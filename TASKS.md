@@ -1,0 +1,690 @@
+# Raffle OS Implementation Roadmap
+
+This file tracks implementation progress for Raffle OS. `AGENTS.md` defines the engineering rules, while `docs/product/PRD.md` defines the product requirements. Complete phases sequentially unless an explicit dependency allows work to proceed in parallel. A phase is not complete until every applicable task and its verification checklist pass.
+
+Do not mark a task complete based on intent. Update its status only after the result exists in the repository and has been verified.
+
+## Status Legend
+
+- `[ ]` Not started
+- `[~]` In progress
+- `[x]` Completed
+- `[!]` Blocked
+
+Standard Markdown checkboxes render only `[ ]` and `[x]`. This project uses `[~]` and `[!]` as additional status conventions.
+
+## Current Repository Baseline
+
+### Confirmed current state
+
+- [x] React 19 is installed as an application dependency.
+- [x] TypeScript 6 is installed and used by the source scaffold.
+- [x] Vite 8 is the current development and production build tool.
+- [x] ESLint 10 is configured for TypeScript, React Hooks, and Vite React Refresh.
+- [x] npm is the package manager and `package-lock.json` is committed.
+- [x] The source currently consists of the default Vite React starter application.
+- [x] Plain CSS files exist for the starter application.
+- [x] `AGENTS.md` exists at the repository root.
+- [x] `docs/product/PRD.md` exists.
+- [x] `TASKS.md` now exists at the repository root.
+
+### Confirmed npm scripts
+
+- [x] `npm run dev` — starts the Vite development server.
+- [x] `npm run build` — runs `tsc -b` and then the Vite production build.
+- [x] `npm run lint` — runs ESLint across the repository.
+- [x] `npm run preview` — previews the production build.
+- [ ] No standalone `typecheck` script currently exists.
+- [ ] No `test` script or test runner currently exists.
+
+The last two unchecked items record missing capabilities, not tasks that can be completed merely by checking them. Any script or dependency addition requires an approved implementation task.
+
+### Confirmed missing product foundations
+
+- [ ] No application routing exists.
+- [ ] No testing approach or test tooling exists.
+- [ ] No project design system or styling-system decision exists.
+- [ ] TypeScript `strict` mode is not explicitly enabled.
+- [ ] No application-level folder architecture exists beyond the starter scaffold.
+- [ ] No product domain models or domain modules exist.
+- [ ] No IndexedDB persistence layer exists.
+- [ ] No participant import pipeline exists.
+- [ ] No draw engine exists.
+- [ ] No Operator Panel exists.
+- [ ] No separate Audience Display exists.
+- [ ] No BroadcastChannel synchronization exists.
+- [ ] No history, audit, redraw, or export implementation exists.
+
+## Phase 0 — Documentation and Repository Foundation
+
+### Documentation
+
+- [x] Confirm `docs/product/PRD.md` exists and is the product source of truth.
+- [x] Confirm root `AGENTS.md` exists and defines engineering rules.
+- [x] Create the root `TASKS.md` implementation roadmap.
+- [ ] Replace the default Vite README with a concise Raffle OS project README in a separate documentation task.
+- [ ] Link the PRD, agent guide, and roadmap from the future project README.
+- [ ] Document local development commands in the future project README without inventing scripts.
+
+### Repository workflow
+
+- [ ] Decide and document the Git branch naming convention.
+- [ ] Decide and document the commit message convention.
+- [ ] Define how roadmap checkbox updates are included with implementation commits.
+- [ ] Ensure completed work is committed and the working tree is clean.
+
+### Baseline verification
+
+- [ ] Start the baseline with `npm run dev` and verify it loads locally.
+- [ ] Run `npm run lint` and record the result.
+- [ ] Run `npm run build` and record the result.
+- [ ] Verify the baseline in a current desktop Chrome version.
+- [ ] Verify the baseline in a current desktop Edge version.
+- [ ] Document supported local environment assumptions, including Node.js/npm expectations once agreed.
+
+### Exit criteria
+
+- [x] Repository-level product, engineering, and roadmap documentation is discoverable.
+- [ ] The baseline application runs locally.
+- [ ] Existing lint and production-build commands pass.
+- [ ] Chrome and Edge environment assumptions are documented.
+- [ ] The working tree is clean after the phase commit.
+
+## Phase 1 — Application Foundation
+
+This phase creates structure only. It must not implement the real draw engine, participant import pipeline, persistence behavior, or official history.
+
+### Technical decisions
+
+- [ ] Decide whether routing will use a small in-app browser-history abstraction or a proposed dependency.
+- [ ] Document the routing decision and tradeoffs before implementation.
+- [ ] Decide whether styling will use plain CSS, CSS Modules, or another approved approach.
+- [ ] Document design-token and component-style conventions.
+- [ ] Decide the unit and component testing approach.
+- [ ] Propose any required testing dependency for approval before installation.
+- [ ] Propose any routing or styling dependency for approval before installation.
+- [ ] Add only dependencies that have been explicitly approved.
+- [ ] Enable TypeScript strict mode and resolve all resulting baseline type errors.
+
+### Application structure
+
+- [ ] Define an application-level folder structure that separates UI, domain, services, and infrastructure.
+- [ ] Create shared domain-type directories without implementing business behavior.
+- [ ] Create a global application shell.
+- [ ] Create a structurally separate Operator Panel layout.
+- [ ] Create a structurally separate Audience Display route.
+- [ ] Add a placeholder Dashboard route.
+- [ ] Add a placeholder Participants route.
+- [ ] Add a placeholder Draw Setup route.
+- [ ] Add a placeholder Live Draw route.
+- [ ] Add a placeholder Pending Results route.
+- [ ] Add a placeholder History route.
+- [ ] Add a placeholder Settings route.
+- [ ] Add a placeholder Audience Display route.
+- [ ] Add a not-found route.
+- [ ] Add an application-level error boundary.
+- [ ] Add basic responsive behavior for the desktop target sizes.
+- [ ] Add foundational design tokens without building the full design system.
+
+### Verification
+
+- [ ] Verify every planned route is directly accessible.
+- [ ] Verify Operator and Audience interfaces do not share operator-only layout or controls.
+- [ ] Verify placeholder pages contain no draw, import, eligibility, or persistence logic.
+- [ ] Run available lint checks.
+- [ ] Run the production build.
+- [ ] Run tests if an approved test script has been added.
+
+### Exit criteria
+
+- [ ] Every planned route is accessible.
+- [ ] Operator and Audience interfaces are structurally separate.
+- [ ] TypeScript strict checks, lint, and production build pass.
+- [ ] No business logic is embedded in placeholder pages.
+
+## Phase 2 — Design System and Static UI Prototype
+
+Use realistic mock data only. Do not add production draw, import, eligibility, audit, or persistence logic in this phase.
+
+### Tokens and primitives
+
+- [ ] Define color tokens.
+- [ ] Define typography tokens.
+- [ ] Define spacing and sizing tokens.
+- [ ] Define border, radius, elevation, and focus tokens.
+- [ ] Define semantic status tokens for Practice, Live, Pending, Confirmed, warning, error, connection, and blackout states.
+- [ ] Build a reusable Button.
+- [ ] Build a reusable Input.
+- [ ] Build a reusable Select.
+- [ ] Build a reusable Checkbox.
+- [ ] Build a reusable Toggle.
+- [ ] Build a reusable Badge.
+- [ ] Build a reusable Card.
+- [ ] Build a reusable Modal.
+- [ ] Build a reusable Table.
+- [ ] Build a reusable Empty State.
+- [ ] Build a reusable Toast.
+- [ ] Build a reusable Confirmation Dialog.
+- [ ] Add accessible labels, focus states, and keyboard behavior to every interactive primitive.
+
+### Operator static screens
+
+- [ ] Build Operator Panel navigation and header.
+- [ ] Build the Dashboard static UI.
+- [ ] Build the Participant Import static UI.
+- [ ] Build the Draw Setup static UI.
+- [ ] Build the Live Draw ready state.
+- [ ] Build the Live Draw running state.
+- [ ] Build the Pending Results static UI.
+- [ ] Build the Redraw panel static UI.
+- [ ] Build the History static UI.
+- [ ] Show visually distinct Practice and Live mock states without relying on color alone.
+
+### Audience static screens
+
+- [ ] Build the Standby state.
+- [ ] Build the Countdown state.
+- [ ] Build the Rolling state.
+- [ ] Build the Winner Reveal state.
+- [ ] Build the Confirmed state.
+- [ ] Build the Blackout state.
+- [ ] Build a one-winner hero layout.
+- [ ] Build a 3 × 2 grid for 6 winners.
+- [ ] Build a 5 × 2 grid for 10 winners.
+- [ ] Build a 5 × 4 grid for 20 winners.
+- [ ] Keep ticket numbers visually dominant in every winner layout.
+
+### Review and verification
+
+- [ ] Demonstrate the complete mock happy path without production behavior.
+- [ ] Review the Operator Panel at 1440 × 900.
+- [ ] Review the Audience Display at 1920 × 1080, 16:9.
+- [ ] Verify operator-only data is absent from the Audience Display mock payloads.
+- [ ] Review keyboard navigation, visible focus, contrast, and readability.
+- [ ] Confirm visual treatment resembles event-control software rather than a generic SaaS template.
+- [ ] Run available lint, test, and production-build commands.
+
+### Exit criteria
+
+- [ ] The complete happy path can be demonstrated using mock data.
+- [ ] No production draw or persistence logic exists.
+- [ ] Ticket numbers remain visually dominant on the Audience Display.
+- [ ] The UI does not resemble a generic SaaS template.
+- [ ] Accessibility and readability checks pass.
+
+## Phase 3 — Domain Model and Local Persistence
+
+### Domain model
+
+- [ ] Define the `Event` model.
+- [ ] Define the `Participant` model with a string ticket identifier.
+- [ ] Define the prize-category model.
+- [ ] Define the draw-configuration model.
+- [ ] Define the draw-session model.
+- [ ] Define the winner model.
+- [ ] Define the redraw-record model.
+- [ ] Define the audit-record model.
+- [ ] Define the public display-state model.
+- [ ] Define discriminated status unions.
+- [ ] Define and test allowed state transitions.
+
+### Persistence decision and schema
+
+- [ ] Compare direct IndexedDB use with any proposed persistence dependency.
+- [ ] Obtain approval before adding a persistence dependency.
+- [ ] Document the selected IndexedDB approach.
+- [ ] Define the initial database schema.
+- [ ] Add an explicit schema version.
+- [ ] Add a migration mechanism before storing official records.
+- [ ] Document stored-data backward-compatibility rules.
+
+### Data access
+
+- [ ] Create isolated repository or data-access modules.
+- [ ] Persist events.
+- [ ] Persist participants.
+- [ ] Persist prize categories.
+- [ ] Persist draw sessions.
+- [ ] Persist winner history.
+- [ ] Persist redraw and audit history.
+- [ ] Store lightweight preferences separately from domain data.
+- [ ] Add seed or demo-data utilities used only in development.
+- [ ] Add explicit protection and confirmation around database reset.
+
+### Verification
+
+- [ ] Add persistence tests.
+- [ ] Verify data survives browser refresh.
+- [ ] Verify every stored ticket number remains a string.
+- [ ] Verify leading zeroes survive a storage round trip.
+- [ ] Verify persistence modules can be tested without React.
+- [ ] Verify an incompatible schema fails safely or migrates explicitly.
+
+### Exit criteria
+
+- [ ] Data survives browser refresh.
+- [ ] Stored ticket numbers remain strings.
+- [ ] Leading zeroes are preserved.
+- [ ] Persistence logic is isolated from React components.
+- [ ] Schema changes are versioned.
+
+## Phase 4 — Participant Import and Eligibility
+
+### Import pipeline
+
+- [ ] Define typed raw-row, mapped-row, validation-result, and import-summary models.
+- [ ] Define the participant import pipeline independently of React.
+- [ ] Decide whitespace normalization and duplicate-comparison rules from the PRD open questions.
+- [ ] Support CSV input.
+- [ ] Support XLSX input.
+- [ ] Propose any file-parsing dependency for approval before installation.
+- [ ] Add explicit column mapping.
+- [ ] Add a data preview before commit.
+- [ ] Preserve ticket identifiers as strings from file read onward.
+- [ ] Detect empty ticket numbers.
+- [ ] Detect duplicate ticket numbers.
+- [ ] Detect malformed rows.
+- [ ] Detect missing required columns.
+- [ ] Support optional participant name.
+- [ ] Support optional check-in status.
+- [ ] Support optional group.
+- [ ] Support optional notes.
+- [ ] Produce a reviewable invalid-row report.
+
+### Import application behavior
+
+- [ ] Implement replace-import behavior with explicit confirmation.
+- [ ] Decide and document merge-conflict behavior.
+- [ ] Implement merge-import behavior without creating duplicate tickets.
+- [ ] Add participant search.
+- [ ] Add participant filters.
+- [ ] Display participant validation and eligibility status.
+- [ ] Add manual participant editing with revalidation.
+
+### Tests
+
+- [ ] Test leading-zero preservation.
+- [ ] Test duplicate detection within a file.
+- [ ] Test conflicts against stored participants.
+- [ ] Test empty values.
+- [ ] Test malformed rows.
+- [ ] Test missing required columns.
+- [ ] Test replace confirmation behavior.
+- [ ] Test merge conflicts.
+- [ ] Test equivalent CSV and XLSX normalization.
+
+### Exit criteria
+
+- [ ] CSV and XLSX imports produce equivalent normalized participant records.
+- [ ] Invalid records cannot silently enter the eligible pool.
+- [ ] No ticket number is converted to a number.
+- [ ] Import errors are reviewable before confirmation.
+
+## Phase 5 — Secure Draw Engine
+
+### Secure selection
+
+- [ ] Create a secure random-source module using `crypto.getRandomValues()`.
+- [ ] Implement unbiased integer-range generation with rejection sampling or an equivalent method.
+- [ ] Implement secure Fisher–Yates shuffle or equivalent selection without replacement.
+- [ ] Add a guard that prevents official selection when Web Crypto is unavailable.
+- [ ] Verify `Math.random()` is absent from the official draw-selection path.
+- [ ] Prevent duplicate winners within one draw.
+
+### Eligibility
+
+- [ ] Implement eligibility filtering independently of React.
+- [ ] Support winner counts of 1, 3, 6, 10, 20, and 50.
+- [ ] Support a custom winner count up to 100.
+- [ ] Exclude previous Confirmed winners when the one-win-per-event rule is active.
+- [ ] Support once-per-category rules.
+- [ ] Support the allow-repeat rule.
+- [ ] Support check-in requirements.
+- [ ] Reject a draw when eligible participants are fewer than requested winners.
+
+### Draw record preparation
+
+- [ ] Create an immutable eligible-pool snapshot.
+- [ ] Record active filters and draw configuration with the snapshot.
+- [ ] Record mode and timestamp.
+- [ ] Keep final selection independent from all visual animation state.
+
+### Tests and performance
+
+- [ ] Test random-helper output bounds.
+- [ ] Test rejection behavior without trying to prove randomness statistically.
+- [ ] Test duplicate prevention.
+- [ ] Test prior-winner exclusion.
+- [ ] Test check-in eligibility.
+- [ ] Test once-per-category eligibility.
+- [ ] Test insufficient-pool rejection.
+- [ ] Test immutability of the eligible snapshot.
+- [ ] Test at least 10,000 participants and up to 100 winners.
+- [ ] Verify final selection completes within the PRD target on an agreed benchmark device.
+
+### Exit criteria
+
+- [ ] Official selection uses Web Crypto API only.
+- [ ] The same participant cannot be selected twice in one draw.
+- [ ] Visual animation cannot change selected results.
+- [ ] Selection completes within the PRD performance target.
+- [ ] Domain tests pass.
+
+## Phase 6 — Draw Setup and Live Workflow
+
+The secure draw engine must pass Phase 5 verification before it is connected to Live Mode.
+
+### Setup
+
+- [ ] Connect Draw Setup UI to persisted domain data.
+- [ ] Configure prize category.
+- [ ] Configure prize name.
+- [ ] Configure winner count.
+- [ ] Configure eligibility rules.
+- [ ] Display the current eligible-participant count.
+- [ ] Add system-readiness checks for persistence and Web Crypto.
+
+### Modes and start controls
+
+- [ ] Add Practice Mode behavior.
+- [ ] Add Live Mode behavior.
+- [ ] Make Practice and Live visually distinct without relying on color alone.
+- [ ] Add explicit confirmation before entering or starting Live Mode.
+- [ ] Add hold-to-start for a Live draw.
+- [ ] Lock the eligible-pool snapshot when a draw starts.
+- [ ] Prevent participant edits during an active draw.
+
+### Active draw workflow
+
+- [ ] Create Pending winner records before operator confirmation.
+- [ ] Add countdown state.
+- [ ] Add rolling-presentation state.
+- [ ] Add winner-reveal state.
+- [ ] Add skip-animation control without changing results.
+- [ ] Define and implement safe abort behavior.
+- [ ] Add blackout behavior.
+- [ ] Define recovery for interruption at each active state.
+
+### Verification
+
+- [ ] Verify setup-to-Pending happy path.
+- [ ] Verify Practice Mode leaves official eligibility and records unchanged.
+- [ ] Verify Live Mode creates an auditable draw session.
+- [ ] Verify animations cannot trigger a reselection.
+- [ ] Verify interrupted states recover without silently selecting again.
+- [ ] Run available lint, test, and production-build commands.
+
+### Exit criteria
+
+- [ ] Operator can complete a draw from setup through Pending results.
+- [ ] Practice Mode does not alter official records.
+- [ ] Live Mode creates an auditable draw session.
+- [ ] Interrupted actions have defined recovery behavior.
+
+## Phase 7 — Operator and Audience Display Synchronization
+
+Audience synchronization presents results generated elsewhere. It must never own or generate draw results.
+
+### Communication
+
+- [ ] Create an isolated BroadcastChannel communication module.
+- [ ] Define typed public display messages.
+- [ ] Ensure message payloads exclude operator-only participant data.
+- [ ] Add a display-ready handshake.
+- [ ] Define behavior when BroadcastChannel is unavailable.
+
+### State synchronization
+
+- [ ] Synchronize Standby.
+- [ ] Synchronize Countdown.
+- [ ] Synchronize Rolling.
+- [ ] Synchronize Reveal.
+- [ ] Synchronize Confirmed.
+- [ ] Synchronize Blackout.
+- [ ] Synchronize Restore.
+- [ ] Show connection status in the Operator Panel.
+- [ ] Add reconnect behavior.
+- [ ] Preserve a safe display state after disconnection.
+- [ ] Restore the correct presentation state after reconnection.
+
+### Display workflow and tests
+
+- [ ] Add a separate fullscreen workflow.
+- [ ] Test one Operator window with one Audience Display window.
+- [ ] Test multiple open Audience Display windows.
+- [ ] Test disconnection during each presentation state.
+- [ ] Add synchronization tests where practical.
+- [ ] Verify display failure cannot corrupt draw-session data.
+
+### Exit criteria
+
+- [ ] Operator actions update the Audience Display reliably.
+- [ ] Audience Display contains no operator controls or internal participant data.
+- [ ] Disconnecting the display does not corrupt draw data.
+- [ ] Reconnection restores the correct presentation state.
+
+## Phase 8 — Winner Confirmation and Redraw
+
+This phase depends on the draw-session, winner, redraw, and audit models from Phase 3 and secure selection from Phase 5.
+
+### Product decisions
+
+- [ ] Decide whether cancelled participants return to the pool for each redraw reason.
+- [ ] Confirm the approved redraw-reason set.
+- [ ] Decide how partial confirmation and redraw are presented to the Audience Display.
+
+### Confirmation
+
+- [ ] Confirm an individual Pending winner.
+- [ ] Confirm all Pending winners.
+- [ ] Cancel an individual Pending winner.
+- [ ] Keep other valid winners unchanged during partial actions.
+- [ ] Update one-win eligibility only after confirmation.
+
+### Redraw
+
+- [ ] Select multiple winners for redraw.
+- [ ] Require a redraw reason in Live Mode.
+- [ ] Require explanatory text when the reason is `other`.
+- [ ] Select replacement winners through the secure draw engine.
+- [ ] Preserve original winner records.
+- [ ] Store explicit original-to-replacement relationships.
+- [ ] Keep cancelled winners visible in audit history.
+- [ ] Show a safe redraw presentation state on the Audience Display.
+
+### Tests
+
+- [ ] Test individual and confirm-all behavior.
+- [ ] Test partial redraw without changing valid winners.
+- [ ] Test required Live redraw reasons.
+- [ ] Test cancelled-record preservation.
+- [ ] Test replacement relationships.
+- [ ] Test one-win eligibility updates only after confirmation.
+- [ ] Test Practice redraw leaves Live records unchanged.
+
+### Exit criteria
+
+- [ ] Cancelled records remain visible.
+- [ ] Replacement relationships are traceable.
+- [ ] Valid winners are not changed during partial redraw.
+- [ ] One-win eligibility updates only after confirmation.
+
+## Phase 9 — History, Audit, and Export
+
+Persistence and the official draw-session model must exist before this phase begins.
+
+### History and audit
+
+- [ ] Build draw-session history.
+- [ ] Build an all-winners view.
+- [ ] Build a chronological audit timeline.
+- [ ] Add history filters.
+- [ ] Add history search.
+- [ ] Distinguish Practice and Live records.
+- [ ] Show cancellation reasons.
+- [ ] Show original-to-replacement relationships.
+- [ ] Reopen completed public results on the Audience Display without creating a new draw.
+- [ ] Prevent official records from being silently overwritten or deleted.
+
+### Export
+
+- [ ] Decide and document final export columns and worksheet structure.
+- [ ] Export Confirmed results to CSV.
+- [ ] Export Confirmed results to XLSX.
+- [ ] Preserve ticket identifiers as strings in CSV output.
+- [ ] Preserve ticket identifiers and leading zeroes in XLSX output.
+- [ ] Keep cancelled and replacement records available to the audit view.
+- [ ] Propose any export dependency for approval before installation.
+
+### Tests
+
+- [ ] Test reconstruction of a completed draw from stored records.
+- [ ] Test export of leading-zero ticket numbers.
+- [ ] Test export excludes non-final Pending results.
+- [ ] Test redraw history remains traceable.
+- [ ] Test official record immutability rules.
+
+### Exit criteria
+
+- [ ] A completed draw can be reconstructed from stored records.
+- [ ] Exported ticket numbers preserve leading zeroes.
+- [ ] Redraw history is included in the audit trail.
+
+## Phase 10 — Recovery, Backup, and Operational Safety
+
+Recovery and operational-safety work is part of MVP hardening. Backup and restore remain conditional P2 work under the PRD and must not be implemented until explicitly approved for a later milestone.
+
+### Recovery and safety
+
+- [ ] Add autosave-status feedback.
+- [ ] Restore an interrupted Pending session without reselection.
+- [ ] Restore the last safe Audience Display state.
+- [ ] Add protection against accidental event reset.
+- [ ] Add explicit confirmation to every destructive action.
+- [ ] Add storage-capacity warnings.
+- [ ] Add an IndexedDB readiness diagnostic.
+- [ ] Add a Web Crypto API readiness diagnostic.
+- [ ] Add a BroadcastChannel readiness diagnostic.
+- [ ] Add a storage-availability diagnostic.
+- [ ] Add recovery tests for refresh and interrupted sessions.
+
+### Conditional P2 backup and restore
+
+- [!] Obtain explicit product approval to include local event backup and restore in a later milestone.
+- [!] Define and version the portable backup format after approval.
+- [!] Add event backup export after approval.
+- [!] Add event backup import after approval.
+- [!] Validate backup format and schema version.
+- [!] Add backup compatibility tests.
+- [!] Verify invalid or incompatible backups fail without changing current data.
+
+### Exit criteria
+
+- [ ] Browser refresh does not silently lose active work.
+- [ ] Dangerous actions require explicit confirmation.
+- [ ] Runtime capability failures are reported before Live draw.
+- [!] If backup/restore is approved, restored backups produce valid domain records.
+- [!] If backup/restore is approved, invalid or incompatible backups fail safely.
+
+## Phase 11 — Accessibility, Performance, and Release Hardening
+
+### Accessibility and presentation
+
+- [ ] Review keyboard navigation across all operator workflows.
+- [ ] Verify visible focus states.
+- [ ] Complete a color-contrast review.
+- [ ] Add reduced-motion support.
+- [ ] Add a high-readability Audience Display option if approved.
+- [ ] Add a large-number display option if approved.
+- [ ] Remove unnecessary animation.
+- [ ] Verify important states are not communicated through color alone.
+
+### Browser, viewport, and scale verification
+
+- [ ] Test the current desktop Chrome version.
+- [ ] Test the current desktop Edge version.
+- [ ] Test at 1366 × 768.
+- [ ] Test the Operator Panel at 1440 × 900.
+- [ ] Test the Audience Display at 1920 × 1080.
+- [ ] Test at least 10,000 participant records.
+- [ ] Test draws of up to 100 winners.
+- [ ] Verify the secure selection performance target on the agreed device.
+
+### Release verification
+
+- [ ] Run `npm run lint`.
+- [ ] Run a standalone typecheck if a typecheck script exists at that time.
+- [ ] Run all tests if a test script exists at that time.
+- [ ] Run `npm run build`.
+- [ ] Review the production bundle for unexpected assets or dependencies.
+- [ ] Remove development-only seed data from production paths.
+- [ ] Remove debug output.
+- [ ] Complete the operator rehearsal checklist.
+- [ ] Complete manual acceptance testing against the PRD.
+- [ ] Document known limitations.
+
+### Exit criteria
+
+- [ ] All required and available verification commands pass.
+- [ ] Core workflows pass manual acceptance testing.
+- [ ] No critical accessibility issue remains.
+- [ ] No critical data-integrity issue remains.
+- [ ] Release limitations are documented.
+
+## Deferred P2 Backlog
+
+These items are not scheduled for MVP implementation and require separate scope approval:
+
+- [ ] QR check-in.
+- [ ] Mobile remote control.
+- [ ] Networked multi-device operation.
+- [ ] Cloud synchronization.
+- [ ] Authentication and user roles.
+- [ ] Ticketing integration.
+- [ ] WhatsApp integration.
+- [ ] Digital prize claiming.
+- [ ] Theme marketplace.
+- [ ] External legal-grade audit integration.
+
+## Definition of Done for Every Coding Task
+
+- [ ] The change implements only the requested scope.
+- [ ] Product invariants remain preserved.
+- [ ] TypeScript types are explicit.
+- [ ] Relevant tests are added or updated.
+- [ ] The available lint command passes.
+- [ ] The available typecheck command passes, if one exists.
+- [ ] The available test command passes, if one exists.
+- [ ] The production build passes.
+- [ ] UI is manually reviewed when applicable.
+- [ ] Documentation is updated when behavior changes.
+- [ ] A completion report is provided.
+- [ ] The Git diff is reviewed for unrelated changes.
+
+## Recommended Execution Order
+
+1. Complete Phase 0 baseline verification and repository conventions.
+2. Complete Phase 1 technical decisions and application foundation.
+3. Build Phase 2 static UI using mock data. Static UI may begin before persistence once Phase 1 structure and styling decisions are stable.
+4. Define Phase 3 domain models and persistence. Persistence must exist before official history, audit, and recovery.
+5. Implement Phase 4 import and eligibility foundations against the approved domain model.
+6. Implement and fully test the Phase 5 draw engine. It must pass domain and performance verification before connection to Live Mode.
+7. Connect the tested engine through Phase 6 setup and Live workflow.
+8. Add Phase 7 Audience synchronization. Synchronization must present state and must not own draw-result generation.
+9. Implement Phase 8 confirmation and redraw after the draw-session domain model exists. Confirmation and redraw depend on the winner, redraw, and audit relationships.
+10. Build Phase 9 history and export after persistence and official record behavior are stable.
+11. Complete Phase 10 recovery and operational safety. Perform backup/restore work only if its conditional P2 scope is approved.
+12. Finish with Phase 11 accessibility, performance, acceptance, and release hardening.
+
+## Immediate Next Task
+
+The recommended next task is a bounded **Phase 1 planning and application-foundation task**:
+
+- decide and document routing, styling, and testing approaches;
+- propose any necessary dependencies for approval;
+- enable TypeScript strict mode;
+- establish the application folder structure; and
+- create only the global shell, separate Operator/Audience layouts, and placeholder routes.
+
+Do not implement participant import, persistence, secure winner selection, or any Live draw behavior in that task.
+

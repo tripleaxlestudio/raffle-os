@@ -24,6 +24,10 @@ const operatorPages = [
   ['/settings', 'Settings'],
 ] as const
 
+const placeholderOperatorPages = operatorPages.filter(
+  ([path]) => path !== '/dashboard',
+)
+
 const operatorNavigationLabels = operatorPages.map(([, label]) => label)
 
 describe('application routes', () => {
@@ -31,7 +35,10 @@ describe('application routes', () => {
     const { router } = renderRoute('/')
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Dashboard' }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Nusantara Tech Gala 2026',
+      }),
     ).toBeInTheDocument()
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/dashboard')
@@ -44,7 +51,7 @@ describe('application routes', () => {
     expect(
       within(screen.getByRole('main')).getByRole('heading', {
         level: 1,
-        name: 'Dashboard',
+        name: 'Nusantara Tech Gala 2026',
       }),
     ).toBeInTheDocument()
     expect(screen.getByRole('banner')).toBeInTheDocument()
@@ -52,16 +59,23 @@ describe('application routes', () => {
       screen.getByRole('navigation', { name: 'Operator navigation' }),
     ).toBeInTheDocument()
     expect(screen.getByText('Raffle OS')).toBeInTheDocument()
-    expect(screen.getByText('Event not selected')).toBeInTheDocument()
+    expect(
+      screen.getAllByText('Nusantara Tech Gala 2026'),
+    ).toHaveLength(2)
     expect(screen.getByText('Practice Mode')).toBeInTheDocument()
     expect(
       screen.getByRole('status', {
-        name: 'Audience Display: Disconnected',
+        name: 'Audience Display: Connected',
       }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole('combobox', { name: 'Prototype scenario' }),
+    ).toHaveValue('ready')
   })
 
-  it.each(operatorPages)('renders %s as the %s page', (path, title) => {
+  it.each(placeholderOperatorPages)(
+    'renders %s as the %s placeholder page',
+    (path, title) => {
     const { container } = renderRoute(path)
 
     expect(
@@ -84,7 +98,8 @@ describe('application routes', () => {
         within(navigation).getByRole('link', { name: navigationLabel }),
       ).toBeInTheDocument()
     }
-  })
+    },
+  )
 
   it.each([
     ['/dashboard', 'Dashboard'],
@@ -155,7 +170,10 @@ describe('application routes', () => {
     await user.click(recoveryLink)
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Dashboard' }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Nusantara Tech Gala 2026',
+      }),
     ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/dashboard')
   })

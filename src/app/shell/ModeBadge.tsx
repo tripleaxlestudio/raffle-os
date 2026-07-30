@@ -1,4 +1,5 @@
 import type { AppMode } from '../../domain/types/index.ts'
+import { Badge } from '../../shared/ui/index.ts'
 
 interface ModeBadgeProps {
   mode: AppMode
@@ -11,8 +12,13 @@ const modeLabels: Record<AppMode, string> = {
 
 export function ModeBadge({ mode }: ModeBadgeProps) {
   return (
-    <span className="mode-badge" data-mode={mode}>
+    <Badge
+      className="mode-badge"
+      data-mode={mode}
+      indicator
+      variant={mode}
+    >
       {modeLabels[mode]}
-    </span>
+    </Badge>
   )
 }

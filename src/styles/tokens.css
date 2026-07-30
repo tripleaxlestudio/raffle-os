@@ -12,10 +12,14 @@
   --color-accent-hover: var(--accent-hover);
   --color-status-live: var(--status-live);
   --color-status-practice: var(--status-practice);
+  --color-status-pending: var(--status-pending);
+  --color-status-confirmed: var(--status-confirmed);
   --color-status-success: var(--status-success);
   --color-status-warning: var(--status-warning);
   --color-status-danger: var(--status-danger);
+  --color-status-info: var(--status-info);
   --color-status-disconnected: var(--status-disconnected);
+  --color-status-blackout: var(--status-blackout);
   --font-sans: var(--font-family-sans);
   --font-mono: var(--font-family-mono);
 }
@@ -46,18 +50,28 @@
   --space-8: 2rem;
   --space-10: 2.5rem;
   --space-12: 3rem;
+  --space-16: 4rem;
 
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 
   --operator-sidebar-width: 15rem;
-  --operator-header-height: 4rem;
+  --operator-header-height: 4.75rem;
   --content-padding: clamp(1rem, 2vw, 2rem);
   --content-max-width: 90rem;
+  --content-grid-gap: clamp(0.875rem, 1.4vw, 1.25rem);
   --audience-safe-inline: clamp(2rem, 5vw, 6rem);
   --audience-safe-block: clamp(1.5rem, 5vh, 4rem);
   --interactive-min-size: 2.75rem;
+  --control-height-sm: 2.25rem;
+  --control-height-md: 2.75rem;
+  --control-height-lg: 3.125rem;
+  --control-inline-padding: 0.875rem;
+  --shadow-sm: 0 0.25rem 0.75rem var(--shadow-color);
+  --shadow-md: 0 0.75rem 2rem var(--shadow-color);
+  --shadow-focus: 0 0 0 var(--focus-ring-offset) var(--app-bg);
   --focus-ring: #9b92ff;
   --focus-ring-width: 0.1875rem;
   --focus-ring-offset: 0.1875rem;
@@ -80,11 +94,15 @@
   --accent-soft: rgb(117 103 255 / 0.14);
   --status-live: #f05d68;
   --status-practice: #f2a93b;
+  --status-pending: #f2a93b;
+  --status-confirmed: #35c48d;
   --status-success: #35c48d;
   --status-warning: #f2a93b;
   --status-danger: #f05d68;
   --status-info: #4ea8ff;
   --status-disconnected: #aeb4c0;
+  --status-blackout: #000000;
+  --shadow-color: rgb(0 0 0 / 0.24);
   --focus-ring: #9b92ff;
 }
 
@@ -106,10 +124,14 @@
   --accent-soft: rgb(138 92 255 / 0.2);
   --status-live: #ff7180;
   --status-practice: #f4c55a;
+  --status-pending: #f4c55a;
+  --status-confirmed: #55d6a3;
   --status-success: #55d6a3;
   --status-warning: #f4c55a;
   --status-danger: #ff7180;
   --status-info: #72baff;
   --status-disconnected: rgb(255 255 255 / 0.68);
+  --status-blackout: #000000;
+  --shadow-color: rgb(0 0 0 / 0.32);
   --focus-ring: #f4c55a;
 }

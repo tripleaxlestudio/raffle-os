@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "./tokens.css";
+@import "./primitives.css";
+@import "./operator.css";
 
 @layer base {
   *,

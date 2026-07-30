@@ -31,7 +31,7 @@ export function RouteErrorPage() {
   const content = getRouteErrorContent(error)
 
   return (
-    <main className="error-page">
+    <main className="error-page" data-interface="operator">
       <div className="error-page__content">
         <h1>{content.heading}</h1>
         <p>{content.message}</p>

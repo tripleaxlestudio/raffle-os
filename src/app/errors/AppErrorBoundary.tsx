@@ -34,7 +34,7 @@ export class AppErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <main className="error-page">
+        <main className="error-page" data-interface="operator">
           <div className="error-page__content">
             <h1>Something went wrong</h1>
             <p>

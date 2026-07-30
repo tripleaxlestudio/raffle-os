@@ -1,131 +1,127 @@
 # Raffle OS
 
-Raffle OS is a local-first event raffle application for drawing one or multiple winners from ticket-number participant data. It is designed around a separate Operator Panel and fullscreen Audience Display for LED screens, projectors, or vMix capture.
+Raffle OS is a planned local-first event raffle application centered on ticket
+numbers. The interface is split into a production-oriented Operator Panel and a
+standalone fullscreen Audience Display for LED screens, projectors, or vMix
+capture.
 
-> **Project status:** Raffle OS is in early development. The repository currently contains a React, TypeScript, and Vite starter scaffold plus product documentation and an approved Phase 1 technical plan. Production raffle functionality has not yet been implemented.
+> **Project status:** Phase 1 application foundation and the Phase 2
+> deterministic static UI prototype are implemented and accepted. The current
+> screens use immutable mock fixtures and query-selected scenarios; they do not
+> perform production raffle operations.
 
-## Product Goals
+## Implemented Presentation Prototype
 
-The following are product goals, not completed features:
+The Phase 2 prototype includes:
 
-- Remain local-first and usable without an internet connection.
-- Import participant data identified by ticket numbers.
-- Draw one or multiple winners in a single operation.
-- Preserve leading zeroes by treating ticket numbers as strings.
-- Keep the Operator Panel separate from the fullscreen Audience Display.
-- Support winner confirmation, redraw, history, and an operational audit trail.
-- Use the Web Crypto API for official winner selection.
-- Remain practical and readable during professional event operations.
+- a high-fidelity Operator shell, navigation, dashboard, participant-import
+  wizard, draw setup, live-draw states, pending results, redraw drawer, history,
+  and settings;
+- a structurally separate Audience Display with standby, countdown, rolling,
+  reveal, confirmed, blackout, and disconnected-safe states;
+- exact hero, 3 × 2, 5 × 2, and 5 × 4 winner layouts for 1, 6, 10, and 20
+  tickets;
+- reusable typed presentation primitives with accessible focus and dialog
+  behavior;
+- deterministic, query-driven mock scenarios; and
+- Vitest and Testing Library coverage for routing, components, screens,
+  accessibility semantics, scope boundaries, and the complete mock happy path.
 
-## Current Repository Status
+These are presentation prototypes only. Production file import, persistence,
+eligibility evaluation, secure winner selection, confirmation and redraw
+mutation, Operator/Audience synchronization, export, recovery, audio,
+fullscreen control, backend services, and cloud behavior are planned for later
+phases and are not implemented.
 
-| Area | Current status |
+## Interfaces and Routes
+
+Operator routes share the Operator layout:
+
+| Route | Prototype surface |
 |---|---|
-| Application | Default Vite React starter; Raffle OS screens and workflows are not implemented |
-| React | React 19 (`^19.2.7`; lockfile resolved to 19.2.8 during the baseline audit) |
-| TypeScript | TypeScript 6 (`~6.0.2`; lockfile resolved to 6.0.3); strict mode is planned but not explicitly enabled |
-| Vite | Vite 8 (`^8.1.1`; lockfile resolved to 8.1.5) |
-| ESLint | ESLint 10 with TypeScript, React Hooks, and React Refresh rules |
-| npm scripts | `dev`, `build`, `lint`, and `preview` |
-| Documentation | `AGENTS.md`, `TASKS.md`, `docs/product/PRD.md`, and `docs/technical/PHASE-1-PLAN.md` |
-| Routing | Not implemented; no routing package is currently installed |
-| Tests | No test runner, test script, or tests currently exist |
-| Persistence | Not implemented |
-| Draw engine | Not implemented |
+| `/` | Redirects to `/dashboard` |
+| `/dashboard` | Event-control dashboard |
+| `/participants` | Participant Import wizard |
+| `/draw/setup` | Draw configuration |
+| `/draw/live` | Ready and running draw presentation |
+| `/draw/results` | Pending Results and redraw presentation |
+| `/history` | Draw sessions, winners, audit log, and session detail |
+| `/settings` | Branding, presentation, audio, and display settings |
 
-## Planned MVP Capabilities
+The Audience Display is a separate interface at `/display`. Unknown paths use
+the not-found route.
 
-The planned MVP includes:
+Prototype states are selected with URL query parameters. Examples:
 
-- Event setup.
-- CSV and XLSX participant import.
-- Duplicate and invalid-ticket validation.
-- Prize-category and winner-count configuration.
-- Secure selection of multiple winners.
-- Practice and Live Mode.
-- A separate fullscreen Audience Display.
-- Pending-result verification.
-- Partial redraw.
-- Draw history and an audit trail.
-- CSV or XLSX result export.
-- Local persistence and interrupted-session recovery.
+```text
+/participants?step=review
+/draw/setup?mode=live&scenario=insufficient
+/draw/live?state=running&mode=practice&stage=countdown
+/draw/results?scenario=partial
+/draw/results?panel=redraw&selection=multiple
+/history?view=session-detail
+/settings?section=display
+/display?state=reveal&count=6
+/display?state=confirmed&count=20
+/display?state=blackout
+/display?state=disconnected
+```
 
-Implementation progress is tracked in [TASKS.md](TASKS.md).
+Query changes select deterministic presentation fixtures. They do not import,
+draw, confirm, redraw, persist, synchronize, or export data.
 
 ## Technology
 
-### Current
+- React 19 and React DOM 19
+- React Router 7
+- TypeScript 6 with explicit strict mode
+- Vite 8
+- Tailwind CSS 4 through the official Vite plugin
+- Vitest 4 with jsdom
+- React Testing Library, jest-dom, and user-event
+- ESLint 10
+- npm with a committed lockfile
 
-The following technology is confirmed in the repository:
-
-- React
-- TypeScript
-- Vite
-- ESLint
-- npm
-
-### Planned and Subject to Approval
-
-The approved Phase 1 plan proposes the following foundations. They may not be installed and must not be treated as currently available until `package.json` confirms them:
-
-- React Router
-- Tailwind CSS
-- Vitest
-- React Testing Library
-- An IndexedDB persistence approach in a later phase
-
-See [the Phase 1 technical plan](docs/technical/PHASE-1-PLAN.md) for the proposed packages, tradeoffs, and implementation slices.
-
-## Requirements
-
-Local development currently requires:
-
-- Node.js
-- npm
-- Git
-- A current desktop version of Chrome or Edge for manual review
-
-Node.js 22.20.0 and npm 10.9.3 were used during the repository baseline audit. These are verified environment versions, not declared universal minimums; `package.json` does not currently define an `engines` requirement.
+React, React DOM, and React Router are the production dependencies. No
+persistence or state-management library is installed.
 
 ## Local Development
 
-Install the current dependencies:
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-Start the Vite development server:
+Available scripts:
 
-```bash
-npm run dev
-```
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Run the TypeScript project build and create a Vite production build |
+| `npm run lint` | Run ESLint across the repository |
+| `npm run preview` | Preview the production build |
+| `npm run typecheck` | Run the TypeScript project build in no-emit mode |
+| `npm run test` | Run the Vitest suite once |
+| `npm run test:watch` | Run Vitest in watch mode |
 
-Run the configured linter:
-
-```bash
-npm run lint
-```
-
-Run the TypeScript and production build:
-
-```bash
-npm run build
-```
-
-Preview the production build:
-
-```bash
-npm run preview
-```
-
-There is currently no standalone `typecheck` or `test` script.
+Node.js 22.20.0 and npm 10.9.3 were recorded during the Phase 2 planning audit.
+They are verified environment versions, not declared universal minimums;
+`package.json` does not define an `engines` requirement.
 
 ## Project Documentation
 
-- [Product Requirements Document](docs/product/PRD.md) — approved product scope, behavior, constraints, and acceptance criteria.
-- [Phase 1 Technical Plan](docs/technical/PHASE-1-PLAN.md) — audited baseline and approved application-foundation plan.
-- [Implementation Roadmap](TASKS.md) — ordered phases and implementation progress.
-- [Agent Guidelines](AGENTS.md) — engineering rules and product invariants for coding agents.
+- [Product Requirements Document](docs/product/PRD.md) — approved product
+  scope, behavior, constraints, and acceptance criteria.
+- [Phase 1 Acceptance](docs/technical/PHASE-1-ACCEPTANCE.md) — permanent
+  application-foundation acceptance record.
+- [Phase 2 Plan](docs/technical/PHASE-2-PLAN.md) — implementation plan and
+  completed acceptance checklist.
+- [Phase 2 Acceptance](docs/technical/PHASE-2-ACCEPTANCE.md) — permanent static
+  prototype acceptance record.
+- [Implementation Roadmap](TASKS.md) — ordered phases and verified progress.
+- [Agent Guidelines](AGENTS.md) — engineering rules and product invariants.
 
-Read the PRD and relevant technical documentation before implementing product features. If project documents conflict, report the conflict rather than choosing silently.
+Read the PRD and relevant technical documentation before implementing product
+features. If project documents conflict, report the conflict rather than
+choosing silently.

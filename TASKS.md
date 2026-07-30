@@ -18,15 +18,21 @@ Standard Markdown checkboxes render only `[ ]` and `[x]`. This project uses `[~]
 ### Confirmed current state
 
 - [x] React 19 is installed as an application dependency.
-- [x] TypeScript 6 is installed and used by the source scaffold.
+- [x] React Router 7 provides application routing.
+- [x] TypeScript 6 is installed and explicit `strict` mode is enabled.
 - [x] Vite 8 is the current development and production build tool.
+- [x] Tailwind CSS 4 is configured through the official Vite plugin.
+- [x] Vitest 4, jsdom, React Testing Library, jest-dom, and user-event provide
+  the automated test environment.
 - [x] ESLint 10 is configured for TypeScript, React Hooks, and Vite React Refresh.
 - [x] npm is the package manager and `package-lock.json` is committed.
-- [x] The source currently consists of the default Vite React starter application.
-- [x] Plain CSS files exist for the starter application.
-- [x] `AGENTS.md` exists at the repository root.
-- [x] `docs/product/PRD.md` exists.
-- [x] `TASKS.md` now exists at the repository root.
+- [x] The Phase 1 application foundation is implemented and accepted.
+- [x] The Phase 2 deterministic static UI prototype is implemented and accepted.
+- [x] Operator and Audience interfaces use separate layouts and route surfaces.
+- [x] Semantic tokens, reusable typed presentation components, immutable mock
+  fixtures, and query-driven prototype scenarios are implemented.
+- [x] The repository contains 22 test files covering 182 passing tests at Phase
+  2 acceptance.
 
 ### Confirmed npm scripts
 
@@ -34,26 +40,21 @@ Standard Markdown checkboxes render only `[ ]` and `[x]`. This project uses `[~]
 - [x] `npm run build` — runs `tsc -b` and then the Vite production build.
 - [x] `npm run lint` — runs ESLint across the repository.
 - [x] `npm run preview` — previews the production build.
-- [ ] No standalone `typecheck` script currently exists.
-- [ ] No `test` script or test runner currently exists.
+- [x] `npm run typecheck` — runs the TypeScript project build in no-emit mode.
+- [x] `npm run test` — runs the Vitest suite once.
+- [x] `npm run test:watch` — runs Vitest in watch mode.
 
-The last two unchecked items record missing capabilities, not tasks that can be completed merely by checking them. Any script or dependency addition requires an approved implementation task.
+### Confirmed implementation boundary
 
-### Confirmed missing product foundations
-
-- [ ] No application routing exists.
-- [ ] No testing approach or test tooling exists.
-- [ ] No project design system or styling-system decision exists.
-- [ ] TypeScript `strict` mode is not explicitly enabled.
-- [ ] No application-level folder architecture exists beyond the starter scaffold.
-- [ ] No product domain models or domain modules exist.
-- [ ] No IndexedDB persistence layer exists.
-- [ ] No participant import pipeline exists.
-- [ ] No draw engine exists.
-- [ ] No Operator Panel exists.
-- [ ] No separate Audience Display exists.
-- [ ] No BroadcastChannel synchronization exists.
-- [ ] No history, audit, redraw, or export implementation exists.
+- [x] Current participant import, draw, result, redraw, history, settings, and
+  Audience states are deterministic presentation prototypes only.
+- [x] Production domain models and state transitions remain unimplemented.
+- [x] IndexedDB persistence and stored-data migration remain unimplemented.
+- [x] Production CSV/XLSX import and eligibility evaluation remain unimplemented.
+- [x] Secure draw selection and official winner generation remain unimplemented.
+- [x] Winner confirmation and redraw mutation remain unimplemented.
+- [x] Operator/Audience synchronization remains unimplemented.
+- [x] Export, recovery, backend, and cloud behavior remain unimplemented.
 
 ## Phase 0 — Documentation and Repository Foundation
 
@@ -62,9 +63,9 @@ The last two unchecked items record missing capabilities, not tasks that can be 
 - [x] Confirm `docs/product/PRD.md` exists and is the product source of truth.
 - [x] Confirm root `AGENTS.md` exists and defines engineering rules.
 - [x] Create the root `TASKS.md` implementation roadmap.
-- [ ] Replace the default Vite README with a concise Raffle OS project README in a separate documentation task.
-- [ ] Link the PRD, agent guide, and roadmap from the future project README.
-- [ ] Document local development commands in the future project README without inventing scripts.
+- [x] Replace the default Vite README with a concise Raffle OS project README.
+- [x] Link the PRD, agent guide, roadmap, and acceptance records from the project README.
+- [x] Document the current local development commands in the project README.
 
 ### Repository workflow
 
@@ -148,69 +149,69 @@ Use realistic mock data only. Do not add production draw, import, eligibility, a
 
 ### Tokens and primitives
 
-- [ ] Define color tokens.
-- [ ] Define typography tokens.
-- [ ] Define spacing and sizing tokens.
-- [ ] Define border, radius, elevation, and focus tokens.
-- [ ] Define semantic status tokens for Practice, Live, Pending, Confirmed, warning, error, connection, and blackout states.
-- [ ] Build a reusable Button.
-- [ ] Build a reusable Input.
-- [ ] Build a reusable Select.
-- [ ] Build a reusable Checkbox.
-- [ ] Build a reusable Toggle.
-- [ ] Build a reusable Badge.
-- [ ] Build a reusable Card.
-- [ ] Build a reusable Modal.
-- [ ] Build a reusable Table.
-- [ ] Build a reusable Empty State.
-- [ ] Build a reusable Toast.
-- [ ] Build a reusable Confirmation Dialog.
-- [ ] Add accessible labels, focus states, and keyboard behavior to every interactive primitive.
+- [x] Define color tokens.
+- [x] Define typography tokens.
+- [x] Define spacing and sizing tokens.
+- [x] Define border, radius, elevation, and focus tokens.
+- [x] Define semantic status tokens for Practice, Live, Pending, Confirmed, warning, error, connection, and blackout states.
+- [x] Build a reusable Button.
+- [x] Build a reusable Input.
+- [x] Build a reusable Select.
+- [x] Build a reusable Checkbox.
+- [x] Build a reusable Toggle.
+- [x] Build a reusable Badge.
+- [x] Build a reusable Card.
+- [x] Build a reusable Modal.
+- [x] Build a reusable Table.
+- [x] Build a reusable Empty State.
+- [x] Build a reusable Toast.
+- [x] Build a reusable Confirmation Dialog.
+- [x] Add accessible labels, focus states, and keyboard behavior to every interactive primitive.
 
 ### Operator static screens
 
-- [ ] Build Operator Panel navigation and header.
-- [ ] Build the Dashboard static UI.
-- [ ] Build the Participant Import static UI.
-- [ ] Build the Draw Setup static UI.
-- [ ] Build the Live Draw ready state.
-- [ ] Build the Live Draw running state.
-- [ ] Build the Pending Results static UI.
-- [ ] Build the Redraw panel static UI.
-- [ ] Build the History static UI.
-- [ ] Show visually distinct Practice and Live mock states without relying on color alone.
+- [x] Build Operator Panel navigation and header.
+- [x] Build the Dashboard static UI.
+- [x] Build the Participant Import static UI.
+- [x] Build the Draw Setup static UI.
+- [x] Build the Live Draw ready state.
+- [x] Build the Live Draw running state.
+- [x] Build the Pending Results static UI.
+- [x] Build the Redraw panel static UI.
+- [x] Build the History static UI.
+- [x] Show visually distinct Practice and Live mock states without relying on color alone.
 
 ### Audience static screens
 
-- [ ] Build the Standby state.
-- [ ] Build the Countdown state.
-- [ ] Build the Rolling state.
-- [ ] Build the Winner Reveal state.
-- [ ] Build the Confirmed state.
-- [ ] Build the Blackout state.
-- [ ] Build a one-winner hero layout.
-- [ ] Build a 3 × 2 grid for 6 winners.
-- [ ] Build a 5 × 2 grid for 10 winners.
-- [ ] Build a 5 × 4 grid for 20 winners.
-- [ ] Keep ticket numbers visually dominant in every winner layout.
+- [x] Build the Standby state.
+- [x] Build the Countdown state.
+- [x] Build the Rolling state.
+- [x] Build the Winner Reveal state.
+- [x] Build the Confirmed state.
+- [x] Build the Blackout state.
+- [x] Build a one-winner hero layout.
+- [x] Build a 3 × 2 grid for 6 winners.
+- [x] Build a 5 × 2 grid for 10 winners.
+- [x] Build a 5 × 4 grid for 20 winners.
+- [x] Keep ticket numbers visually dominant in every winner layout.
 
 ### Review and verification
 
-- [ ] Demonstrate the complete mock happy path without production behavior.
-- [ ] Review the Operator Panel at 1440 × 900.
-- [ ] Review the Audience Display at 1920 × 1080, 16:9.
-- [ ] Verify operator-only data is absent from the Audience Display mock payloads.
-- [ ] Review keyboard navigation, visible focus, contrast, and readability.
-- [ ] Confirm visual treatment resembles event-control software rather than a generic SaaS template.
-- [ ] Run available lint, test, and production-build commands.
+- [x] Demonstrate the complete mock happy path without production behavior.
+- [x] Review the Operator Panel at 1440 × 900.
+- [x] Review the Audience Display at 1920 × 1080, 16:9.
+- [x] Verify operator-only data is absent from the Audience Display mock payloads.
+- [x] Review keyboard navigation, visible focus, contrast, and readability.
+- [x] Confirm visual treatment resembles event-control software rather than a generic SaaS template.
+- [x] Run available lint, test, and production-build commands.
 
 ### Exit criteria
 
-- [ ] The complete happy path can be demonstrated using mock data.
-- [ ] No production draw or persistence logic exists.
-- [ ] Ticket numbers remain visually dominant on the Audience Display.
-- [ ] The UI does not resemble a generic SaaS template.
-- [ ] Accessibility and readability checks pass.
+- [x] The complete happy path can be demonstrated using mock data.
+- [x] No production draw or persistence logic exists.
+- [x] Ticket numbers remain visually dominant on the Audience Display.
+- [x] The UI does not resemble a generic SaaS template.
+- [x] Accessibility and readability checks pass.
 
 ## Phase 3 — Domain Model and Local Persistence
 
@@ -665,7 +666,7 @@ These items are not scheduled for MVP implementation and require separate scope 
 
 1. Complete Phase 0 baseline verification and repository conventions.
 2. Complete Phase 1 technical decisions and application foundation.
-3. Build Phase 2 static UI using mock data. Static UI may begin before persistence once Phase 1 structure and styling decisions are stable.
+3. Phase 2 static UI using mock data is complete and accepted.
 4. Define Phase 3 domain models and persistence. Persistence must exist before official history, audit, and recovery.
 5. Implement Phase 4 import and eligibility foundations against the approved domain model.
 6. Implement and fully test the Phase 5 draw engine. It must pass domain and performance verification before connection to Live Mode.
@@ -678,12 +679,15 @@ These items are not scheduled for MVP implementation and require separate scope 
 
 ## Immediate Next Task
 
-The recommended next task is a bounded **Phase 1 planning and application-foundation task**:
+Begin **Phase 3 planning** for the domain model and local persistence:
 
-- decide and document routing, styling, and testing approaches;
-- propose any necessary dependencies for approval;
-- enable TypeScript strict mode;
-- establish the application folder structure; and
-- create only the global shell, separate Operator/Audience layouts, and placeholder routes.
+- review the Phase 3 roadmap against the PRD and accepted Phase 2 presentation
+  contracts;
+- define proposed domain types, state transitions, persistence boundaries, and
+  schema-versioning rules;
+- compare direct IndexedDB use with any proposed dependency and obtain approval
+  before adding one;
+- preserve ticket identifiers as strings and retain all product invariants; and
+- produce an implementation plan before changing application behavior.
 
-Do not implement participant import, persistence, secure winner selection, or any Live draw behavior in that task.
+No Phase 3 implementation task is marked complete.

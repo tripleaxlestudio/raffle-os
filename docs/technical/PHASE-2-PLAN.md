@@ -2,7 +2,11 @@
 
 ## Summary
 
-Phase 1 is accepted and technically ready for Phase 2. Build a deterministic, high-fidelity prototype on the existing React/Router/Tailwind/Vitest stack without new dependencies or production behavior. Mock data remains presentation-only, ticket numbers remain strings, and Audience fixtures contain public information only.
+Phase 1 and Phase 2 are accepted. Phase 2 delivered a deterministic,
+high-fidelity prototype on the existing React/Router/Tailwind/Vitest stack
+without new dependencies or production behavior. Mock data remains
+presentation-only, ticket numbers remain strings, and Audience fixtures contain
+public information only.
 
 Defaults adopted because no preference response was received:
 
@@ -13,10 +17,19 @@ Defaults adopted because no preference response was received:
 
 Current implementation status:
 
-- Phase 2 Slice 1 — Design contract, Operator shell, and Dashboard is implemented and committed as `1b2c0d7`.
-- Phase 2 Slice 2 — Participant Import prototype is the recommended next task and is not implemented.
-- Slices 3 through 6 remain planned and are not implemented.
-- This document records the complete approved Phase 2 scope; it does not expand that scope or claim completion of the phase.
+- Slices 1 through 6 are implemented and verified.
+- Acceptance-gap corrections were committed as `56dfd64`.
+- The redraw drawer structure, focus behavior, backdrop layering, responsive
+  layout, scrolling, footer actions, and PrototypeNavigator interaction were
+  corrected in `c4ab9f8`.
+- The accepted Phase 2 implementation commit is
+  `c4ab9f88bdf69dca264ef5543aa695becffdaa89`.
+- The accepted suite contains 22 test files and 182 passing tests; lint,
+  typecheck, and the production build pass.
+- The complete manual Chrome and Edge viewport, keyboard, accessibility,
+  reduced-motion, contrast, and status review passes.
+- This document records the completed approved Phase 2 scope and does not
+  expand it into production raffle behavior.
 
 ## 1. Repository Readiness Audit
 
@@ -42,36 +55,60 @@ Current implementation status:
   - `npm.cmd run typecheck`: PASS.
   - `npm.cmd run test`: PASS, 4 files and 28 tests.
   - `npm.cmd run build`: PASS, 41 modules transformed.
-- Documentation drift was non-blocking and should be corrected only during final Phase 2 closeout:
-  - `TASKS.md` “Current Repository Baseline” and “Immediate Next Task” still describe the pre-Phase-1 scaffold.
-  - `README.md` still says routing, strict mode, and tests are unavailable.
+- At planning time, documentation drift was non-blocking and reserved for final
+  Phase 2 closeout:
+  - `TASKS.md` “Current Repository Baseline” and “Immediate Next Task” described
+    the pre-Phase-1 scaffold.
+  - `README.md` said routing, strict mode, and tests were unavailable.
   - The historical Phase 1 plan describes packages as proposed; the newer Phase 1 acceptance record and current code supersede that status.
+- The Phase 2 documentation closeout resolves the first two drift items.
 
-### Status after Slice 1
+### Historical status after Slice 1
 
-- `HEAD` is `1b2c0d7` (`feat: build Phase 2 dashboard prototype`).
+- At that checkpoint, `HEAD` was `1b2c0d7` (`feat: build Phase 2 dashboard
+  prototype`).
 - Slice 1 added the design contract, core reusable primitives, Operator shell refinement, deterministic Dashboard fixtures, Dashboard scenarios, focused styles, and tests.
 - The post-Slice-1 baseline passes lint, typecheck, 41 tests across 6 files, and the production build.
-- Participant Import, Draw Setup, Live Draw states, Pending Results, Redraw, History redesign, Settings redesign, and Audience Display states remain unimplemented.
+- At that checkpoint, Participant Import, Draw Setup, Live Draw states, Pending
+  Results, Redraw, History redesign, Settings redesign, and Audience Display
+  states were not yet implemented.
 - No dependency change was introduced by Slice 1.
+
+### Final accepted status
+
+- Branch `main` and upstream `origin/main` both pointed to the accepted
+  implementation commit
+  `c4ab9f88bdf69dca264ef5543aa695becffdaa89` before documentation closeout.
+- All six implementation slices are complete.
+- The final automated acceptance audit passed lint, typecheck, all 182 tests
+  across 22 files, the production build with 96 modules transformed, and
+  `git diff --check`.
+- Manual verification by Ismail on 30 July 2026 passed the full Chrome and Edge
+  viewport matrix, keyboard and focus checks, reduced-motion rendering,
+  contrast, status recognition, Audience safe areas, and redraw-drawer review.
+- No package or dependency change was introduced between the accepted Phase 1
+  documentation commit and the accepted Phase 2 implementation commit.
+- Production import, persistence, eligibility, secure draw selection,
+  confirmation, redraw mutation, synchronization, export, recovery, backend,
+  and cloud behavior remain unimplemented.
 
 ## 2. Gap Analysis Against `TASKS.md` Phase 2
 
-| Phase 2 area | Current state | Required gap closure |
+| Phase 2 area | Accepted state | Resolution |
 |---|---|---|
-| Tokens | Slice 1 added semantic design tokens for the Operator foundation | Complete any sizing, elevation, control, and semantic Pending/Confirmed/blackout/connection tokens required by later slices |
-| Primitives | Slice 1 implemented Button, Input, Select, Checkbox, Toggle, Badge, Card, FieldMessage, and supporting helpers | Add Table, EmptyState, Modal, Toast, and ConfirmationDialog only in the slices that require them; preserve typed and accessible behavior |
-| Operator shell | Slice 1 implemented the high-fidelity shell, event context, mode distinction, display status, and Operator-only prototype scenario control | Extend only where a later approved screen requires a shared shell capability |
-| Dashboard | Slice 1 implemented deterministic Dashboard scenarios and focused tests | Preserve as a regression baseline; no redesign is planned |
-| Participant Import | Inert route placeholder | Build the four-step static import prototype in Slice 2 |
-| Draw Setup and Live Draw | Inert route placeholders | Build deterministic setup, ready, and running visual scenarios in Slice 3 |
-| Pending, Redraw, History, Settings | Inert route placeholders | Build static Operator surfaces in Slice 4 |
-| Audience Display | One inert placeholder | Build all presentation states, disconnected-safe state, and 1/6/10/20 winner layouts in Slice 5 |
-| Mock data | Slice 1 provides deterministic Dashboard view-model fixtures and query scenarios | Add screen-specific immutable fixtures and public-only Audience fixtures in their respective slices |
-| Prototype navigation | Slice 1 provides Dashboard query-driven scenarios | Add query-driven wizard, mode, draw, result, and display scenarios as each route is implemented |
-| Accessibility | Slice 1 provides shared labels, descriptions, focus treatment, status cues, and primitive tests | Add dialog focus management, table semantics, screen-specific keyboard behavior, and manual contrast review |
-| Tests | Foundation and Slice 1 primitive/Dashboard tests pass | Add scenario, screen, privacy, and responsive-structure tests per remaining slice |
-| Manual review | Phase 1 and Slice 1 viewport review completed | Complete the full Phase 2 Chrome/Edge screen and state matrix during integration and acceptance |
+| Tokens | Complete semantic token coverage | Colors, typography, spacing, sizing, borders, radii, elevation, focus, modes, results, connection, warning, error, blackout, and layering are covered |
+| Primitives | Complete | Button, Input, Select, Checkbox, Toggle, Badge, Card, Modal, Table, EmptyState, Toast, ConfirmationDialog, and supporting compositions are typed and tested |
+| Operator shell | Complete | High-fidelity event-control shell, active navigation, mode distinction, display status, and Operator-only prototype navigation are present |
+| Dashboard | Complete | Deterministic Dashboard scenarios and focused tests are present |
+| Participant Import | Complete static prototype | Upload, mapping, validation, and summary scenarios are query-driven and presentation-only |
+| Draw Setup and Live Draw | Complete static prototype | Practice/Live, sufficient/insufficient, ready, countdown, and rolling scenarios are deterministic |
+| Pending, Redraw, History, Settings | Complete static prototype | Partial-result accounting, redraw relationships, history detail, and static settings surfaces are present |
+| Audience Display | Complete static prototype | Seven states and exact 1/6/10/20 winner layouts are implemented with public-only data |
+| Mock data | Complete | Screen-specific immutable fixtures and public-only Audience fixtures are present |
+| Prototype navigation | Complete | Supported query scenarios are directly navigable with safe fallbacks |
+| Accessibility | Complete for Phase 2 | Labels, focus, modal and drawer containment/return, semantic tables, keyboard paths, contrast, reduced motion, and non-color status cues passed |
+| Tests | Complete | 22 files and 182 tests cover components, routes, scenarios, privacy, scope, and the deterministic happy path |
+| Manual review | Complete | Chrome and Edge passed the full required viewport and presentation matrix |
 
 ## 3. Component Inventory
 
@@ -198,31 +235,35 @@ Winner layouts:
 
 ## 7. Recommended Implementation Slices
 
-1. **Slice 1 — Design contract, shell, and Dashboard** — Implemented and committed as `1b2c0d7`.
+1. **Slice 1 — Design contract, shell, and Dashboard** — Complete; committed as `1b2c0d7`.
    - Complete tokens, core primitives, prototype types/fixtures, Operator shell refinement, and Dashboard.
    - Establish query-scenario parsing and integrated primitive tests.
 
-2. **Slice 2 — Participant Import prototype** — Planned; not implemented.
+2. **Slice 2 — Participant Import prototype** — Complete; committed as `0d7431e`.
    - Add remaining form/table primitives and all four wizard steps.
    - Cover leading zeroes, duplicates, empty rows, malformed rows, and replace/merge copy visually only.
 
-3. **Slice 3 — Draw Setup and Live Draw** — Planned; not implemented.
+3. **Slice 3 — Draw Setup and Live Draw** — Complete; committed as `b46ede3`.
    - Build deterministic Practice/Live, sufficient/insufficient, ready, confirmation, countdown, and rolling scenarios.
    - Keep winner generation and timers absent.
 
-4. **Slice 4 — Pending Results, Redraw, History, and Settings** — Planned; not implemented.
+4. **Slice 4 — Pending Results, Redraw, History, and Settings** — Complete; committed as `9f66113`.
    - Build visual confirmation, partial status, redraw, cancellation/replacement, history, and static settings surfaces.
    - Explicitly label all records as prototype data.
 
-5. **Slice 5 — Audience Display** — Planned; not implemented.
+5. **Slice 5 — Audience Display** — Complete; committed as `000bab2`.
    - Build all seven display states and the four required winner grids.
    - Add strict fixture and DOM privacy tests.
 
-6. **Slice 6 — Integration and acceptance** — Planned; not implemented.
+6. **Slice 6 — Integration and acceptance** — Complete; acceptance-gap
+   corrections committed as `56dfd64`, redraw-drawer corrections committed as
+   `c4ab9f8`, and documentation closeout recorded separately.
    - Complete mock happy-path navigation, keyboard review, Chrome/Edge viewport matrix, full verification, documentation corrections, and Phase 2 acceptance record.
    - Update `TASKS.md` only for items actually verified.
 
-Each slice must run lint, typecheck, tests, and build and keep the Git diff limited to its purpose.
+Each slice ran lint, typecheck, tests, and build with a Git diff limited to its
+purpose. Final acceptance passed 22 test files and 182 tests, and the production
+build transformed 96 modules.
 
 ## 8. Testing Strategy
 
@@ -255,64 +296,91 @@ Each slice must run lint, typecheck, tests, and build and keep the Git diff limi
 
 ## 9. Manual Viewport Matrix
 
-Record exact browser versions during execution.
+Reviewer: Ismail. Verification date: 30 July 2026.
 
-| Browser | Interface | Viewport | Required review |
+- Microsoft Edge `150.0.4078.99` (Official build) (64-bit)
+- Google Chrome `150.0.7871.187` (Official Build) (64-bit), Stable cohort
+
+| Browser | Interface | Viewport | Result |
 |---|---|---:|---|
-| Chrome and Edge | Operator | 1440 × 900 | Every Operator screen, dialog, toast, and happy-path transition |
-| Chrome and Edge | Operator | 1366 × 768 | Dense import, Pending, redraw, and history screens; no hidden critical action or horizontal page overflow |
-| Chrome and Edge | Operator | 1920 × 1080 | Content max-width, shell balance, and readability |
-| Chrome and Edge | Audience | 1920 × 1080 | Every state and 1/6/10/20 grid; safe areas and ticket dominance |
-| Chrome and Edge | Audience | 1280 × 720 | Graceful desktop fallback and grid legibility |
-| Chrome and Edge | Both | Primary viewport | Full keyboard path, visible focus, modal focus return, reduced-motion mode, and status recognition without color |
+| Microsoft Edge | Operator | 1440 × 900 | PASS |
+| Microsoft Edge | Operator | 1366 × 768 | PASS |
+| Microsoft Edge | Operator | 1920 × 1080 | PASS |
+| Google Chrome | Operator | 1440 × 900 | PASS |
+| Google Chrome | Operator | 1366 × 768 | PASS |
+| Google Chrome | Operator | 1920 × 1080 | PASS |
+| Microsoft Edge | Audience | 1920 × 1080 | PASS |
+| Microsoft Edge | Audience | 1280 × 720 | PASS |
+| Google Chrome | Audience | 1920 × 1080 | PASS |
+| Google Chrome | Audience | 1280 × 720 | PASS |
 
-Audience review should also check a clean 16:9 capture surface with no scrollbars, cursor-dependent UI, operator controls, or internal data.
+The supplied manual evidence also records PASS for keyboard focus and tab order,
+modal and redraw-drawer containment and focus return, Escape behavior, disabled
+semantics, reduced-motion rendering, contrast and readability, non-color mode
+and result-status recognition, Audience safe areas and ticket dominance,
+blackout purity, disconnected stale-data protection, clipping and scrollbar
+checks, and the event-control visual character.
 
 ## 10. Phase 2 Acceptance Checklist
 
-- [ ] No dependency or package-version change is introduced.
-- [ ] Semantic tokens cover colors, typography, spacing, sizing, border, radius, elevation, focus, mode, result, connection, warning, error, and blackout states.
-- [ ] All Phase 2 primitives exist with typed props and accessible behavior.
-- [ ] Operator navigation and header are high fidelity and preserve route accessibility.
-- [ ] Dashboard, import wizard, Draw Setup, Live ready/running, Pending, redraw, history, and Settings static screens are complete.
-- [ ] Practice and Live are distinguishable through text, borders/shapes, and layout—not color alone.
-- [ ] The complete mock happy path is deterministic and directly navigable.
-- [ ] Audience standby, countdown, rolling, reveal, confirmed, blackout, and disconnected-safe states are directly accessible.
-- [ ] Winner layouts are exactly hero, 3 × 2, 5 × 2, and 5 × 4 for 1, 6, 10, and 20.
-- [ ] Ticket numbers remain strings and visually dominate reveal/confirmed layouts.
-- [ ] Audience fixtures and DOM expose no operator-only or participant-internal data.
-- [ ] No CSV/XLSX parsing, file reading, storage, persistence, draw selection, eligibility, BroadcastChannel, export, recovery, backend, or cloud code exists.
-- [ ] No official confirmation, redraw, or history mutation is implied or performed.
-- [ ] Keyboard navigation, focus, contrast, reduced motion, and viewport checks pass.
-- [ ] `npm.cmd run lint`, `typecheck`, `test`, and `build` pass.
-- [ ] Chrome and Edge pass the manual viewport matrix with versions recorded.
-- [ ] Documentation no longer describes the repository as the default Vite scaffold.
-- [ ] Only verified Phase 2 checkboxes are updated.
-- [ ] The working tree contains no unrelated changes.
+- [x] No dependency or package-version change is introduced.
+- [x] Semantic tokens cover colors, typography, spacing, sizing, border, radius, elevation, focus, mode, result, connection, warning, error, and blackout states.
+- [x] All Phase 2 primitives exist with typed props and accessible behavior.
+- [x] Operator navigation and header are high fidelity and preserve route accessibility.
+- [x] Dashboard, import wizard, Draw Setup, Live ready/running, Pending, redraw, history, and Settings static screens are complete.
+- [x] Practice and Live are distinguishable through text, borders/shapes, and layout—not color alone.
+- [x] The complete mock happy path is deterministic and directly navigable.
+- [x] Audience standby, countdown, rolling, reveal, confirmed, blackout, and disconnected-safe states are directly accessible.
+- [x] Winner layouts are exactly hero, 3 × 2, 5 × 2, and 5 × 4 for 1, 6, 10, and 20.
+- [x] Ticket numbers remain strings and visually dominate reveal/confirmed layouts.
+- [x] Audience fixtures and DOM expose no operator-only or participant-internal data.
+- [x] No CSV/XLSX parsing, file reading, storage, persistence, draw selection, eligibility, BroadcastChannel, export, recovery, backend, or cloud code exists.
+- [x] No official confirmation, redraw, or history mutation is implied or performed.
+- [x] Keyboard navigation, focus, contrast, reduced motion, and viewport checks pass.
+- [x] `npm.cmd run lint`, `typecheck`, `test`, and `build` pass.
+- [x] `git diff --check` passes.
+- [x] Chrome and Edge pass the manual viewport matrix with versions recorded.
+- [x] Documentation no longer describes the repository as the default Vite scaffold.
+- [x] Only verified Phase 2 checkboxes are updated.
+- [x] The working tree contains no unrelated changes.
 
-The checklist remains phase-wide and intentionally unchecked until the complete Phase 2 scope is implemented and verified. Slice 1 completion does not imply completion of Slice 2 or any later slice.
+The checklist is complete based on the final automated acceptance audit and the
+supplied manual verification record.
 
 ## 11. Risks and Open Questions
 
 - The PRD remains version `0.1`, marked draft, with no named product owner. Prototype visual defaults must not be mistaken for approved production behavior.
-- The PRD does not settle whether Pending tickets may be fully revealed. Phase 2 will show them with a neutral “under verification” label; Phase 6/8 still requires a product decision.
-- Disconnected-safe behavior is unresolved. Phase 2 will use a message-only safe screen without stale winners; Phase 7 must obtain approval before implementing real recovery behavior.
-- Multi-slot redraw presentation order and post-partial-confirmation Audience ordering remain unresolved. Phase 2 may demonstrate one deterministic arrangement only.
-- Branding, animation durations, and audio constraints are undefined. Use fictional text branding, restrained CSS-only presentation, no runtime timers, and no audio.
-- The stale README/TASKS baseline can confuse future audits; correct it during closeout without changing product requirements.
+- The PRD does not settle whether Pending tickets may be fully revealed. Phase 2
+  uses a neutral “under verification” label; Phase 6/8 still requires a product
+  decision.
+- Phase 2 uses a message-only disconnected-safe screen without stale winners;
+  Phase 7 must obtain approval before implementing real recovery behavior.
+- Multi-slot redraw presentation order and post-partial-confirmation Audience
+  ordering remain unresolved. Phase 2 demonstrates one deterministic
+  arrangement only.
+- Branding, animation durations, and audio constraints are undefined. Phase 2
+  uses fictional text branding, restrained CSS-only presentation, no runtime
+  timers, and no audio.
+- The README and TASKS baseline drift is corrected in Phase 2 documentation
+  closeout without changing product requirements.
 - The local extraneous `node_modules` entries are a reproducibility hygiene concern, but not a Phase 2 blocker and not authorization to reinstall or clean packages.
 - Automated visual regression is unavailable; the manual matrix is mandatory.
 
-## 12. Recommended Immediate Next Task
+## 12. Phase 3 Planning
 
-Implement only **Slice 2 — Participant Import prototype**:
+The next task is a bounded Phase 3 planning effort:
 
-- replace only the `/participants` placeholder with a deterministic, query-driven four-step static prototype;
-- add immutable Participant Import view-model fixtures outside `src/domain`;
-- add only the reusable Table, EmptyState, ProgressStepper, and FieldGroup UI needed by the slice;
-- implement Upload, Column Mapping, Validation Review, and Import Summary views with safe query fallbacks and browser-history navigation;
-- preserve ticket identifiers as strings and include leading-zero, duplicate, empty, malformed, missing-name, and whitespace-normalized fixture examples;
-- make file selection, parsing, validation, replace, merge, download, and import actions presentation-only;
-- add focused route, screen, accessibility, immutability, privacy, and scope tests;
-- do not add dependencies, file APIs, parsing, persistence, domain models, mutation, export, Audience Display changes, or any later Phase 2 slice;
-- verify lint, typecheck, tests, build, `git diff --check`, and the Participant Import flow at 1366 × 768, 1440 × 900, and 1920 × 1080.
+- reconcile the Phase 3 roadmap with the PRD and accepted Phase 2 presentation
+  contracts;
+- propose explicit domain types and allowed state transitions for events,
+  participants, prize categories, draw configurations, sessions, winners,
+  redraw records, audit records, and public display state;
+- define persistence boundaries, schema versioning, migrations, stored-data
+  compatibility, and safe database-reset behavior;
+- compare direct IndexedDB use with any proposed persistence dependency and
+  obtain approval before changing dependencies;
+- preserve ticket identifiers as strings and retain all accepted product
+  invariants; and
+- plan isolated, React-independent domain and persistence tests.
+
+This closeout does not mark or implement any Phase 3 task.

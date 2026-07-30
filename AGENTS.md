@@ -2,7 +2,9 @@
 
 Raffle OS is a planned local-first web application for running event raffles with ticket numbers. It separates a production-oriented Operator Panel from a fullscreen Audience Display intended for LED screens, projectors, or vMix capture.
 
-The Phase 1 application foundation is implemented. The repository now contains routing, separate Operator and Audience layouts, inert route placeholders, safe error handling, foundational styling and tokens, and automated foundation tests. Later-phase product capabilities remain planned and must not be described as implemented unless the code confirms them.
+The Phase 1 application foundation and Phase 2 deterministic static UI prototype are implemented and accepted. The repository now contains routing, separate Operator and Audience layouts, safe error handling, semantic styling and tokens, reusable accessible presentation components, deterministic mock scenarios, high-fidelity static screens, and automated prototype tests.
+
+Phase 2 is presentation-only. Production participant import, persistence, eligibility, secure draw selection, winner confirmation, redraw mutation, Operator/Audience synchronization, export, interrupted-session recovery, backend services, and cloud behavior remain unimplemented. Later-phase product capabilities remain planned and must not be described as implemented unless the code confirms them.
 
 # Source of Truth
 

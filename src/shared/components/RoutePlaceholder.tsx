@@ -8,10 +8,10 @@ export function RoutePlaceholder({
   purpose,
 }: RoutePlaceholderProps) {
   return (
-    <main>
+    <section className="route-placeholder">
       <h1>{title}</h1>
       <p>{purpose}</p>
       <p>This feature is not yet implemented.</p>
-    </main>
+    </section>
   )
 }

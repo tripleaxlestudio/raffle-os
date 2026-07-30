@@ -3,6 +3,7 @@ import {
   Navigate,
   type RouteObject,
 } from 'react-router'
+import { OperatorLayout } from './layouts/OperatorLayout.tsx'
 import { AudienceDisplayPage } from '../pages/display/AudienceDisplayPage.tsx'
 import { DashboardPage } from '../pages/operator/DashboardPage.tsx'
 import { DrawSetupPage } from '../pages/operator/DrawSetupPage.tsx'
@@ -16,6 +17,7 @@ import { NotFoundPage } from '../pages/system/NotFoundPage.tsx'
 const operatorRoutes = {
   id: 'operator',
   path: '/',
+  element: <OperatorLayout />,
   children: [
     {
       index: true,

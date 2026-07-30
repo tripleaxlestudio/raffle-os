@@ -68,3 +68,78 @@ export interface PrototypeParticipantImportFixture {
   sourceColumns: readonly PrototypeSourceColumn[]
   summary: PrototypeImportSummary
 }
+
+export type PrototypeDrawMode = 'practice' | 'live'
+export type PrototypeDrawSetupScenario = 'ready' | 'insufficient'
+export type PrototypeLiveDrawState = 'ready' | 'running'
+export type PrototypeLiveDrawStage = 'countdown' | 'rolling'
+export type PrototypeWinningFrequency =
+  | 'event'
+  | 'category'
+  | 'unlimited'
+
+export interface PrototypeDrawConfiguration {
+  readonly category: string
+  readonly eventName: string
+  readonly internalNote: string
+  readonly prizeName: string
+  readonly winnerCount: number
+  readonly winningFrequency: PrototypeWinningFrequency
+  readonly winningFrequencyLabel: string
+}
+
+export interface PrototypeEligibilitySummary {
+  readonly checkedInParticipants: number
+  readonly eligibleParticipants: number
+  readonly excludedPreviousWinners: number
+  readonly participantGroup: string
+  readonly requestedWinners: number
+  readonly totalParticipants: number
+}
+
+export interface PrototypePresentationSequence {
+  readonly audioCue: string
+  readonly celebrationEffect: string
+  readonly countdownEnabled: boolean
+  readonly countdownSeconds: number
+  readonly reducedMotionSafe: boolean
+  readonly revealStyle: string
+  readonly rollingSeconds: number
+}
+
+export interface PrototypeSystemCheck {
+  readonly detail: string
+  readonly label: string
+  readonly status: 'ready' | 'warning' | 'blocked'
+}
+
+export interface PrototypeAudiencePreview {
+  readonly eventName: string
+  readonly prizeName: string
+  readonly resolution: '1920 × 1080'
+  readonly stateLabel: string
+  readonly tickets: readonly string[]
+  readonly winnerCount: number
+}
+
+export interface PrototypeDrawSetupFixture {
+  readonly audiencePreview: PrototypeAudiencePreview
+  readonly configuration: PrototypeDrawConfiguration
+  readonly eligibility: PrototypeEligibilitySummary
+  readonly presentation: PrototypePresentationSequence
+  readonly scenario: PrototypeDrawSetupScenario
+}
+
+export interface PrototypeLiveDrawFixture {
+  readonly audiencePreviews: {
+    readonly countdown: PrototypeAudiencePreview
+    readonly ready: PrototypeAudiencePreview
+    readonly rolling: PrototypeAudiencePreview
+  }
+  readonly configuration: PrototypeDrawConfiguration
+  readonly eligibility: PrototypeEligibilitySummary
+  readonly presentation: PrototypePresentationSequence
+  readonly staticCountdownValue: string
+  readonly systemChecks: readonly PrototypeSystemCheck[]
+  readonly ticketStream: readonly string[]
+}

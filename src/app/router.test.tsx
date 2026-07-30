@@ -25,7 +25,11 @@ const operatorPages = [
 ] as const
 
 const placeholderOperatorPages = operatorPages.filter(
-  ([path]) => path !== '/dashboard' && path !== '/participants',
+  ([path]) =>
+    path !== '/dashboard' &&
+    path !== '/participants' &&
+    path !== '/draw/setup' &&
+    path !== '/draw/live',
 )
 
 const operatorNavigationLabels = operatorPages.map(([, label]) => label)
@@ -191,6 +195,42 @@ describe('application routes', () => {
         /^Audience Display: (Disconnected|Connecting|Connected)$/,
       ),
     ).not.toBeInTheDocument()
+  })
+
+  it('exposes the Slice 3 direct links only in Operator prototype navigation', () => {
+    renderRoute('/draw/setup')
+
+    const prototypeNavigation = screen.getByRole('navigation', {
+      name: 'Prototype navigation scenarios',
+    })
+    const expectedLinks = [
+      ['Draw Setup — Practice Ready', '/draw/setup?mode=practice&scenario=ready'],
+      ['Draw Setup — Live Ready', '/draw/setup?mode=live&scenario=ready'],
+      [
+        'Draw Setup — Insufficient Pool',
+        '/draw/setup?mode=practice&scenario=insufficient',
+      ],
+      [
+        'Live Draw — Practice Ready',
+        '/draw/live?state=ready&mode=practice',
+      ],
+      ['Live Draw — Live Ready', '/draw/live?state=ready&mode=live'],
+      [
+        'Live Draw — Countdown',
+        '/draw/live?state=running&mode=practice&stage=countdown',
+      ],
+      [
+        'Live Draw — Rolling',
+        '/draw/live?state=running&mode=practice&stage=rolling',
+      ],
+    ] as const
+
+    for (const [label, href] of expectedLinks) {
+      expect(
+        within(prototypeNavigation).getByRole('link', { name: label }),
+      ).toHaveAttribute('href', href)
+    }
+    expect(screen.getByText('Phase 2 Prototype')).toBeVisible()
   })
 
   it('does not expose links to Operator routes on /display', () => {

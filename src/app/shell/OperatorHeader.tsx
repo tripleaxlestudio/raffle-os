@@ -3,6 +3,7 @@ import type {
   DisplayConnectionStatus,
 } from '../../domain/types/index.ts'
 import type { DashboardPrototypeScenario } from '../../prototype/dashboard.ts'
+import { PrototypeNavigator } from '../../shared/components/PrototypeNavigator.tsx'
 import { Select } from '../../shared/ui/index.ts'
 import { ConnectionStatus } from './ConnectionStatus.tsx'
 import { ModeBadge } from './ModeBadge.tsx'
@@ -45,6 +46,7 @@ export function OperatorHeader({
           <option value="ready">Ready state</option>
           <option value="attention">Needs attention</option>
         </Select>
+        <PrototypeNavigator />
         <ModeBadge mode={mode} />
         <ConnectionStatus status={connectionStatus} />
       </div>

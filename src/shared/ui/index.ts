@@ -7,8 +7,14 @@ export {
 } from './Button.tsx'
 export { Card } from './Card.tsx'
 export { Checkbox } from './Checkbox.tsx'
+export { ConfirmationDialog } from './ConfirmationDialog.tsx'
 export { EmptyState } from './EmptyState.tsx'
 export { Input } from './Input.tsx'
+export { Modal } from './Modal.tsx'
+export {
+  SegmentedControl,
+  type SegmentedControlOption,
+} from './SegmentedControl.tsx'
 export { Select } from './Select.tsx'
 export { Table } from './Table.tsx'
 export { Toggle } from './Toggle.tsx'

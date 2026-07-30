@@ -1,0 +1,27 @@
+warning: in the working copy of 'src/app/layouts/OperatorLayout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/router.test.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/shell/OperatorHeader.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/shell/OperatorSidebar.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/operator/DrawSetupPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/operator/LiveDrawPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/prototype/data/index.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/prototype/operator-types.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/prototype/scenario-query.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/shared/ui/Button.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/shared/ui/index.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/styles/operator.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/styles/primitives.css', LF will be replaced by CRLF the next time Git touches it
+ src/app/layouts/OperatorLayout.tsx   |   8 [32m+[m[31m-[m
+ src/app/router.test.tsx              |  42 [32m+[m[31m-[m
+ src/app/shell/OperatorHeader.tsx     |   2 [32m+[m
+ src/app/shell/OperatorSidebar.tsx    |   2 [32m+[m[31m-[m
+ src/pages/operator/DrawSetupPage.tsx | 443 [32m++++++++++++++++++[m[31m-[m
+ src/pages/operator/LiveDrawPage.tsx  | 373 [32m+++++++++++++++[m[31m-[m
+ src/prototype/data/index.ts          |   2 [32m+[m
+ src/prototype/operator-types.ts      |  75 [32m++++[m
+ src/prototype/scenario-query.ts      |  64 [32m++[m[31m-[m
+ src/shared/ui/Button.tsx             |  62 [32m+[m[31m--[m
+ src/shared/ui/index.ts               |   6 [32m+[m
+ src/styles/operator.css              | 802 [32m+++++++++++++++++++++++++++++++++++[m
+ src/styles/primitives.css            | 179 [32m+++++++[m[31m-[m
+ 13 files changed, 2020 insertions(+), 40 deletions(-)

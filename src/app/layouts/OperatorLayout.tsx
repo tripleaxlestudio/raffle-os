@@ -9,6 +9,7 @@ import {
   resolveDashboardPrototypeScenario,
   type DashboardPrototypeScenario,
 } from '../../prototype/dashboard.ts'
+import { resolvePrototypeDrawMode } from '../../prototype/scenario-query.ts'
 import { OperatorHeader } from '../shell/OperatorHeader.tsx'
 import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
 
@@ -21,6 +22,11 @@ export function OperatorLayout() {
       ? resolveDashboardPrototypeScenario(searchParams)
       : 'ready'
   const prototype = getDashboardPrototype(scenario)
+  const mode =
+    location.pathname === '/draw/setup' ||
+    location.pathname === '/draw/live'
+      ? resolvePrototypeDrawMode(searchParams.get('mode'))
+      : prototype.mode
 
   function handleScenarioChange(
     nextScenario: DashboardPrototypeScenario,
@@ -40,7 +46,7 @@ export function OperatorLayout() {
           connectionStatus={prototype.connectionStatus}
           eventName={prototype.event.name}
           eventSchedule={prototype.event.schedule}
-          mode={prototype.mode}
+          mode={mode}
           onScenarioChange={handleScenarioChange}
           scenario={scenario}
         />

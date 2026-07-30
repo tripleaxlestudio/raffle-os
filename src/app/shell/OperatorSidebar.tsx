@@ -49,7 +49,7 @@ export function OperatorSidebar() {
         <span className="operator-sidebar__footer-label">
           Static prototype
         </span>
-        <span>Phase 2 · Slice 1</span>
+        <span>Phase 2 Prototype</span>
       </div>
     </aside>
   )

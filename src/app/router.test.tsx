@@ -25,7 +25,7 @@ const operatorPages = [
 ] as const
 
 const placeholderOperatorPages = operatorPages.filter(
-  ([path]) => path !== '/dashboard',
+  ([path]) => path !== '/dashboard' && path !== '/participants',
 )
 
 const operatorNavigationLabels = operatorPages.map(([, label]) => label)

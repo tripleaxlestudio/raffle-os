@@ -2,7 +2,7 @@
 
 Raffle OS is a planned local-first web application for running event raffles with ticket numbers. It separates a production-oriented Operator Panel from a fullscreen Audience Display intended for LED screens, projectors, or vMix capture.
 
-The repository is currently the default React/Vite scaffold. Do not describe planned product capabilities as implemented unless the code confirms them.
+The Phase 1 application foundation is implemented. The repository now contains routing, separate Operator and Audience layouts, inert route placeholders, safe error handling, foundational styling and tokens, and automated foundation tests. Later-phase product capabilities remain planned and must not be described as implemented unless the code confirms them.
 
 # Source of Truth
 
@@ -17,14 +17,18 @@ The repository is currently the default React/Vite scaffold. Do not describe pla
 The currently confirmed stack is:
 
 - React 19
+- React Router 7
 - TypeScript 6
 - Vite 8
+- Tailwind CSS 4 through the official Vite plugin
+- Vitest 4 with jsdom 29
+- React Testing Library 16, jest-dom 7, and user-event 14
 - ESLint 10
 - npm with a committed lockfile
 
-Only React and React DOM are current production dependencies. Do not assume that Tailwind CSS, React Router, Dexie, a state-management library, or any testing library is installed.
+React, React DOM, and React Router are the current production dependencies. Tailwind CSS and the testing stack are development dependencies. Dexie and state-management libraries are not installed.
 
-The TypeScript configurations currently enable several safety checks but do not explicitly set `strict: true`. Strict mode is a product requirement, not a completed repository capability.
+The application and Node TypeScript configurations explicitly enable `strict: true`.
 
 # Product Invariants
 
@@ -56,7 +60,7 @@ The TypeScript configurations currently enable several safety checks but do not 
 
 # TypeScript Rules
 
-- TypeScript strict mode must remain enabled. Because it is not explicitly enabled in the current configuration, treat enabling it as required implementation work and report the change when it is made.
+- TypeScript strict mode must remain enabled.
 - Avoid `any`.
 - Avoid unsafe type assertions.
 - Define explicit domain types for participants, events, draw sessions, winners, statuses, and redraw records.
@@ -108,6 +112,9 @@ The following npm scripts currently exist:
 | `npm run build` | Run the TypeScript project build, then create a Vite production build |
 | `npm run lint` | Run ESLint across the repository |
 | `npm run preview` | Preview the production build |
+| `npm run typecheck` | Run the TypeScript project build in no-emit mode |
+| `npm run test` | Run the Vitest suite once |
+| `npm run test:watch` | Run Vitest in watch mode |
 
 Before completing a coding task:
 
@@ -115,8 +122,6 @@ Before completing a coding task:
 - Run `npm run build` for application or TypeScript changes.
 - Run other relevant scripts only if they exist in `package.json` at that time.
 - Report any command that could not be run and why.
-
-There is currently no standalone `typecheck` or `test` script. Do not document or invoke one unless it is added to `package.json` as part of approved work.
 
 # Change Discipline
 
@@ -139,4 +144,3 @@ Every completed implementation task must report:
 3. Commands run and their results.
 4. Assumptions made.
 5. Remaining risks or follow-up work.
-

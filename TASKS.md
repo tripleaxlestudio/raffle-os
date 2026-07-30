@@ -96,51 +96,51 @@ This phase creates structure only. It must not implement the real draw engine, p
 
 ### Technical decisions
 
-- [ ] Decide whether routing will use a small in-app browser-history abstraction or a proposed dependency.
-- [ ] Document the routing decision and tradeoffs before implementation.
-- [ ] Decide whether styling will use plain CSS, CSS Modules, or another approved approach.
-- [ ] Document design-token and component-style conventions.
-- [ ] Decide the unit and component testing approach.
-- [ ] Propose any required testing dependency for approval before installation.
-- [ ] Propose any routing or styling dependency for approval before installation.
-- [ ] Add only dependencies that have been explicitly approved.
-- [ ] Enable TypeScript strict mode and resolve all resulting baseline type errors.
+- [x] Decide whether routing will use a small in-app browser-history abstraction or a proposed dependency.
+- [x] Document the routing decision and tradeoffs before implementation.
+- [x] Decide whether styling will use plain CSS, CSS Modules, or another approved approach.
+- [x] Document design-token and component-style conventions.
+- [x] Decide the unit and component testing approach.
+- [x] Propose any required testing dependency for approval before installation.
+- [x] Propose any routing or styling dependency for approval before installation.
+- [x] Add only dependencies that have been explicitly approved.
+- [x] Enable TypeScript strict mode and resolve all resulting baseline type errors.
 
 ### Application structure
 
-- [ ] Define an application-level folder structure that separates UI, domain, services, and infrastructure.
-- [ ] Create shared domain-type directories without implementing business behavior.
-- [ ] Create a global application shell.
-- [ ] Create a structurally separate Operator Panel layout.
-- [ ] Create a structurally separate Audience Display route.
-- [ ] Add a placeholder Dashboard route.
-- [ ] Add a placeholder Participants route.
-- [ ] Add a placeholder Draw Setup route.
-- [ ] Add a placeholder Live Draw route.
-- [ ] Add a placeholder Pending Results route.
-- [ ] Add a placeholder History route.
-- [ ] Add a placeholder Settings route.
-- [ ] Add a placeholder Audience Display route.
-- [ ] Add a not-found route.
-- [ ] Add an application-level error boundary.
-- [ ] Add basic responsive behavior for the desktop target sizes.
-- [ ] Add foundational design tokens without building the full design system.
+- [x] Define an application-level folder structure that separates UI, domain, services, and infrastructure.
+- [x] Create shared domain-type directories without implementing business behavior.
+- [x] Create a global application shell.
+- [x] Create a structurally separate Operator Panel layout.
+- [x] Create a structurally separate Audience Display route.
+- [x] Add a placeholder Dashboard route.
+- [x] Add a placeholder Participants route.
+- [x] Add a placeholder Draw Setup route.
+- [x] Add a placeholder Live Draw route.
+- [x] Add a placeholder Pending Results route.
+- [x] Add a placeholder History route.
+- [x] Add a placeholder Settings route.
+- [x] Add a placeholder Audience Display route.
+- [x] Add a not-found route.
+- [x] Add an application-level error boundary.
+- [x] Add basic responsive behavior for the desktop target sizes.
+- [x] Add foundational design tokens without building the full design system.
 
 ### Verification
 
-- [ ] Verify every planned route is directly accessible.
-- [ ] Verify Operator and Audience interfaces do not share operator-only layout or controls.
-- [ ] Verify placeholder pages contain no draw, import, eligibility, or persistence logic.
-- [ ] Run available lint checks.
-- [ ] Run the production build.
-- [ ] Run tests if an approved test script has been added.
+- [x] Verify every planned route is directly accessible.
+- [x] Verify Operator and Audience interfaces do not share operator-only layout or controls.
+- [x] Verify placeholder pages contain no draw, import, eligibility, or persistence logic.
+- [x] Run available lint checks.
+- [x] Run the production build.
+- [x] Run tests if an approved test script has been added.
 
 ### Exit criteria
 
-- [ ] Every planned route is accessible.
-- [ ] Operator and Audience interfaces are structurally separate.
-- [ ] TypeScript strict checks, lint, and production build pass.
-- [ ] No business logic is embedded in placeholder pages.
+- [x] Every planned route is accessible.
+- [x] Operator and Audience interfaces are structurally separate.
+- [x] TypeScript strict checks, lint, and production build pass.
+- [x] No business logic is embedded in placeholder pages.
 
 ## Phase 2 — Design System and Static UI Prototype
 
@@ -687,4 +687,3 @@ The recommended next task is a bounded **Phase 1 planning and application-founda
 - create only the global shell, separate Operator/Audience layouts, and placeholder routes.
 
 Do not implement participant import, persistence, secure winner selection, or any Live draw behavior in that task.
-

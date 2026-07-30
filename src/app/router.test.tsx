@@ -61,7 +61,7 @@ describe('application routes', () => {
   })
 
   it.each(operatorPages)('renders %s as the %s page', (path, title) => {
-    renderRoute(path)
+    const { container } = renderRoute(path)
 
     expect(
       screen.getByRole('heading', { level: 1, name: title }),
@@ -69,6 +69,11 @@ describe('application routes', () => {
     expect(
       screen.getByText('This feature is not yet implemented.'),
     ).toBeInTheDocument()
+    expect(container.querySelector('[data-operator-shell]')).toHaveAttribute(
+      'data-interface',
+      'operator',
+    )
+    expect(screen.getByRole('banner')).toBeInTheDocument()
 
     const navigation = screen.getByRole('navigation', {
       name: 'Operator navigation',
@@ -92,14 +97,33 @@ describe('application routes', () => {
     expect(activeLink).toHaveClass('operator-nav__link--active')
   })
 
-  it('renders the standalone Audience Display page at /display', () => {
+  it('renders the standalone Audience Display shell at /display', () => {
+    const { container } = renderRoute('/display')
+
+    const audienceShell = container.querySelector('[data-audience-shell]')
+    expect(audienceShell).toHaveAttribute('data-interface', 'audience')
+    expect(container.querySelector('[data-operator-shell]')).toBeNull()
+    expect(
+      screen.getByRole('main', { name: 'Audience presentation' }),
+    ).toBeInTheDocument()
+  })
+
+  it('renders the inert Audience Display placeholder at /display', () => {
     renderRoute('/display')
 
+    expect(screen.getByText('Raffle OS')).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { level: 1, name: 'Audience Display' }),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('This feature is not yet implemented.'),
+      screen.getByText(
+        'This route is intended for LED screens, projectors, or vMix capture.',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Display states and raffle presentation are not yet implemented.',
+      ),
     ).toBeInTheDocument()
   })
 
@@ -111,14 +135,28 @@ describe('application routes', () => {
     ).toBeInTheDocument()
   })
 
-  it('does not render Operator navigation or controls on /display', () => {
+  it('does not render the Operator shell or status on /display', () => {
     renderRoute('/display')
 
-    expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('navigation', { name: 'Operator navigation' }),
+    ).not.toBeInTheDocument()
     expect(screen.queryByRole('banner')).not.toBeInTheDocument()
-    expect(screen.queryByText('Raffle OS')).not.toBeInTheDocument()
     expect(screen.queryByText('Practice Mode')).not.toBeInTheDocument()
-    expect(screen.queryByText(/Audience Display:/)).not.toBeInTheDocument()
-    expect(screen.queryByText('Participants')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        /^Audience Display: (Disconnected|Connecting|Connected)$/,
+      ),
+    ).not.toBeInTheDocument()
+  })
+
+  it('does not expose links to Operator routes on /display', () => {
+    renderRoute('/display')
+
+    for (const navigationLabel of operatorNavigationLabels) {
+      expect(
+        screen.queryByRole('link', { name: navigationLabel }),
+      ).not.toBeInTheDocument()
+    }
   })
 })

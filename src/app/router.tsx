@@ -3,6 +3,7 @@ import {
   Navigate,
   type RouteObject,
 } from 'react-router'
+import { AudienceDisplayShell } from './layouts/AudienceDisplayShell.tsx'
 import { OperatorLayout } from './layouts/OperatorLayout.tsx'
 import { AudienceDisplayPage } from '../pages/display/AudienceDisplayPage.tsx'
 import { DashboardPage } from '../pages/operator/DashboardPage.tsx'
@@ -58,7 +59,13 @@ export const appRoutes = [
   operatorRoutes,
   {
     path: '/display',
-    element: <AudienceDisplayPage />,
+    element: <AudienceDisplayShell />,
+    children: [
+      {
+        index: true,
+        element: <AudienceDisplayPage />,
+      },
+    ],
   },
   {
     path: '*',

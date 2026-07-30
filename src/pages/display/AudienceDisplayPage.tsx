@@ -1,12 +1,15 @@
 export function AudienceDisplayPage() {
   return (
-    <main>
-      <h1>Audience Display</h1>
+    <section
+      aria-labelledby="audience-display-title"
+      className="audience-display-placeholder"
+    >
+      <p className="audience-display-placeholder__identity">Raffle OS</p>
+      <h1 id="audience-display-title">Audience Display</h1>
       <p>
-        This page will present public raffle states on a separate audience-facing
-        screen.
+        This route is intended for LED screens, projectors, or vMix capture.
       </p>
-      <p>This feature is not yet implemented.</p>
-    </main>
+      <p>Display states and raffle presentation are not yet implemented.</p>
+    </section>
   )
 }

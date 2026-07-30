@@ -63,6 +63,8 @@
 
 @layer components {
   .operator-layout {
+    position: relative;
+    z-index: var(--layer-operator-content);
     display: grid;
     grid-template-columns: var(--operator-sidebar-width) minmax(0, 1fr);
     width: 100%;
@@ -147,6 +149,8 @@
   }
 
   .operator-header {
+    position: relative;
+    z-index: var(--layer-operator-header);
     display: flex;
     min-width: 0;
     min-height: var(--operator-header-height);
@@ -274,6 +278,10 @@
     padding: var(--content-padding);
     background: var(--app-bg);
     scrollbar-color: var(--border-strong) transparent;
+  }
+
+  :root[data-side-panel-open] .operator-main {
+    overflow: hidden;
   }
 
   .operator-main > * {

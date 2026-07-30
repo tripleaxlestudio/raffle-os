@@ -75,6 +75,13 @@
   --focus-ring: #9b92ff;
   --focus-ring-width: 0.1875rem;
   --focus-ring-offset: 0.1875rem;
+
+  --layer-operator-content: 0;
+  --layer-operator-header: 10;
+  --layer-prototype-navigation: 20;
+  --layer-drawer-backdrop: 30;
+  --layer-drawer-surface: 40;
+  --layer-drawer-content: 50;
 }
 
 [data-interface="operator"] {

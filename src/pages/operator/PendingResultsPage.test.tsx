@@ -207,6 +207,51 @@ describe('Redraw presentation panel', () => {
     expect(within(multiplePanel).getByText('018742')).toBeVisible()
   })
 
+  it('renders the drawer surface after its full-viewport backdrop', () => {
+    renderResults('/draw/results?panel=redraw&selection=single')
+
+    const drawerRoot = document.querySelector(
+      '[data-layer="drawer-root"]',
+    )
+    const backdrop = document.querySelector(
+      '[data-layer="drawer-backdrop"]',
+    )
+    const surface = screen.getByRole('dialog', {
+      name: 'Redraw selected winner',
+    })
+
+    expect(drawerRoot).toHaveAttribute('data-interface', 'operator')
+    expect(drawerRoot?.children[0]).toBe(backdrop)
+    expect(drawerRoot?.children[1]).toBe(surface)
+    expect(surface).toHaveAttribute('data-layer', 'drawer-surface')
+    expect(
+      within(surface).getByRole('heading', {
+        level: 2,
+        name: 'Redraw selected winner',
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('closes PrototypeNavigator and makes the background inert when opened', async () => {
+    const user = userEvent.setup()
+    renderResults()
+    const navigatorSummary = screen.getByText('Prototype navigation')
+    const navigator = navigatorSummary.closest('details')
+
+    await user.click(navigatorSummary)
+    expect(navigator).toHaveAttribute('open')
+
+    await user.click(screen.getByRole('link', { name: 'Open redraw' }))
+
+    expect(navigator).not.toHaveAttribute('open')
+    expect(document.querySelector('[data-operator-shell]')).toHaveAttribute(
+      'inert',
+    )
+    expect(document.documentElement).toHaveAttribute(
+      'data-side-panel-open',
+    )
+  })
+
   it('shows a required-note appearance for Other', async () => {
     const user = userEvent.setup()
     renderResults('/draw/results?panel=redraw&selection=single')
@@ -242,6 +287,23 @@ describe('Redraw presentation panel', () => {
     ).toHaveAttribute('href', '/history?view=session-detail')
   })
 
+  it('does not mutate the redraw fixture during panel interactions', async () => {
+    const fixtureBefore = JSON.stringify(redrawFixture)
+    const user = userEvent.setup()
+    renderResults('/draw/results?panel=redraw&selection=multiple')
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Redraw reason' }),
+      'Other',
+    )
+    await user.type(
+      screen.getByRole('textbox', { name: 'Reason note (required)' }),
+      'Presentation-only note',
+    )
+
+    expect(JSON.stringify(redrawFixture)).toBe(fixtureBefore)
+  })
+
   it('closes with Escape and returns focus to the redraw trigger', async () => {
     const user = userEvent.setup()
     renderResults()
@@ -252,5 +314,15 @@ describe('Redraw presentation panel', () => {
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await waitFor(() => expect(trigger).toHaveFocus())
+    expect(document.querySelector('[data-operator-shell]')).not.toHaveAttribute(
+      'inert',
+    )
+    expect(document.documentElement).not.toHaveAttribute(
+      'data-side-panel-open',
+    )
+
+    const navigatorSummary = screen.getByText('Prototype navigation')
+    await user.click(navigatorSummary)
+    expect(navigatorSummary.closest('details')).toHaveAttribute('open')
   })
 })

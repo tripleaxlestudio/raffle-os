@@ -44,16 +44,33 @@ export function SidePanel({
       return
     }
 
+    const operatorShell = document.querySelector<HTMLElement>(
+      '[data-operator-shell]',
+    )
+    const operatorShellWasInert =
+      operatorShell?.hasAttribute('inert') ?? false
+    const rootHadSidePanelState =
+      document.documentElement.hasAttribute('data-side-panel-open')
+
     previousFocusRef.current =
       document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null
+
+    operatorShell?.setAttribute('inert', '')
+    document.documentElement.setAttribute('data-side-panel-open', '')
 
     const firstFocusable =
       panelRef.current?.querySelector<HTMLElement>(focusableSelector)
     ;(firstFocusable ?? panelRef.current)?.focus()
 
     return () => {
+      if (!operatorShellWasInert) {
+        operatorShell?.removeAttribute('inert')
+      }
+      if (!rootHadSidePanelState) {
+        document.documentElement.removeAttribute('data-side-panel-open')
+      }
       previousFocusRef.current?.focus()
       previousFocusRef.current = null
     }
@@ -96,10 +113,15 @@ export function SidePanel({
   }
 
   return createPortal(
-    <div className="ui-side-panel-layer">
+    <div
+      className="ui-side-panel-layer"
+      data-interface="operator"
+      data-layer="drawer-root"
+    >
       <button
         aria-label="Close redraw panel"
         className="ui-side-panel-backdrop"
+        data-layer="drawer-backdrop"
         onClick={onClose}
         type="button"
       />
@@ -108,6 +130,7 @@ export function SidePanel({
         aria-labelledby={titleId}
         aria-modal="true"
         className="ui-side-panel"
+        data-layer="drawer-surface"
         onKeyDown={handleKeyDown}
         ref={panelRef}
         role="dialog"

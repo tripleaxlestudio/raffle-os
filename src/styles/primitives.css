@@ -931,30 +931,45 @@
 
   .ui-side-panel-layer {
     position: fixed;
-    z-index: 120;
     inset: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(26rem, 34rem);
+    grid-template-columns:
+      minmax(0, 1fr)
+      clamp(30rem, 40vw, 34rem);
+    pointer-events: none;
   }
 
   .ui-side-panel-backdrop {
+    position: absolute;
+    z-index: var(--layer-drawer-backdrop);
+    inset: 0;
     min-width: 0;
     border: 0;
     background: rgb(4 6 10 / 0.72);
     cursor: pointer;
+    pointer-events: auto;
   }
 
   .ui-side-panel {
+    position: relative;
+    z-index: var(--layer-drawer-surface);
     display: grid;
+    grid-column: 2;
     grid-template-rows: auto auto minmax(0, 1fr) auto;
+    container-type: inline-size;
     min-width: 0;
     min-height: 0;
+    max-width: 100vw;
     border-left: 1px solid var(--border-strong);
     background: var(--surface-raised);
+    color: var(--text-primary);
     box-shadow: var(--shadow-md);
+    pointer-events: auto;
   }
 
   .ui-side-panel__header {
+    position: relative;
+    z-index: var(--layer-drawer-content);
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -980,21 +995,31 @@
   }
 
   .ui-side-panel__description {
+    position: relative;
+    z-index: var(--layer-drawer-content);
     margin: 0;
     padding: var(--space-3) var(--space-5);
     border-bottom: 1px solid var(--border-default);
     color: var(--text-secondary);
     font-size: var(--font-size-xs);
+    overflow-wrap: anywhere;
   }
 
   .ui-side-panel__body {
+    position: relative;
+    z-index: var(--layer-drawer-content);
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     padding: var(--space-5);
+    scrollbar-color: var(--border-strong) transparent;
   }
 
   .ui-side-panel__footer {
+    position: relative;
+    z-index: var(--layer-drawer-content);
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: var(--space-3);
     padding: var(--space-4) var(--space-5);
@@ -1007,14 +1032,25 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .ui-side-panel-backdrop {
-    position: absolute;
-    inset: 0;
-  }
-
   .ui-side-panel {
-    position: relative;
+    grid-column: 1;
     width: min(34rem, 100%);
     margin-left: auto;
+  }
+}
+
+@media (max-width: 40rem) {
+  .ui-side-panel {
+    width: 100%;
+    border-left: 0;
+  }
+
+  .ui-side-panel__footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .ui-side-panel__footer .ui-button {
+    width: 100%;
   }
 }

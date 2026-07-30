@@ -127,23 +127,19 @@ describe('application routes', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders the inert Audience Display placeholder at /display', () => {
+  it('renders the standby Audience Display prototype at /display', () => {
     renderRoute('/display')
 
-    expect(screen.getByText('Raffle OS')).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Audience Display' }),
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Draw will begin shortly',
+      }),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(
-        'This route is intended for LED screens, projectors, or vMix capture.',
-      ),
+      screen.getByText('Nusantara Tech Gala 2026'),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        'Display states and raffle presentation are not yet implemented.',
-      ),
-    ).toBeInTheDocument()
+    expect(screen.queryByText('000123')).not.toBeInTheDocument()
   })
 
   it('renders Not Found for an unknown route', () => {
@@ -196,7 +192,7 @@ describe('application routes', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('exposes the Slice 3 direct links only in Operator prototype navigation', () => {
+  it('exposes prototype direct links only in Operator navigation', () => {
     renderRoute('/draw/setup')
 
     const prototypeNavigation = screen.getByRole('navigation', {
@@ -260,6 +256,28 @@ describe('application routes', () => {
     ] as const
 
     for (const [label, href] of sliceFourLinks) {
+      expect(
+        within(prototypeNavigation).getByRole('link', { name: label }),
+      ).toHaveAttribute('href', href)
+    }
+
+    const audienceLinks = [
+      ['Audience Standby', '/display?state=standby'],
+      ['Audience Countdown', '/display?state=countdown'],
+      ['Audience Rolling', '/display?state=rolling'],
+      ['Reveal 1', '/display?state=reveal&count=1'],
+      ['Reveal 6', '/display?state=reveal&count=6'],
+      ['Reveal 10', '/display?state=reveal&count=10'],
+      ['Reveal 20', '/display?state=reveal&count=20'],
+      ['Confirmed 1', '/display?state=confirmed&count=1'],
+      ['Confirmed 6', '/display?state=confirmed&count=6'],
+      ['Confirmed 10', '/display?state=confirmed&count=10'],
+      ['Confirmed 20', '/display?state=confirmed&count=20'],
+      ['Blackout', '/display?state=blackout'],
+      ['Disconnected', '/display?state=disconnected'],
+    ] as const
+
+    for (const [label, href] of audienceLinks) {
       expect(
         within(prototypeNavigation).getByRole('link', { name: label }),
       ).toHaveAttribute('href', href)

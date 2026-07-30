@@ -2,6 +2,7 @@
 @import "./tokens.css";
 @import "./primitives.css";
 @import "./operator.css";
+@import "./audience.css";
 
 @layer base {
   *,
@@ -312,77 +313,6 @@
     font-size: var(--font-size-xs);
     letter-spacing: 0.03em;
     text-transform: uppercase;
-  }
-
-  .audience-display-shell {
-    display: grid;
-    width: 100%;
-    height: 100vh;
-    height: 100dvh;
-    min-width: 0;
-    overflow: hidden;
-    background: var(--app-bg);
-    color: var(--text-primary);
-  }
-
-  .audience-display-main {
-    display: grid;
-    min-width: 0;
-    min-height: 0;
-    place-items: center;
-    padding:
-      var(--audience-safe-block)
-      var(--audience-safe-inline);
-    background:
-      linear-gradient(
-        135deg,
-        transparent 0 70%,
-        var(--accent-soft) 100%
-      ),
-      var(--app-bg);
-  }
-
-  .audience-display-placeholder {
-    width: min(100%, 54rem);
-    padding: clamp(2rem, 5vw, 4.5rem);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
-    background: var(--surface);
-    text-align: center;
-  }
-
-  .audience-display-placeholder__identity {
-    margin: 0 0 var(--space-5);
-    color: var(--accent-hover);
-    font-family: var(--font-family-mono);
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
-
-  .audience-display-placeholder h1 {
-    margin: 0;
-    color: var(--text-primary);
-    font-size: clamp(2rem, 4vw, 4rem);
-    font-weight: var(--font-weight-bold);
-    letter-spacing: -0.035em;
-    line-height: var(--line-height-tight);
-  }
-
-  .audience-display-placeholder p:not(
-      .audience-display-placeholder__identity
-    ) {
-    max-width: 42rem;
-    margin: var(--space-5) auto 0;
-    color: var(--text-secondary);
-    font-size: clamp(1rem, 1.5vw, 1.25rem);
-  }
-
-  .audience-display-placeholder p:last-child {
-    color: var(--text-muted);
-    font-family: var(--font-family-mono);
-    font-size: var(--font-size-sm);
   }
 
   .error-page {

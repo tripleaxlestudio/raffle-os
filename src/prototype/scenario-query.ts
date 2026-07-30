@@ -1,4 +1,10 @@
 import type {
+  AudienceQueryState,
+  AudienceWinnerCount,
+  PublicAudienceScenario,
+} from './audience-types.ts'
+import { audienceFixtures } from './data/audience.fixture.ts'
+import type {
   PrototypeDrawMode,
   PrototypeDrawSetupScenario,
   PrototypeHistoryView,
@@ -10,6 +16,73 @@ import type {
   PrototypeResultsPanel,
   PrototypeSettingsSection,
 } from './operator-types.ts'
+
+export interface AudienceScenarioQuery {
+  readonly count: AudienceWinnerCount
+  readonly state: AudienceQueryState
+}
+
+function resolveAudienceWinnerCount(
+  value: string | null,
+): AudienceWinnerCount {
+  switch (value) {
+    case '6':
+      return 6
+    case '10':
+      return 10
+    case '20':
+      return 20
+    case '1':
+    default:
+      return 1
+  }
+}
+
+export function resolveAudienceScenarioQuery(
+  searchParams: URLSearchParams,
+): AudienceScenarioQuery {
+  const count = resolveAudienceWinnerCount(searchParams.get('count'))
+
+  switch (searchParams.get('state')) {
+    case 'countdown':
+      return { count, state: 'countdown' }
+    case 'rolling':
+      return { count, state: 'rolling' }
+    case 'reveal':
+      return { count, state: 'reveal' }
+    case 'confirmed':
+      return { count, state: 'confirmed' }
+    case 'blackout':
+      return { count, state: 'blackout' }
+    case 'disconnected':
+      return { count, state: 'disconnected' }
+    case 'standby':
+    default:
+      return { count, state: 'standby' }
+  }
+}
+
+export function getAudienceScenarioFixture({
+  count,
+  state,
+}: AudienceScenarioQuery): PublicAudienceScenario {
+  switch (state) {
+    case 'countdown':
+      return audienceFixtures.countdown
+    case 'rolling':
+      return audienceFixtures.rolling
+    case 'reveal':
+      return audienceFixtures.reveal[count]
+    case 'confirmed':
+      return audienceFixtures.confirmed[count]
+    case 'blackout':
+      return audienceFixtures.blackout
+    case 'disconnected':
+      return audienceFixtures.disconnected
+    case 'standby':
+      return audienceFixtures.standby
+  }
+}
 
 export const prototypeImportSteps = [
   'upload',

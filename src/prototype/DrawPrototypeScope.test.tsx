@@ -36,14 +36,14 @@ describe('Draw prototype scope and separation', () => {
     }
   })
 
-  it('keeps the Audience Display inert and free of Operator controls', () => {
+  it('keeps the Audience Display free of Operator draw controls', () => {
     const router = createMemoryRouter(appRoutes, {
       initialEntries: ['/display'],
     })
     render(<RouterProvider router={router} />)
 
     expect(
-      screen.getByRole('heading', { name: 'Audience Display' }),
+      screen.getByRole('heading', { name: 'Draw will begin shortly' }),
     ).toBeInTheDocument()
     expect(
       screen.queryByRole('navigation', {

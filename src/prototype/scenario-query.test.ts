@@ -1,11 +1,83 @@
 import { describe, expect, it } from 'vitest'
 import {
+  getAudienceScenarioFixture,
+  resolveAudienceScenarioQuery,
   resolvePrototypeDrawSetupQuery,
   resolvePrototypeHistoryView,
   resolvePrototypeLiveDrawQuery,
   resolvePrototypePendingResultsQuery,
   resolvePrototypeSettingsSection,
 } from './scenario-query.ts'
+
+describe('Audience prototype query parsing', () => {
+  it('defaults a missing state to standby with a safe count', () => {
+    expect(resolveAudienceScenarioQuery(new URLSearchParams())).toEqual({
+      count: 1,
+      state: 'standby',
+    })
+  })
+
+  it('falls back an invalid state to standby', () => {
+    expect(
+      resolveAudienceScenarioQuery(
+        new URLSearchParams('state=official&count=20'),
+      ),
+    ).toEqual({
+      count: 20,
+      state: 'standby',
+    })
+  })
+
+  it.each(['0', '3', '5', '100', '-1', 'six'])(
+    'falls back unsupported count %s to one',
+    (count) => {
+      expect(
+        resolveAudienceScenarioQuery(
+          new URLSearchParams(`state=reveal&count=${count}`),
+        ),
+      ).toEqual({
+        count: 1,
+        state: 'reveal',
+      })
+    },
+  )
+
+  it.each([
+    ['standby', 'standby'],
+    ['countdown', 'countdown'],
+    ['rolling', 'rolling'],
+    ['reveal', 'winner-reveal'],
+    ['confirmed', 'confirmed'],
+    ['blackout', 'blackout'],
+    ['disconnected', 'disconnected'],
+  ] as const)(
+    'resolves the supported %s state directly',
+    (queryState, fixtureState) => {
+      const query = resolveAudienceScenarioQuery(
+        new URLSearchParams(`state=${queryState}`),
+      )
+
+      expect(query.state).toBe(queryState)
+      expect(getAudienceScenarioFixture(query).state).toBe(fixtureState)
+    },
+  )
+
+  it.each([1, 6, 10, 20] as const)(
+    'selects the exact %i-ticket fixture',
+    (count) => {
+      const query = resolveAudienceScenarioQuery(
+        new URLSearchParams(`state=confirmed&count=${count}`),
+      )
+      const scenario = getAudienceScenarioFixture(query)
+
+      expect(scenario.state).toBe('confirmed')
+      if (scenario.state === 'confirmed') {
+        expect(scenario.layoutCount).toBe(count)
+        expect(scenario.ticketNumbers).toHaveLength(count)
+      }
+    },
+  )
+})
 
 describe('draw prototype query parsing', () => {
   it('defaults Draw Setup safely', () => {

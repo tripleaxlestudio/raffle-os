@@ -1,15 +1,36 @@
+import { useSearchParams } from 'react-router'
+import {
+  getAudienceScenarioFixture,
+  resolveAudienceScenarioQuery,
+} from '../../prototype/scenario-query.ts'
+import {
+  BlackoutStage,
+  CountdownStage,
+  DisconnectedStage,
+  RollingStage,
+  StandbyStage,
+  WinnerStage,
+} from '../../ui/audience/index.ts'
+
 export function AudienceDisplayPage() {
-  return (
-    <section
-      aria-labelledby="audience-display-title"
-      className="audience-display-placeholder"
-    >
-      <p className="audience-display-placeholder__identity">Raffle OS</p>
-      <h1 id="audience-display-title">Audience Display</h1>
-      <p>
-        This route is intended for LED screens, projectors, or vMix capture.
-      </p>
-      <p>Display states and raffle presentation are not yet implemented.</p>
-    </section>
+  const [searchParams] = useSearchParams()
+  const scenario = getAudienceScenarioFixture(
+    resolveAudienceScenarioQuery(searchParams),
   )
+
+  switch (scenario.state) {
+    case 'standby':
+      return <StandbyStage scenario={scenario} />
+    case 'countdown':
+      return <CountdownStage scenario={scenario} />
+    case 'rolling':
+      return <RollingStage scenario={scenario} />
+    case 'winner-reveal':
+    case 'confirmed':
+      return <WinnerStage scenario={scenario} />
+    case 'blackout':
+      return <BlackoutStage />
+    case 'disconnected':
+      return <DisconnectedStage scenario={scenario} />
+  }
 }

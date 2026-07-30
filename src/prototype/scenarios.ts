@@ -88,4 +88,56 @@ export const prototypeNavigationItems = Object.freeze([
     label: 'Settings - Display',
     to: '/settings?section=display',
   }),
+  Object.freeze({
+    label: 'Audience Standby',
+    to: '/display?state=standby',
+  }),
+  Object.freeze({
+    label: 'Audience Countdown',
+    to: '/display?state=countdown',
+  }),
+  Object.freeze({
+    label: 'Audience Rolling',
+    to: '/display?state=rolling',
+  }),
+  Object.freeze({
+    label: 'Reveal 1',
+    to: '/display?state=reveal&count=1',
+  }),
+  Object.freeze({
+    label: 'Reveal 6',
+    to: '/display?state=reveal&count=6',
+  }),
+  Object.freeze({
+    label: 'Reveal 10',
+    to: '/display?state=reveal&count=10',
+  }),
+  Object.freeze({
+    label: 'Reveal 20',
+    to: '/display?state=reveal&count=20',
+  }),
+  Object.freeze({
+    label: 'Confirmed 1',
+    to: '/display?state=confirmed&count=1',
+  }),
+  Object.freeze({
+    label: 'Confirmed 6',
+    to: '/display?state=confirmed&count=6',
+  }),
+  Object.freeze({
+    label: 'Confirmed 10',
+    to: '/display?state=confirmed&count=10',
+  }),
+  Object.freeze({
+    label: 'Confirmed 20',
+    to: '/display?state=confirmed&count=20',
+  }),
+  Object.freeze({
+    label: 'Blackout',
+    to: '/display?state=blackout',
+  }),
+  Object.freeze({
+    label: 'Disconnected',
+    to: '/display?state=disconnected',
+  }),
 ]) satisfies readonly PrototypeNavigationItem[]

@@ -3,312 +3,389 @@
 ## 1. Executive Summary
 
 ### Purpose of Phase 3
-The purpose of Phase 3 is to establish explicit, production-grade domain models and a robust, typed local persistence infrastructure using IndexedDB for Raffle OS. Phase 3 creates the data foundation required for state transitions, entity relationships, and historical records without connecting real persistence to the presentation prototype UI or implementing participant file import, secure draw selection, eligibility calculation, or live workflow behaviors.
+
+Phase 3 establishes explicit production domain models and a robust, typed local
+persistence foundation using IndexedDB. It creates the contracts needed for
+future state transitions, entity relationships, candidate-pool snapshots, and
+immutable official history without connecting persistence to the Phase 2
+prototype UI or implementing participant import, eligibility calculation,
+secure winner selection, or live workflow behavior.
 
 ### Accepted Phase 2 Baseline
-Phase 2 delivered a high-fidelity, deterministic static UI prototype accepted on 30 July 2026 (`c4ab9f88bdf69dca264ef5543aa695becffdaa89`). The codebase contains 22 test files with 182 passing tests covering Operator and Audience presentation layouts, semantic design tokens, reusable accessible UI primitives, query-driven mock scenarios, and exact winner grid layouts. Phase 2 relies strictly on frozen, immutable presentation mock fixtures under `src/prototype/data/` and view models in `src/prototype/operator-types.ts` and `src/prototype/audience-types.ts`. It contains no persistence, domain entity logic, or state mutation.
 
-### Production Capabilities Added in Phase 3
-Phase 3 will design and introduce:
-- Strict TypeScript domain entity models for events, participants, prize categories, draw configurations, draw sessions, winner records, redraw records, audit entries, display states, and application preferences.
-- Typed discriminated status unions and validated state transition rules for domain entities.
-- An IndexedDB database schema (Version 1) with indexes optimized for event isolation and lookup by ticket string.
-- Versioned schema migration infrastructure and stored-data backward-compatibility rules.
-- Isolated repository interfaces and IndexedDB data-access implementations separated from React components.
-- Normalized persistence error domain types.
-- Development-only seed and safe database-reset utilities with explicit confirmation boundaries.
-- Unit and integration tests for domain models, database operations, transaction integrity, and repositories.
+Phase 2 delivered a high-fidelity deterministic static UI prototype accepted on
+30 July 2026 (`c4ab9f88bdf69dca264ef5543aa695becffdaa89`). The
+codebase contains 22 test files with 182 passing tests covering Operator and
+Audience layouts, semantic design tokens, reusable accessible presentation
+components, query-driven mock scenarios, and exact winner grid layouts. Phase 2
+uses frozen presentation fixtures under `src/prototype/data/` and presentation
+types in `src/prototype/operator-types.ts` and
+`src/prototype/audience-types.ts`. It contains no production persistence,
+domain mutation, or draw behavior.
+
+### Production Foundations Added in Phase 3
+
+Phase 3 will introduce:
+
+- strict TypeScript domain models for Event, Participant, PrizeCategory,
+  DrawConfiguration, DrawSession, WinnerRecord, RedrawRecord, AuditRecord,
+  DisplayConfiguration, and ApplicationPreference;
+- explicit lifecycle and immutability rules for draft and official records;
+- an IndexedDB Version 1 schema, including persisted display configuration;
+- unique event-scoped participant tickets and unique winner selection sequence
+  positions;
+- versioned schema migration infrastructure and backward-compatibility rules;
+- one repository interface and one Dexie implementation owner for every
+  Version 1 store;
+- a cross-store transaction coordinator for draw-history persistence;
+- normalized persistence error types and a storage-capability diagnostic;
+- development-only seed and guarded database-reset utilities; and
+- unit and integration tests for domain rules, schema, repositories,
+  transactions, migrations, diagnostics, and record survival after reopen.
 
 ### Product Capabilities Explicitly Deferred
+
 Phase 3 will **not** implement:
-- CSV or XLSX file reading, parsing, preview, or import mapping (deferred to Phase 4).
-- Participant eligibility filtering or pool calculation logic (deferred to Phase 4 / Phase 5).
-- Web Crypto random selection, Fisher–Yates shuffle, or winner selection algorithms (deferred to Phase 5).
-- Official winner confirmation, redraw mutations, or live draw workflow state machines (deferred to Phase 6 / Phase 8).
-- BroadcastChannel messaging or Operator/Audience display synchronization (deferred to Phase 7).
-- CSV/XLSX export or audit trail generation for export files (deferred to Phase 9).
-- Interrupted-session UI recovery workflows or backup/restore features (deferred to Phase 10).
-- UI component integration with real local storage (deferred to Phase 6+).
-- Audio, fullscreen browser control, backend services, cloud databases, authentication, or payment functionality.
+
+- CSV or XLSX file reading, parsing, preview, validation staging, or mapping
+  (Phase 4);
+- participant eligibility calculation or candidate-pool construction
+  (Phase 4 / Phase 5);
+- Web Crypto selection, Fisher–Yates shuffling, or winner selection (Phase 5);
+- Operator confirmation actions, redraw execution workflows, or Live draw UI
+  mutation (later workflow phases);
+- BroadcastChannel communication or Operator/Audience synchronization
+  (Phase 7);
+- export, backup/restore, or interrupted-session UI recovery;
+- connection of prototype pages, routes, fixtures, or components to production
+  persistence; or
+- audio, fullscreen control, backend services, cloud storage, authentication,
+  or payments.
+
+Phase 3 defines persistence commands and atomicity rules that later workflows
+will call. Tests may use synthetic domain records to prove these boundaries,
+but no Phase 3 UI or selection algorithm will invoke them.
 
 ### Rationale for Architectural Order
-Establishing domain models and persistence before import, draw execution, and live workflows is critical to project integrity:
-1. **Prevents Prototype-to-Production Bleed**: Defining strict production entities prevents presentation view models (which use dummy fields like `fileSize` or `strategyLabel`) from accidentally becoming database models.
-2. **Enforces Product Invariants at the Schema Layer**: Ticket identifiers must be preserved as strings with leading zeroes from the moment data structures are defined.
-3. **Establishes Audit and History Relationships**: Redraw, cancellation, and replacement linkages depend on immutable primary keys and entity relationships that must be designed before winner confirmation logic is written.
-4. **Enables Deterministic Unit Testing**: Repositories can be fully tested in isolation without React rendering or live UI state interference.
+
+1. **Prototype isolation**: production models cannot accidentally inherit dummy
+   presentation fields or deterministic fixture behavior.
+2. **Data integrity first**: string ticket identifiers, scoped uniqueness, and
+   immutable history are defined before file import or winner selection.
+3. **Explicit historical relationships**: cancellation and replacement are
+   append-oriented relationships between stable records.
+4. **Testable persistence**: repositories and transactions can be verified
+   independently of React and live event workflows.
 
 ---
 
 ## 2. Repository Readiness Audit
 
 ### Verified Current Facts
-- **Git Branch**: `main`
-- **Git Upstream**: `origin/main`
-- **Working-Tree Status**: Clean (verified via `git status --short`).
-- **Target OS**: Windows (Powershell environment).
-- **Installed Production Dependencies** (`package.json`):
-  - `react`: `^19.2.7`
-  - `react-dom`: `^19.2.7`
-  - `react-router`: `^7.18.2`
-- **Installed Development Dependencies** (`package.json`):
-  - `@eslint/js`: `^10.0.1`, `eslint`: `^10.6.0`, `eslint-plugin-react-hooks`: `^7.1.1`, `eslint-plugin-react-refresh`: `^0.5.3`
-  - `@tailwindcss/vite`: `^4.3.3`, `tailwindcss`: `^4.3.3`
-  - `@testing-library/dom`: `^10.4.1`, `@testing-library/jest-dom`: `^7.0.0`, `@testing-library/react`: `^16.3.2`, `@testing-library/user-event`: `^14.6.1`
-  - `@types/node`: `^24.13.2`, `@types/react`: `^19.2.17`, `@types/react-dom`: `^19.2.3`
-  - `@vitejs/plugin-react`: `^6.0.3`, `vite`: `^8.1.1`
-  - `globals`: `^17.7.0`, `jsdom`: `^29.1.1`, `typescript`: `~6.0.2`, `typescript-eslint`: `^8.62.0`, `vitest`: `^4.1.10`
-- **Confirmed npm Scripts**:
-  - `npm run dev` — starts Vite dev server.
-  - `npm run build` — runs `tsc -b && vite build`.
-  - `npm run lint` — runs ESLint across the workspace.
-  - `npm run preview` — previews production build.
-  - `npm run typecheck` — runs TypeScript compiler in no-emit mode.
-  - `npm run test` — runs Vitest suite once.
-  - `npm run test:watch` — runs Vitest in watch mode.
-- **Test Baseline**: 22 test files, 182 tests passing cleanly.
-- **Source Structure**:
-  - `src/app/` (shell, layouts, routing, error boundary, happy path integration test)
-  - `src/domain/types/` (currently contains only `AppMode` and `DisplayConnectionStatus`)
-  - `src/pages/` (operator pages and audience page)
-  - `src/prototype/` (mock fixtures, query parsers, scenario definitions, presentation types)
-  - `src/shared/` (ui primitives, shared compositions)
-  - `src/styles/` (CSS tokens, app, audience, operator, primitives styles)
-  - `src/test/` (vitest setup and environment tests)
-  - `src/ui/` (audience and operator UI compositions)
-- **Accepted Documentation Records**:
-  - `docs/technical/PHASE-1-ACCEPTANCE.md` (accepted 30 July 2026)
-  - `docs/technical/PHASE-2-PLAN.md` (accepted 30 July 2026)
-  - `docs/technical/PHASE-2-ACCEPTANCE.md` (accepted 30 July 2026)
-  - `docs/technical/ADR-001-foundation-stack.md` (accepted foundation stack)
-- **Existing View Models & Fixtures**: Presentation view types (`PrototypeParticipantRow`, `PrototypeWinnerRecord`, `PrototypePendingResultsFixture`, etc.) exist under `src/prototype/` for static screen display only.
-- **Production Domain Entities**: Do **not** exist yet (only placeholder app mode and connection status types under `src/domain/types/`).
-- **IndexedDB / Persistence Libraries**: **None** installed or present in `package.json`. No IndexedDB code exists in `src/`.
-- **`localStorage` / `sessionStorage`**: Not used anywhere in the codebase.
-- **Migrations / Repositories / Data Access Modules**: **None** exist.
 
-### Verification Results
-All five safe verification commands were executed and passed cleanly:
-1. `npm.cmd run lint`: Exit code 0 (no ESLint diagnostics).
-2. `npm.cmd run typecheck`: Exit code 0 (`tsc -b` passed).
-3. `npm.cmd run test`: Exit code 0 (22 test files passed, 182 tests passed).
-4. `npm.cmd run build`: Exit code 0 (`tsc -b && vite build` succeeded, 96 modules transformed).
-5. `git diff --check`: Exit code 0 (no whitespace issues).
+- **Git branch**: `main`
+- **Git upstream**: `origin/main`
+- **Current HEAD at this readiness audit**:
+  `28f5af8755590b86b6c543584197e62bd97c014b`
+- **Current `origin/main` at this readiness audit**:
+  `28f5af8755590b86b6c543584197e62bd97c014b`
+- **HEAD/upstream relationship**: exact match at audit time.
+- **Working tree before this plan revision**: clean, verified with
+  `git status --short`.
+- **Target environment**: Windows PowerShell; Chrome and Edge desktop are the
+  product browsers.
+- **Installed production dependencies**: React 19, React DOM 19, and React
+  Router 7.
+- **Installed development foundation**: Vite 8, TypeScript 6 in strict mode,
+  Tailwind CSS 4, Vitest 4 with jsdom 29, React Testing Library, and ESLint 10.
+- **Persistence dependencies**: neither `dexie` nor `fake-indexeddb` is
+  installed.
+- **Production domain state**: no production entities exist beyond the current
+  small app-mode and display-connection types.
+- **Persistence state**: no IndexedDB database, migration, repository, or
+  production storage integration exists.
+- **Prototype state**: `src/prototype/` remains frozen deterministic
+  presentation data and types.
+- **Test baseline**: 22 test files and 182 passing tests.
+
+### Confirmed Commands
+
+The repository exposes these Windows verification commands:
+
+```text
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd run test
+npm.cmd run build
+git diff --check
+```
+
+The accepted Phase 2 record reports all five commands passing. Phase 3
+implementation must run them again at each applicable slice and at final
+acceptance; this plan revision itself does not re-run application verification
+because it changes documentation only.
 
 ### Conflict Audit
-No conflicts exist between PRD v0.1, AGENTS.md, TASKS.md, Phase 2 acceptance records, and current code. All documents agree that Phase 2 is presentation-only and Phase 3 establishes domain models and local persistence without implementing participant file import, eligibility filtering, draw execution, or live UI coupling.
+
+No product-requirement conflict was identified. The PRD and accepted Phase 2
+record agree that the application remains local-first, ticket numbers remain
+strings, official history cannot be silently overwritten, the pure-black
+Audience blackout is the accepted contract, and the current UI remains a
+presentation-only prototype.
 
 ---
 
 ## 3. Phase 3 Scope
 
 ### Foundations Planned for Phase 3
-Phase 3 will plan and establish the following architectural foundations:
-- **Explicit Domain Entity Models**: TypeScript types and interfaces representing domain concepts.
-- **Entity Identifiers**: Standardized UUID generator and composite identifier patterns.
-- **Status Discriminated Unions**: Explicit states for events, draw sessions, winners, and participants.
-- **Domain Invariants**: Programmatic rules enforcing string ticket numbers, leading-zero retention, immutability of official history, and mode isolation.
-- **IndexedDB Persistence & Schema**: Object store definitions, primary keys, and indices.
-- **Schema Versioning & Migration Infrastructure**: Upgrade transaction handlers and version tracking.
-- **Repository Pattern & Interfaces**: Data-access boundaries separating domain storage from presentation.
-- **Transaction Boundaries**: Multi-store atomic transaction helpers for draw execution and redraw tracking.
-- **Development Seed Data**: Fictional, valid domain entity records for local development.
-- **Database Reset Safeguards**: Protected utility functions requiring explicit multi-step confirmation flags before wiping local IndexedDB stores.
-- **Persistence Automated Tests**: Isolated Vitest test suite testing database creation, migrations, CRUD operations, transaction rollbacks, index queries, and ticket string integrity using an in-memory IndexedDB test provider.
-- **Data Compatibility Rules**: Version validation ensuring old or unsupported database schemas fail safely without corrupting data.
+
+- production domain contracts and invariant functions;
+- branded string identifiers generated with `crypto.randomUUID()`;
+- explicit state unions and transition guards;
+- immutable configuration and candidate-pool snapshot contracts on
+  DrawSession;
+- IndexedDB Version 1 stores, indexes, schema registration, and migrations;
+- repository interfaces and Dexie implementations for every store;
+- intentional mutation commands instead of generic persistence saves;
+- cross-store transaction ownership for official draw history;
+- development seed, safe reset, and storage-capability diagnostics;
+- fake IndexedDB tests plus final manual Chrome and Edge smoke checks; and
+- strict isolation from the Phase 2 presentation prototype.
 
 ### Capabilities Explicitly Excluded from Phase 3
-Phase 3 will **not** implement:
-- CSV or XLSX file selection, drag-and-drop, parsing, or column mapping.
-- Real file import pipeline or preview modal validation against files.
-- Eligible participant pool calculation, filter matching logic, or check-in evaluation algorithms.
-- Web Crypto `getRandomValues()` draw selection engine or Fisher–Yates shuffle implementation.
-- Winner selection, countdown/rolling execution timers, or live winner generation.
-- Operator confirmation UI actions, partial confirmation mutations, or redraw panel execution.
-- BroadcastChannel messaging, display state broadcasting, or Operator-to-Audience sync.
-- CSV/XLSX export functions or download triggers.
-- Backup file creation, JSON backup export, or backup file import/restore.
-- Interrupted-session recovery workflow UI hooks.
-- Audio file loading, audio playback cues, or Web Audio API integration.
-- Fullscreen browser API triggers or window management.
-- Any backend API, cloud sync, authentication, user accounts, or payment processing.
+
+- real participant files, invalid-row staging, or import commit behavior;
+- eligibility filters being evaluated against participants;
+- creation of an official candidate pool from production participants;
+- winner selection or use of Web Crypto for a draw result;
+- official confirmation/redraw application use cases and UI controls;
+- display synchronization, export, recovery UI, backup/restore, or cloud
+  behavior; and
+- any change to Phase 2 pages, routes, fixtures, or presentation tests except
+  verifying they continue to pass.
 
 ---
 
 ## 4. Domain Model Proposal
 
-Phase 3 proposes explicit production domain models under `src/domain/`. Every entity is strictly typed, avoiding `any` or loose record types.
+All production models live under `src/domain/`. They must avoid `any`, unsafe
+assertions, numeric ticket coercion, and imports from `src/prototype/`.
 
 ### 4.1 Entity Models
 
 #### 1. `Event`
-- **Purpose**: Represents the top-level context for a raffle event.
-- **Required Fields**:
-  - `id`: `EventId` (string UUID)
-  - `name`: `string` (non-empty)
-  - `status`: `EventStatus` ('draft' | 'ready' | 'live' | 'completed' | 'archived')
-  - `createdAt`: `string` (ISO 8601 UTC)
-  - `updatedAt`: `string` (ISO 8601 UTC)
-- **Optional Fields**:
-  - `description`: `string`
-  - `scheduledAt`: `string` (ISO 8601 UTC)
-- **Identifier Type**: `EventId` (branded string UUID)
-- **Status Fields**: `status`
-- **Relationships**: Parent entity for `Participant`, `PrizeCategory`, `DrawSession`, `AuditRecord`.
-- **Invariants**: `name` must be trimmed and non-empty. Deleting an event with confirmed `DrawSession` records is prohibited.
+
+- **Fields**: `id: EventId`, non-empty `name`, optional `description` and
+  `scheduledAt`, `status: EventStatus`, `createdAt`, and `updatedAt`.
+- **Lifecycle**: draft metadata can be intentionally updated. Status changes use
+  a validated transition command. Hard deletion is prohibited after official
+  history exists.
+- **Relationships**: parent of all event-scoped entities.
 
 #### 2. `Participant`
-- **Purpose**: Represents an individual participant entry eligible for drawing within an event.
-- **Required Fields**:
-  - `id`: `ParticipantId` (string UUID)
-  - `eventId`: `EventId` (string UUID)
-  - `ticketNumber`: `string` (ticket identifier, **must remain string at all times**)
-  - `createdAt`: `string` (ISO 8601 UTC)
-  - `updatedAt`: `string` (ISO 8601 UTC)
-- **Optional Fields**:
-  - `name`: `string` (participant name)
-  - `group`: `string` (department, company, or table)
-  - `isCheckedIn`: `boolean` (check-in status, default `false`)
-  - `notes`: `string`
-- **Identifier Type**: `ParticipantId` (branded string UUID)
-- **Status Fields**: `isCheckedIn`
-- **Relationships**: Belongs to `Event`. Referenced by `WinnerRecord`.
-- **Invariants**: `ticketNumber` **MUST ALWAYS BE A STRING**. Leading zeroes must be preserved (e.g. `"00042"`). `ticketNumber` must never be parsed or converted to `number`.
+
+- **Fields**: `id: ParticipantId`, `eventId`, `ticketNumber: TicketNumber`,
+  optional `name`, `group`, `notes`, `isCheckedIn`, `createdAt`, and
+  `updatedAt`.
+- **Invariant**: `ticketNumber` is always a string and preserves leading zeroes.
+  The pair `(eventId, ticketNumber)` is unique.
+- **Persisted-state boundary**: Participant has no
+  `ParticipantValidationStatus`. A persisted Participant is already a valid
+  production record. Empty, duplicate, malformed, or otherwise invalid file
+  rows belong to a future Phase 4 import-staging model and must never be stored
+  as Participant records.
 
 #### 3. `PrizeCategory`
-- **Purpose**: Defines a category or tier of prizes within an event (e.g., "Grand Prize", "Door Prize").
-- **Required Fields**:
-  - `id`: `PrizeCategoryId` (string UUID)
-  - `eventId`: `EventId` (string UUID)
-  - `name`: `string` (category name)
-  - `prizeName`: `string` (name of the specific item/prize)
-  - `displayOrder`: `number` (sorting priority)
-  - `createdAt`: `string` (ISO 8601 UTC)
-- **Optional Fields**:
-  - `description`: `string`
-  - `sponsorName`: `string`
-- **Identifier Type**: `PrizeCategoryId` (branded string UUID)
-- **Relationships**: Belongs to `Event`. Referenced by `DrawConfiguration`.
+
+- **Fields**: `id: PrizeCategoryId`, `eventId`, non-empty `name`, non-empty
+  `prizeName`, `displayOrder`, optional `description` and `sponsorName`, and
+  `createdAt`.
+- **Lifecycle**: create and update while draft; prohibit deletion or mutation
+  that would invalidate a used DrawConfiguration or historical snapshot.
+- **Repository boundary**: has a dedicated `PrizeCategoryRepository`; it is not
+  folded into Event or DrawConfiguration persistence.
 
 #### 4. `DrawConfiguration`
-- **Purpose**: Captures the operational rules and parameters for a specific draw session.
-- **Required Fields**:
-  - `id`: `DrawConfigurationId` (string UUID)
-  - `eventId`: `EventId` (string UUID)
-  - `prizeCategoryId`: `PrizeCategoryId` (string UUID)
-  - `requestedWinners`: `number` (integer between 1 and 100)
-  - `winningRule`: `WinningRule` ('one-per-event' | 'one-per-category' | 'allow-repeats')
-  - `requireCheckIn`: `boolean`
-  - `createdAt`: `string` (ISO 8601 UTC)
-- **Optional Fields**:
-  - `eligibleGroupFilter`: `string` (optional group constraint)
-- **Identifier Type**: `DrawConfigurationId` (branded string UUID)
-- **Invariants**: `requestedWinners` must satisfy `1 <= requestedWinners <= 100`.
+
+- **Fields**: `id: DrawConfigurationId`, `eventId`, `prizeCategoryId`,
+  `requestedWinners` from 1 through 100, `winningRule`, `requireCheckIn`,
+  optional `eligibleGroupFilter`, and `createdAt`/`updatedAt`.
+- **Immutability decision**: `updateDraft` is allowed only until a DrawSession
+  using the configuration first enters `drawing`. From that point, the
+  DrawConfiguration is immutable; changed rules require a new
+  DrawConfiguration ID.
+- **Historical rule**: DrawSession stores its own immutable
+  `DrawConfigurationSnapshot`, so historical meaning never depends on a
+  mutable join.
+- **Repository boundary**: has a dedicated `DrawConfigurationRepository`.
 
 #### 5. `DrawSession`
-- **Purpose**: Represents a distinct draw execution instance (either Practice or Live).
-- **Required Fields**:
-  - `id`: `DrawSessionId` (string UUID)
-  - `eventId`: `EventId` (string UUID)
-  - `configurationId`: `DrawConfigurationId` (string UUID)
-  - `mode`: `AppMode` ('practice' | 'live')
-  - `status`: `DrawSessionStatus` ('draft' | 'ready' | 'drawing' | 'pending-confirmation' | 'confirmed' | 'cancelled' | 'partially-replaced' | 'completed')
-  - `eligibleSnapshotCount`: `number` (count of eligible participants when draw started)
-  - `createdAt`: `string` (ISO 8601 UTC)
-  - `updatedAt`: `string` (ISO 8601 UTC)
-- **Optional Fields**:
-  - `completedAt`: `string` (ISO 8601 UTC)
-- **Identifier Type**: `DrawSessionId` (branded string UUID)
-- **Relationships**: Belongs to `Event`. References `DrawConfiguration`. Contains multiple `WinnerRecord` instances.
-- **Invariants**: Live draw sessions must create an auditable, immutable snapshot record upon execution. Practice sessions must be flagged as `mode: 'practice'` and cannot alter live eligibility.
+
+- **Fields**: `id: DrawSessionId`, `eventId`, `configurationId`,
+  `mode: AppMode`, `status: DrawSessionStatus`,
+  `configurationSnapshot: DrawConfigurationSnapshot | null`,
+  `candidatePoolSnapshot: CandidatePoolSnapshot | null`, `createdAt`,
+  `updatedAt`, and optional `completedAt`.
+- **Draft rule**: both snapshots may be null while the session is draft or
+  ready.
+- **Start rule**: before transition to `drawing`, a later Phase 5 use case must
+  atomically attach both snapshots. Once attached, neither snapshot can be
+  edited.
+- **Terminal rule**: a completed or cancelled official DrawSession cannot be
+  overwritten by a general update. Only validated status transitions are
+  exposed.
+
+`DrawConfigurationSnapshot` contains at least:
+
+- source `configurationId`;
+- `prizeCategoryId`, category name, and public prize name;
+- `requestedWinners`, `winningRule`, `requireCheckIn`, and normalized active
+  group filter;
+- snapshot format version; and
+- `capturedAt`.
+
+`CandidatePoolSnapshot` contains at least:
+
+- snapshot format version and `capturedAt`;
+- the active filter/rule values used to construct it;
+- an immutable ordered collection of candidate entries, each containing
+  `participantId` and the exact string `ticketNumber`; and
+- `eligibleSnapshotCount`, which must equal the number of candidate entries.
+
+`eligibleSnapshotCount` alone is explicitly insufficient: it cannot prove
+which participants were eligible, preserve their ticket strings, or reconstruct
+the pool from later-mutated Participant records.
+
+Phase 3 defines, persists, validates, and round-trips the snapshot structures.
+Phase 5 remains responsible for evaluating eligibility, constructing the
+production candidate list, freezing it before selection, verifying sufficient
+capacity, and using the frozen entries as the sole selection input.
 
 #### 6. `WinnerRecord`
-- **Purpose**: Represents a selected winning ticket slot within a draw session.
-- **Required Fields**:
-  - `id`: `WinnerRecordId` (string UUID)
-  - `drawSessionId`: `DrawSessionId` (string UUID)
-  - `participantId`: `ParticipantId` (string UUID)
-  - `ticketNumber`: `string` (preserved string ticket number)
-  - `sequenceNumber`: `number` (1-indexed draw order)
-  - `status`: `WinnerStatus` ('pending' | 'confirmed' | 'cancelled' | 'replaced')
-  - `createdAt`: `string` (ISO 8601 UTC)
-  - `updatedAt`: `string` (ISO 8601 UTC)
-- **Optional Fields**:
-  - `participantName`: `string` (denormalized for display audit)
-  - `confirmedAt`: `string` (ISO 8601 UTC)
-  - `cancelledAt`: `string` (ISO 8601 UTC)
-- **Identifier Type**: `WinnerRecordId` (branded string UUID)
-- **Relationships**: Belongs to `DrawSession`. References `Participant`. Target of `RedrawRecord`.
-- **Invariants**: `ticketNumber` must be a string with intact leading zeroes. Confirmed live winners alter eligibility for subsequent draws when `winningRule` is `'one-per-event'`.
+
+- **Fields**: `id: WinnerRecordId`, denormalized `eventId` and
+  `prizeCategoryId`, `drawSessionId`, `participantId`,
+  `ticketNumber: TicketNumber`, `sequenceNumber`, `status: WinnerStatus`,
+  `createdAt`, `updatedAt`, and optional `confirmedAt`/`cancelledAt`.
+- **Participant snapshot**: an optional participant display name may be copied
+  for local Operator audit, but Audience messages remain public-only.
+- **Sequence semantics**: `sequenceNumber` is an immutable, 1-based selection
+  sequence within one DrawSession. The pair
+  `(drawSessionId, sequenceNumber)` is unique. Initial results use sequential
+  values; a redraw replacement receives the next unused sequence rather than
+  reusing or overwriting the original record's sequence. UI relationship
+  presentation may display the replacement in the original logical result
+  position by following RedrawRecord lineage.
+- **Denormalization decision**: both `eventId` and `prizeCategoryId` are stored.
+  `eventId` supports efficient event history and one-per-event queries.
+  `prizeCategoryId` is also retained because one-per-category eligibility and
+  category history are core query paths. The query benefit justifies the
+  consistency cost only with mandatory relationship validation.
+- **Relationship validation**: on append, the repository/transaction must
+  verify that `eventId` equals the parent DrawSession `eventId`,
+  `prizeCategoryId` equals the DrawSession configuration snapshot category,
+  the Participant belongs to the same Event, and the copied ticket matches the
+  Participant ticket and candidate snapshot entry.
+- **Identity rule**: `participantId`, `ticketNumber`, `eventId`,
+  `prizeCategoryId`, `drawSessionId`, and `sequenceNumber` never change after
+  creation.
 
 #### 7. `RedrawRecord`
-- **Purpose**: Records an audit trail entry when a winner is cancelled and replaced during Live mode.
-- **Required Fields**:
-  - `id`: `RedrawRecordId` (string UUID)
-  - `drawSessionId`: `DrawSessionId` (string UUID)
-  - `originalWinnerRecordId`: `WinnerRecordId` (string UUID)
-  - `replacementWinnerRecordId`: `WinnerRecordId` (string UUID)
-  - `reason`: `RedrawReason` ('absent' | 'invalid-ticket' | 'ineligible' | 'previous-winner' | 'operator-error' | 'other')
-  - `createdAt`: `string` (ISO 8601 UTC)
-- **Optional Fields**:
-  - `reasonNote`: `string` (required if `reason === 'other'`)
-- **Identifier Type**: `RedrawRecordId` (branded string UUID)
-- **Relationships**: Belongs to `DrawSession`. Links `originalWinnerRecordId` to `replacementWinnerRecordId`.
-- **Invariants**: In Live mode, `reason` is strictly required. If `reason` is `'other'`, `reasonNote` must be a non-empty string. Both original and replacement records must remain visible in audit history.
+
+- **Fields**: `id: RedrawRecordId`, denormalized `eventId`, `drawSessionId`,
+  `originalWinnerRecordId`, `replacementWinnerRecordId`, required
+  `reason: RedrawReason`, optional `reasonNote`, and `createdAt`.
+- **Role**: append-only evidence that one cancelled WinnerRecord was replaced by
+  a distinct WinnerRecord. It owns the reason and relationship; it does not
+  mutate either record's participant identity.
+- **Validation**: both winners must exist, share the same Event and
+  DrawSession, be distinct IDs, and the original must be `cancelled`. A
+  replacement initially enters as `pending`. If that replacement is later
+  cancelled, a new RedrawRecord links it to another new replacement, preserving
+  the entire chain.
+- **Repository boundary**: has a dedicated append-only `RedrawRepository`.
 
 #### 8. `AuditRecord`
-- **Purpose**: Append-only log tracking major operational actions within an event.
-- **Required Fields**:
-  - `id`: `AuditRecordId` (string UUID)
-  - `eventId`: `EventId` (string UUID)
-  - `action`: `AuditAction` ('event-created' | 'participants-imported' | 'draw-started' | 'winner-confirmed' | 'winner-cancelled' | 'redraw-executed' | 'database-reset')
-  - `actor`: `string` (e.g. `'operator'`)
-  - `detail`: `string` (human-readable summary)
-  - `timestamp`: `string` (ISO 8601 UTC)
-- **Identifier Type**: `AuditRecordId` (branded string UUID)
-- **Invariants**: Audit records are append-only. They cannot be updated or deleted through standard repository calls.
+
+- **Fields**: `id: AuditRecordId`, `eventId`, `action`, `actor`, structured-clone
+  safe detail, and `timestamp`.
+- **Lifecycle**: append-only. No update or normal delete method exists.
+- **Limitation**: this local audit trail is operational evidence, not
+  tamper-proof or legally certified evidence.
 
 #### 9. `DisplayConfiguration`
-- **Purpose**: Presentation settings for the Audience Display.
-- **Required Fields**:
-  - `id`: `DisplayConfigurationId` (string UUID)
-  - `eventId`: `EventId` (string UUID)
-  - `targetResolution`: `string` (e.g., `'1920x1080'`)
-  - `safeAreaMargin`: `number` (pixels)
-  - `blackoutAppearance`: `'pure-black' | 'branded'`
-  - `updatedAt`: `string` (ISO 8601 UTC)
-- **Identifier Type**: `DisplayConfigurationId` (branded string UUID)
+
+- **Fields**: `id: DisplayConfigurationId`, unique `eventId`,
+  `targetResolution`, non-negative `safeAreaMargin`,
+  `blackoutAppearance: 'pure-black'`, `createdAt`, and `updatedAt`.
+- **Persistence decision**: retained and persisted in Phase 3 through a
+  `display_configurations` store, dedicated repository interface, Dexie
+  implementation, tests, implementation slice, and acceptance item.
+- **Blackout contract**: the only Phase 3 value is the literal
+  `'pure-black'`, matching accepted Phase 2 behavior. A branded blackout is not
+  supported. Any future alternative requires an explicit product decision and
+  is outside this plan.
+- **UI boundary**: persistence is implemented without connecting the Settings
+  prototype or Audience page to it.
 
 #### 10. `ApplicationPreference`
-- **Purpose**: Lightweight key-value application settings stored independently from event domain data.
-- **Required Fields**:
-  - `key`: `string` (e.g., `'active_event_id'`, `'theme_mode'`)
-  - `value`: `unknown` (JSON-serializable value)
-  - `updatedAt`: `string` (ISO 8601 UTC)
 
----
+Application preferences use a closed typed registry rather than
+`value: unknown` or unconstrained generics:
+
+```typescript
+export interface ApplicationPreferenceRegistry {
+  activeEventId: EventId | null
+  lastOperatorMode: AppMode
+}
+
+export type ApplicationPreferenceKey =
+  keyof ApplicationPreferenceRegistry
+
+export type ApplicationPreference<
+  K extends ApplicationPreferenceKey = ApplicationPreferenceKey,
+> = {
+  [P in K]: {
+    key: P
+    value: ApplicationPreferenceRegistry[P]
+    updatedAt: IsoTimestamp
+  }
+}[K]
+```
+
+Registry values must be structured-clone safe: no functions, symbols, DOM
+nodes, class instances, cyclic graphs, or `undefined`. Each key has a runtime
+validator and a specific return type. Adding a key requires updating the
+registry, validator, migration consideration, and tests.
 
 ### 4.2 Important Domain Invariants
-1. **String Ticket Identifiers**: Ticket numbers must be strings (`type TicketNumber = string`). Leading zeroes must be preserved throughout storage, indexing, querying, and presentation (e.g., `"00123"`). Ticket numbers must **NEVER** be converted to `number` or passed through `parseInt()`.
-2. **Prototype Isolation**: Prototype fixtures in `src/prototype/data/` must **NEVER** be inserted into the production IndexedDB instance or imported by domain entities.
-3. **Official Record Immutability**: Confirmed live winner records and audit logs must never be overwritten or deleted during normal application workflows.
-4. **Redraw Traceability**: Redraw operations must set the original winner status to `'replaced'` or `'cancelled'` and preserve explicit links to the replacement winner in a `RedrawRecord`.
-5. **Practice / Live Separation**: Practice draws must be explicitly tagged (`mode: 'practice'`) and stored separately or filtered out from official eligibility calculations.
-6. **Timestamp Standard**: All timestamps must be saved in machine-readable ISO 8601 UTC format (`YYYY-MM-DDTHH:mm:ss.sssZ`). Human-readable display text must be calculated at render time using local browser formatting helpers.
 
----
+1. Ticket numbers remain strings from domain creation through IndexedDB keys
+   and queries; leading zeroes are never normalized away.
+2. Prototype fixtures and types never enter production persistence.
+3. Invalid import rows are staging data, not Participant records.
+4. A used DrawConfiguration and attached DrawSession snapshots are immutable.
+5. Confirmed/completed official records cannot be overwritten through a
+   generic save operation.
+6. Practice records remain explicitly marked and cannot affect future Live
+   eligibility or official history.
+7. All stored timestamps use unambiguous ISO 8601 UTC strings.
+8. Denormalized winner relationship fields are validated against their parent
+   DrawSession, configuration snapshot, Participant, and candidate snapshot.
+9. AuditRecord and RedrawRecord are append-only.
+10. A redraw creates a new WinnerRecord; no WinnerRecord silently becomes a
+    different participant.
 
 ### 4.3 Identifier Strategy Recommendation
 
-We compare three primary ID generation strategies:
+| Strategy | Use | Decision |
+|---|---|---|
+| `crypto.randomUUID()` | Stable entity primary keys | Recommended; browser-native and collision resistant. |
+| Compound indexes | Scoped uniqueness and query keys | Recommended for event tickets and winner sequence positions. |
+| IndexedDB auto-increment | Entity identity | Rejected because insertion order should not define identity. |
 
-| Strategy | Pros | Cons | Recommendation |
-|---|---|---|---|
-| **`crypto.randomUUID()`** | Standard browser native API, zero dependencies, collision-resistant 128-bit UUID v4, supported in all modern Chrome/Edge browsers. | Opaque random string (36 chars). | **RECOMMENDED** for primary entity IDs (`EventId`, `ParticipantId`, `DrawSessionId`, etc.). |
-| **Composite IDs** (e.g., `event1:ticket001`) | Human-readable, self-describing, natural uniqueness scope. | Coupling entity identity to mutable properties; refactoring keys requires complex index updates. | **RECOMMENDED** only for compound index keys (e.g. `[eventId+ticketNumber]`). |
-| **IndexedDB Auto-Increment Keys** | Sequential numbers (`1, 2, 3...`), simple integer storage. | Auto-increment IDs leak sequence order, complicate multi-database sync, and vary by insertion order. | **REJECTED** for entity primary keys. |
-
-> **CRITICAL RULE**: `Math.random()` **MUST NEVER BE USED** to generate entity identifiers or random values.
+`Math.random()` must never generate official winner results or production
+entity IDs.
 
 ---
 
@@ -329,71 +406,80 @@ export type DrawSessionStatus =
   | 'ready'
   | 'drawing'
   | 'pending-confirmation'
-  | 'confirmed'
-  | 'cancelled'
-  | 'partially-replaced'
   | 'completed'
+  | 'cancelled'
 
 export type WinnerStatus =
   | 'pending'
   | 'confirmed'
   | 'cancelled'
-  | 'replaced'
-
-export type ParticipantValidationStatus =
-  | 'valid'
-  | 'invalid'
-
-export type ParticipantImportStrategy =
-  | 'replace'
-  | 'merge'
 ```
 
-### 5.2 Permitted State Transitions
+`ParticipantValidationStatus` and `ParticipantImportStrategy` are not
+Participant domain state in Phase 3. Phase 4 may define separate import-staging
+types for invalid rows and replace/merge intent.
 
-```
-[EventStatus]
-  draft ─────────► ready ─────────► live ─────────► completed ─────────► archived
-    │               │               │
-    └───────────────┴───────────────┴─────────────► archived (direct archive)
+### 5.2 Winner and Redraw Lifecycle
 
-[DrawSessionStatus]
-  draft ─────────► ready ─────────► drawing ─────────► pending-confirmation ─────────► confirmed
-                                                             │                          │
-                                                             ├─► partially-replaced ────┼─► completed
-                                                             │                          │
-                                                             └─► cancelled ─────────────┘
-
-[WinnerStatus]
-  pending ─────────► confirmed
+```text
+new selection
      │
-     └─────────────► cancelled ─────────► replaced
+     ▼
+  pending ───────────────► confirmed
+     │                         │
+     └──────────────┬──────────┘
+                    │ explicit redraw transaction
+                    ▼
+                cancelled  (terminal)
+                    │
+                    └── RedrawRecord ──► new replacement WinnerRecord (pending)
 ```
+
+- The original WinnerRecord always ends in terminal status `cancelled` when
+  replaced.
+- A replacement is a new WinnerRecord with its own immutable ID, participant,
+  ticket, and selection sequence.
+- A replacement starts `pending`, then may become `confirmed` or `cancelled`.
+  Cancelling it creates another RedrawRecord and another new pending
+  replacement.
+- `replaced` is not a WinnerStatus. It is relationship presentation derived
+  when a RedrawRecord points from a cancelled winner to a replacement.
+- `pending -> confirmed`, `pending -> cancelled`, and the exceptional
+  `confirmed -> cancelled` transition are intentional commands. The latter is
+  allowed only inside an audited redraw transaction with a required Live
+  reason.
+- `cancelled` is terminal. Identity and selection fields never transition.
 
 ### 5.3 State Enforcement Responsibilities
 
-| State Transition | Phase 3 Responsibility | Deferred Phase Responsibility |
+| Area | Phase 3 responsibility | Deferred responsibility |
 |---|---|---|
-| `EventStatus` transitions | Store status unions in IndexedDB; provide type safety. | UI workflow triggers for archiving and starting events (Phase 6). |
-| `DrawSessionStatus` transitions | Persist draw session records and status changes atomically. | Draw execution state machine, timers, hold-to-start (Phase 5/6). |
-| `WinnerStatus` transitions | Model `WinnerRecord` status updates and `RedrawRecord` relationships. | Operator confirmation/redraw UI workflows (Phase 8). |
-| `ParticipantValidationStatus` | Model `status` field on `Participant`. | CSV/XLSX file validation pipeline (Phase 4). |
+| Event lifecycle | Types, transition guards, repository commands | Operator workflow triggers |
+| DrawSession lifecycle | Types, snapshot contracts, immutable persistence | Draw execution state machine |
+| Winner lifecycle | Append and validated status-transition boundaries | Confirmation/redraw use cases and UI |
+| Redraw | Append-only relationship contract and atomic persistence boundary | Candidate selection and operator workflow |
+| Participant import validation | Exclude invalid rows from Participant domain | Phase 4 staging and file validation |
 
 ---
 
 ## 6. Prototype-to-Domain Boundary
 
 ### Architectural Boundary Rules
-1. **Strict Type Separation**: Prototype presentation types (`src/prototype/operator-types.ts`, `src/prototype/audience-types.ts`) will coexist with production domain types (`src/domain/`). Prototype types will **NOT** be imported into production persistence modules.
-2. **No Automatic Fixture Replacement**: Existing mock scenario queries (`/draw/setup?mode=live&scenario=insufficient`) will continue to read frozen presentation fixtures from `src/prototype/data/`. Production persistence will not replace prototype fixtures until an explicitly approved UI integration slice in a later phase.
-3. **Explicit Mapper Layer**: When UI components eventually transition to production persistence, explicit mapper functions (e.g., `mapDomainWinnerToPresentationViewModel()`) will transform domain entities into UI presentation models.
-4. **Deterministic Prototype Tests**: All 182 existing Phase 2 tests rely on deterministic query scenarios and frozen mock fixtures. Phase 3 must guarantee that no production persistence code breaks these tests.
 
-### Proposed Directory Layout (Domain & Infrastructure)
+1. `src/prototype/` presentation types are never imported by domain,
+   application repository, or persistence infrastructure modules.
+2. Existing scenario URLs continue to use frozen mock fixtures throughout
+   Phase 3.
+3. A future UI-integration phase must add explicit domain-to-view-model mappers.
+4. Production persistence must not be instantiated by current pages, route
+   loaders, hooks, or Audience components.
+5. All 182 accepted Phase 2 tests must remain deterministic and passing.
+
+### Proposed Directory Layout
 
 ```text
 src/
-├── domain/                         # Phase 3 Production Domain Models
+├── domain/
 │   ├── events/
 │   │   ├── event.types.ts
 │   │   └── event.invariants.ts
@@ -403,45 +489,66 @@ src/
 │   ├── prizes/
 │   │   └── prize.types.ts
 │   ├── draws/
+│   │   ├── draw-configuration.types.ts
 │   │   ├── draw-session.types.ts
-│   │   └── draw-configuration.types.ts
+│   │   └── draw.invariants.ts
 │   ├── winners/
 │   │   ├── winner.types.ts
-│   │   └── redraw.types.ts
+│   │   ├── redraw.types.ts
+│   │   └── winner.invariants.ts
 │   ├── audit/
 │   │   └── audit.types.ts
+│   ├── display/
+│   │   └── display-configuration.types.ts
+│   ├── preferences/
+│   │   └── application-preference.types.ts
 │   └── shared/
 │       ├── identifiers.ts
 │       ├── timestamps.ts
 │       └── result.ts
-├── infrastructure/                 # Phase 3 Infrastructure Layer
+├── application/
 │   └── persistence/
-│       ├── db.ts                   # Dexie database class / schema definition
-│       ├── schema/
-│       │   ├── schema-v1.ts
-│       │   └── migrations.ts
 │       ├── repositories/
-│       │   ├── event.repository.ts
-│       │   ├── participant.repository.ts
-│       │   ├── prize.repository.ts
-│       │   ├── draw-session.repository.ts
-│       │   ├── winner.repository.ts
-│       │   ├── audit.repository.ts
-│       │   └── preference.repository.ts
-│       └── errors/
-│           └── persistence-errors.ts
-└── application/                    # Application Abstractions (Repositories contracts)
-    └── repositories/
-        ├── event-repository.interface.ts
-        ├── participant-repository.interface.ts
-        ├── prize-repository.interface.ts
-        ├── draw-session-repository.interface.ts
-        ├── winner-repository.interface.ts
-        ├── audit-repository.interface.ts
-        └── preference-repository.interface.ts
+│       │   ├── event-repository.interface.ts
+│       │   ├── participant-repository.interface.ts
+│       │   ├── prize-category-repository.interface.ts
+│       │   ├── draw-configuration-repository.interface.ts
+│       │   ├── display-configuration-repository.interface.ts
+│       │   ├── draw-session-repository.interface.ts
+│       │   ├── winner-repository.interface.ts
+│       │   ├── redraw-repository.interface.ts
+│       │   ├── audit-repository.interface.ts
+│       │   └── preference-repository.interface.ts
+│       └── draw-persistence-unit-of-work.interface.ts
+└── infrastructure/
+    └── persistence/
+        ├── db.ts
+        ├── schema/
+        │   ├── schema-v1.ts
+        │   └── migrations.ts
+        ├── repositories/
+        │   ├── event.repository.ts
+        │   ├── participant.repository.ts
+        │   ├── prize-category.repository.ts
+        │   ├── draw-configuration.repository.ts
+        │   ├── display-configuration.repository.ts
+        │   ├── draw-session.repository.ts
+        │   ├── winner.repository.ts
+        │   ├── redraw.repository.ts
+        │   ├── audit.repository.ts
+        │   └── preference.repository.ts
+        ├── transactions/
+        │   └── dexie-draw-persistence-unit-of-work.ts
+        ├── diagnostics/
+        │   └── storage-diagnostics.ts
+        ├── seed/
+        │   ├── dev-seed.ts
+        │   └── reset-db.ts
+        └── errors/
+            └── persistence-errors.ts
 ```
 
-> **Note**: Do not create these directories during this planning task. They will be created during Phase 3 implementation slices.
+These paths are planned; this planning task creates none of them.
 
 ---
 
@@ -449,40 +556,29 @@ src/
 
 ### 7.1 Comparison of Options
 
-We compare three options for local persistence:
-
-| Criteria | 1. Native IndexedDB API | 2. Dexie.js (`dexie`) | 3. `idb` (Jake Archibald) |
+| Criteria | Native IndexedDB | Dexie | `idb` |
 |---|---|---|---|
-| **TypeScript Support** | Low (requires manual casting and EventListener handling) | **Excellent** (first-class typed tables, queries, and compound indexes) | Good (lightweight Promise wrappers over native types) |
-| **Schema Versioning** | Complex `onupgradeneeded` event handling, error-prone | **Built-in fluent versioning** (`db.version(1).stores({...})`) | Manual version check inside `openDB` upgrade callbacks |
-| **Migration Support** | Manual cursor-based transformations | **Built-in `.upgrade()` handlers** with typed table context | Manual transformation inside upgrade callback |
-| **Transaction Handling** | Verbose `db.transaction(['a', 'b'], 'readwrite')` | **Clean transaction syntax** `db.transaction('rw', db.tableA, ...)` | Promise-based native transactions |
-| **Testability** | Difficult to mock natively in jsdom without third-party DOM mocks | **Seamless** with `fake-indexeddb` in Vitest | Requires `fake-indexeddb` |
-| **Bundle Impact** | 0 KB (browser native) | ~25 KB (minified + gzipped) | ~2 KB (minified + gzipped) |
-| **Maintenance Risk** | Low (W3C standard API) | Low (widely adopted, active maintenance since 2014) | Low (maintained by Chrome team member) |
-| **Learning Curve** | High (verbose event-driven API) | Low (Clean async/await fluent API) | Medium (Promise wrapper over raw IDB) |
+| Strict TypeScript ergonomics | Manual and verbose | Strong typed tables and queries | Good Promise wrapper |
+| Schema/migrations | Manual upgrade events | Declarative versions and upgrade handlers | Manual upgrade callback |
+| Multi-store transactions | Verbose | Concise and testable | Promise-based native model |
+| Compound indexes | Manual key/index handling | Direct schema support | Native index wrappers |
+| Testability in Vitest | Needs an IndexedDB test provider | Works with `fake-indexeddb` | Works with `fake-indexeddb` |
+| Production dependency cost | None | Moderate | Small |
 
-### 7.2 Recommendation: Dexie.js (`dexie`)
+### 7.2 Recommendation: Dexie
 
-We recommend **Dexie.js (`dexie`)** as the persistence framework for Raffle OS.
+Dexie remains the recommended persistence layer because typed tables, compound
+indexes, migrations, and multi-store transactions materially reduce
+implementation risk. This is a proposed new production dependency and requires
+explicit approval before installation. Its exact version and bundle impact must
+be verified at implementation approval time rather than silently inferred from
+this plan.
 
-#### Tradeoffs & Approval Requirements:
-- **Current Status**: `dexie` is **NOT** currently installed in `package.json`.
-- **Proposed Production Dependency**: `dexie` (`^4.0.10`).
-- **Why Preferred over Native IndexedDB**:
-  1. Native IndexedDB code requires hundreds of lines of boilerplate for transactions, index cursors, and upgrade events, increasing maintenance risk.
-  2. Dexie provides compile-time TypeScript checks for store entities and compound indexes.
-  3. Dexie makes atomic multi-store transactions (e.g. creating a `DrawSession`, `WinnerRecord`, and `AuditRecord` together) concise and reliable.
-- **Disadvantages**: Adds a ~25 KB production bundle dependency.
-- **Approval Gate**: Explicit approval is required before installing `dexie`.
+### 7.3 Test Environment: `fake-indexeddb`
 
-### 7.3 Test Environment Dependency: `fake-indexeddb`
-
-For automated testing in Vitest / jsdom without requiring a real browser process:
-- **Proposed Development Dependency**: `fake-indexeddb` (`^6.0.0`).
-- **Purpose**: Provides an in-memory, fully compliant IndexedDB engine that executes inside Vitest/jsdom tests.
-- **Alternatives**: Running tests in real browsers via Playwright/Puppeteer (much slower, complex test setup).
-- **Approval Gate**: Explicit approval is required before installing `fake-indexeddb`.
+`fake-indexeddb` remains the recommended development dependency for isolated
+Vitest persistence tests. It does not replace final real-browser smoke checks.
+Installation and exact version also require explicit approval.
 
 ---
 
@@ -491,128 +587,291 @@ For automated testing in Vitest / jsdom without requiring a real browser process
 ### Database Name: `RaffleOS_DB` (Version 1)
 
 ```typescript
-// Proposed Dexie Schema Definition
-export interface RaffleOSSchema {
-  events: 'id, name, status, createdAt'
-  participants: 'id, eventId, ticketNumber, [eventId+ticketNumber], isCheckedIn, group'
-  prize_categories: 'id, eventId, displayOrder'
-  draw_configurations: 'id, eventId, prizeCategoryId'
-  draw_sessions: 'id, eventId, mode, status, createdAt'
-  winner_records: 'id, drawSessionId, participantId, ticketNumber, status, sequenceNumber'
-  redraw_records: 'id, drawSessionId, originalWinnerRecordId, replacementWinnerRecordId'
-  audit_records: 'id, eventId, action, timestamp'
-  preferences: 'key'
-}
+// Proposed Dexie Version 1 store strings
+const schemaV1 = {
+  events: 'id, name, status, createdAt',
+  participants:
+    'id, eventId, ticketNumber, &[eventId+ticketNumber], isCheckedIn, group',
+  prize_categories: 'id, eventId, displayOrder',
+  draw_configurations: 'id, eventId, prizeCategoryId',
+  display_configurations: 'id, &eventId',
+  draw_sessions:
+    'id, eventId, configurationId, mode, status, createdAt',
+  winner_records:
+    'id, eventId, prizeCategoryId, drawSessionId, participantId, ticketNumber, status, sequenceNumber, &[drawSessionId+sequenceNumber], [eventId+status], [eventId+prizeCategoryId+status]',
+  redraw_records:
+    'id, eventId, drawSessionId, &originalWinnerRecordId, replacementWinnerRecordId, createdAt',
+  audit_records: 'id, eventId, action, timestamp, [eventId+timestamp]',
+  preferences: 'key',
+} as const
 ```
 
-### Table Details
+`&[eventId+ticketNumber]` is intentionally unique and scoped per Event.
+`ticketNumber` remains a string component of the compound key.
 
-| Store Name | Primary Key | Indexes | Unique Constraints | Deletion Behavior | Primary Query Patterns |
-|---|---|---|---|---|---|
-| `events` | `id` | `name`, `status`, `createdAt` | `id` | Prohibited if confirmed draws exist. | Get all events; get active event by status. |
-| `participants` | `id` | `eventId`, `ticketNumber`, `[eventId+ticketNumber]`, `isCheckedIn`, `group` | `id`, `[eventId+ticketNumber]` | Cascade delete with Event in draft mode. | Query by `eventId`; query single ticket via compound key `[eventId+ticketNumber]`. |
-| `prize_categories` | `id` | `eventId`, `displayOrder` | `id` | Prohibited if referenced by active configuration. | List categories for event sorted by `displayOrder`. |
-| `draw_configurations` | `id` | `eventId`, `prizeCategoryId` | `id` | Allowed in draft mode. | Get configuration for draw setup. |
-| `draw_sessions` | `id` | `eventId`, `mode`, `status`, `createdAt` | `id` | Prohibited if status is `'confirmed'`. | Fetch latest live/practice draw session by `eventId`. |
-| `winner_records` | `id` | `drawSessionId`, `participantId`, `ticketNumber`, `status`, `sequenceNumber` | `id` | Immutably preserved for audit. | List winners for a `drawSessionId`; check if `participantId` is already a confirmed winner. |
-| `redraw_records` | `id` | `drawSessionId`, `originalWinnerRecordId`, `replacementWinnerRecordId` | `id` | Immutably preserved for audit. | Fetch replacement lineage for a cancelled winner. |
-| `audit_records` | `id` | `eventId`, `action`, `timestamp` | `id` | Append-only; deletion prohibited. | Query chronological audit timeline for event. |
-| `preferences` | `key` | None | `key` | Key-value overwrites allowed. | Get/set app settings (e.g. `active_event_id`). |
+`&[drawSessionId+sequenceNumber]` is also intentionally unique. It prevents two
+WinnerRecords from claiming the same immutable selection sequence in one
+DrawSession. Redraws append a replacement with the next sequence and use
+RedrawRecord for logical replacement presentation, so the constraint never
+requires deletion or mutation of the original.
+
+### Table Details, Ownership, and Test Coverage
+
+| Version 1 store | Primary/index decision | Repository owner | Slice | Required focused tests |
+|---|---|---|---:|---|
+| `events` | `id`; status/name indexes | EventRepository | 3 | create, update draft, transition, protected delete |
+| `participants` | `id`; unique `&[eventId+ticketNumber]` | ParticipantRepository | 3 | leading-zero lookup, scoped uniqueness, bounded event reads |
+| `prize_categories` | `id`; event/order indexes | PrizeCategoryRepository | 4 | event isolation, draft update, referenced-record guard |
+| `draw_configurations` | `id`; event/category indexes | DrawConfigurationRepository | 4 | draft update, immutability after use, relationship validation |
+| `display_configurations` | `id`; unique `&eventId` | DisplayConfigurationRepository | 4 | one per event, pure-black validation, reopen survival |
+| `draw_sessions` | `id`; event/mode/status indexes | DrawSessionRepository | 5 | transitions, snapshot immutability, terminal protection |
+| `winner_records` | `id`; event/category/session indexes; unique sequence compound index | WinnerRepository | 5 | append, denormalized validation, duplicate sequence rejection |
+| `redraw_records` | `id`; unique original-winner index | RedrawRepository | 5 | append-only lineage, reason rules, relationship validation |
+| `audit_records` | `id`; chronological event compound index | AuditRepository | 5 | append-only behavior and ordered event query |
+| `preferences` | typed `key` | PreferenceRepository | 4 | key-specific validation, structured-clone-safe round trip |
+
+No Version 1 table may be added during implementation without adding its
+domain owner, repository interface, Dexie implementation, implementation slice,
+migration consideration, tests, and acceptance coverage.
+
+### Deletion Behavior
+
+- Event deletion is limited to a deliberate draft-only operation when no
+  official history exists.
+- Participant/category/configuration deletion cannot invalidate snapshots or
+  official history.
+- DrawSession, WinnerRecord, RedrawRecord, and AuditRecord official history is
+  never deleted through standard repositories.
+- DisplayConfiguration may be replaced only through an event-scoped update
+  command.
+- Preferences may be set by their typed key.
+- A full developer database reset is a separate guarded utility, not a
+  repository operation.
 
 ---
 
 ## 9. Schema Versioning and Migration Strategy
 
-### Database Initialization & Version 1
-- **Database Name**: `RaffleOS_DB`
-- **Initial Version**: `1`
-- **Version Control File**: `src/infrastructure/persistence/schema/schema-v1.ts`
+### Database Initialization and Version 1
+
+- database name: `RaffleOS_DB`;
+- initial version: `1`;
+- schema declaration: `schema/schema-v1.ts`;
+- version registration and forward migrations: `schema/migrations.ts`; and
+- database class/table typing: `db.ts`.
+
+`migrations.ts` is part of the actual Slice 2 file list and has its own test
+coverage; it is not merely an acceptance aspiration.
 
 ### Schema Evolution Rules
-Every schema change after Version 1 must follow strict discipline:
-1. **Migration Code**: Increment database version number (e.g. `.version(2)`) and write an explicit `.upgrade(tx => { ... })` function in `src/infrastructure/persistence/schema/migrations.ts`.
-2. **Migration Tests**: Write a dedicated Vitest suite testing the schema upgrade using pre-seeded Version N data transformed into Version N+1 structures.
-3. **No Destructive Drops**: Existing object stores or columns must not be dropped without data transformation or explicit deprecation paths.
-4. **Unsupported Version Failure**: If an open database request encounters a database version higher than the current code supports, open fails with a typed `UnsupportedSchemaVersionError` without mutating local data.
-5. **No Deployment Rollbacks**: IndexedDB cannot automatically "rollback" schema migrations once committed to a user's browser storage. All migrations must be forward-only and strictly tested.
+
+1. Increment the Dexie version and add an explicit forward-only migration.
+2. Test an upgrade from a seeded prior-version database, including leading-zero
+   tickets and official history.
+3. Preserve or explicitly transform old data; do not silently drop stores or
+   official records.
+4. Fail a database newer than supported with
+   `UnsupportedSchemaVersionError` before mutating data.
+5. Treat committed browser migrations as irreversible deployments and document
+   recovery behavior.
+6. Review new typed preference keys and snapshot-format versions for migration
+   needs.
 
 ---
 
 ## 10. Repository and Data-Access Architecture
 
-### Architecture Pattern: Repositories with IndexedDB Implementation
-We separate domain storage interfaces from IndexedDB specifics using the Repository Pattern.
+### Architecture Pattern
 
-```
-React UI / Hooks (Phase 6+) ──► Application Service ──► Repository Interface ──► Dexie IndexedDB Implementation
+```text
+Future UI/use case
+    → application persistence contract
+        → repository or draw persistence unit of work
+            → Dexie implementation
+                → IndexedDB
 ```
 
-### Proposed Repository Interfaces
+### Intentional Repository Commands
+
+Official or historical entities do not expose universal `save` methods.
+Representative boundaries are:
 
 ```typescript
-export interface EventRepository {
+interface EventRepository {
   findById(id: EventId): Promise<Event | null>
   findAll(): Promise<Event[]>
-  save(event: Event): Promise<void>
-  delete(id: EventId): Promise<void>
+  create(event: Event): Promise<void>
+  updateDraft(event: Event): Promise<void>
+  transitionStatus(
+    id: EventId,
+    from: EventStatus,
+    to: EventStatus,
+    at: IsoTimestamp,
+  ): Promise<void>
+  deleteDraft(id: EventId): Promise<void>
 }
 
-export interface ParticipantRepository {
+interface ParticipantRepository {
   findById(id: ParticipantId): Promise<Participant | null>
-  findByTicketNumber(eventId: EventId, ticketNumber: string): Promise<Participant | null>
-  findByEventId(eventId: EventId, options?: { limit?: number; offset?: number }): Promise<Participant[]>
-  save(participant: Participant): Promise<void>
-  saveBatch(participants: Participant[]): Promise<void>
+  findByTicketNumber(
+    eventId: EventId,
+    ticketNumber: TicketNumber,
+  ): Promise<Participant | null>
+  findByEventId(
+    eventId: EventId,
+    page: { limit: number; offset: number },
+  ): Promise<Participant[]>
   countByEventId(eventId: EventId): Promise<number>
-  deleteAllByEventId(eventId: EventId): Promise<void>
+  createBatch(participants: readonly Participant[]): Promise<void>
+  updateOperationalFields(
+    id: ParticipantId,
+    changes: ParticipantOperationalChanges,
+  ): Promise<void>
+  deleteDraftEventParticipants(eventId: EventId): Promise<void>
 }
 
-export interface PrizeRepository {
-  findCategoriesByEventId(eventId: EventId): Promise<PrizeCategory[]>
-  saveCategory(category: PrizeCategory): Promise<void>
+interface PrizeCategoryRepository {
+  findById(id: PrizeCategoryId): Promise<PrizeCategory | null>
+  findByEventId(eventId: EventId): Promise<PrizeCategory[]>
+  create(category: PrizeCategory): Promise<void>
+  updateDraft(category: PrizeCategory): Promise<void>
+  deleteDraft(id: PrizeCategoryId): Promise<void>
 }
 
-export interface DrawSessionRepository {
+interface DrawConfigurationRepository {
+  findById(id: DrawConfigurationId): Promise<DrawConfiguration | null>
+  findByEventId(eventId: EventId): Promise<DrawConfiguration[]>
+  createDraft(configuration: DrawConfiguration): Promise<void>
+  updateDraft(configuration: DrawConfiguration): Promise<void>
+  deleteUnused(id: DrawConfigurationId): Promise<void>
+}
+
+interface DisplayConfigurationRepository {
+  findByEventId(eventId: EventId): Promise<DisplayConfiguration | null>
+  create(configuration: DisplayConfiguration): Promise<void>
+  updateForEvent(configuration: DisplayConfiguration): Promise<void>
+}
+
+interface DrawSessionRepository {
   findById(id: DrawSessionId): Promise<DrawSession | null>
-  findLatestByEventId(eventId: EventId, mode?: AppMode): Promise<DrawSession | null>
-  save(session: DrawSession): Promise<void>
+  findLatestByEventId(
+    eventId: EventId,
+    mode?: AppMode,
+  ): Promise<DrawSession | null>
+  createDraft(session: DrawSession): Promise<void>
+  attachSnapshotsAndTransitionToDrawing(
+    id: DrawSessionId,
+    snapshots: DrawStartSnapshots,
+  ): Promise<void>
+  transitionStatus(
+    id: DrawSessionId,
+    from: DrawSessionStatus,
+    to: DrawSessionStatus,
+    at: IsoTimestamp,
+  ): Promise<void>
 }
 
-export interface WinnerRepository {
-  findByDrawSessionId(drawSessionId: DrawSessionId): Promise<WinnerRecord[]>
-  findConfirmedByEventId(eventId: EventId): Promise<WinnerRecord[]>
-  save(winner: WinnerRecord): Promise<void>
-  saveBatch(winners: WinnerRecord[]): Promise<void>
+interface WinnerRepository {
+  findByDrawSessionId(id: DrawSessionId): Promise<WinnerRecord[]>
+  findConfirmedByEventId(id: EventId): Promise<WinnerRecord[]>
+  findConfirmedByEventAndCategory(
+    eventId: EventId,
+    prizeCategoryId: PrizeCategoryId,
+  ): Promise<WinnerRecord[]>
+  append(winner: WinnerRecord): Promise<void>
+  appendBatch(winners: readonly WinnerRecord[]): Promise<void>
+  transitionStatus(
+    id: WinnerRecordId,
+    from: WinnerStatus,
+    to: WinnerStatus,
+    at: IsoTimestamp,
+  ): Promise<void>
 }
 
-export interface AuditRepository {
+interface RedrawRepository {
+  findByDrawSessionId(id: DrawSessionId): Promise<RedrawRecord[]>
+  findByOriginalWinnerId(id: WinnerRecordId): Promise<RedrawRecord | null>
+  append(record: RedrawRecord): Promise<void>
+}
+
+interface AuditRepository {
   findByEventId(eventId: EventId): Promise<AuditRecord[]>
-  append(audit: AuditRecord): Promise<void>
+  append(record: AuditRecord): Promise<void>
 }
 
-export interface PreferenceRepository {
-  get<T>(key: string): Promise<T | null>
-  set<T>(key: string, value: T): Promise<void>
+interface PreferenceRepository {
+  get<K extends ApplicationPreferenceKey>(
+    key: K,
+  ): Promise<ApplicationPreferenceRegistry[K] | null>
+  set<K extends ApplicationPreferenceKey>(
+    key: K,
+    value: ApplicationPreferenceRegistry[K],
+    at: IsoTimestamp,
+  ): Promise<void>
 }
 ```
 
-### Transaction Boundaries & Error Normalization
-- **Multi-Store Transactions**: Operations involving multiple stores (e.g. saving a `DrawSession` and its `WinnerRecord` entries) must run inside a single Dexie write transaction (`db.transaction('rw', [db.draw_sessions, db.winner_records, db.audit_records], async () => { ... })`).
-- **Error Normalization**: All native IndexedDB / Dexie exceptions must be caught inside repositories and re-thrown as typed domain errors (`PersistenceError`).
+The concrete method names may be refined during implementation, but these
+capability limits are acceptance requirements. There is no generic overwrite
+path for confirmed/completed DrawSession, WinnerRecord, RedrawRecord, or
+AuditRecord data.
+
+### Cross-Store Transaction Ownership
+
+Repositories own single-store validation and access. Cross-store atomicity is
+owned by `DrawPersistenceUnitOfWork` in the application boundary and
+`DexieDrawPersistenceUnitOfWork` in infrastructure.
+
+The coordinator provides intentional operations for:
+
+- appending a started DrawSession snapshot, selected WinnerRecords, and the
+  corresponding AuditRecord atomically;
+- transitioning one or more winner statuses with AuditRecords atomically; and
+- cancelling an original winner, appending a distinct pending replacement,
+  appending RedrawRecord, updating the DrawSession state if required, and
+  appending AuditRecord atomically.
+
+These are persistence transactions, not Phase 3 selection or Operator
+workflows. They accept already-created, already-policy-validated records from
+future application use cases, then enforce relationship consistency and
+rollback all stores on failure. UI components and independent repositories do
+not open their own overlapping multi-store write transactions.
+
+### Relationship Validation and Error Normalization
+
+- Cross-store validation occurs inside the same transaction as the write to
+  avoid time-of-check/time-of-use inconsistencies.
+- Duplicate tickets and duplicate session sequence positions map to
+  `DuplicateRecordError`.
+- Missing or mismatched parents map to typed validation/relationship errors.
+- Dexie/native errors are normalized once at the infrastructure boundary and
+  preserve their cause without exposing implementation exceptions to React.
 
 ---
 
 ## 11. Seed and Development Data Strategy
 
 ### Development Seed Rules
-- Seed execution must be **explicitly triggered** (e.g., via a developer utility function or CLI helper). It must **NEVER** run automatically in production builds.
-- Seed data must use fictional names, events, and ticket numbers.
-- Ticket numbers must include string leading zeroes (e.g. `"000101"`, `"000102"`, `"000999"`).
-- Seeding must check for existing data and refuse to overwrite local databases unless an explicit `overwrite: true` parameter is provided.
-- Seed records must conform strictly to production domain entity schemas.
-- Sample dataset size for development testing:
-  - **Standard Dev Seed**: 1 Event, 2 Prize Categories, 500 Participants (including leading-zero tickets and check-in statuses).
-  - **Performance Dev Seed**: 1 Event, 10,000 Participants (for testing index query performance).
+
+- Seeding is explicitly invoked and never runs automatically in production.
+- All data is fictional and uses valid production contracts.
+- Leading-zero tickets are included.
+- Default seeding refuses existing data; any overwrite path requires a guarded
+  reset first rather than silent per-record replacement.
+- A standard seed covers every Version 1 store.
+- A capacity seed provides 10,000 Participants for bounded-query and index
+  benchmark work.
+- Official-history seeds use append/transition commands and the transaction
+  coordinator rather than bypassing repository immutability.
+
+### Database Reset Limitation
+
+The reset helper requires an explicit multi-step confirmation token and returns
+a structured result describing success or failure. A record written to
+`audit_records` in `RaffleOS_DB` cannot survive deletion of that same database.
+Therefore Phase 3 makes **no persistent audit guarantee for a full database
+reset**. A pre-reset log would be deleted with the database and must not be
+described as durable evidence. Durable external reset logging is out of scope.
 
 ---
 
@@ -620,322 +879,424 @@ export interface PreferenceRepository {
 
 ### Safeguard Matrix
 
-| Potential Risk | Enforcement Mechanism | Failure Handling |
+| Risk | Enforcement | Failure behavior |
 |---|---|---|
-| **Duplicate Ticket in Event** | Compound index `[eventId+ticketNumber]` in `participants` store. | Repository throws `DuplicateRecordError`; write is aborted. |
-| **Numeric Ticket Coercion** | TypeScript strict string types (`type TicketNumber = string`) + repository string checks. | Runtime error if non-string passed. |
-| **Malformed Stored Record** | Schema validation helpers on read/write in repository layer. | Throws `ValidationError`; prevents corrupted data from entering domain. |
-| **Partial Transaction Failure** | Atomic multi-store Dexie transactions. | Transaction auto-rolls back all writes cleanly. |
-| **Storage Quota Exceeded** | Catch `QuotaExceededError` in repository error normalizer. | Throws `StorageQuotaError` with user-facing recovery guidance. |
-| **Browser Private Mode** | Storage availability diagnostic check on DB initialization. | Throws `DatabaseUnavailableError`; warns operator before session starts. |
-| **Accidental Reset / Delete** | Multi-step confirmation flag required in reset utility functions. | Hard-reset blocked unless explicit confirmation token provided. |
-| **Cross-Event Data Leakage** | All primary queries filtered strictly by `eventId`. | Isolated dataset returned per event. |
+| Duplicate ticket within Event | Unique `&[eventId+ticketNumber]` | Abort and return `DuplicateRecordError` |
+| Duplicate winner sequence | Unique `&[drawSessionId+sequenceNumber]` | Abort without altering prior winner history |
+| Numeric ticket coercion | `TicketNumber` string type plus runtime validation | Reject before write |
+| Mismatched denormalized winner fields | Transactional parent/snapshot validation | Roll back all related writes |
+| Configuration changed after use | `updateDraft` guard plus immutable session snapshot | Reject mutation |
+| Candidate history reduced to a count | Full candidate snapshot contract | Reject draw-start persistence without complete snapshot |
+| Partial official write | Dexie multi-store transaction coordinator | Roll back every participating store |
+| Generic official overwrite | No generic save/put capability in repository contracts | Compile-time/API boundary plus runtime guard |
+| Storage unavailable | Destructive-free capability diagnostic | Return `DatabaseUnavailableError` and block future Live startup |
+| Accidental full reset | Explicit confirmation token and separate utility | Refuse reset; never claim its in-database audit survives |
+| Cross-event leakage | Required event-scoped indexes and relationship checks | Reject mismatches and return only scoped data |
 
 ---
 
 ## 13. Error Model
 
-### Typed Domain Persistence Errors
+All persistence errors derive from `PersistenceError` and narrow caught
+`unknown` values safely. Planned types include:
 
-All persistence errors inherit from a base `PersistenceError` class in `src/infrastructure/persistence/errors/persistence-errors.ts`:
+- `DatabaseUnavailableError`;
+- `SchemaMigrationError`;
+- `UnsupportedSchemaVersionError`;
+- `RecordNotFoundError`;
+- `DuplicateRecordError`;
+- `RelationshipMismatchError`;
+- `ValidationError`;
+- `ImmutableRecordError`;
+- `StorageQuotaError`; and
+- `TransactionError`.
 
-```typescript
-export abstract class PersistenceError extends Error {
-  abstract readonly code: string
-  constructor(message: string) {
-    super(message)
-    this.name = this.constructor.name
-  }
-}
-
-export class DatabaseUnavailableError extends PersistenceError {
-  readonly code = 'DATABASE_UNAVAILABLE'
-}
-
-export class SchemaMigrationError extends PersistenceError {
-  readonly code = 'SCHEMA_MIGRATION_FAILED'
-}
-
-export class RecordNotFoundError extends PersistenceError {
-  readonly code = 'RECORD_NOT_FOUND'
-}
-
-export class DuplicateRecordError extends PersistenceError {
-  readonly code = 'DUPLICATE_RECORD'
-}
-
-export class ValidationError extends PersistenceError {
-  readonly code = 'VALIDATION_FAILED'
-}
-
-export class StorageQuotaError extends PersistenceError {
-  readonly code = 'STORAGE_QUOTA_EXCEEDED'
-}
-
-export class TransactionError extends PersistenceError {
-  readonly code = 'TRANSACTION_FAILED'
-}
-
-export class UnsupportedSchemaVersionError extends PersistenceError {
-  readonly code = 'UNSUPPORTED_SCHEMA_VERSION'
-}
-```
-
-### Error Handling Classification
-
-| Error Type | Recoverable? | User-Facing Message | Action |
-|---|---|---|---|
-| `DatabaseUnavailableError` | No | "Local browser storage is unavailable or blocked by private browsing mode." | Block Live Mode startup. |
-| `SchemaMigrationError` | No | "Database migration failed. Your stored data has been preserved." | Halt startup; log diagnostic details. |
-| `RecordNotFoundError` | Yes | "The requested record could not be found." | Log warning; return fallback UI state. |
-| `DuplicateRecordError` | Yes | "A participant with ticket number X already exists in this event." | Highlight input field for operator. |
-| `StorageQuotaError` | Conditional | "Browser storage is full. Please free space on your device." | Warn operator; block new imports. |
+`DatabaseUnavailableError` messaging must state that local storage failed the
+capability check. It must not claim the browser is in private/incognito mode,
+because browser mode cannot be reliably inferred from storage behavior.
 
 ---
 
 ## 14. Testing Strategy
 
-### 14.1 Test Scope & Requirements
-- **Domain Model Tests**: Verify string ticket retention, leading zero preservation, invariant enforcement, and state transition validation without any database or React component dependencies.
-- **Database Tests**: Test Dexie database initialization, Version 1 schema creation, index lookups, transaction rollbacks, and record survival across database re-open cycles using `fake-indexeddb`.
-- **Repository Tests**: Test typed returns, `[eventId+ticketNumber]` compound index lookups, error normalization, and batch operations.
-- **Seed Tests**: Test that development seeding produces valid domain entities, preserves leading-zero ticket strings, and refuses silent overwrites.
-- **Regression Tests**: Verify that all 22 Phase 2 test files and 182 tests continue to pass without any regression.
+### 14.1 Automated Test Scope
 
-### 14.2 Isolated Test Database Approach
-All persistence tests will run in Vitest using `fake-indexeddb` to ensure fast, isolated, in-memory execution without touching real browser profiles or requiring Playwright/Puppeteer.
+- **Domain tests**: string ticket retention, absence of Participant validation
+  state, configuration/snapshot immutability, winner lifecycle, redraw chains,
+  pure-black display configuration, and typed preference validation.
+- **Database/schema tests**: all ten Version 1 stores, exact unique compound
+  indexes, schema open/reopen, forward migration harness, and unsupported
+  version handling.
+- **Repository tests**: every repository in the ownership table, bounded reads,
+  typed returns, relationship guards, and intentional mutation commands.
+- **Transaction tests**: success and rollback across DrawSession,
+  WinnerRecord, RedrawRecord, and AuditRecord stores.
+- **Snapshot tests**: configuration and full candidate entries survive
+  close/reopen; count matches entries; snapshots reject mutation after start.
+- **Seed/reset tests**: every store receives valid seed data, leading zeroes
+  survive, overwrite is refused, confirmation is required, and no false reset
+  audit-survival claim exists.
+- **Diagnostics tests**: success and each failure stage of the capability probe,
+  with cleanup attempted in all paths.
+- **Regression tests**: the existing 22 test files and 182 tests remain passing
+  and no prototype UI imports or initializes production persistence.
+
+### 14.2 Isolated Database Approach
+
+Automated persistence tests use `fake-indexeddb` with a unique database name per
+test and guaranteed cleanup. Real browser behavior is covered by final manual
+smoke checks rather than assumed from the in-memory implementation.
+
+### 14.3 Storage-Capability Diagnostic
+
+The diagnostic does not attempt private-browsing detection. It:
+
+1. opens a uniquely named temporary IndexedDB database;
+2. creates a temporary object store;
+3. writes a sentinel record;
+4. reads it back and verifies its value;
+5. deletes the record and verifies cleanup;
+6. closes the database; and
+7. deletes the temporary database in a `finally` path.
+
+The result reports which capability stage failed and any normalized error. The
+probe must never write production event data.
 
 ---
 
 ## 15. Performance and Capacity Planning
 
-### Targets & Capacity Constraints
-- **Participant Dataset Scale**: Support at least **10,000 participants** per event.
-- **Draw Session Scale**: Support multiple draw sessions per event with up to **100 winners** per draw.
-- **Query Performance**: Index lookups for `[eventId+ticketNumber]` and `eventId` must complete in **< 10 ms** for a 10,000 participant store.
-- **Bounded Memory Reads**: Repository methods must support pagination (`limit`/`offset`) or stream cursors to prevent loading all 10,000 participant objects into memory simultaneously when only a subset is requested.
+### Capacity and Query Guidance
+
+- Support at least 10,000 Participants per Event.
+- Support multiple DrawSessions per Event and up to 100 initial winners per
+  draw.
+- Use indexed queries for event ticket, event history, category history, and
+  draw-session winner lookups.
+- Require explicit bounded reads (`limit` plus cursor/offset policy) for
+  participant lists; do not load an entire Event when a subset is requested.
+- Prohibit unnecessary `toArray()` calls or full-store scans in normal lookup
+  paths.
+- Benchmark both cold and warm indexed queries against representative data.
+
+There is no universal “less than 10 ms” persistence acceptance threshold.
+IndexedDB latency depends on browser, hardware, profile state, dataset, cache
+state, and test environment. Each benchmark record must include:
+
+- Chrome/Edge version;
+- operating system and relevant hardware description;
+- dataset size and shape;
+- query/index used and requested result bound;
+- cold/warm methodology, iteration count, and summary measurements; and
+- any discovered full scan or unbounded allocation.
+
+Performance acceptance is based on correct index use, bounded memory behavior,
+absence of avoidable scans, and recorded measurements. The PRD's separate
+sub-one-second final selection target remains for the future draw engine and is
+not redefined here.
 
 ---
 
 ## 16. Security and Privacy
 
-### Security & Privacy Rules
-1. **Local-First Isolation**: All participant and draw data remains stored strictly inside the local browser profile's IndexedDB instance. No network requests or cloud calls are made.
-2. **Unencrypted Browser Storage**: IndexedDB storage is unencrypted by default in web browsers. Anyone with access to the physical device and browser user profile can inspect local IndexedDB records via DevTools.
-3. **Audience Display Privacy Boundary**: The Audience Display interface must **NEVER** query or receive full `Participant` records (which may contain names, groups, check-in status, or notes). Audience messages must contain string ticket numbers and public prize labels only.
-4. **Local Audit Limitations**: Local IndexedDB audit trails prevent operational mistakes, but do not constitute tamper-proof or legally certified audit logs against a device administrator.
+1. All Phase 3 data remains inside the local browser profile; no network or
+   cloud request is added.
+2. IndexedDB is not an application-level encryption boundary. A person with
+   device/profile access may inspect it.
+3. Audience code never queries Participant repositories or receives full
+   Participant records.
+4. Local audit records reduce accidental operational ambiguity but are neither
+   tamper-proof nor legally certified.
+5. Deleting site data or the full database destroys records, including any
+   audit record stored in that database.
+6. The storage diagnostic reports capability, not private/incognito status.
 
 ---
 
 ## 17. Proposed Phase 3 Folder Structure
 
+The authoritative proposed layout is the structure in Section 6. In addition,
+tests are colocated by concern:
+
 ```text
 src/
-├── domain/                                 # [NEW in Phase 3] Production Domain Models
-│   ├── events/
-│   │   ├── event.types.ts
-│   │   └── event.invariants.ts
-│   ├── participants/
-│   │   ├── participant.types.ts
-│   │   └── participant.invariants.ts
-│   ├── prizes/
-│   │   └── prize.types.ts
-│   ├── draws/
-│   │   ├── draw-session.types.ts
-│   │   └── draw-configuration.types.ts
-│   ├── winners/
-│   │   ├── winner.types.ts
-│   │   └── redraw.types.ts
-│   ├── audit/
-│   │   └── audit.types.ts
-│   └── shared/
-│       ├── identifiers.ts
-│       ├── timestamps.ts
-│       └── result.ts
-├── infrastructure/                         # [NEW in Phase 3] Infrastructure & Storage
-│   └── persistence/
-│       ├── db.ts                           # Dexie database definition
-│       ├── schema/
-│       │   ├── schema-v1.ts
-│       │   └── migrations.ts
-│       ├── repositories/
-│       │   ├── event.repository.ts
-│       │   ├── participant.repository.ts
-│       │   ├── prize.repository.ts
-│       │   ├── draw-session.repository.ts
-│       │   ├── winner.repository.ts
-│       │   ├── audit.repository.ts
-│       │   └── preference.repository.ts
-│       ├── seed/
-│       │   └── dev-seed.ts                 # Explicit development seed helper
-│       └── errors/
-│           └── persistence-errors.ts
-├── application/                            # [NEW in Phase 3] Abstract Interfaces
-│   └── repositories/
-│       ├── event-repository.interface.ts
-│       ├── participant-repository.interface.ts
-│       ├── prize-repository.interface.ts
-│       ├── draw-session-repository.interface.ts
-│       ├── winner-repository.interface.ts
-│       ├── audit-repository.interface.ts
-│       └── preference-repository.interface.ts
-├── prototype/                              # [UNCHANGED] Prototype Fixtures & View Models
-│   ├── data/
-│   ├── operator-types.ts
-│   └── audience-types.ts
-└── pages/                                  # [UNCHANGED] Prototype Presentation Screens
+├── domain/domain.test.ts
+├── infrastructure/persistence/
+│   ├── db.test.ts
+│   ├── schema/migrations.test.ts
+│   ├── repositories/configuration-repositories.test.ts
+│   ├── repositories/core-repositories.test.ts
+│   ├── repositories/draw-history-repositories.test.ts
+│   ├── transactions/draw-persistence-unit-of-work.test.ts
+│   ├── diagnostics/storage-diagnostics.test.ts
+│   └── seed/seed-and-reset.test.ts
+└── prototype/                              # unchanged and disconnected
 ```
 
 ---
 
 ## 18. Implementation Slices
 
-Phase 3 is divided into seven (7) reviewable implementation slices:
+Phase 3 is divided into seven reviewable slices.
 
 ### Slice 1: Domain Contracts and Invariants
-- **Objective**: Create production TypeScript domain entity models, status discriminated unions, branded identifier utilities, timestamp helpers, and domain invariant validation functions.
-- **Files Created/Modified**:
+
+- **Objective**: define every promised production domain type, snapshot,
+  lifecycle, preference registry, and invariant without database code.
+- **Files**:
   - [NEW] `src/domain/shared/identifiers.ts`
   - [NEW] `src/domain/shared/timestamps.ts`
+  - [NEW] `src/domain/shared/result.ts`
   - [NEW] `src/domain/events/event.types.ts`
+  - [NEW] `src/domain/events/event.invariants.ts`
   - [NEW] `src/domain/participants/participant.types.ts`
+  - [NEW] `src/domain/participants/participant.invariants.ts`
   - [NEW] `src/domain/prizes/prize.types.ts`
+  - [NEW] `src/domain/draws/draw-configuration.types.ts`
   - [NEW] `src/domain/draws/draw-session.types.ts`
+  - [NEW] `src/domain/draws/draw.invariants.ts`
   - [NEW] `src/domain/winners/winner.types.ts`
+  - [NEW] `src/domain/winners/redraw.types.ts`
+  - [NEW] `src/domain/winners/winner.invariants.ts`
   - [NEW] `src/domain/audit/audit.types.ts`
+  - [NEW] `src/domain/display/display-configuration.types.ts`
+  - [NEW] `src/domain/preferences/application-preference.types.ts`
   - [NEW] `src/domain/domain.test.ts`
-- **Proposed Dependencies**: None.
-- **Tests**: Unit tests for string ticket retention, leading zero preservation, state union validation, and invariant checks.
-- **Verification Commands**: `npm run lint`, `npm run typecheck`, `npm run test`.
-- **Explicit Non-Goals**: No database code or persistence dependencies installed in Slice 1.
-- **Commit Boundary**: `feat(domain): define Phase 3 domain entity models and invariants`
+- **Tests**: all Section 14 domain cases, including DisplayConfiguration,
+  ApplicationPreference, snapshots, and winner/redraw semantics.
+- **Dependencies**: none.
+- **Verification**:
+  `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run test`,
+  `npm.cmd run build`, `git diff --check`.
+- **Non-goals**: no dependency installation, IndexedDB, import logic, or UI.
+- **Commit boundary**: `feat(domain): define Phase 3 domain contracts`
 
-### Slice 2: Persistence Dependencies and Database Schema Version 1
-- **Objective**: Obtain explicit approval, install `dexie` and `fake-indexeddb`, define the Dexie database class `RaffleOSDatabase`, Version 1 schema, indices, and error domain classes.
-- **Files Created/Modified**:
-  - [MODIFY] `package.json` (add `dexie` to dependencies, `fake-indexeddb` to devDependencies)
+### Slice 2: Persistence Dependencies, Schema Version 1, and Migrations
+
+- **Objective**: after explicit approval, install approved dependencies and
+  define the database, all ten stores, exact indexes, error types, and migration
+  infrastructure.
+- **Files**:
+  - [MODIFY] `package.json`
+  - [MODIFY] `package-lock.json`
   - [NEW] `src/infrastructure/persistence/errors/persistence-errors.ts`
   - [NEW] `src/infrastructure/persistence/schema/schema-v1.ts`
+  - [NEW] `src/infrastructure/persistence/schema/migrations.ts`
+  - [NEW] `src/infrastructure/persistence/schema/migrations.test.ts`
   - [NEW] `src/infrastructure/persistence/db.ts`
   - [NEW] `src/infrastructure/persistence/db.test.ts`
-- **Proposed Dependencies**: `dexie` (`^4.0.10`), `fake-indexeddb` (`^6.0.0`).
-- **Tests**: Test database creation, store indexing, compound key `[eventId+ticketNumber]`, error mapping, and database re-opening in `fake-indexeddb`.
-- **Verification Commands**: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`.
-- **Commit Boundary**: `feat(persistence): establish Dexie schema v1 and test setup`
+- **Tests**: schema opens with every store and exact unique indexes; migration
+  harness; reopen survival; unsupported versions; error normalization.
+- **Dependencies**: proposed `dexie` and `fake-indexeddb`, with exact versions
+  approved at implementation time.
+- **Verification**: all five Windows commands listed in Slice 1.
+- **Commit boundary**: `feat(persistence): establish schema v1 and migrations`
 
-### Slice 3: Repository Interfaces and Event / Participant Repositories
-- **Objective**: Create application repository interfaces and Implement `DexieEventRepository` and `DexieParticipantRepository`.
-- **Files Created/Modified**:
-  - [NEW] `src/application/repositories/event-repository.interface.ts`
-  - [NEW] `src/application/repositories/participant-repository.interface.ts`
+### Slice 3: Event and Participant Repositories
+
+- **Objective**: implement Event and Participant contracts and Dexie owners.
+- **Files**:
+  - [NEW] `src/application/persistence/repositories/event-repository.interface.ts`
+  - [NEW] `src/application/persistence/repositories/participant-repository.interface.ts`
   - [NEW] `src/infrastructure/persistence/repositories/event.repository.ts`
   - [NEW] `src/infrastructure/persistence/repositories/participant.repository.ts`
-  - [NEW] `src/infrastructure/persistence/repositories/repositories.test.ts`
-- **Proposed Dependencies**: Uses installed `dexie`.
-- **Tests**: Test Event CRUD, Participant batch insertions, string ticket lookups, and compound key uniqueness.
-- **Verification Commands**: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`.
-- **Commit Boundary**: `feat(persistence): implement event and participant repositories`
+  - [NEW] `src/infrastructure/persistence/repositories/core-repositories.test.ts`
+- **Tests**: intentional commands, event isolation, bounded reads, string ticket
+  round trips, and unique `&[eventId+ticketNumber]`.
+- **Verification**: all five Windows commands listed in Slice 1.
+- **Commit boundary**: `feat(persistence): add event and participant repositories`
 
-### Slice 4: Draw Session, Winner, Redraw, and Audit Repositories
-- **Objective**: Implement `DexieDrawSessionRepository`, `DexieWinnerRepository`, `DexieAuditRepository`, and `DexiePreferenceRepository` with atomic transaction boundaries.
-- **Files Created/Modified**:
-  - [NEW] `src/application/repositories/draw-session-repository.interface.ts`
-  - [NEW] `src/application/repositories/winner-repository.interface.ts`
-  - [NEW] `src/application/repositories/audit-repository.interface.ts`
-  - [NEW] `src/application/repositories/preference-repository.interface.ts`
+### Slice 4: Configuration and Preference Repositories
+
+- **Objective**: implement the remaining mutable-configuration stores and typed
+  preferences.
+- **Files**:
+  - [NEW] `src/application/persistence/repositories/prize-category-repository.interface.ts`
+  - [NEW] `src/application/persistence/repositories/draw-configuration-repository.interface.ts`
+  - [NEW] `src/application/persistence/repositories/display-configuration-repository.interface.ts`
+  - [NEW] `src/application/persistence/repositories/preference-repository.interface.ts`
+  - [NEW] `src/infrastructure/persistence/repositories/prize-category.repository.ts`
+  - [NEW] `src/infrastructure/persistence/repositories/draw-configuration.repository.ts`
+  - [NEW] `src/infrastructure/persistence/repositories/display-configuration.repository.ts`
+  - [NEW] `src/infrastructure/persistence/repositories/preference.repository.ts`
+  - [NEW] `src/infrastructure/persistence/repositories/configuration-repositories.test.ts`
+- **Tests**: draft-only category/configuration mutation, configuration
+  immutability after use, one DisplayConfiguration per Event, pure-black-only
+  validation, typed preferences, and reopen survival.
+- **Verification**: all five Windows commands listed in Slice 1.
+- **Commit boundary**:
+  `feat(persistence): add configuration and preference repositories`
+
+### Slice 5: Draw History Repositories and Unit of Work
+
+- **Objective**: implement DrawSession, WinnerRecord, RedrawRecord, and
+  AuditRecord owners plus the cross-store transaction coordinator.
+- **Files**:
+  - [NEW] `src/application/persistence/repositories/draw-session-repository.interface.ts`
+  - [NEW] `src/application/persistence/repositories/winner-repository.interface.ts`
+  - [NEW] `src/application/persistence/repositories/redraw-repository.interface.ts`
+  - [NEW] `src/application/persistence/repositories/audit-repository.interface.ts`
+  - [NEW] `src/application/persistence/draw-persistence-unit-of-work.interface.ts`
   - [NEW] `src/infrastructure/persistence/repositories/draw-session.repository.ts`
   - [NEW] `src/infrastructure/persistence/repositories/winner.repository.ts`
+  - [NEW] `src/infrastructure/persistence/repositories/redraw.repository.ts`
   - [NEW] `src/infrastructure/persistence/repositories/audit.repository.ts`
-  - [NEW] `src/infrastructure/persistence/repositories/preference.repository.ts`
-  - [NEW] `src/infrastructure/persistence/repositories/draw-persistence.test.ts`
-- **Proposed Dependencies**: Uses installed `dexie`.
-- **Tests**: Test atomic transactions, winner records, redraw relationships, and append-only audit entries.
-- **Verification Commands**: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`.
-- **Commit Boundary**: `feat(persistence): implement draw, winner, audit, and preference repositories`
+  - [NEW] `src/infrastructure/persistence/transactions/dexie-draw-persistence-unit-of-work.ts`
+  - [NEW] `src/infrastructure/persistence/repositories/draw-history-repositories.test.ts`
+  - [NEW] `src/infrastructure/persistence/transactions/draw-persistence-unit-of-work.test.ts`
+- **Tests**: snapshot immutability, denormalized field validation, unique
+  sequence positions, winner transitions, redraw lineage, append-only audit,
+  atomic success, and full rollback.
+- **Non-goal**: no selection, eligibility, confirmation UI, or redraw UI use
+  case.
+- **Verification**: all five Windows commands listed in Slice 1.
+- **Commit boundary**: `feat(persistence): add immutable draw history boundaries`
 
-### Slice 5: Development Seed and Reset Utilities
-- **Objective**: Create developer seed data utilities and explicit database reset helpers with confirmation guards.
-- **Files Created/Modified**:
+### Slice 6: Seed, Reset, and Storage Diagnostics
+
+- **Objective**: add explicit development seed/reset utilities and a
+  storage-capability probe.
+- **Files**:
   - [NEW] `src/infrastructure/persistence/seed/dev-seed.ts`
   - [NEW] `src/infrastructure/persistence/seed/reset-db.ts`
-  - [NEW] `src/infrastructure/persistence/seed/seed.test.ts`
-- **Proposed Dependencies**: Uses installed `dexie`.
-- **Tests**: Test that seed execution inserts valid domain models with string ticket numbers and refuses silent overwrites.
-- **Verification Commands**: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`.
-- **Commit Boundary**: `feat(persistence): add development seed and safe reset utilities`
-
-### Slice 6: Storage Diagnostics and Compatibility Boundary
-- **Objective**: Create storage diagnostics (storage quota estimation, private browsing checks, database readiness checks) and schema migration error boundary helpers.
-- **Files Created/Modified**:
+  - [NEW] `src/infrastructure/persistence/seed/seed-and-reset.test.ts`
   - [NEW] `src/infrastructure/persistence/diagnostics/storage-diagnostics.ts`
-  - [NEW] `src/infrastructure/persistence/diagnostics/diagnostics.test.ts`
-- **Proposed Dependencies**: Uses browser StorageManager API (`navigator.storage.estimate()`).
-- **Tests**: Test storage quota checks, unavailable storage fallbacks, and diagnostic health reporting.
-- **Verification Commands**: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`.
-- **Commit Boundary**: `feat(persistence): add storage diagnostics and health reporting`
+  - [NEW] `src/infrastructure/persistence/diagnostics/storage-diagnostics.test.ts`
+- **Tests**: every Version 1 store is seeded, safe refusal/confirmation behavior,
+  no durable same-database reset-audit claim, and complete open/write/read/delete
+  diagnostic paths with cleanup.
+- **Verification**: all five Windows commands listed in Slice 1.
+- **Commit boundary**: `feat(persistence): add seed reset and storage diagnostics`
 
-### Slice 7: Phase 3 Acceptance Audit and Documentation Closeout
-- **Objective**: Run full verification suite, verify Phase 1 and Phase 2 regression safety, complete `docs/technical/PHASE-3-ACCEPTANCE.md`, and update `TASKS.md`.
-- **Files Created/Modified**:
+### Slice 7: Phase 3 Acceptance and Documentation Closeout
+
+- **Objective**: run the full automated suite, perform Chrome and Edge
+  IndexedDB smoke checks, verify prototype isolation, and record acceptance.
+- **Files**:
   - [NEW] `docs/technical/PHASE-3-ACCEPTANCE.md`
-  - [MODIFY] `TASKS.md` (update Phase 3 checkboxes)
-- **Proposed Dependencies**: None.
-- **Tests**: Full repository suite (`vitest run`).
-- **Verification Commands**: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`, `git diff --check`.
-- **Commit Boundary**: `docs: close Phase 3 acceptance`
+  - [MODIFY] `TASKS.md`
+- **Automated verification**:
+  `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run test`,
+  `npm.cmd run build`, `git diff --check`.
+- **Manual verification**: Section 19 browser checklist.
+- **Commit boundary**: `docs: close Phase 3 acceptance`
+
+Every Version 1 store is owned by exactly one repository implementation slice:
+Events and Participants in Slice 3; PrizeCategory, DrawConfiguration,
+DisplayConfiguration, and preferences in Slice 4; DrawSession, WinnerRecord,
+RedrawRecord, and AuditRecord in Slice 5.
 
 ---
 
 ## 19. Phase 3 Acceptance Checklist
 
-- [ ] Production domain entity models exist for Event, Participant, PrizeCategory, DrawConfiguration, DrawSession, WinnerRecord, RedrawRecord, AuditRecord, DisplayConfiguration, and ApplicationPreference under `src/domain/`.
-- [ ] Prototype presentation view types (`src/prototype/`) remain completely separate from production domain models.
-- [ ] Ticket numbers are typed as strings (`type TicketNumber = string`) and maintained as strings in all domain entities and database indices.
-- [ ] Leading zeroes are verified to survive database write and read cycles in repository tests.
-- [ ] Only approved persistence dependencies (`dexie`, `fake-indexeddb`) are installed after explicit user approval.
-- [ ] Schema Version 1 is defined with object stores for events, participants, prize categories, draw configurations, draw sessions, winner records, redraw records, audit records, and preferences.
-- [ ] Migration infrastructure (`migrations.ts`) is established and tested.
-- [ ] Required stores and indexes (including compound index `[eventId+ticketNumber]`) exist and are verified.
-- [ ] Isolated repository interfaces (`src/application/repositories/`) and Dexie implementations (`src/infrastructure/persistence/repositories/`) exist.
-- [ ] Persistence errors are normalized into typed `PersistenceError` domain classes.
-- [ ] Repository tests verify that stored data survives database close and re-open cycles in `fake-indexeddb`.
-- [ ] Event data remains strictly isolated by `eventId`.
-- [ ] Development seed utilities produce valid domain records without silent overwrites of existing data.
-- [ ] Database reset functions require explicit multi-step confirmation flags.
-- [ ] **No CSV/XLSX file parsing** or import preview logic is implemented in Phase 3.
-- [ ] **No Web Crypto random selection engine** or draw selection algorithm is implemented in Phase 3.
-- [ ] **No participant eligibility filtering** or pool calculation logic is implemented in Phase 3.
-- [ ] **No official winner confirmation** or live redraw UI mutation is implemented in Phase 3.
-- [ ] **No BroadcastChannel messaging** or Operator/Audience synchronization is implemented in Phase 3.
-- [ ] **No CSV/XLSX export**, file download, backup/restore, audio, or backend code is implemented in Phase 3.
-- [ ] All 22 Phase 2 test files and 182 existing tests continue to pass cleanly.
-- [ ] `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`, and `git diff --check` all pass with zero errors.
-- [ ] Documentation reflects accepted Phase 3 scope.
-- [ ] The Git working tree is clean.
+### Domain and Integrity
+
+- [ ] All ten production entity/value contracts exist, including
+  DisplayConfiguration and ApplicationPreference.
+- [ ] Participant contains no persisted validation status; invalid import rows
+  are explicitly deferred to Phase 4 staging.
+- [ ] Ticket numbers remain strings and leading zeroes survive write, indexed
+  lookup, close, and reopen.
+- [ ] WinnerStatus is only `pending | confirmed | cancelled`; `replaced` is
+  derived from RedrawRecord relationships.
+- [ ] A redraw leaves the original WinnerRecord as terminal `cancelled` and
+  appends a distinct pending replacement without changing participant identity.
+- [ ] Used DrawConfigurations and attached DrawSession snapshots are immutable.
+- [ ] DrawSession includes immutable configuration and full candidate-pool
+  snapshot contracts; eligible count alone is never presented as reconstructive
+  evidence.
+- [ ] WinnerRecord includes `eventId` and `prizeCategoryId`, and transactional
+  validation proves they match DrawSession, configuration snapshot,
+  Participant, and candidate snapshot.
+- [ ] DisplayConfiguration persists exactly one configuration per Event and
+  supports only the accepted pure-black blackout.
+- [ ] ApplicationPreference uses the typed structured-clone-safe registry and
+  runtime validation.
+
+### Schema, Repositories, and Transactions
+
+- [ ] Version 1 contains exactly the ten stores in Section 8, including
+  `display_configurations`.
+- [ ] Participants use the unique compound index
+  `&[eventId+ticketNumber]`.
+- [ ] WinnerRecords use the unique compound index
+  `&[drawSessionId+sequenceNumber]`.
+- [ ] `migrations.ts` and migration tests are implemented in Slice 2.
+- [ ] Every Version 1 store has its listed domain owner, repository interface,
+  Dexie implementation, slice, and focused tests.
+- [ ] PrizeCategory, DrawConfiguration, RedrawRecord, and
+  DisplayConfiguration have dedicated repository boundaries.
+- [ ] Confirmed/completed official records have no generic save/overwrite path.
+- [ ] RedrawRecord and AuditRecord repositories are append-only.
+- [ ] Cross-store draw-history writes are owned by
+  DrawPersistenceUnitOfWork and roll back atomically on any error.
+- [ ] Production persistence remains disconnected from all Phase 2 UI,
+  fixtures, routes, and components.
+
+### Diagnostics, Performance, and Reset Safety
+
+- [ ] Storage capability is diagnosed by a temporary
+  open/write/read/delete/cleanup probe without claiming private-mode detection.
+- [ ] Database reset requires explicit confirmation and documentation states
+  that an audit record in the deleted database cannot survive full deletion.
+- [ ] Repository query paths use indexes and bounded reads without unnecessary
+  full scans.
+- [ ] Benchmarks record browser, environment, dataset, query, bounds,
+  methodology, and measurements; no universal 10 ms threshold is asserted.
+
+### Automated and Manual Verification
+
+- [ ] All accepted Phase 2 tests continue to pass.
+- [ ] `npm.cmd run lint` passes.
+- [ ] `npm.cmd run typecheck` passes.
+- [ ] `npm.cmd run test` passes.
+- [ ] `npm.cmd run build` passes.
+- [ ] `git diff --check` passes.
+- [ ] Manual Chrome IndexedDB smoke check passes:
+  database opens; a test record survives reload/reopen; lookup of a ticket such
+  as `"00042"` succeeds without losing zeroes; cleanup succeeds; and no
+  prototype UI is connected to production persistence.
+- [ ] Manual Edge IndexedDB smoke check passes with the same five checks.
+- [ ] Phase 3 acceptance records the tested Chrome and Edge versions and the
+  exact accepted commit.
+
+### Scope Exclusions
+
+- [ ] No CSV/XLSX parsing or import staging is implemented.
+- [ ] No eligibility calculation or production candidate-pool construction is
+  implemented.
+- [ ] No winner selection or Web Crypto draw engine is implemented.
+- [ ] No official confirmation/redraw UI workflow is implemented.
+- [ ] No BroadcastChannel, export, backup/restore, recovery UI, backend, cloud,
+  authentication, or payment behavior is implemented.
 
 ---
 
 ## 20. Risks and Open Questions
 
-| Item | Decision / Option | Recommended Default | Impact of Alternative Choice |
-|---|---|---|---|
-| **1. Persistence Dependency** | Native IndexedDB vs Dexie.js | **Dexie.js (`dexie`)** | Using native IndexedDB requires ~300+ lines of low-level event callback code, increasing bug risk. |
-| **2. Test Database Engine** | `fake-indexeddb` vs Browser integration testing | **`fake-indexeddb`** | Playwright/Puppeteer browser tests would slow unit test execution from <1s to >30s. |
-| **3. Participant Ticket Uniqueness** | Scoped per event vs Globally unique across all events | **Scoped per event** (`[eventId+ticketNumber]`) | Global uniqueness would prevent different events from reusing standard ticket number ranges (`001-500`). |
-| **4. Event Hard Deletion** | Prohibit deletion if confirmed draws exist vs Allow cascade delete | **Prohibit deletion if confirmed draws exist** | Cascade delete would destroy historical audit logs for completed live raffles. |
-| **5. Audit Record Immutability** | Append-only starting in Phase 3 vs Editable logs | **Append-only starting in Phase 3** | Editable audit logs compromise event transparency and historical auditability. |
-| **6. Preference Storage** | IndexedDB `preferences` store vs Browser `localStorage` | **IndexedDB `preferences` store** | `localStorage` is synchronous and can block the main thread; IndexedDB keeps all storage unified. |
-| **7. Schema Migration Strategy** | Eager validation on database open vs Lazy record migration on read | **Eager migration in Dexie `.upgrade()`** | Lazy migration spreads schema transformation logic across repositories, complicating tests. |
-| **8. Quota Exceeded Handling** | Fail-fast with user warning vs Silent storage pruning | **Fail-fast with `StorageQuotaError`** | Pruning would silently destroy old event records or participant data. |
+| Item | Phase 3 decision | Remaining consideration |
+|---|---|---|
+| Persistence dependency | Recommend Dexie after explicit approval | Verify exact version and bundle impact at installation |
+| Test database | Recommend `fake-indexeddb` after explicit approval | Real-browser smoke checks remain mandatory |
+| Participant uniqueness | Unique per Event with `&[eventId+ticketNumber]` | Phase 4 defines normalization before commit without numeric coercion |
+| Winner sequence | Unique per DrawSession; replacements append the next sequence | UI later resolves logical replacement position from lineage |
+| Configuration history | Freeze configuration after first use and snapshot it on DrawSession | Future edits create a new configuration |
+| Candidate history | Define and persist full snapshot structure | Phase 5 constructs and validates real eligible pools |
+| Prize category denormalization | Store on WinnerRecord for indexed eligibility/history | Transaction must reject parent mismatch |
+| Display configuration | Persist one per Event | UI wiring remains deferred |
+| Reset audit | No same-database survival guarantee | External durable logging is out of scope |
+| Performance | Environment-aware indexed benchmarks | Acceptance record must preserve measurements and context |
 
 ---
 
 ## 21. Recommended Immediate Next Task
 
 ### Task Recommendation
-The recommended immediate next task after approval of this plan is **Phase 3 — Slice 1: Domain Contracts and Invariants**.
 
-Slice 1 focuses purely on defining TypeScript domain models, status discriminated unions, identifier helpers, and domain invariant functions under `src/domain/`. It does **NOT** install persistence dependencies (`dexie`), touch `package.json`, or create database schema files.
+After approval of this plan, begin **Phase 3 — Slice 1: Domain Contracts and
+Invariants**. Slice 1 installs no dependency, creates no database, and changes
+no prototype presentation code.
 
 ### Draft Prompt for Phase 3 Slice 1
 
@@ -943,27 +1304,27 @@ Slice 1 focuses purely on defining TypeScript domain models, status discriminate
 Execute Phase 3 — Slice 1: Domain Contracts and Invariants for Raffle OS.
 
 Requirements:
-- Do not install new dependencies or modify package.json in Slice 1.
-- Do not create database schema files or IndexedDB implementation code in Slice 1.
-- Do not modify prototype presentation files (src/prototype/) or React components.
+- Do not install dependencies or modify package files.
+- Do not create IndexedDB/schema/repository code.
+- Do not modify src/prototype/, React components, pages, routes, or tests except
+  for adding the new focused domain test file.
 
 Tasks:
-1. Create `src/domain/shared/identifiers.ts` providing branded identifier types (EventId, ParticipantId, DrawSessionId, etc.) and a UUID generator using `crypto.randomUUID()`.
-2. Create `src/domain/shared/timestamps.ts` providing ISO 8601 UTC timestamp helpers.
-3. Create explicit production domain entity types and invariants:
-   - `src/domain/events/event.types.ts` & `event.invariants.ts`
-   - `src/domain/participants/participant.types.ts` & `participant.invariants.ts` (enforcing string ticket numbers & leading-zero preservation)
-   - `src/domain/prizes/prize.types.ts`
-   - `src/domain/draws/draw-session.types.ts` & `draw-configuration.types.ts`
-   - `src/domain/winners/winner.types.ts` & `redraw.types.ts`
-   - `src/domain/audit/audit.types.ts`
-4. Add comprehensive unit tests in `src/domain/domain.test.ts` testing domain models, ticket number string retention, leading zero preservation, and invariant rules.
-5. Verify all existing Phase 1 & Phase 2 tests continue to pass.
+1. Add branded identifiers and ISO UTC timestamp helpers.
+2. Define Event, Participant, PrizeCategory, DrawConfiguration, DrawSession,
+   WinnerRecord, RedrawRecord, AuditRecord, DisplayConfiguration, and the typed
+   ApplicationPreference registry.
+3. Define immutable DrawConfigurationSnapshot and CandidatePoolSnapshot
+   contracts.
+4. Exclude ParticipantValidationStatus from Participant production state.
+5. Encode winner/redraw lifecycle rules: cancelled original, new pending
+   replacement, and relationship-derived "replaced" presentation.
+6. Add focused invariant tests, including ticket strings and leading zeroes.
 
-Run verification commands:
-- npm run lint
-- npm run typecheck
-- npm run test
-- npm run build
+Run:
+- npm.cmd run lint
+- npm.cmd run typecheck
+- npm.cmd run test
+- npm.cmd run build
 - git diff --check
 ```

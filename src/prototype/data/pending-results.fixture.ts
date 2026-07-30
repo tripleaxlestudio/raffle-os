@@ -90,6 +90,7 @@ function createFixture(
     readonly cancelled: number
     readonly confirmed: number
     readonly pending: number
+    readonly replaced: number
   },
 ): PrototypePendingResultsFixture {
   return Object.freeze({
@@ -101,7 +102,8 @@ function createFixture(
       eligiblePoolSnapshot: 3814,
       pending: summaryCounts.pending,
       prize: 'Electric Scooter',
-      winnerCount: 10,
+      replaced: summaryCounts.replaced,
+      totalResultRecords: statuses.length,
     }),
     winners: createWinners(statuses),
   })
@@ -111,7 +113,7 @@ export const pendingResultsFixtures = Object.freeze({
   pending: createFixture(
     'pending',
     Object.freeze(Array.from({ length: 10 }, () => 'pending' as const)),
-    { cancelled: 0, confirmed: 0, pending: 10 },
+    { cancelled: 0, confirmed: 0, pending: 10, replaced: 0 },
   ),
   partial: createFixture(
     'partial',
@@ -127,11 +129,11 @@ export const pendingResultsFixtures = Object.freeze({
       'pending',
       'pending',
     ]),
-    { cancelled: 1, confirmed: 5, pending: 4 },
+    { cancelled: 1, confirmed: 4, pending: 4, replaced: 1 },
   ),
   confirmed: createFixture(
     'confirmed',
     Object.freeze(Array.from({ length: 10 }, () => 'confirmed' as const)),
-    { cancelled: 0, confirmed: 10, pending: 0 },
+    { cancelled: 0, confirmed: 10, pending: 0, replaced: 0 },
   ),
 })

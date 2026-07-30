@@ -102,6 +102,13 @@
     border-radius: 50%;
   }
 
+  .ui-button__icon {
+    display: inline-grid;
+    flex: 0 0 auto;
+    place-items: center;
+    line-height: 1;
+  }
+
   .ui-badge {
     display: inline-flex;
     min-height: 1.75rem;
@@ -387,6 +394,16 @@
     box-shadow: var(--shadow-sm);
   }
 
+  .ui-card--interactive {
+    border-color: var(--border-strong);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .ui-card--interactive:hover {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border-strong));
+  }
+
   .ui-card--accent {
     border-top: 0.1875rem solid var(--accent);
   }
@@ -509,6 +526,23 @@
     text-transform: uppercase;
   }
 
+  .ui-table__header--sortable {
+    white-space: nowrap;
+  }
+
+  .ui-table__header--sortable > span:first-child {
+    vertical-align: middle;
+  }
+
+  .ui-table__sort-marker {
+    display: inline-block;
+    margin-left: var(--space-2);
+    color: var(--text-muted);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-xs);
+    vertical-align: middle;
+  }
+
   .ui-table tbody tr:last-child > * {
     border-bottom: 0;
   }
@@ -527,6 +561,75 @@
 
   .ui-table-empty {
     border-top: 1px solid var(--border-default);
+  }
+
+  .ui-toast {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border-strong);
+    border-left-width: 0.25rem;
+    border-radius: var(--radius-md);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-md);
+  }
+
+  .ui-toast--neutral {
+    border-left-color: var(--text-muted);
+  }
+
+  .ui-toast--success {
+    border-left-color: var(--status-success);
+  }
+
+  .ui-toast--warning {
+    border-left-color: var(--status-warning);
+  }
+
+  .ui-toast--danger {
+    border-left-color: var(--status-danger);
+  }
+
+  .ui-toast__marker {
+    width: 0.65rem;
+    height: 0.65rem;
+    margin-top: 0.35rem;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .ui-toast--success .ui-toast__marker {
+    color: var(--status-success);
+  }
+
+  .ui-toast--warning .ui-toast__marker {
+    border-radius: 0.1rem;
+    color: var(--status-warning);
+    transform: rotate(45deg);
+  }
+
+  .ui-toast--danger .ui-toast__marker {
+    color: var(--status-danger);
+  }
+
+  .ui-toast__copy {
+    min-width: 0;
+  }
+
+  .ui-toast__copy strong,
+  .ui-toast__copy p {
+    margin: 0;
+  }
+
+  .ui-toast__copy p {
+    margin-top: var(--space-1);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
   }
 
   .field-group {

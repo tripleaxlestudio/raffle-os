@@ -69,6 +69,53 @@ describe('Pending Results static prototype', () => {
     ).toHaveAttribute('href', '/history?view=session-detail')
   })
 
+  it('reconciles every partial row status with the exact summary counts', () => {
+    renderResults('/draw/results?scenario=partial')
+    const fixture = pendingResultsFixtures.partial
+    const counts = {
+      pending: fixture.winners.filter((winner) => winner.status === 'pending')
+        .length,
+      confirmed: fixture.winners.filter(
+        (winner) => winner.status === 'confirmed',
+      ).length,
+      cancelled: fixture.winners.filter(
+        (winner) => winner.status === 'cancelled',
+      ).length,
+      replaced: fixture.winners.filter(
+        (winner) => winner.status === 'replaced',
+      ).length,
+    }
+    const summary = screen
+      .getByRole('heading', { level: 2, name: 'Result summary' })
+      .closest('.results-summary')
+
+    expect(counts).toEqual({
+      pending: 4,
+      confirmed: 4,
+      cancelled: 1,
+      replaced: 1,
+    })
+    expect(fixture.summary).toMatchObject(counts)
+    expect(fixture.summary.totalResultRecords).toBe(10)
+    expect(fixture.winners).toHaveLength(10)
+    if (!(summary instanceof HTMLElement)) {
+      throw new Error('Result summary was not rendered.')
+    }
+    expect(
+      within(summary).getByText('Total result records').parentElement,
+    ).toHaveTextContent('10')
+    for (const [label, value] of [
+      ['Pending', '4'],
+      ['Confirmed', '4'],
+      ['Cancelled', '1'],
+      ['Replaced', '1'],
+    ] as const) {
+      expect(
+        within(summary).getByText(label).parentElement,
+      ).toHaveTextContent(value)
+    }
+  })
+
   it('keeps visual row selection local and leaves frozen fixtures unchanged', async () => {
     const user = userEvent.setup()
     const fixture = pendingResultsFixtures.pending
@@ -190,6 +237,9 @@ describe('Redraw presentation panel', () => {
     expect(
       within(panel).getByText(/No selection logic or redraw has run/i),
     ).toBeVisible()
+    expect(
+      within(panel).getByRole('link', { name: 'Review in History' }),
+    ).toHaveAttribute('href', '/history?view=session-detail')
   })
 
   it('closes with Escape and returns focus to the redraw trigger', async () => {

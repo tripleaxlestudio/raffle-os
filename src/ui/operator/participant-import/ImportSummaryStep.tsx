@@ -11,6 +11,7 @@ import {
 
 interface ImportSummaryStepProps {
   dashboardPath: string
+  drawSetupPath: string
   file: PrototypeImportFile
   reviewPath: string
   summary: PrototypeImportSummary
@@ -18,6 +19,7 @@ interface ImportSummaryStepProps {
 
 export function ImportSummaryStep({
   dashboardPath,
+  drawSetupPath,
   file,
   reviewPath,
   summary,
@@ -94,8 +96,11 @@ export function ImportSummaryStep({
           <ButtonLink to={reviewPath} variant="secondary">
             Review validation
           </ButtonLink>
-          <ButtonLink size="lg" to={dashboardPath}>
+          <ButtonLink to={dashboardPath} variant="secondary">
             Return to Dashboard
+          </ButtonLink>
+          <ButtonLink size="lg" to={drawSetupPath}>
+            Continue to Draw Setup
           </ButtonLink>
         </div>
       </Card>

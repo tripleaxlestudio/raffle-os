@@ -2,7 +2,12 @@ import type { HTMLAttributes } from 'react'
 import { joinClassNames } from './class-names.ts'
 
 type CardElement = 'article' | 'div' | 'section'
-type CardTone = 'default' | 'raised' | 'accent' | 'warning'
+type CardTone =
+  | 'default'
+  | 'raised'
+  | 'interactive'
+  | 'accent'
+  | 'warning'
 
 interface CardProps extends HTMLAttributes<HTMLElement> {
   as?: CardElement

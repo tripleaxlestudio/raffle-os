@@ -56,7 +56,7 @@ const mappings = Object.freeze([
   }),
   Object.freeze({
     targetField: 'Participant Name',
-    requirement: 'required',
+    requirement: 'optional',
     sourceColumn: 'Full Name',
     sourcePreview: Object.freeze([
       'Alya Pranoto',
@@ -113,8 +113,8 @@ const emptyTicketIssue = Object.freeze({
 
 const missingNameIssue = Object.freeze({
   code: 'missing-name',
-  message: 'Participant Name is required by this prototype mapping.',
-  severity: 'error',
+  message: 'Participant Name is optional; this blank value remains valid.',
+  severity: 'warning',
 } satisfies PrototypeValidationIssue)
 
 const malformedEmailIssue = Object.freeze({
@@ -175,7 +175,7 @@ const participantRows = Object.freeze([
     participantName: '',
     email: 'guest@example.test',
     group: 'Community',
-    status: 'invalid',
+    status: 'valid',
     issues: Object.freeze([missingNameIssue]),
   }),
   Object.freeze({

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type {
   PrototypeImportSummary,
   PrototypeParticipantRow,
@@ -9,6 +10,7 @@ import {
   ButtonLink,
   Card,
   Table,
+  Toast,
 } from '../../../shared/ui/index.ts'
 
 interface ImportValidationStepProps {
@@ -30,6 +32,7 @@ export function ImportValidationStep({
   rows,
   summary,
 }: ImportValidationStepProps) {
+  const [noticeVisible, setNoticeVisible] = useState(false)
   const metrics = [
     {
       detail: 'Rows in the fictional workbook',
@@ -96,10 +99,23 @@ export function ImportValidationStep({
               Invalid
             </Button>
           </div>
-          <Button disabled size="sm" variant="secondary">
+          <Button
+            onClick={() => setNoticeVisible(true)}
+            size="sm"
+            variant="secondary"
+          >
             Download issues
           </Button>
         </div>
+
+        {noticeVisible ? (
+          <Toast
+            description="The deterministic participant fixtures remain unchanged."
+            onDismiss={() => setNoticeVisible(false)}
+            title="Prototype only — no file was downloaded."
+            variant="warning"
+          />
+        ) : null}
 
         <Table caption="Representative participant validation rows">
           <thead>
@@ -126,7 +142,7 @@ export function ImportValidationStep({
                 </td>
                 <td>
                   {row.participantName === ''
-                    ? '— Missing name —'
+                      ? '— Optional name not provided —'
                     : row.participantName}
                 </td>
                 <td>{row.email}</td>

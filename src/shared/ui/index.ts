@@ -17,5 +17,6 @@ export {
 } from './SegmentedControl.tsx'
 export { Select } from './Select.tsx'
 export { SidePanel } from './SidePanel.tsx'
-export { Table } from './Table.tsx'
+export { Table, TableHeader } from './Table.tsx'
+export { Toast, type ToastVariant } from './Toast.tsx'
 export { Toggle } from './Toggle.tsx'

@@ -71,6 +71,11 @@ describe('History static prototype', () => {
     expect(
       screen.getByRole('button', { name: 'Export XLSX · Prototype only' }),
     ).toBeDisabled()
+    expect(
+      screen.getByRole('link', {
+        name: 'Review presentation settings',
+      }),
+    ).toHaveAttribute('href', '/settings?section=branding')
   })
 
   it('exposes selected tab state for direct views', () => {

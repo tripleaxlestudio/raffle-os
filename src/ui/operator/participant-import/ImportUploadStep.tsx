@@ -100,7 +100,8 @@ export function ImportUploadStep({
             </li>
             <li>Use one header row and one participant per spreadsheet row.</li>
             <li>
-              Required prototype fields are Ticket Number and Participant Name.
+              Ticket Number is the only required field. Participant Name is
+              optional.
             </li>
           </ul>
         </FieldGroup>

@@ -174,7 +174,8 @@ export interface PrototypeResultsSummary {
   readonly eligiblePoolSnapshot: number
   readonly pending: number
   readonly prize: string
-  readonly winnerCount: number
+  readonly replaced: number
+  readonly totalResultRecords: number
 }
 
 export interface PrototypePendingResultsFixture {

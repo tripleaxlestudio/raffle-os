@@ -1,4 +1,5 @@
 import type {
+  ThHTMLAttributes,
   ReactNode,
   TableHTMLAttributes,
 } from 'react'
@@ -8,6 +9,36 @@ interface TableProps extends TableHTMLAttributes<HTMLTableElement> {
   caption: string
   emptyState?: ReactNode
   isEmpty?: boolean
+}
+
+interface TableHeaderProps
+  extends ThHTMLAttributes<HTMLTableCellElement> {
+  sortable?: boolean
+}
+
+export function TableHeader({
+  children,
+  className,
+  sortable = false,
+  ...props
+}: TableHeaderProps) {
+  return (
+    <th
+      aria-sort={sortable ? 'none' : undefined}
+      className={joinClassNames(
+        sortable && 'ui-table__header--sortable',
+        className,
+      )}
+      {...props}
+    >
+      <span>{children}</span>
+      {sortable ? (
+        <span aria-hidden="true" className="ui-table__sort-marker">
+          {'\u2195'}
+        </span>
+      ) : null}
+    </th>
+  )
 }
 
 export function Table({

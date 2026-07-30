@@ -74,6 +74,7 @@ export function ParticipantsPage() {
         {step === 'summary' ? (
           <ImportSummaryStep
             dashboardPath="/dashboard"
+            drawSetupPath="/draw/setup?mode=practice&scenario=ready"
             file={participantImportFixture.file}
             reviewPath={getPrototypeImportStepPath('validation')}
             summary={participantImportFixture.summary}

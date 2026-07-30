@@ -1,11 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { FieldGroup } from '../components/FieldGroup.tsx'
 import {
   ProgressStepper,
   type ProgressStep,
 } from '../components/ProgressStepper.tsx'
-import { EmptyState, Table } from './index.ts'
+import { EmptyState, Table, TableHeader } from './index.ts'
 
 const progressSteps = [
   { id: 'upload', label: 'Upload file' },
@@ -64,6 +64,33 @@ describe('Participant Import shared UI', () => {
     expect(
       screen.getByText('Change the selected validation filter.'),
     ).toBeInTheDocument()
+  })
+
+  it('presents a sortable-looking header without adding sorting behavior', () => {
+    render(
+      <Table caption="Sortable-looking participant rows">
+        <thead>
+          <tr>
+            <TableHeader scope="col" sortable>
+              Ticket Number
+            </TableHeader>
+          </tr>
+        </thead>
+        <tbody />
+      </Table>,
+    )
+
+    const header = screen.getByRole('columnheader', {
+      name: 'Ticket Number',
+    })
+    expect(header).toHaveAttribute('aria-sort', 'none')
+    expect(header).toHaveClass('ui-table__header--sortable')
+    expect(
+      within(header).getByText('\u2195', {
+        selector: '[aria-hidden="true"]',
+      }),
+    ).toBeInTheDocument()
+    expect(header.querySelector('button')).toBeNull()
   })
 
   it('exposes complete, current, and upcoming step states without color alone', () => {

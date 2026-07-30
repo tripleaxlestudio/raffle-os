@@ -6,6 +6,7 @@ import type {
 } from '../../prototype/operator-types.ts'
 import { resolvePrototypeHistoryView } from '../../prototype/scenario-query.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
+import { SectionHeader } from '../../shared/components/SectionHeader.tsx'
 import { SummaryList } from '../../shared/components/SummaryList.tsx'
 import {
   Badge,
@@ -14,6 +15,7 @@ import {
   ButtonLink,
   Card,
   Table,
+  TableHeader,
 } from '../../shared/ui/index.ts'
 
 const historyViews = [
@@ -59,17 +61,22 @@ function HistoryTabs({ view }: { view: PrototypeHistoryView }) {
 function SessionsView() {
   return (
     <Card className="history-panel" padding="none">
-      <div className="results-panel-heading">
-        <div>
-          <p>Session index</p>
-          <h2>Draw Sessions</h2>
-        </div>
-        <Badge variant="neutral">{historyFixture.sessions.length} fixtures</Badge>
-      </div>
+      <SectionHeader
+        actions={
+          <Badge variant="neutral">
+            {historyFixture.sessions.length} fixtures
+          </Badge>
+        }
+        className="results-panel-heading"
+        eyebrow="Session index"
+        title="Draw Sessions"
+      />
       <Table caption="Prototype draw sessions">
         <thead>
           <tr>
-            <th scope="col">Date &amp; Time</th>
+            <TableHeader scope="col" sortable>
+              Date &amp; Time
+            </TableHeader>
             <th scope="col">Category</th>
             <th scope="col">Prize</th>
             <th scope="col">Mode</th>
@@ -341,9 +348,17 @@ export function HistoryPage() {
       </div>
       <PageHeader
         actions={
-          <Button disabled size="lg" variant="secondary">
-            Export disabled · Prototype only
-          </Button>
+          <>
+            <ButtonLink
+              to="/settings?section=branding"
+              variant="secondary"
+            >
+              Review presentation settings
+            </ButtonLink>
+            <Button disabled size="lg" variant="secondary">
+              Export disabled · Prototype only
+            </Button>
+          </>
         }
         description="Review static session, winner, and audit relationships without modifying official data."
         eyebrow="Operator records"

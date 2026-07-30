@@ -87,8 +87,8 @@ export function ImportMappingStep({
 
           <div className="mapping-summary" role="status">
             <strong>Mapping summary</strong>
-            <span>2 required fields mapped</span>
-            <span>3 optional fields mapped</span>
+            <span>1 required field mapped</span>
+            <span>4 optional fields mapped</span>
             <span>1 optional field left unmapped</span>
           </div>
         </div>

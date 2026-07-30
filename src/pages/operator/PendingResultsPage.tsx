@@ -100,11 +100,17 @@ function RedrawPanel({
             Cancel
           </Button>
           {replacementOpen ? (
-            <ButtonLink
-              to={getPrototypePendingResultsPath({ scenario })}
-            >
-              Return to Pending Results
-            </ButtonLink>
+            <>
+              <ButtonLink
+                to={getPrototypePendingResultsPath({ scenario })}
+                variant="secondary"
+              >
+                Return to Pending Results
+              </ButtonLink>
+              <ButtonLink to="/history?view=session-detail">
+                Review in History
+              </ButtonLink>
+            </>
           ) : (
             <ButtonLink
               to={getPrototypePendingResultsPath({
@@ -286,10 +292,14 @@ function ResultsContent({
   const summaryItems = [
     ['Draw session', fixture.summary.drawSession],
     ['Prize', fixture.summary.prize],
-    ['Winner count', String(fixture.summary.winnerCount)],
+    [
+      'Total result records',
+      String(fixture.summary.totalResultRecords),
+    ],
     ['Pending', String(fixture.summary.pending)],
     ['Confirmed', String(fixture.summary.confirmed)],
     ['Cancelled', String(fixture.summary.cancelled)],
+    ['Replaced', String(fixture.summary.replaced)],
     [
       'Eligible pool snapshot',
       fixture.summary.eligiblePoolSnapshot.toLocaleString('en-US'),

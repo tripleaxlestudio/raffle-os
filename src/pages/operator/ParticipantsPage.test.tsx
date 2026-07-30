@@ -74,7 +74,7 @@ describe('Participant Import static prototype', () => {
     ).toHaveValue('Ticket ID')
     expect(
       screen.getByRole('combobox', {
-        name: /Participant Name — Required/i,
+        name: /Participant Name — Optional/i,
       }),
     ).toHaveValue('Full Name')
     expect(
@@ -100,7 +100,11 @@ describe('Participant Import static prototype', () => {
     ).toHaveAttribute('href', '/participants?step=upload')
   })
 
-  it('renders all validation totals, representative issues, and exact ticket strings', () => {
+  it('renders validation totals, optional-name guidance, and an inert download notice', async () => {
+    const user = userEvent.setup()
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click')
+    const fixtureBefore = JSON.stringify(participantImportFixture)
+
     renderParticipants('/participants?step=validation')
 
     const totals = screen.getByRole('region', {
@@ -118,7 +122,14 @@ describe('Participant Import static prototype', () => {
     expect(within(table).getByText('004216')).toBeVisible()
     expect(within(table).getAllByText('010039')).toHaveLength(2)
     expect(within(table).getByText('— Empty —')).toBeVisible()
-    expect(within(table).getByText('— Missing name —')).toBeVisible()
+    expect(
+      within(table).getByText('— Optional name not provided —'),
+    ).toBeVisible()
+    expect(
+      within(table).getByText(
+        'Participant Name is optional; this blank value remains valid.',
+      ),
+    ).toBeVisible()
     expect(
       within(table).getByText(/Email does not match/i),
     ).toBeVisible()
@@ -126,9 +137,27 @@ describe('Participant Import static prototype', () => {
       within(table).getByText(/Leading and trailing whitespace/i),
     ).toBeVisible()
 
-    expect(
+    await user.click(
       screen.getByRole('button', { name: 'Download issues' }),
-    ).toBeDisabled()
+    )
+    expect(
+      screen.getByRole('status', {
+        name: 'Prototype only — no file was downloaded.',
+      }),
+    ).toHaveTextContent('Prototype only — no file was downloaded.')
+    expect(anchorClick).not.toHaveBeenCalled()
+    expect(document.querySelector('a[download]')).toBeNull()
+    expect(JSON.stringify(participantImportFixture)).toBe(fixtureBefore)
+
+    await user.click(
+      screen.getByRole('button', { name: 'Dismiss notification' }),
+    )
+    expect(
+      screen.queryByRole('status', {
+        name: 'Prototype only — no file was downloaded.',
+      }),
+    ).not.toBeInTheDocument()
+    anchorClick.mockRestore()
     expect(
       screen.getByRole('button', {
         name: 'Replace existing dataset',
@@ -164,6 +193,29 @@ describe('Participant Import static prototype', () => {
     expect(
       screen.getByRole('link', { name: 'Review validation' }),
     ).toHaveAttribute('href', '/participants?step=validation')
+    expect(
+      screen.getByRole('link', { name: 'Continue to Draw Setup' }),
+    ).toHaveAttribute(
+      'href',
+      '/draw/setup?mode=practice&scenario=ready',
+    )
+  })
+
+  it('keeps Participant Name optional and summary totals internally consistent', () => {
+    const missingNameRow = participantImportFixture.rows.find(
+      (row) => row.issues.some((issue) => issue.code === 'missing-name'),
+    )
+    const participantNameMapping = participantImportFixture.mappings.find(
+      (mapping) => mapping.targetField === 'Participant Name',
+    )
+    const { summary } = participantImportFixture
+
+    expect(participantNameMapping?.requirement).toBe('optional')
+    expect(missingNameRow?.status).toBe('valid')
+    expect(missingNameRow?.issues[0]?.severity).toBe('warning')
+    expect(
+      summary.validRows + summary.duplicateRows + summary.invalidRows,
+    ).toBe(summary.totalRows)
   })
 
   it('uses route history for Continue, Back, and Forward navigation', async () => {

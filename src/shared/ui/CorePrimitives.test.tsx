@@ -54,6 +54,24 @@ describe('core UI primitives', () => {
     ).toHaveAttribute('href', '/draw/setup')
   })
 
+  it('keeps the visible label as the accessible name with a decorative icon', () => {
+    render(
+      <Button icon={<span>+</span>}>
+        Add prototype row
+      </Button>,
+    )
+
+    const button = screen.getByRole('button', {
+      name: 'Add prototype row',
+    })
+    expect(button).toHaveTextContent('+')
+    expect(button).toHaveAccessibleName('Add prototype row')
+    expect(button.querySelector('.ui-button__icon')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    )
+  })
+
   it('connects input descriptions and errors to the native input', () => {
     render(
       <Input
@@ -144,5 +162,19 @@ describe('core UI primitives', () => {
     expect(screen.getByText('Confirmed')).toHaveClass(
       'ui-badge--confirmed',
     )
+  })
+
+  it('adds interactive Card presentation without changing its semantics', () => {
+    render(
+      <Card aria-label="Selectable prototype" tone="interactive">
+        Static option
+      </Card>,
+    )
+
+    const card = screen.getByLabelText('Selectable prototype')
+    expect(card).toHaveClass('ui-card--interactive')
+    expect(card.tagName).toBe('SECTION')
+    expect(card).not.toHaveAttribute('role', 'button')
+    expect(card).not.toHaveAttribute('tabindex')
   })
 })

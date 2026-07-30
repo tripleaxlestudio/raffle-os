@@ -143,3 +143,138 @@ export interface PrototypeLiveDrawFixture {
   readonly systemChecks: readonly PrototypeSystemCheck[]
   readonly ticketStream: readonly string[]
 }
+
+export type PrototypeResultStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'cancelled'
+  | 'replaced'
+
+export type PrototypePendingResultsScenario =
+  | 'pending'
+  | 'partial'
+  | 'confirmed'
+
+export type PrototypeResultsPanel = 'summary' | 'redraw' | 'replacement'
+export type PrototypeRedrawSelection = 'single' | 'multiple'
+
+export interface PrototypeWinnerRecord {
+  readonly checkIn: 'Checked in' | 'Not checked in'
+  readonly group: string
+  readonly participantName: string
+  readonly replacementTicket?: string
+  readonly status: PrototypeResultStatus
+  readonly ticketNumber: string
+}
+
+export interface PrototypeResultsSummary {
+  readonly cancelled: number
+  readonly confirmed: number
+  readonly drawSession: string
+  readonly eligiblePoolSnapshot: number
+  readonly pending: number
+  readonly prize: string
+  readonly winnerCount: number
+}
+
+export interface PrototypePendingResultsFixture {
+  readonly scenario: PrototypePendingResultsScenario
+  readonly summary: PrototypeResultsSummary
+  readonly winners: readonly PrototypeWinnerRecord[]
+}
+
+export type PrototypeRedrawReason =
+  | 'Participant absent'
+  | 'Invalid ticket'
+  | 'Ineligible participant'
+  | 'Previous winner'
+  | 'Operator error'
+  | 'Other'
+
+export interface PrototypeReplacementRelationship {
+  readonly originalParticipant: string
+  readonly originalTicket: string
+  readonly reason: PrototypeRedrawReason
+  readonly relationshipText: string
+  readonly replacementParticipant: string
+  readonly replacementTicket: string
+}
+
+export interface PrototypeRedrawFixture {
+  readonly multipleOriginals: readonly PrototypeWinnerRecord[]
+  readonly reasons: readonly PrototypeRedrawReason[]
+  readonly relationship: PrototypeReplacementRelationship
+  readonly singleOriginal: PrototypeWinnerRecord
+}
+
+export type PrototypeHistoryView =
+  | 'sessions'
+  | 'winners'
+  | 'audit'
+  | 'session-detail'
+
+export interface PrototypeHistorySession {
+  readonly category: string
+  readonly dateTime: string
+  readonly id: string
+  readonly mode: 'Practice' | 'Live'
+  readonly operator: string
+  readonly prize: string
+  readonly status: string
+  readonly winnerCount: number
+}
+
+export interface PrototypeAuditEntry {
+  readonly action: string
+  readonly actor: string
+  readonly detail: string
+  readonly timestamp: string
+}
+
+export interface PrototypeHistoryFixture {
+  readonly auditEntries: readonly PrototypeAuditEntry[]
+  readonly sessions: readonly PrototypeHistorySession[]
+  readonly winners: readonly PrototypeWinnerRecord[]
+  readonly sessionDetail: {
+    readonly configuration: readonly {
+      readonly label: string
+      readonly value: string
+    }[]
+    readonly eligiblePoolSnapshot: number
+    readonly relationship: PrototypeReplacementRelationship
+    readonly session: PrototypeHistorySession
+  }
+}
+
+export type PrototypeSettingsSection =
+  | 'branding'
+  | 'presentation'
+  | 'audio'
+  | 'display'
+
+export interface PrototypeSettingsFixture {
+  readonly audio: {
+    readonly countdownCue: string
+    readonly masterVolume: string
+    readonly rollingCue: string
+    readonly winnerRevealCue: string
+  }
+  readonly branding: {
+    readonly accentColor: string
+    readonly eventName: string
+    readonly eventSubtitle: string
+    readonly primaryColor: string
+  }
+  readonly display: {
+    readonly blackoutAppearance: string
+    readonly safeArea: string
+    readonly targetResolution: string
+  }
+  readonly presentation: {
+    readonly celebrationEffect: string
+    readonly countdownDuration: string
+    readonly revealStyle: string
+    readonly rollingDuration: string
+    readonly winnerLayout: string
+  }
+}

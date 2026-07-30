@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   resolvePrototypeDrawSetupQuery,
+  resolvePrototypeHistoryView,
   resolvePrototypeLiveDrawQuery,
+  resolvePrototypePendingResultsQuery,
+  resolvePrototypeSettingsSection,
 } from './scenario-query.ts'
 
 describe('draw prototype query parsing', () => {
@@ -82,5 +85,69 @@ describe('draw prototype query parsing', () => {
       stage: 'countdown',
       state: 'running',
     })
+  })
+})
+
+describe('Slice 4 prototype query parsing', () => {
+  it('defaults Pending Results safely', () => {
+    expect(
+      resolvePrototypePendingResultsQuery(new URLSearchParams()),
+    ).toEqual({
+      panel: 'summary',
+      scenario: 'pending',
+      selection: 'single',
+    })
+  })
+
+  it('accepts supported Pending Results and redraw values', () => {
+    expect(
+      resolvePrototypePendingResultsQuery(
+        new URLSearchParams(
+          'scenario=partial&panel=redraw&selection=multiple',
+        ),
+      ),
+    ).toEqual({
+      panel: 'redraw',
+      scenario: 'partial',
+      selection: 'multiple',
+    })
+  })
+
+  it('falls back for invalid result scenarios and redraw selections', () => {
+    expect(
+      resolvePrototypePendingResultsQuery(
+        new URLSearchParams(
+          'scenario=official&panel=mutation&selection=all',
+        ),
+      ),
+    ).toEqual({
+      panel: 'summary',
+      scenario: 'pending',
+      selection: 'single',
+    })
+  })
+
+  it('falls back invalid History views to sessions', () => {
+    expect(
+      resolvePrototypeHistoryView(new URLSearchParams('view=deleted')),
+    ).toBe('sessions')
+    expect(
+      resolvePrototypeHistoryView(
+        new URLSearchParams('view=session-detail'),
+      ),
+    ).toBe('session-detail')
+  })
+
+  it('falls back invalid Settings sections to branding', () => {
+    expect(
+      resolvePrototypeSettingsSection(
+        new URLSearchParams('section=storage'),
+      ),
+    ).toBe('branding')
+    expect(
+      resolvePrototypeSettingsSection(
+        new URLSearchParams('section=display'),
+      ),
+    ).toBe('display')
   })
 })

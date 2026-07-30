@@ -16,5 +16,6 @@ export {
   type SegmentedControlOption,
 } from './SegmentedControl.tsx'
 export { Select } from './Select.tsx'
+export { SidePanel } from './SidePanel.tsx'
 export { Table } from './Table.tsx'
 export { Toggle } from './Toggle.tsx'

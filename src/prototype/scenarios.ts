@@ -32,4 +32,60 @@ export const prototypeNavigationItems = Object.freeze([
     label: 'Live Draw — Rolling',
     to: '/draw/live?state=running&mode=practice&stage=rolling',
   }),
+  Object.freeze({
+    label: 'Pending Results - Pending',
+    to: '/draw/results?scenario=pending',
+  }),
+  Object.freeze({
+    label: 'Pending Results - Partial confirmation',
+    to: '/draw/results?scenario=partial',
+  }),
+  Object.freeze({
+    label: 'Pending Results - Confirmed',
+    to: '/draw/results?scenario=confirmed',
+  }),
+  Object.freeze({
+    label: 'Redraw - Single winner',
+    to: '/draw/results?panel=redraw&selection=single',
+  }),
+  Object.freeze({
+    label: 'Redraw - Multiple winners',
+    to: '/draw/results?panel=redraw&selection=multiple',
+  }),
+  Object.freeze({
+    label: 'Redraw - Replacement preview',
+    to: '/draw/results?panel=replacement',
+  }),
+  Object.freeze({
+    label: 'History - Draw Sessions',
+    to: '/history?view=sessions',
+  }),
+  Object.freeze({
+    label: 'History - All Winners',
+    to: '/history?view=winners',
+  }),
+  Object.freeze({
+    label: 'History - Audit Log',
+    to: '/history?view=audit',
+  }),
+  Object.freeze({
+    label: 'History - Session detail',
+    to: '/history?view=session-detail',
+  }),
+  Object.freeze({
+    label: 'Settings - Branding',
+    to: '/settings?section=branding',
+  }),
+  Object.freeze({
+    label: 'Settings - Presentation',
+    to: '/settings?section=presentation',
+  }),
+  Object.freeze({
+    label: 'Settings - Audio',
+    to: '/settings?section=audio',
+  }),
+  Object.freeze({
+    label: 'Settings - Display',
+    to: '/settings?section=display',
+  }),
 ]) satisfies readonly PrototypeNavigationItem[]

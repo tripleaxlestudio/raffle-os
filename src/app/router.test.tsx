@@ -24,13 +24,15 @@ const operatorPages = [
   ['/settings', 'Settings'],
 ] as const
 
-const placeholderOperatorPages = operatorPages.filter(
-  ([path]) =>
-    path !== '/dashboard' &&
-    path !== '/participants' &&
-    path !== '/draw/setup' &&
-    path !== '/draw/live',
-)
+const operatorPageHeadings = [
+  ['/dashboard', 'Nusantara Tech Gala 2026'],
+  ['/participants', 'Participant Import'],
+  ['/draw/setup', 'Draw Setup'],
+  ['/draw/live', 'Live Draw'],
+  ['/draw/results', 'Pending Results'],
+  ['/history', 'History'],
+  ['/settings', 'Settings'],
+] as const
 
 const operatorNavigationLabels = operatorPages.map(([, label]) => label)
 
@@ -77,16 +79,13 @@ describe('application routes', () => {
     ).toHaveValue('ready')
   })
 
-  it.each(placeholderOperatorPages)(
-    'renders %s as the %s placeholder page',
+  it.each(operatorPageHeadings)(
+    'renders %s as the %s Operator page',
     (path, title) => {
     const { container } = renderRoute(path)
 
     expect(
       screen.getByRole('heading', { level: 1, name: title }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText('This feature is not yet implemented.'),
     ).toBeInTheDocument()
     expect(container.querySelector('[data-operator-shell]')).toHaveAttribute(
       'data-interface',
@@ -226,6 +225,41 @@ describe('application routes', () => {
     ] as const
 
     for (const [label, href] of expectedLinks) {
+      expect(
+        within(prototypeNavigation).getByRole('link', { name: label }),
+      ).toHaveAttribute('href', href)
+    }
+
+    const sliceFourLinks = [
+      ['Pending Results - Pending', '/draw/results?scenario=pending'],
+      [
+        'Pending Results - Partial confirmation',
+        '/draw/results?scenario=partial',
+      ],
+      ['Pending Results - Confirmed', '/draw/results?scenario=confirmed'],
+      [
+        'Redraw - Single winner',
+        '/draw/results?panel=redraw&selection=single',
+      ],
+      [
+        'Redraw - Multiple winners',
+        '/draw/results?panel=redraw&selection=multiple',
+      ],
+      [
+        'Redraw - Replacement preview',
+        '/draw/results?panel=replacement',
+      ],
+      ['History - Draw Sessions', '/history?view=sessions'],
+      ['History - All Winners', '/history?view=winners'],
+      ['History - Audit Log', '/history?view=audit'],
+      ['History - Session detail', '/history?view=session-detail'],
+      ['Settings - Branding', '/settings?section=branding'],
+      ['Settings - Presentation', '/settings?section=presentation'],
+      ['Settings - Audio', '/settings?section=audio'],
+      ['Settings - Display', '/settings?section=display'],
+    ] as const
+
+    for (const [label, href] of sliceFourLinks) {
       expect(
         within(prototypeNavigation).getByRole('link', { name: label }),
       ).toHaveAttribute('href', href)

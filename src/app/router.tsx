@@ -3,6 +3,7 @@ import {
   Navigate,
   type RouteObject,
 } from 'react-router'
+import { RouteErrorPage } from './errors/RouteErrorPage.tsx'
 import { AudienceDisplayShell } from './layouts/AudienceDisplayShell.tsx'
 import { OperatorLayout } from './layouts/OperatorLayout.tsx'
 import { AudienceDisplayPage } from '../pages/display/AudienceDisplayPage.tsx'
@@ -19,6 +20,7 @@ const operatorRoutes = {
   id: 'operator',
   path: '/',
   element: <OperatorLayout />,
+  errorElement: <RouteErrorPage />,
   children: [
     {
       index: true,
@@ -60,6 +62,7 @@ export const appRoutes = [
   {
     path: '/display',
     element: <AudienceDisplayShell />,
+    errorElement: <RouteErrorPage />,
     children: [
       {
         index: true,
@@ -70,6 +73,7 @@ export const appRoutes = [
   {
     path: '*',
     element: <NotFoundPage />,
+    errorElement: <RouteErrorPage />,
   },
 ] satisfies RouteObject[]
 

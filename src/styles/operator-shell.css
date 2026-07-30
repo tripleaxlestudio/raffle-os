@@ -55,8 +55,8 @@ body {
 }
 
 .operator-nav__link:focus-visible {
-  outline: 0.125rem solid currentColor;
-  outline-offset: 0.125rem;
+  outline: 0.1875rem solid currentColor;
+  outline-offset: 0.1875rem;
 }
 
 .operator-workspace {
@@ -126,4 +126,47 @@ body {
 
 .route-placeholder > :first-child {
   margin-top: 0;
+}
+
+.error-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 2rem;
+}
+
+.error-page__content {
+  width: min(100%, 32rem);
+}
+
+.error-page__content > :first-child {
+  margin-top: 0;
+}
+
+.error-page__actions {
+  margin-top: 1.5rem;
+}
+
+.error-recovery__button {
+  min-height: 2.75rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.recovery-link,
+.not-found__link {
+  color: inherit;
+  font-weight: 600;
+}
+
+.error-recovery__button:focus-visible,
+.recovery-link:focus-visible,
+.not-found__link:focus-visible {
+  outline: 0.1875rem solid #005fcc;
+  outline-offset: 0.1875rem;
 }

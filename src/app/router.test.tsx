@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { appRoutes } from './router.tsx'
@@ -128,11 +129,35 @@ describe('application routes', () => {
   })
 
   it('renders Not Found for an unknown route', () => {
-    renderRoute('/unknown-route')
+    const { container } = renderRoute('/unknown-route')
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Not Found' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText('The requested page does not exist.'),
+    ).toBeInTheDocument()
+    expect(container.querySelector('[data-operator-shell]')).toBeNull()
+    expect(
+      screen.queryByRole('navigation', { name: 'Operator navigation' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('provides working navigation from Not Found to /dashboard', async () => {
+    const user = userEvent.setup()
+    const { router } = renderRoute('/unknown-route')
+
+    const recoveryLink = screen.getByRole('link', {
+      name: 'Return to Dashboard',
+    })
+    expect(recoveryLink).toHaveAttribute('href', '/dashboard')
+
+    await user.click(recoveryLink)
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Dashboard' }),
+    ).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/dashboard')
   })
 
   it('does not render the Operator shell or status on /display', () => {

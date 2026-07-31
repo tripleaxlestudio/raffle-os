@@ -1202,19 +1202,6 @@ describe('Slice 4 source and scope boundaries', () => {
       query: '?raw',
     },
   )
-  const allProductionSources = import.meta.glob(
-    [
-      '../../../application/**/*.ts',
-      '../../../infrastructure/**/*.ts',
-      '!./configuration-repositories.test.ts',
-    ],
-    {
-      eager: true,
-      import: 'default',
-      query: '?raw',
-    },
-  )
-
   it('keeps all repository interfaces domain-only', () => {
     for (const [path, source] of Object.entries(interfaceSources)) {
       expect(source, path).toEqual(expect.any(String))
@@ -1269,18 +1256,7 @@ describe('Slice 4 source and scope boundaries', () => {
     }
   })
 
-  it('does not implement Slice 5 repositories, a Unit of Work, or future product behavior', () => {
-    const paths = Object.keys(allProductionSources)
-    expect(paths.some((path) => /draw-session\.repository/.test(path)))
-      .toBe(false)
-    expect(paths.some((path) => /winner\.repository/.test(path)))
-      .toBe(false)
-    expect(paths.some((path) => /redraw\.repository/.test(path)))
-      .toBe(false)
-    expect(paths.some((path) => /audit\.repository/.test(path)))
-      .toBe(false)
-    expect(paths.some((path) => /unit-of-work/.test(path))).toBe(false)
-
+  it('does not implement future product behavior', () => {
     for (const [path, source] of Object.entries(
       implementationSources,
     )) {

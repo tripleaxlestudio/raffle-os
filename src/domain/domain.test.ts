@@ -388,22 +388,107 @@ describe('draw configuration and immutable start snapshots', () => {
     },
   )
 
-  it('allows a draft update before use and locks it after use', () => {
+  it('allows prizeCategoryId to change while the configuration is unused', () => {
     const proposed = {
       ...configuration,
-      requestedWinners: 3,
+      prizeCategoryId: createPrizeCategoryId(),
       updatedAt: laterTimestamp,
     }
 
     expect(
       validateDrawConfigurationUpdate(configuration, proposed, {
         hasStartedDrawSession: false,
-      }).ok,
-    ).toBe(true)
+      }),
+    ).toEqual({ ok: true, value: proposed })
+  })
+
+  it('rejects a draft update that changes the configuration ID', () => {
     expect(
-      validateDrawConfigurationUpdate(configuration, proposed, {
-        hasStartedDrawSession: true,
-      }).ok,
+      validateDrawConfigurationUpdate(
+        configuration,
+        {
+          ...configuration,
+          id: createDrawConfigurationId(),
+          updatedAt: laterTimestamp,
+        },
+        { hasStartedDrawSession: false },
+      ).ok,
+    ).toBe(false)
+  })
+
+  it('rejects a draft update that changes Event ownership', () => {
+    expect(
+      validateDrawConfigurationUpdate(
+        configuration,
+        {
+          ...configuration,
+          eventId: createEventId(),
+          updatedAt: laterTimestamp,
+        },
+        { hasStartedDrawSession: false },
+      ).ok,
+    ).toBe(false)
+  })
+
+  it('rejects a draft update that changes createdAt', () => {
+    expect(
+      validateDrawConfigurationUpdate(
+        configuration,
+        {
+          ...configuration,
+          createdAt: laterTimestamp,
+          updatedAt: laterTimestamp,
+        },
+        { hasStartedDrawSession: false },
+      ).ok,
+    ).toBe(false)
+  })
+
+  it('allows all valid draft-editable operational fields to change', () => {
+    const proposed = {
+      ...configuration,
+      eligibleGroupFilter: 'VIP',
+      prizeCategoryId: createPrizeCategoryId(),
+      requestedWinners: 3,
+      requireCheckIn: false,
+      updatedAt: laterTimestamp,
+      winningRule: 'allow-repeat' as const,
+    }
+
+    expect(
+      validateDrawConfigurationUpdate(
+        configuration,
+        proposed,
+        { hasStartedDrawSession: false },
+      ),
+    ).toEqual({ ok: true, value: proposed })
+  })
+
+  it('validates the resulting draft configuration', () => {
+    expect(
+      validateDrawConfigurationUpdate(
+        configuration,
+        {
+          ...configuration,
+          requestedWinners: 101,
+          updatedAt: laterTimestamp,
+        },
+        { hasStartedDrawSession: false },
+      ).ok,
+    ).toBe(false)
+  })
+
+  it('locks every configuration update after a session starts', () => {
+    expect(
+      validateDrawConfigurationUpdate(
+        configuration,
+        {
+          ...configuration,
+          prizeCategoryId: createPrizeCategoryId(),
+          updatedAt: laterTimestamp,
+        },
+        { hasStartedDrawSession: true },
+      ).ok,
     ).toBe(false)
   })
 

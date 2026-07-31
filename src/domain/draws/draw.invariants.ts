@@ -86,12 +86,11 @@ export function validateDrawConfigurationUpdate(
   if (
     current.id !== proposed.id ||
     current.eventId !== proposed.eventId ||
-    current.prizeCategoryId !== proposed.prizeCategoryId ||
     current.createdAt !== proposed.createdAt
   ) {
     return failure(
       'immutable-configuration-identity',
-      'Configuration identity and parent fields cannot change.',
+      'Configuration ID, Event ownership, and creation time cannot change.',
     )
   }
 

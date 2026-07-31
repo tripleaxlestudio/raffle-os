@@ -1,5 +1,9 @@
 import type { AuditRecord } from '../../../domain/audit/audit.types.ts'
 import type { DisplayConfiguration } from '../../../domain/display/display-configuration.types.ts'
+import {
+  validateDrawConfiguration,
+  validateDrawSession,
+} from '../../../domain/draws/draw.invariants.ts'
 import type { DrawConfiguration } from '../../../domain/draws/draw-configuration.types.ts'
 import type { DrawSession } from '../../../domain/draws/draw-session.types.ts'
 import { validateEvent } from '../../../domain/events/event.invariants.ts'
@@ -40,27 +44,34 @@ export function validateSeedDataset(dataset: ValidatedSeedDataset): void {
   }
 
   // 2. Validate PrizeCategories
-  const prizeCategoryIds = new Set<string>()
+  const prizeCategoryMap = new Map<string, PrizeCategory>()
   for (const category of dataset.prizeCategories) {
     if (!eventIds.has(category.eventId)) {
       throw new RelationshipMismatchError(
         'PrizeCategory must belong to a seeded Event.',
       )
     }
-    prizeCategoryIds.add(category.id)
+    prizeCategoryMap.set(category.id, category)
   }
 
   // 3. Validate DrawConfigurations
   const drawConfigMap = new Map<string, DrawConfiguration>()
   for (const config of dataset.drawConfigurations) {
+    requireValid(validateDrawConfiguration(config))
     if (!eventIds.has(config.eventId)) {
       throw new RelationshipMismatchError(
         'DrawConfiguration must belong to a seeded Event.',
       )
     }
-    if (!prizeCategoryIds.has(config.prizeCategoryId)) {
+    const category = prizeCategoryMap.get(config.prizeCategoryId)
+    if (category === undefined) {
       throw new RelationshipMismatchError(
         'DrawConfiguration must reference a seeded PrizeCategory.',
+      )
+    }
+    if (category.eventId !== config.eventId) {
+      throw new RelationshipMismatchError(
+        'DrawConfiguration and PrizeCategory must belong to the same Event.',
       )
     }
     drawConfigMap.set(config.id, config)
@@ -117,6 +128,11 @@ export function validateSeedDataset(dataset: ValidatedSeedDataset): void {
         'DrawSession must reference a seeded DrawConfiguration.',
       )
     }
+    if (config.eventId !== session.eventId) {
+      throw new RelationshipMismatchError(
+        'DrawSession and DrawConfiguration must belong to the same Event.',
+      )
+    }
 
     if (session.configurationSnapshot === null) {
       throw new RelationshipMismatchError(
@@ -124,11 +140,17 @@ export function validateSeedDataset(dataset: ValidatedSeedDataset): void {
       )
     }
 
+    const configurationSnapshot = session.configurationSnapshot
     if (
-      session.configurationSnapshot.configurationId !== config.id
+      configurationSnapshot.configurationId !== config.id ||
+      configurationSnapshot.prizeCategoryId !== config.prizeCategoryId ||
+      configurationSnapshot.requestedWinners !== config.requestedWinners ||
+      configurationSnapshot.winningRule !== config.winningRule ||
+      configurationSnapshot.requireCheckIn !== config.requireCheckIn ||
+      configurationSnapshot.eligibleGroupFilter !== config.eligibleGroupFilter
     ) {
       throw new RelationshipMismatchError(
-        'DrawConfigurationSnapshot configurationId must match the DrawConfiguration.',
+        'DrawConfigurationSnapshot identity and required values must match the DrawConfiguration.',
       )
     }
 
@@ -138,8 +160,10 @@ export function validateSeedDataset(dataset: ValidatedSeedDataset): void {
       )
     }
 
+    requireValid(validateDrawSession(session))
+
     // Check candidate pool matches participants
-    const candidateParticipantIds = new Set<string>()
+    const candidateTicketByParticipantId = new Map<string, string>()
     for (const candidate of session.candidatePoolSnapshot.candidateEntries) {
       const participant = participantMap.get(candidate.participantId)
       if (participant === undefined) {
@@ -147,12 +171,20 @@ export function validateSeedDataset(dataset: ValidatedSeedDataset): void {
           'Candidate pool entry references an unseeded Participant.',
         )
       }
+      if (participant.eventId !== session.eventId) {
+        throw new RelationshipMismatchError(
+          'Candidate pool Participant must belong to the DrawSession Event.',
+        )
+      }
       if (participant.ticketNumber !== candidate.ticketNumber) {
         throw new RelationshipMismatchError(
           'Candidate pool ticket number mismatches Participant ticket number.',
         )
       }
-      candidateParticipantIds.add(candidate.participantId)
+      candidateTicketByParticipantId.set(
+        candidate.participantId,
+        candidate.ticketNumber,
+      )
     }
 
     // 7. Validate Winners
@@ -177,9 +209,26 @@ export function validateSeedDataset(dataset: ValidatedSeedDataset): void {
             'WinnerRecord prizeCategoryId must match the configuration.',
           )
         }
-        if (!candidateParticipantIds.has(winner.participantId)) {
+        const participant = participantMap.get(winner.participantId)
+        if (participant === undefined) {
           throw new RelationshipMismatchError(
-            'WinnerRecord participant must be present in the candidate pool snapshot.',
+            'WinnerRecord must reference a seeded Participant.',
+          )
+        }
+        if (
+          participant.eventId !== session.eventId ||
+          participant.ticketNumber !== winner.ticketNumber
+        ) {
+          throw new RelationshipMismatchError(
+            'WinnerRecord Event and ticket must match the Participant.',
+          )
+        }
+        if (
+          candidateTicketByParticipantId.get(winner.participantId) !==
+          winner.ticketNumber
+        ) {
+          throw new RelationshipMismatchError(
+            'WinnerRecord participant and ticket must be present in the candidate pool snapshot.',
           )
         }
         if (sequences.has(winner.sequenceNumber)) {

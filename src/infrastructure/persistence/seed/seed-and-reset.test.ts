@@ -1,5 +1,5 @@
 import { IDBKeyRange, indexedDB } from 'fake-indexeddb'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   RaffleOSDatabase,
 } from '../db.ts'
@@ -49,8 +49,24 @@ describe('Development Seed and Guarded Reset', () => {
     })
   }
 
+  async function expectAllVersionOneStoresEmpty(
+    database: RaffleOSDatabase,
+  ): Promise<void> {
+    const counts = await Promise.all([
+      database.events.count(),
+      database.participants.count(),
+      database.prize_categories.count(),
+      database.draw_configurations.count(),
+      database.display_configurations.count(),
+      database.draw_sessions.count(),
+      database.winner_records.count(),
+      database.redraw_records.count(),
+      database.audit_records.count(),
+      database.preferences.count(),
+    ])
 
-
+    expect(counts).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+  }
   describe('Import and Startup Isolation', () => {
     it('importing dev-seed or reset-db does not instantiate or open RaffleOS_DB', async () => {
       const databases = await indexedDB.databases()
@@ -210,7 +226,7 @@ describe('Development Seed and Guarded Reset', () => {
         ...drawSession,
         configurationSnapshot: {
           ...drawSession.configurationSnapshot!,
-          sourceConfigurationId: '99999999-9999-4999-8999-999999999999' as DrawConfigurationId,
+          configurationId: '99999999-9999-4999-8999-999999999999' as DrawConfigurationId,
         },
       }
 
@@ -245,11 +261,7 @@ describe('Development Seed and Guarded Reset', () => {
         ),
       ).rejects.toThrow(RelationshipMismatchError)
 
-      // Verify every store is 0
-      expect(await db.events.count()).toBe(0)
-      expect(await db.participants.count()).toBe(0)
-      expect(await db.draw_sessions.count()).toBe(0)
-      expect(await db.winner_records.count()).toBe(0)
+      await expectAllVersionOneStoresEmpty(db)
 
       db.close()
     })
@@ -269,12 +281,17 @@ describe('Development Seed and Guarded Reset', () => {
         ...drawSession,
         candidatePoolSnapshot: {
           ...drawSession.candidatePoolSnapshot!,
-          eligibleCandidateEntries: [
-            {
-              participantId: participants[0].id,
-              ticketNumber: 'MISMATCH_TICKET' as Participant['ticketNumber'],
-            },
-          ],
+          candidateEntries:
+            drawSession.candidatePoolSnapshot!.candidateEntries.map(
+              (candidate, index) =>
+                index === 0
+                  ? {
+                      ...candidate,
+                      ticketNumber:
+                        'MISMATCH_TICKET' as Participant['ticketNumber'],
+                    }
+                  : candidate,
+            ),
         },
       }
 
@@ -306,8 +323,7 @@ describe('Development Seed and Guarded Reset', () => {
         ),
       ).rejects.toThrow(RelationshipMismatchError)
 
-      expect(await db.events.count()).toBe(0)
-      expect(await db.participants.count()).toBe(0)
+      await expectAllVersionOneStoresEmpty(db)
 
       db.close()
     })
@@ -324,11 +340,17 @@ describe('Development Seed and Guarded Reset', () => {
       const drawSession = getStandardSeedDrawSession()
       const winners = getStandardSeedWinners()
 
+      const candidateEntries =
+        drawSession.candidatePoolSnapshot!.candidateEntries.filter(
+          (candidate) =>
+            candidate.participantId !== winners[0].participantId,
+        )
       const invalidDrawSession = {
         ...drawSession,
         candidatePoolSnapshot: {
           ...drawSession.candidatePoolSnapshot!,
-          eligibleCandidateEntries: [], // Empty candidate pool
+          candidateEntries,
+          eligibleSnapshotCount: candidateEntries.length,
         },
       }
 
@@ -361,8 +383,7 @@ describe('Development Seed and Guarded Reset', () => {
         ),
       ).rejects.toThrow(RelationshipMismatchError)
 
-      expect(await db.events.count()).toBe(0)
-      expect(await db.winner_records.count()).toBe(0)
+      await expectAllVersionOneStoresEmpty(db)
 
       db.close()
     })
@@ -415,8 +436,7 @@ describe('Development Seed and Guarded Reset', () => {
         ),
       ).rejects.toThrow(RelationshipMismatchError)
 
-      expect(await db.events.count()).toBe(0)
-      expect(await db.redraw_records.count()).toBe(0)
+      await expectAllVersionOneStoresEmpty(db)
 
       db.close()
     })
@@ -467,8 +487,7 @@ describe('Development Seed and Guarded Reset', () => {
         ),
       ).rejects.toThrow(RelationshipMismatchError)
 
-      expect(await db.events.count()).toBe(0)
-      expect(await db.audit_records.count()).toBe(0)
+      await expectAllVersionOneStoresEmpty(db)
 
       db.close()
     })

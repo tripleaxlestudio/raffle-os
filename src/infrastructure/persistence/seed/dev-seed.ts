@@ -22,6 +22,7 @@ import {
   SEED_ISO_TIMESTAMPS,
 } from './dev-seed-fixtures.ts'
 import {
+  validateSeedDataset,
   writeValidatedSeedDataset,
 } from './seed-transaction-writer.ts'
 
@@ -203,14 +204,16 @@ export async function seedDevelopmentDatabase(
             })
           }
 
-          // Use writeValidatedSeedDataset to validate and bulkAdd batch
-          await writeValidatedSeedDataset(database, {
+          // Validate each bounded batch against the exact Event that owns it,
+          // then add only the participants because the Event is already seeded.
+          validateSeedDataset({
             displayConfigurations: [],
             drawConfigurations: [],
-            events: [],
+            events: [capacityEvent],
             participants: batchParticipants,
             prizeCategories: [],
           })
+          await database.participants.bulkAdd(batchParticipants)
 
           insertedCount += batchParticipants.length
         }

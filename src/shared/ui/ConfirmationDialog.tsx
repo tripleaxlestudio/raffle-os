@@ -11,6 +11,8 @@ interface ConfirmationDialogProps {
   open: boolean
   title: string
   tone?: 'warning' | 'danger'
+  confirmDisabled?: boolean
+  confirmLoading?: boolean
 }
 
 export function ConfirmationDialog({
@@ -22,6 +24,8 @@ export function ConfirmationDialog({
   open,
   title,
   tone = 'warning',
+  confirmDisabled = false,
+  confirmLoading = false,
 }: ConfirmationDialogProps) {
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -37,6 +41,8 @@ export function ConfirmationDialog({
             {cancelLabel}
           </Button>
           <Button
+            disabled={confirmDisabled}
+            isLoading={confirmLoading}
             onClick={onConfirm}
             variant={tone === 'danger' ? 'danger' : 'primary'}
           >

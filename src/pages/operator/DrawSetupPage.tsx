@@ -1,445 +1,113 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { drawSetupFixtures } from '../../prototype/data/index.ts'
-import type {
-  PrototypeDrawMode,
-  PrototypeWinningFrequency,
-} from '../../prototype/operator-types.ts'
-import {
-  getPrototypeDrawSetupPath,
-  resolvePrototypeDrawSetupQuery,
-} from '../../prototype/scenario-query.ts'
+import { queryDrawSetup } from '../../application/draw/draw-setup-query.ts'
+import type { DrawSetupProductionServices, DrawSetupReadyViewModel, DrawSetupViewModel } from '../../application/draw/draw-setup-query.types.ts'
+import type { DrawCommandResult } from '../../application/draw/draw-command.types.ts'
+import type { AppMode } from '../../domain/types/app-mode.ts'
+import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
+import { mapDrawSetupError } from '../../ui/operator/draw/draw-setup-error-mapper.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
-import {
-  Badge,
-  Button,
-  ButtonLink,
-  Card,
-  Checkbox,
-  Input,
-  SegmentedControl,
-  Select,
-  Toggle,
-} from '../../shared/ui/index.ts'
-import { AudiencePreview } from '../../ui/operator/draw/AudiencePreview.tsx'
+import { Badge, Button, ButtonLink, Card, ConfirmationDialog } from '../../shared/ui/index.ts'
 
-const winnerCountOptions = ['1', '3', '6', '10', '20', '50'].map(
-  (value) => ({ label: value, value }),
-)
-
-const winningFrequencyOptions = [
-  { label: 'Once per event', value: 'event' },
-  { label: 'Once per category', value: 'category' },
-  { label: 'Unlimited', value: 'unlimited' },
-] as const
-
-const numberFormatter = new Intl.NumberFormat('en-US')
-
-function formatCount(value: number) {
-  return numberFormatter.format(value)
+function modeFromQuery(value: string | null): AppMode {
+  return value === 'live' ? 'live' : 'practice'
 }
 
-function isPrototypeWinningFrequency(
-  value: string,
-): value is PrototypeWinningFrequency {
-  return (
-    value === 'event' ||
-    value === 'category' ||
-    value === 'unlimited'
-  )
+function formatWinningRule(rule: DrawSetupReadyViewModel['configuration']['winningRule']) {
+  return rule === 'once-per-event' ? 'Once per event' : rule === 'once-per-category' ? 'Once per category' : 'Allow repeat'
 }
 
-function ModeContext({ mode }: { mode: PrototypeDrawMode }) {
-  return (
-    <div className="draw-mode-context">
-      <Badge variant={mode}>{mode === 'live' ? 'LIVE FLOW' : 'PRACTICE'}</Badge>
-      <span>
-        {mode === 'live'
-          ? 'Live-event review context'
-          : 'Rehearsal-only review context'}
-      </span>
-    </div>
-  )
+function SetupSummary({ view }: { view: DrawSetupReadyViewModel }) {
+  return <div className="draw-setup-production__summary">
+    <Card padding="sm"><span>Event</span><strong>{view.event.name}</strong></Card>
+    <Card padding="sm"><span>Prize category</span><strong>{view.category.name} · {view.category.prizeName}</strong></Card>
+    <Card padding="sm"><span>Mode</span><strong>{view.mode === 'live' ? 'Live draw' : 'Practice rehearsal'}</strong></Card>
+    <Card padding="sm"><span>Winning rule</span><strong>{formatWinningRule(view.configuration.winningRule)}</strong></Card>
+    <Card padding="sm"><span>Check-in requirement</span><strong>{view.configuration.requireCheckIn ? 'Checked-in participants only' : 'All participants'}</strong></Card>
+    <Card padding="sm"><span>Group filter</span><strong>{view.configuration.eligibleGroupFilter ?? 'All groups'}</strong></Card>
+  </div>
 }
 
-function PanelHeading({
-  eyebrow,
-  title,
-}: {
-  eyebrow: string
-  title: string
-}) {
-  return (
-    <div className="draw-panel__heading">
-      <p>{eyebrow}</p>
-      <h2>{title}</h2>
-    </div>
-  )
+function Capacity({ view }: { view: Pick<DrawSetupReadyViewModel, 'totalParticipantCount' | 'eligibleCandidateCount' | 'excludedCount' | 'configuration' | 'exclusionCounts'> }) {
+  return <Card className="draw-panel" padding="md">
+    <div className="draw-panel__heading"><p>Readiness</p><h2>Eligible pool capacity</h2></div>
+    <dl aria-label="Eligible pool summary" className="eligible-pool-metrics">
+      <div><dt>Total participants</dt><dd>{view.totalParticipantCount}</dd></div>
+      <div><dt>Eligible candidates</dt><dd>{view.eligibleCandidateCount}</dd></div>
+      <div><dt>Excluded</dt><dd>{view.excludedCount}</dd></div>
+      <div className="eligible-pool-metrics__highlight"><dt>Requested winners</dt><dd>{view.configuration.requestedWinners}</dd></div>
+    </dl>
+    {Object.keys(view.exclusionCounts).length > 0 ? <div className="draw-setup-production__exclusions"><strong>Exclusion summary</strong>{Object.entries(view.exclusionCounts).map(([reason, count]) => <span key={reason}>{reason.replaceAll('-', ' ')}: {count}</span>)}</div> : null}
+  </Card>
 }
 
-export function DrawSetupPage() {
+function Confirmation({ mode, view, onCancel, onConfirm, busy }: { mode: AppMode; view: DrawSetupReadyViewModel; onCancel: () => void; onConfirm: () => void; busy: boolean }) {
+  return <ConfirmationDialog confirmDisabled={busy} confirmLabel={busy ? 'Starting…' : mode === 'live' ? 'Confirm live draw' : 'Run practice'} confirmLoading={busy} consequence={mode === 'live' ? <>Event <strong>{view.event.name}</strong>, category <strong>{view.category.name}</strong>, <strong>{view.configuration.requestedWinners}</strong> requested winners, and <strong>{view.eligibleCandidateCount}</strong> eligible candidates will use the frozen eligibility snapshot and record an official pending draw.</> : <>This is a rehearsal only. No official WinnerRecords, DrawSession mutation, or AuditRecord will be written.</>} onCancel={onCancel} onConfirm={onConfirm} open title={mode === 'live' ? 'Confirm live draw start' : 'Run practice rehearsal'} />
+}
+
+type DrawSetupSuccess = { readonly state: 'practice-success' | 'live-success'; readonly result: DrawCommandResult }
+
+function PendingResult({ view, onReturn }: { view: DrawSetupSuccess; onReturn: () => void }) {
+  return <Card className="draw-panel" padding="md"><div aria-live="polite" role="status"><p className="draw-setup-production__eyebrow">{view.state === 'live-success' ? 'Live draw started' : 'Practice result'}</p><h2>Pending winners</h2><p>{view.state === 'live-success' ? 'These winners are pending confirmation in the later workflow.' : 'This rehearsal result is in memory only and is not official.'}</p></div><ol className="draw-setup-production__winners">{view.result.pendingWinners.map((winner) => <li key={winner.id}><span>Sequence {winner.sequenceNumber}</span><strong>{winner.ticketNumber}</strong><Badge variant="pending">pending</Badge></li>)}</ol><Button onClick={onReturn} variant="secondary">Return to ready</Button></Card>
+}
+
+type PageState = DrawSetupViewModel | DrawSetupSuccess
+
+export function DrawSetupPage({ services: suppliedServices }: { services?: DrawSetupProductionServices } = {}) {
   const [searchParams] = useSearchParams()
-  const query = resolvePrototypeDrawSetupQuery(searchParams)
+  const mode = modeFromQuery(searchParams.get('mode'))
+  const services = useMemo(() => suppliedServices ?? createDrawSetupProductionServices(), [suppliedServices])
+  const [view, setView] = useState<PageState>({ state: 'loading' })
+  const [confirmation, setConfirmation] = useState(false)
+  const [executing, setExecuting] = useState(false)
 
-  return (
-    <DrawSetupContent
-      key={`${query.mode}-${query.scenario}`}
-      mode={query.mode}
-      scenario={query.scenario}
-    />
-  )
-}
+  async function load() {
+    setView({ state: 'loading' })
+    try { await services.open(); setView(await queryDrawSetup(mode, services)) } catch (cause: unknown) { setView({ state: 'query-failure', mode, error: { code: 'persistence-failed', message: 'Authoritative draw setup data could not be loaded.', cause } }) }
+  }
 
-function DrawSetupContent({
-  mode,
-  scenario,
-}: ReturnType<typeof resolvePrototypeDrawSetupQuery>) {
-  const fixture = drawSetupFixtures[scenario]
-  const [winnerCount, setWinnerCount] = useState(
-    String(fixture.configuration.winnerCount),
-  )
-  const [winningFrequency, setWinningFrequency] =
-    useState<PrototypeWinningFrequency>(
-      fixture.configuration.winningFrequency,
-    )
-  const requestedWinnerCount =
-    Number.parseInt(winnerCount, 10) || fixture.eligibility.requestedWinners
-  const alternateMode: PrototypeDrawMode =
-    mode === 'practice' ? 'live' : 'practice'
-  const liveDrawReadyPath = `/draw/live?state=ready&mode=${mode}`
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        await services.open()
+        const next = await queryDrawSetup(mode, services)
+        if (!cancelled) setView(next)
+      } catch (cause: unknown) {
+        if (!cancelled) setView({ state: 'query-failure', mode, error: { code: 'persistence-failed', message: 'Authoritative draw setup data could not be loaded.', cause } })
+      }
+    })()
+    return () => { cancelled = true }
+  }, [mode, services])
 
-  return (
-    <section
-      aria-labelledby="draw-setup-title"
-      className="draw-setup"
-      data-draw-mode={mode}
-      data-setup-scenario={scenario}
-    >
-      <div className="prototype-notice" role="note">
-        <span aria-hidden="true">PROTO</span>
-        Fictional setup data only. Nothing on this page is saved, filtered,
-        validated, or made official.
-      </div>
+  async function start() {
+    if (executing || view.state !== 'ready') return
+    setExecuting(true)
+    const result = await services.command.execute({ eventId: view.event.id, drawSessionId: view.session.id, configurationId: view.configuration.id, prizeCategoryId: view.category.id, mode, expectedStatus: 'ready' })
+    setExecuting(false)
+    setConfirmation(false)
+    if (result.ok) setView({ state: mode === 'live' ? 'live-success' : 'practice-success', result: result.value })
+    else setView({ state: 'query-failure', mode, error: { code: 'persistence-failed', message: result.error.message, cause: result.error } })
+  }
 
-      <PageHeader
-        actions={<ModeContext mode={mode} />}
-        description={`${fixture.configuration.eventName} · ${fixture.configuration.category}`}
-        eyebrow="Draw configuration"
-        headingId="draw-setup-title"
-        title="Draw Setup"
-      />
+  if (view.state === 'loading') return <section className="draw-setup" aria-busy="true"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description="Loading authoritative Event, configuration, category, session, and Participant readiness…" /><StatusBanner badge="Loading" title="Preparing draw readiness" tone="info">Practice and Live execution are disabled until persisted data is ready.</StatusBanner></section>
+  if (view.state === 'practice-success' || view.state === 'live-success') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description={view.result.event.name} /><PendingResult view={view} onReturn={() => void load()} /></section>
+  if (view.state === 'no-active-event') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description="No active Event selected" /><StatusBanner badge="Blocked" title="Select or create an Event first" tone="warning">Draw Setup uses only the active persisted Event. Go to the Dashboard or Event setup to select one.</StatusBanner><ButtonLink to="/dashboard" variant="secondary">Return to Dashboard</ButtonLink></section>
+  if (view.state === 'no-configuration') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description={view.event.name} /><StatusBanner badge="Configuration required" title="Complete Draw Setup configuration" tone="warning">No valid DrawConfiguration exists for this Event. Create the configuration before starting a draw.</StatusBanner><ButtonLink to="/settings" variant="secondary">Open Settings</ButtonLink></section>
+  if (view.state === 'invalid-category') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description={view.event.name} /><StatusBanner badge="Blocked" title="The selected prize category is unavailable" tone="warning">The DrawConfiguration does not reference a valid category owned by this Event. No category was selected automatically.</StatusBanner></section>
+  if (view.state === 'no-participants') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description={view.event.name} /><StatusBanner badge="Participants required" title="Import valid Participants for this Event" tone="warning">There are no persisted Participants for the active Event, so neither Practice nor Live can start.</StatusBanner><ButtonLink to="/participants" variant="secondary">Import Participants</ButtonLink></section>
+  if (view.state === 'query-failure') { const error = mapDrawSetupError(view.error); return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description="Readiness unavailable" /><StatusBanner badge={error.retryable ? 'Recoverable error' : 'Blocked'} title={error.title} tone="warning">{error.explanation} {error.suggestedAction ?? ''}</StatusBanner>{error.retryable ? <Button onClick={() => void load()}>Retry</Button> : null}</section> }
+  if (view.state === 'no-session') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description={view.event.name} /><StatusBanner badge="DrawSession required" title="No startable DrawSession exists" tone="warning">A valid ready DrawSession must exist for this Event, category, and configuration. No draw has occurred. Refresh after a ready session is created.</StatusBanner><Capacity view={view} /><Button onClick={() => void load()} variant="secondary">Refresh readiness</Button></section>
+  if (view.state === 'blocked') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description={view.event.name} /><StatusBanner badge="Proceeding blocked" title="Draw cannot start from the current persisted state" tone="warning">{view.reason}</StatusBanner><Capacity view={view} /><Button onClick={() => void load()} variant="secondary">Refresh readiness</Button></section>
+  if (view.state !== 'ready') return null
 
-      {scenario === 'insufficient' ? (
-        <StatusBanner
-          badge="Proceeding blocked"
-          title="Requested winners exceed the eligible participant pool."
-          tone="warning"
-        >
-          This deterministic scenario requests 20 winners from a static pool
-          of 12. Change the prototype scenario to review a sufficient setup.
-        </StatusBanner>
-      ) : (
-        <StatusBanner
-          badge="Pool appears sufficient"
-          title="Static configuration is ready for operator review"
-          tone="success"
-        >
-          The displayed totals are frozen prototype values. No production
-          eligibility engine has verified them.
-        </StatusBanner>
-      )}
-
-      <div className="draw-setup__layout">
-        <div className="draw-setup__main">
-          <Card className="draw-panel" padding="none">
-            <PanelHeading eyebrow="01 · Identity" title="Draw identity" />
-            <div className="draw-panel__body draw-field-grid">
-              <Select
-                defaultValue={fixture.configuration.category}
-                description="Prototype category selection only."
-                label="Category"
-              >
-                <option>Grand Prize</option>
-                <option>Door Prize</option>
-                <option>Early Bird Prize</option>
-              </Select>
-              <Input
-                defaultValue={fixture.configuration.prizeName}
-                description="Editing this field does not save data."
-                label="Prize name"
-              />
-              <Input
-                containerClassName="draw-field-grid__wide"
-                defaultValue={fixture.configuration.internalNote}
-                description="Operator-only fictional note. It is never shown in the preview."
-                label="Optional internal note"
-              />
-            </div>
-          </Card>
-
-          <Card className="draw-panel" padding="none">
-            <PanelHeading eyebrow="02 · Quantity" title="Winner count" />
-            <div className="draw-panel__body">
-              <SegmentedControl
-                label="Winner count presets"
-                onChange={setWinnerCount}
-                options={winnerCountOptions}
-                value={winnerCount}
-              />
-              <div className="winner-count-detail">
-                <Input
-                  inputMode="numeric"
-                  label="Custom winner count"
-                  min="1"
-                  onChange={(event) => setWinnerCount(event.target.value)}
-                  type="number"
-                  value={winnerCount}
-                />
-                <div aria-live="polite" className="winner-count-current">
-                  <span>Currently selected</span>
-                  <strong>{winnerCount || '—'}</strong>
-                  <span>winner slots</span>
-                </div>
-              </div>
-              <p className="draw-panel__note">
-                Winner count is a visual prototype setting and is not
-                validated by a production draw engine.
-              </p>
-            </div>
-          </Card>
-
-          <Card className="draw-panel" padding="none">
-            <PanelHeading
-              eyebrow="03 · Pool rules"
-              title="Eligibility rules"
-            />
-            <div className="draw-panel__body">
-              <div className="eligibility-control-grid">
-                <Checkbox
-                  defaultChecked
-                  description="Visual rule only; no participant data is filtered."
-                  label="Checked-in participants only"
-                />
-                <Checkbox
-                  defaultChecked
-                  description="Static previous-winner total remains unchanged."
-                  label="Exclude previous winners"
-                />
-                <Select
-                  defaultValue={fixture.eligibility.participantGroup}
-                  description="Selecting a group does not alter the pool."
-                  label="Participant group"
-                >
-                  <option>All checked-in participants</option>
-                  <option>VIP finalists</option>
-                  <option>General admission</option>
-                </Select>
-              </div>
-              <div className="winning-frequency">
-                <span className="winning-frequency__label">
-                  Winning frequency
-                </span>
-                <SegmentedControl
-                  label="Winning frequency"
-                  onChange={(value) => {
-                    if (isPrototypeWinningFrequency(value)) {
-                      setWinningFrequency(value)
-                    }
-                  }}
-                  options={winningFrequencyOptions}
-                  value={winningFrequency}
-                />
-              </div>
-              <p className="draw-panel__note">
-                These controls do not calculate or filter real participant
-                eligibility.
-              </p>
-            </div>
-          </Card>
-
-          <Card
-            className="draw-panel"
-            padding="none"
-            tone={scenario === 'insufficient' ? 'warning' : 'default'}
-          >
-            <PanelHeading
-              eyebrow="04 · Capacity"
-              title="Eligible pool summary"
-            />
-            <div className="draw-panel__body">
-              <dl
-                aria-label="Eligible pool summary"
-                className="eligible-pool-metrics"
-              >
-                <div>
-                  <dt>Total participants</dt>
-                  <dd>{formatCount(fixture.eligibility.totalParticipants)}</dd>
-                </div>
-                <div>
-                  <dt>Checked-in participants</dt>
-                  <dd>
-                    {formatCount(
-                      fixture.eligibility.checkedInParticipants,
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Previous winners excluded</dt>
-                  <dd>
-                    {formatCount(
-                      fixture.eligibility.excludedPreviousWinners,
-                    )}
-                  </dd>
-                </div>
-                <div className="eligible-pool-metrics__highlight">
-                  <dt>Eligible pool</dt>
-                  <dd>
-                    {formatCount(
-                      fixture.eligibility.eligibleParticipants,
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Requested winners</dt>
-                  <dd>{formatCount(requestedWinnerCount)}</dd>
-                </div>
-              </dl>
-              {scenario === 'insufficient' ? (
-                <div className="pool-warning" role="alert">
-                  <span aria-hidden="true">!</span>
-                  <div>
-                    <strong>
-                      Requested winners exceed the eligible participant pool.
-                    </strong>
-                    <p>
-                      20 requested winners cannot proceed against the static
-                      pool of 12 eligible participants.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <p className="pool-ready">
-                  <span aria-hidden="true">✓</span>
-                  Sufficient static capacity: 3,814 eligible tickets for 1
-                  requested winner.
-                </p>
-              )}
-            </div>
-          </Card>
-
-          <Card className="draw-panel" padding="none">
-            <PanelHeading
-              eyebrow="05 · Presentation"
-              title="Presentation sequence"
-            />
-            <div className="draw-panel__body presentation-grid">
-              <Toggle
-                defaultChecked={fixture.presentation.countdownEnabled}
-                description={`${fixture.presentation.countdownSeconds} seconds · visual setting only`}
-                label="Countdown enabled"
-              />
-              <Select
-                defaultValue={String(
-                  fixture.presentation.countdownSeconds,
-                )}
-                label="Countdown duration"
-              >
-                <option value="3">3 seconds</option>
-                <option value="5">5 seconds</option>
-                <option value="10">10 seconds</option>
-              </Select>
-              <Select
-                defaultValue={String(fixture.presentation.rollingSeconds)}
-                label="Rolling duration"
-              >
-                <option value="5">5 seconds</option>
-                <option value="8">8 seconds</option>
-                <option value="12">12 seconds</option>
-              </Select>
-              <Select
-                defaultValue={fixture.presentation.revealStyle}
-                label="Reveal style"
-              >
-                <option>Spotlight reveal</option>
-                <option>Clean cut</option>
-              </Select>
-              <Select
-                defaultValue={fixture.presentation.celebrationEffect}
-                label="Celebration effect"
-              >
-                <option>Confetti burst (visual only)</option>
-                <option>None</option>
-              </Select>
-              <Select
-                defaultValue={fixture.presentation.audioCue}
-                label="Audio cue"
-              >
-                <option>Grand reveal cue (silent prototype)</option>
-                <option>No audio cue</option>
-              </Select>
-              <Toggle
-                defaultChecked={fixture.presentation.reducedMotionSafe}
-                description="Static safe-presentation preference."
-                label="Reduced-motion safe presentation"
-              />
-              <p className="draw-panel__note presentation-grid__wide">
-                No timer, rolling animation, celebration effect, or audio
-                playback is implemented.
-              </p>
-            </div>
-          </Card>
-        </div>
-
-        <aside className="draw-setup__aside">
-          <AudiencePreview preview={fixture.audiencePreview} />
-          <Card className="draw-mode-switch" padding="sm">
-            <span>Review another mode</span>
-            <strong>
-              Current: {mode === 'live' ? 'Live flow' : 'Practice rehearsal'}
-            </strong>
-            <ButtonLink
-              size="sm"
-              to={getPrototypeDrawSetupPath({
-                mode: alternateMode,
-                scenario,
-              })}
-              variant="secondary"
-            >
-              Switch to {alternateMode === 'live' ? 'Live' : 'Practice'}
-            </ButtonLink>
-          </Card>
-        </aside>
-      </div>
-
-      <div className="draw-action-bar">
-        <div>
-          <strong>
-            {scenario === 'ready'
-              ? 'Ready for deterministic review'
-              : 'Setup correction required'}
-          </strong>
-          <span>
-            {mode === 'live'
-              ? 'Live-event prototype context'
-              : 'Practice rehearsal context'}
-          </span>
-        </div>
-        <div className="draw-action-bar__actions">
-          <ButtonLink to="/dashboard" variant="secondary">
-            Return to Dashboard
-          </ButtonLink>
-          {scenario === 'insufficient' ? (
-            <Button disabled size="lg">
-              Resolve pool shortage
-            </Button>
-          ) : (
-            <ButtonLink size="lg" to={liveDrawReadyPath}>
-              Review draw
-            </ButtonLink>
-          )}
-        </div>
-      </div>
-    </section>
-  )
+  return <section aria-labelledby="draw-setup-title" className="draw-setup" data-draw-mode={mode}>
+    <PageHeader actions={<div className="draw-mode-context"><Badge variant={mode}>{mode === 'live' ? 'LIVE FLOW' : 'PRACTICE'}</Badge><span>{mode === 'live' ? 'Official draw' : 'Rehearsal only'}</span></div>} description={`${view.event.name} · ${view.category.name}`} eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" />
+    <StatusBanner badge="Ready" title="Eligibility and capacity are ready" tone="success">The final command will rebuild and validate the authoritative candidate snapshot at execution time.</StatusBanner>
+    <SetupSummary view={view} />
+    <Capacity view={view} />
+    <div className="draw-action-bar"><div><strong>{mode === 'live' ? 'Start official Live draw' : 'Run Practice rehearsal'}</strong><span>{view.eligibleCandidateCount} eligible candidates · {view.configuration.requestedWinners} requested winners</span></div><div className="draw-action-bar__actions"><ButtonLink to="/dashboard" variant="secondary">Return to Dashboard</ButtonLink><Button disabled={executing} isLoading={executing} onClick={() => setConfirmation(true)} size="lg">{mode === 'live' ? 'Start Live draw' : 'Run Practice'}</Button></div></div>
+    {confirmation ? <Confirmation busy={executing} mode={mode} onCancel={() => { if (!executing) setConfirmation(false) }} onConfirm={() => void start()} view={view} /> : null}
+  </section>
 }

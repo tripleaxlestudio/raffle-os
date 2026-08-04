@@ -31,6 +31,8 @@ export function OperatorLayout() {
   const isProductionParticipantRoute =
     location.pathname === '/participants' &&
     resolveParticipantWorkflow(searchParams) === 'production'
+  const isProductionDrawSetupRoute = location.pathname === '/draw/setup'
+  const isProductionEventRoute = isProductionParticipantRoute || isProductionDrawSetupRoute
   const mode =
     location.pathname === '/draw/setup' ||
     location.pathname === '/draw/live'
@@ -38,7 +40,7 @@ export function OperatorLayout() {
       : prototype.mode
 
   useEffect(() => {
-    if (!isProductionParticipantRoute) return
+    if (!isProductionEventRoute) return
 
     let active = true
     const services = createParticipantImportProductionServices()
@@ -58,7 +60,7 @@ export function OperatorLayout() {
     return () => {
       active = false
     }
-  }, [isProductionParticipantRoute])
+  }, [isProductionEventRoute])
 
   function handleScenarioChange(
     nextScenario: DashboardPrototypeScenario,
@@ -72,12 +74,12 @@ export function OperatorLayout() {
       data-interface="operator"
       data-operator-shell
     >
-      <OperatorSidebar />
+      <OperatorSidebar production={isProductionEventRoute} />
       <div className="operator-workspace">
         <OperatorHeader
           connectionStatus={prototype.connectionStatus}
-          eventName={isProductionParticipantRoute ? productionEvent?.name ?? 'No Event selected' : prototype.event.name}
-          eventSchedule={isProductionParticipantRoute
+          eventName={isProductionEventRoute ? productionEvent?.name ?? 'No Event selected' : prototype.event.name}
+          eventSchedule={isProductionEventRoute
             ? productionEventLoading
               ? 'Resolving active Event'
               : productionEvent
@@ -87,6 +89,7 @@ export function OperatorLayout() {
           mode={mode}
           onScenarioChange={handleScenarioChange}
           scenario={scenario}
+          showPrototypeControls={!isProductionParticipantRoute}
         />
         <main className="operator-main">
           <Outlet />

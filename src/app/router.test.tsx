@@ -282,7 +282,7 @@ describe('application routes', () => {
         within(prototypeNavigation).getByRole('link', { name: label }),
       ).toHaveAttribute('href', href)
     }
-    expect(screen.getByText('Phase 2 Prototype')).toBeVisible()
+    expect(screen.getByText('Production workspace')).toBeVisible()
   })
 
   it('does not expose links to Operator routes on /display', () => {

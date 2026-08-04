@@ -1,135 +1,218 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createMemoryRouter, RouterProvider } from 'react-router'
-import { describe, expect, it } from 'vitest'
-import { appRoutes } from '../../app/router.tsx'
-import { drawSetupFixtures } from '../../prototype/data/index.ts'
+import { MemoryRouter } from 'react-router'
+import { describe, expect, it, vi } from 'vitest'
+import type { DrawSetupProductionServices } from '../../application/draw/draw-setup-query.types.ts'
+import type { DrawCommandResult } from '../../application/draw/draw-command.types.ts'
+import type { DrawConfiguration } from '../../domain/draws/draw-configuration.types.ts'
+import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
+import type { Event } from '../../domain/events/event.types.ts'
+import type { Participant } from '../../domain/participants/participant.types.ts'
+import type { PrizeCategory } from '../../domain/prizes/prize.types.ts'
+import { DrawSetupPage } from './DrawSetupPage.tsx'
 
-function renderDrawSetup(path = '/draw/setup') {
-  const router = createMemoryRouter(appRoutes, {
-    initialEntries: [path],
-  })
-  const view = render(<RouterProvider router={router} />)
-
-  return { router, ...view }
+function makeServices(overrides: { participants?: Participant[]; event?: Event | null; configuration?: DrawConfiguration | null; category?: PrizeCategory | null; session?: DrawSession | null; resultTickets?: readonly string[] } = {}) {
+  const event = overrides.event === undefined ? { id: 'event-1', name: 'Persisted Gala', status: 'live', createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' } as Event : overrides.event
+  const category = overrides.category === undefined ? { id: 'category-1', eventId: 'event-1', name: 'Grand Prize', prizeName: 'Luxury Electric Vehicle', displayOrder: 1, createdAt: '2026-07-31T08:00:00.000Z' } as PrizeCategory : overrides.category
+  const configuration = overrides.configuration === undefined ? { id: 'configuration-1', eventId: 'event-1', prizeCategoryId: 'category-1', requestedWinners: 1, winningRule: 'once-per-event', requireCheckIn: true, eligibleGroupFilter: null, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' } as DrawConfiguration : overrides.configuration
+  const session = overrides.session === undefined ? { id: 'session-1', eventId: 'event-1', configurationId: 'configuration-1', mode: 'practice', status: 'ready', configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' } as DrawSession : overrides.session
+  const participants = overrides.participants ?? [{ id: 'participant-1', eventId: 'event-1', ticketNumber: '00042', isCheckedIn: true, group: undefined, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' }] as Participant[]
+  const execute = vi.fn(async (): Promise<{ ok: true; value: DrawCommandResult }> => ({
+    ok: true,
+    value: {
+      auditRecord: { action: 'draw-session-started', actor: { type: 'operator', name: 'Test Operator' }, detail: {}, eventId: event!.id, id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1' as never, timestamp: '2026-07-31T08:00:00.000Z' as never },
+      candidatePoolSnapshot: {} as DrawCommandResult['candidatePoolSnapshot'],
+      configuration: configuration!,
+      configurationSnapshot: {} as DrawCommandResult['configurationSnapshot'],
+      event: event!,
+      pendingWinners: (overrides.resultTickets ?? ['00042']).map((ticketNumber, index) => ({ id: `88888888-8888-4888-8888-88888888888${index + 1}` as never, eventId: event!.id, prizeCategoryId: category!.id, drawSessionId: session!.id, participantId: participants[index % participants.length].id, ticketNumber: ticketNumber as never, sequenceNumber: index + 1, status: 'pending' as const, createdAt: '2026-07-31T08:00:00.000Z' as never, updatedAt: '2026-07-31T08:00:00.000Z' as never })),
+      participants,
+      prizeCategory: category!,
+      selectedCandidateEntries: (overrides.resultTickets ?? ['00042']).map((ticketNumber, index) => ({ participantId: participants[index % participants.length].id, ticketNumber: ticketNumber as never })),
+      session: session!,
+    },
+  }))
+  const services = {
+    open: vi.fn(async () => undefined),
+    events: { findById: vi.fn(async () => event), findAll: vi.fn(), create: vi.fn(), updateDraft: vi.fn(), transitionStatus: vi.fn(), deleteDraft: vi.fn() },
+    preferences: { get: vi.fn(async () => event?.id ?? null), set: vi.fn() },
+    configurations: { findById: vi.fn(async () => configuration), findByEventId: vi.fn(async () => configuration === null ? [] : [configuration]), createDraft: vi.fn(), updateDraft: vi.fn(), deleteUnused: vi.fn() },
+    categories: { findById: vi.fn(async () => category), findByEventId: vi.fn(async () => category === null ? [] : [category]), create: vi.fn(), updateDraft: vi.fn(), deleteDraft: vi.fn() },
+    sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => session === null ? [] : [session]), findLatestByEventId: vi.fn(async () => session), createDraft: vi.fn(), attachSnapshotsAndTransitionToDrawing: vi.fn(), transitionStatus: vi.fn() },
+    participants: { findById: vi.fn(), findByTicketNumber: vi.fn(), findByEventId: vi.fn(async () => participants), countByEventId: vi.fn(async () => participants.length), createBatch: vi.fn(), updateOperationalFields: vi.fn(), deleteDraftEventParticipants: vi.fn() },
+    winners: { findByEventId: vi.fn(async () => []), findByDrawSessionId: vi.fn(), findConfirmedByEventId: vi.fn(), findConfirmedByEventAndCategory: vi.fn(), append: vi.fn(), appendBatch: vi.fn(), transitionStatus: vi.fn() },
+    command: { execute },
+  } as unknown as DrawSetupProductionServices
+  return { services, execute }
 }
 
-describe('Draw Setup static prototype', () => {
-  it('renders the deterministic category, prize, presets, and rules', () => {
-    renderDrawSetup()
+function renderDrawSetup(services: DrawSetupProductionServices, path = '/draw/setup?mode=practice') {
+  return render(<MemoryRouter initialEntries={[path]}><DrawSetupPage services={services} /></MemoryRouter>)
+}
 
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'Draw Setup' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('combobox', { name: 'Category' }),
-    ).toHaveValue('Grand Prize')
-    expect(screen.getByRole('textbox', { name: 'Prize name' })).toHaveValue(
-      'Electric Scooter',
-    )
-
-    const presets = screen.getByRole('group', {
-      name: 'Winner count presets',
-    })
-    for (const preset of ['1', '3', '6', '10', '20', '50']) {
-      expect(
-        within(presets).getByRole('button', { name: preset }),
-      ).toBeInTheDocument()
-    }
-    expect(
-      within(presets).getByRole('button', { name: '1' }),
-    ).toHaveAttribute('aria-pressed', 'true')
-    expect(
-      screen.getByRole('checkbox', {
-        name: 'Checked-in participants only',
-      }),
-    ).toBeChecked()
-    expect(
-      screen.getByRole('checkbox', {
-        name: 'Exclude previous winners',
-      }),
-    ).toBeChecked()
-    expect(
-      screen.getByRole('group', { name: 'Winning frequency' }),
-    ).toBeInTheDocument()
+describe('Draw Setup production integration', () => {
+  it('renders loading and no active Event without fixture data', async () => {
+    const { services } = makeServices({ event: null })
+    renderDrawSetup(services)
+    expect(screen.getByText(/Loading authoritative Event/i)).toBeInTheDocument()
+    expect(await screen.findByText('Select or create an Event first')).toBeInTheDocument()
+    expect(screen.queryByText('Nusantara Tech Gala 2026')).not.toBeInTheDocument()
   })
 
-  it('renders the eligible pool summary and permits ready review', () => {
-    renderDrawSetup('/draw/setup?mode=practice&scenario=ready')
-
-    const pool = screen.getByLabelText('Eligible pool summary')
-    expect(within(pool).getByText('4,820')).toBeVisible()
-    expect(within(pool).getByText('3,946')).toBeVisible()
-    expect(within(pool).getByText('3,814')).toBeVisible()
-    expect(
-      screen.getByText(/Sufficient static capacity/i),
-    ).toBeVisible()
-
-    expect(
-      screen.getByRole('link', { name: 'Review draw' }),
-    ).toHaveAttribute(
-      'href',
-      '/draw/live?state=ready&mode=practice',
-    )
+  it('renders authoritative readiness and exact requested/eligible values', async () => {
+    const { services } = makeServices()
+    renderDrawSetup(services)
+    expect(await screen.findByText('Eligibility and capacity are ready')).toBeInTheDocument()
+    expect(screen.getByText('Persisted Gala')).toBeInTheDocument()
+    expect(screen.getByText('Grand Prize · Luxury Electric Vehicle')).toBeInTheDocument()
+    expect(screen.getByText('Eligible candidates')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Run Practice' })).toBeEnabled()
   })
 
-  it('distinguishes Practice and Live modes with text and correct links', () => {
-    const { unmount } = renderDrawSetup(
-      '/draw/setup?mode=practice&scenario=ready',
-    )
-    expect(screen.getAllByText(/Practice rehearsal context/i).length).toBeGreaterThan(0)
-    unmount()
-
-    renderDrawSetup('/draw/setup?mode=live&scenario=ready')
-    expect(
-      screen.getAllByText(/Live-event review context/i).length,
-    ).toBeGreaterThan(0)
-    expect(
-      screen.getByRole('link', { name: 'Review draw' }),
-    ).toHaveAttribute('href', '/draw/live?state=ready&mode=live')
-  })
-
-  it('blocks the insufficient scenario with an explicit warning', () => {
-    renderDrawSetup(
-      '/draw/setup?mode=practice&scenario=insufficient',
-    )
-
-    expect(
-      screen.getAllByText(
-        'Requested winners exceed the eligible participant pool.',
-      ).length,
-    ).toBeGreaterThan(0)
-    expect(
-      screen.getByRole('button', { name: 'Resolve pool shortage' }),
-    ).toBeDisabled()
-    expect(
-      screen.queryByRole('link', { name: 'Review draw' }),
-    ).not.toBeInTheDocument()
-  })
-
-  it('changes only local visual controls without mutating fixtures', async () => {
+  it('confirms Practice, calls the command once, and preserves exact tickets', async () => {
     const user = userEvent.setup()
-    const fixtureWinnerCount =
-      drawSetupFixtures.ready.configuration.winnerCount
+    const { services, execute } = makeServices()
+    renderDrawSetup(services)
+    await user.click(await screen.findByRole('button', { name: 'Run Practice' }))
+    expect(screen.getByRole('dialog', { name: 'Run practice rehearsal' })).toBeInTheDocument()
+    expect(screen.getAllByText(/rehearsal only/i).length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: 'Run practice' }))
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(await screen.findByText('Practice result')).toBeInTheDocument()
+    expect(screen.getByText('00042')).toBeInTheDocument()
+    expect(screen.getByText('pending')).toBeInTheDocument()
+  })
 
-    expect(Object.isFrozen(drawSetupFixtures)).toBe(true)
-    expect(Object.isFrozen(drawSetupFixtures.ready)).toBe(true)
-    expect(
-      Object.isFrozen(drawSetupFixtures.ready.configuration),
-    ).toBe(true)
+  it('requires Live confirmation and blocks duplicate submission', async () => {
+    const user = userEvent.setup()
+    const { services, execute } = makeServices()
+    renderDrawSetup(services, '/draw/setup?mode=live')
+    await user.click(await screen.findByRole('button', { name: 'Start Live draw' }))
+    expect(screen.getByRole('dialog', { name: 'Confirm live draw start' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Confirm live draw start' })).toHaveTextContent(/1 requested winners, and 1 eligible candidates/i)
+    await user.click(screen.getByRole('button', { name: 'Confirm live draw' }))
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(await screen.findByText('Live draw started')).toBeInTheDocument()
+  })
 
-    renderDrawSetup('/draw/setup?mode=practice&scenario=ready')
-    await user.click(
-      within(
-        screen.getByRole('group', { name: 'Winner count presets' }),
-      ).getByRole('button', { name: '6' }),
-    )
+  it('blocks repeated confirmation clicks and keyboard submission while executing', async () => {
+    const user = userEvent.setup()
+    const { services } = makeServices()
+    let resolveExecution: ((result: { ok: false; error: { kind: 'persistence'; code: 'persistence-failed'; message: string } }) => void) | undefined
+    const execution = new Promise<{ ok: false; error: { kind: 'persistence'; code: 'persistence-failed'; message: string } }>((resolve) => { resolveExecution = resolve })
+    const execute = vi.fn(() => execution)
+    services.command.execute = execute
+    renderDrawSetup(services, '/draw/setup?mode=live')
+    const start = await screen.findByRole('button', { name: 'Start Live draw' })
+    start.focus()
+    await user.keyboard('{Enter}')
+    expect(screen.getByRole('dialog', { name: 'Confirm live draw start' })).toBeInTheDocument()
+    const confirm = screen.getByRole('button', { name: 'Confirm live draw' })
+    await user.click(confirm)
+    await user.click(confirm)
+    await user.keyboard('{Enter}')
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(confirm).toBeDisabled()
+    resolveExecution?.({ ok: false, error: { kind: 'persistence', code: 'persistence-failed', message: 'safe failure' } })
+    expect(await screen.findByText('The draw could not be saved')).toBeInTheDocument()
+    expect(screen.queryByText('00042')).not.toBeInTheDocument()
+  })
 
-    expect(
-      screen.getByRole('spinbutton', { name: 'Custom winner count' }),
-    ).toHaveValue(6)
-    expect(drawSetupFixtures.ready.configuration.winnerCount).toBe(
-      fixtureWinnerCount,
-    )
+  it('preserves distinct exact tickets and returned sequence order', async () => {
+    const user = userEvent.setup()
+    const { services } = makeServices({ resultTickets: ['00042', '42'], participants: [{ id: 'participant-1', eventId: 'event-1', ticketNumber: '00042', isCheckedIn: true, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' }, { id: 'participant-2', eventId: 'event-1', ticketNumber: '42', isCheckedIn: true, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' }] as Participant[] })
+    renderDrawSetup(services)
+    await user.click(await screen.findByRole('button', { name: 'Run Practice' }))
+    await user.click(screen.getByRole('button', { name: 'Run practice' }))
+    expect(await screen.findByText('Pending winners')).toBeInTheDocument()
+    const winners = screen.getByRole('list').querySelectorAll('li')
+    expect(winners).toHaveLength(2)
+    expect(winners[0]).toHaveTextContent('Sequence 1')
+    expect(winners[0]).toHaveTextContent('00042')
+    expect(winners[1]).toHaveTextContent('Sequence 2')
+    expect(winners[1]).toHaveTextContent('42')
+  })
+
+  it('blocks insufficient capacity before the command', async () => {
+    const user = userEvent.setup()
+    const { services, execute } = makeServices({ configuration: { id: 'configuration-1', eventId: 'event-1', prizeCategoryId: 'category-1', requestedWinners: 100, winningRule: 'once-per-event', requireCheckIn: true, eligibleGroupFilter: null, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' } as DrawConfiguration, participants: [{ id: 'participant-1', eventId: 'event-1', ticketNumber: '00042', isCheckedIn: true, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' }, { id: 'participant-2', eventId: 'event-1', ticketNumber: '00043', isCheckedIn: true, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' }] as Participant[] })
+    renderDrawSetup(services)
+    expect(await screen.findByText('Draw cannot start from the current persisted state')).toBeInTheDocument()
+    expect(screen.getByText(/smaller than the requested winner count/i)).toBeInTheDocument()
+    expect(execute).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Run Practice' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Refresh readiness' }))
+  })
+
+  it('blocks missing configuration and invalid category relationships', async () => {
+    const noConfiguration = makeServices({ configuration: null })
+    renderDrawSetup(noConfiguration.services)
+    expect(await screen.findByText('Complete Draw Setup configuration')).toBeInTheDocument()
+
+    const invalidCategory = makeServices({ category: null })
+    renderDrawSetup(invalidCategory.services)
+    expect(await screen.findByText('The selected prize category is unavailable')).toBeInTheDocument()
+  })
+
+  it('blocks an Event with no Participants', async () => {
+    const { services } = makeServices({ participants: [] })
+    renderDrawSetup(services)
+    expect(await screen.findByText('Import valid Participants for this Event')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Import Participants' })).toHaveAttribute('href', '/participants')
+  })
+
+  it('blocks a stale or already-running DrawSession', async () => {
+    const { services } = makeServices({ session: { id: 'session-1', eventId: 'event-1', configurationId: 'configuration-1', mode: 'practice', status: 'pending-confirmation', configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' } as DrawSession })
+    renderDrawSetup(services)
+    expect(await screen.findByText(/cannot start another draw/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Run Practice' })).not.toBeInTheDocument()
+  })
+
+  it('returns to ready on cancellation and exposes safe retry copy on load failure', async () => {
+    const user = userEvent.setup()
+    const { services } = makeServices()
+    renderDrawSetup(services)
+    await user.click(await screen.findByRole('button', { name: 'Run Practice' }))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('button', { name: 'Run Practice' })).toBeVisible()
+
+    const failed = makeServices()
+    failed.services.participants.countByEventId = vi.fn(async () => { throw new Error('private diagnostic') })
+    renderDrawSetup(failed.services)
+    expect(await screen.findByText('The draw could not be saved')).toBeInTheDocument()
+    expect(screen.getByText(/no partial winners or audit record/i)).toBeInTheDocument()
+    expect(screen.queryByText('private diagnostic')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled()
+  })
+
+  it('keeps Practice non-official and allows a later Live execution', async () => {
+    const user = userEvent.setup()
+    const { services, execute } = makeServices()
+    const practice = renderDrawSetup(services)
+    await user.click(await screen.findByRole('button', { name: 'Run Practice' }))
+    await user.click(screen.getByRole('button', { name: 'Run practice' }))
+    expect(await screen.findByText('This rehearsal result is in memory only and is not official.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Return to ready' }))
+    expect(await screen.findByRole('button', { name: 'Run Practice' })).toBeInTheDocument()
+    practice.unmount()
+
+    renderDrawSetup(services, '/draw/setup?mode=live')
+    await user.click(await screen.findByRole('button', { name: 'Start Live draw' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm live draw' }))
+    expect(await screen.findByText('Live draw started')).toBeInTheDocument()
+    expect(execute).toHaveBeenCalledTimes(2)
+  })
+
+  it('refreshes to a blocked state after the Live session becomes pending', async () => {
+    const user = userEvent.setup()
+    const { services } = makeServices()
+    renderDrawSetup(services, '/draw/setup?mode=live')
+    await user.click(await screen.findByRole('button', { name: 'Start Live draw' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm live draw' }))
+    expect(await screen.findByText('Live draw started')).toBeInTheDocument()
+    services.sessions.findLatestByEventId = vi.fn(async () => ({ id: 'session-1', eventId: 'event-1', configurationId: 'configuration-1', mode: 'live', status: 'pending-confirmation', configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' } as DrawSession))
+    await user.click(screen.getByRole('button', { name: 'Return to ready' }))
+    expect(await screen.findByText(/cannot start another draw/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Start Live draw' })).not.toBeInTheDocument()
   })
 })

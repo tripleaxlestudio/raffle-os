@@ -13,3 +13,16 @@ export type {
   CandidatePoolDiagnostics,
   CandidatePoolEligibilityEvaluator,
 } from './candidate-pool.types.ts'
+export {
+  selectWinners,
+} from './winner-selection.ts'
+export type {
+  WinnerSelectionInput,
+  WinnerSelectionOutput,
+  WinnerSelectionResult,
+} from './winner-selection.types.ts'
+export type {
+  WinnerSelectionFailure,
+  WinnerSelectionFailureCode,
+  WinnerSelectionFailureKind,
+} from './winner-selection-errors.ts'

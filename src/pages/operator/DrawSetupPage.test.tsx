@@ -61,12 +61,29 @@ describe('Draw Setup production integration', () => {
 
   it('renders authoritative readiness and exact requested/eligible values', async () => {
     const { services } = makeServices()
-    renderDrawSetup(services)
+    const { container } = renderDrawSetup(services)
     expect(await screen.findByText('Eligibility and capacity are ready')).toBeInTheDocument()
     expect(screen.getByText('Persisted Gala')).toBeInTheDocument()
     expect(screen.getByText('Grand Prize · Luxury Electric Vehicle')).toBeInTheDocument()
     expect(screen.getByText('Eligible candidates')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Run Practice' })).toBeEnabled()
+
+    const summary = container.querySelector('.draw-setup-production__summary')
+    expect(summary).not.toBeNull()
+    const expected = [
+      ['Event', 'Persisted Gala'],
+      ['Prize category', 'Grand Prize Â· Luxury Electric Vehicle'],
+      ['Mode', 'Practice rehearsal'],
+      ['Winning rule', 'Once per event'],
+      ['Check-in requirement', 'Checked-in participants only'],
+      ['Group filter', 'All groups'],
+    ]
+    for (const [label] of expected) {
+      const card = Array.from(summary?.children ?? []).find((candidate) => candidate.textContent?.includes(label))
+      expect(card).toBeDefined()
+      expect(card?.querySelector('span')).toHaveTextContent(label)
+      expect(card?.querySelector('strong')).toHaveTextContent(/\S+/)
+    }
   })
 
   it('confirms Practice, calls the command once, and preserves exact tickets', async () => {

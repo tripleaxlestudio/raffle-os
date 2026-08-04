@@ -49,8 +49,8 @@ export function OperatorHeader({
           <option value="attention">Needs attention</option>
         </Select> : null}
         {showPrototypeControls ? <PrototypeNavigator /> : null}
-        <ModeBadge mode={mode} />
-        <ConnectionStatus status={connectionStatus} />
+        {showPrototypeControls ? <ModeBadge mode={mode} /> : null}
+        {showPrototypeControls ? <ConnectionStatus status={connectionStatus} /> : null}
       </div>
     </header>
   )

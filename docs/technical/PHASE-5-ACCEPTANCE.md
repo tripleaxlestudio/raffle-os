@@ -2,12 +2,13 @@
 
 ## Final verdict
 
-**PHASE 5 NOT YET ACCEPTED**
+**PHASE 5 PASSED WITH APPROVED EXCEPTIONS**
 
-Automated Slice 7 coverage is present and passing. Required Chrome and Edge
-browser evidence was not run because no browser-control connector is available
-in this execution environment. No browser result is inferred from jsdom or
-fake IndexedDB tests.
+Automated Slice 7 coverage is passing. Microsoft Edge browser verification was
+completed by Ismail on 2026-08-05. Chrome was not run; the project owner
+approved a waiver because the operational event environment will use Microsoft
+Edge. Chrome is not recorded as passed, and no Chrome result is inferred from
+Edge, jsdom, or fake IndexedDB tests.
 
 ## Branch and baseline
 
@@ -45,15 +46,9 @@ draw behavior was added.
 
 ## Verification results
 
-Baseline before changes: 51 test files and 598 tests passed. Lint, typecheck,
-build, and `git diff --check` passed. The build retained the existing Vite
-warning about chunks larger than 500 kB.
-
-Slice 7 focused tests: 2 files and 4 tests passed.
-
-The complete suite must be rerun after the final documentation/test changes;
-its authoritative final count is recorded in the delivery report and should
-be copied here after that run.
+Latest authoritative automated result: 54 test files and 610 tests passed.
+Lint, typecheck, build, and `git diff --check` passed. The build retained the
+existing Vite warning about chunks larger than 500 kB.
 
 ## Complete-flow and rollback evidence
 
@@ -117,43 +112,55 @@ not enforced as a brittle threshold.
 
 ## Chrome verification matrix
 
-Reviewer, exact version, Windows version, viewport, profile/database, and date:
-**NOT SUPPLIED — NOT RUN**.
+Chrome was **NOT RUN**. The project owner approved this exception because the
+operational event environment will use Microsoft Edge. This is a waiver, not a
+Chrome pass and not an inference that Edge behavior is identical to Chrome.
 
 | Check | Result |
 |---|---|
-| Production Draw Setup and all loading/error states | NOT RUN |
-| Practice confirmation/result and no official writes | NOT RUN |
-| Live confirmation, duplicate-submit prevention, 1/100 winners | NOT RUN |
-| Exact `00042` versus `42`, refresh persistence, pending state | NOT RUN |
-| Recoverable failure, prototype isolation, Participant regression | NOT RUN |
-| Keyboard/modal, reduced motion, scrollbars, clipped action | NOT RUN |
-| Audience privacy boundary | NOT RUN |
-
-Tooling limitation: browser connector/control tooling was unavailable. Follow
-the manual procedure in `docs/technical/PHASE-5-PLAN.md` §12 and record exact
-versions and observed evidence before changing this verdict.
+| Production Draw Setup and all loading/error states | WAIVED — owner-approved Edge-only operation |
+| Practice confirmation/result and no official writes | WAIVED — owner-approved Edge-only operation |
+| Live confirmation, duplicate-submit prevention, 1/100 winners | WAIVED — owner-approved Edge-only operation |
+| Exact `00042` versus `42`, refresh persistence, pending state | WAIVED — owner-approved Edge-only operation |
+| Recoverable failure, prototype isolation, Participant regression | WAIVED — owner-approved Edge-only operation |
+| Keyboard/modal, reduced motion, scrollbars, clipped action | WAIVED — owner-approved Edge-only operation |
+| Audience privacy boundary | WAIVED — owner-approved Edge-only operation |
 
 ## Edge verification matrix
 
-Reviewer, exact version, Windows version, viewport, profile/database, and date:
-**NOT SUPPLIED — NOT RUN**.
+Reviewer: **Ismail**. Date: **2026-08-05**. Primary operational browser:
+**Microsoft Edge 151.0.4129.59 (Official build) (64-bit)**.
 
-All checks listed in the Chrome matrix are **NOT RUN** for Microsoft Edge for
-the same tooling reason. No browser pass is claimed.
+| Check | Result |
+|---|---|
+| Production Draw Setup route and persisted Ready state | PASS |
+| Eligibility and capacity display | PASS |
+| Practice confirmation and execution | PASS |
+| Practice result clearly non-official and no official draw state | PASS |
+| Live mode selection and confirmation with requested/eligible counts | PASS |
+| Official Live execution and pending winner rendering | PASS |
+| Sequence/ticket separation and exact leading-zero preservation | PASS |
+| Pending-confirmation persistence and page refresh/reopen | PASS |
+| Duplicate execution blocking | PASS |
+| Updated eligibility after pending winners | PASS |
+| Prototype controls absent from production route | PASS |
+| Responsive layout with no clipped primary action | PASS |
+| No double scrollbar observed | PASS |
 
 ## Accessibility and inherited acceptance status
 
 Automated component/source tests cover accessible labels, keyboard-oriented
 confirmation behavior, production/prototype separation, and the absence of
-raw Participant data from Audience-facing paths. Manual viewport, reduced
-motion, scrollbar, and clipping checks remain NOT RUN.
+raw Participant data from Audience-facing paths. Edge manual verification
+passed the responsive layout, clipped-action, scrollbar, and pending-result
+checks. Equivalent Chrome checks remain waived by the owner and are not claimed
+as observed.
 
 Phase 3 remains functionally/source tested but retains its documented pending
 manual Chrome and Edge IndexedDB smoke checks. Phase 4 remains functionally
 complete with partial browser acceptance and retains its documented Chrome
-and cross-browser limitations. This Phase 5 run does not silently relabel
-those limitations as passed.
+and cross-browser limitations. This Phase 5 record does not silently relabel
+the Chrome waiver as a Chrome pass.
 
 ## Scope audit
 
@@ -171,15 +178,15 @@ No production draw path contains `Math.random()`.
 - [x] Exact ticket identity covered.
 - [x] Rule/capacity/prototype/privacy coverage retained and exercised by the suite.
 - [x] Deterministic 10,000-record algorithm evidence recorded with limitations.
-- [ ] Chrome browser matrix observed and recorded.
-- [ ] Edge browser matrix observed and recorded.
-- [ ] Phase 5 final acceptance verdict can be changed to passed.
+- [x] Chrome exception explicitly recorded as an owner-approved waiver; Chrome is not marked passed.
+- [x] Edge browser matrix observed and recorded for the operational browser.
+- [x] Phase 5 final acceptance verdict recorded as passed with approved exceptions.
 
 ## Approval
 
 | Role | Name | Date | Decision |
 |---|---|---|---|
-| Owner/reviewer | NOT SUPPLIED | NOT SUPPLIED | PENDING |
+| Owner/reviewer | Ismail | 2026-08-05 | APPROVED — PHASE 5 PASSED WITH APPROVED EXCEPTIONS; Chrome waived for Edge-only operation |
 
 ## Slice 7 files changed
 
@@ -193,7 +200,7 @@ This acceptance harness is development-only. It is not a Settings editor and it 
 
 1. Start the Vite development server: `npm run dev`.
 2. Open the local URL in Chrome or Edge.
-3. Open DevTools → Console.
+3. Open DevTools â†’ Console.
 4. Run the reset explicitly:
 
    ```js

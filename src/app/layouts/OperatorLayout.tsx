@@ -31,7 +31,8 @@ export function OperatorLayout() {
   const isProductionParticipantRoute =
     location.pathname === '/participants' &&
     resolveParticipantWorkflow(searchParams) === 'production'
-  const isProductionDrawSetupRoute = location.pathname === '/draw/setup'
+  const isProductionDrawSetupRoute =
+    location.pathname === '/draw/setup' && !searchParams.has('scenario')
   const isProductionEventRoute = isProductionParticipantRoute || isProductionDrawSetupRoute
   const mode =
     location.pathname === '/draw/setup' ||
@@ -89,7 +90,7 @@ export function OperatorLayout() {
           mode={mode}
           onScenarioChange={handleScenarioChange}
           scenario={scenario}
-          showPrototypeControls={!isProductionParticipantRoute}
+          showPrototypeControls={!isProductionEventRoute}
         />
         <main className="operator-main">
           <Outlet />

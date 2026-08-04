@@ -29,6 +29,7 @@ export interface ValidatedSeedDataset {
   readonly displayConfigurations: readonly DisplayConfiguration[]
   readonly participants: readonly Participant[]
   readonly drawSession?: DrawSession
+  readonly drawSessions?: readonly DrawSession[]
   readonly winners?: readonly WinnerRecord[]
   readonly redrawRecord?: RedrawRecord
   readonly auditRecords?: readonly AuditRecord[]
@@ -114,8 +115,8 @@ export function validateSeedDataset(dataset: ValidatedSeedDataset): void {
   }
 
   // 6. Validate DrawSession and History if present
-  if (dataset.drawSession !== undefined) {
-    const session = dataset.drawSession
+  const drawSessions = dataset.drawSessions ?? (dataset.drawSession === undefined ? [] : [dataset.drawSession])
+  for (const session of drawSessions) {
     if (!eventIds.has(session.eventId)) {
       throw new RelationshipMismatchError(
         'DrawSession must belong to a seeded Event.',
@@ -134,10 +135,23 @@ export function validateSeedDataset(dataset: ValidatedSeedDataset): void {
       )
     }
 
+    requireValid(validateDrawSession(session))
+
     if (session.configurationSnapshot === null) {
-      throw new RelationshipMismatchError(
-        'Seeded official DrawSession requires a configuration snapshot.',
-      )
+      if (session.status !== 'ready') {
+        throw new RelationshipMismatchError(
+          'A non-ready seeded DrawSession requires a configuration snapshot.',
+        )
+      }
+      if (session.candidatePoolSnapshot !== null) {
+        throw new RelationshipMismatchError(
+          'A ready DrawSession without a configuration snapshot cannot have a candidate pool snapshot.',
+        )
+      }
+    }
+
+    if (session.configurationSnapshot === null) {
+      continue
     }
 
     const configurationSnapshot = session.configurationSnapshot
@@ -159,8 +173,6 @@ export function validateSeedDataset(dataset: ValidatedSeedDataset): void {
         'Seeded official DrawSession requires a candidate pool snapshot.',
       )
     }
-
-    requireValid(validateDrawSession(session))
 
     // Check candidate pool matches participants
     const candidateTicketByParticipantId = new Map<string, string>()
@@ -294,8 +306,9 @@ export async function writeValidatedSeedDataset(
   if (dataset.participants.length > 0) {
     await database.participants.bulkAdd(dataset.participants)
   }
-  if (dataset.drawSession !== undefined) {
-    await database.draw_sessions.add(dataset.drawSession)
+  const drawSessions = dataset.drawSessions ?? (dataset.drawSession === undefined ? [] : [dataset.drawSession])
+  if (drawSessions.length > 0) {
+    await database.draw_sessions.bulkAdd(drawSessions)
   }
   if (dataset.winners !== undefined && dataset.winners.length > 0) {
     await database.winner_records.bulkAdd(dataset.winners)

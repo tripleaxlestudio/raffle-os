@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
@@ -35,7 +35,7 @@ function makeServices(overrides: { participants?: Participant[]; event?: Event |
   const services = {
     open: vi.fn(async () => undefined),
     events: { findById: vi.fn(async () => event), findAll: vi.fn(), create: vi.fn(), updateDraft: vi.fn(), transitionStatus: vi.fn(), deleteDraft: vi.fn() },
-    preferences: { get: vi.fn(async () => event?.id ?? null), set: vi.fn() },
+    preferences: { get: vi.fn(async (key: 'activeEventId' | 'lastOperatorMode') => key === 'activeEventId' ? event?.id ?? null : 'practice'), set: vi.fn() },
     configurations: { findById: vi.fn(async () => configuration), findByEventId: vi.fn(async () => configuration === null ? [] : [configuration]), createDraft: vi.fn(), updateDraft: vi.fn(), deleteUnused: vi.fn() },
     categories: { findById: vi.fn(async () => category), findByEventId: vi.fn(async () => category === null ? [] : [category]), create: vi.fn(), updateDraft: vi.fn(), deleteDraft: vi.fn() },
     sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => session === null ? [] : [session]), findLatestByEventId: vi.fn(async () => session), createDraft: vi.fn(), attachSnapshotsAndTransitionToDrawing: vi.fn(), transitionStatus: vi.fn() },
@@ -61,12 +61,42 @@ describe('Draw Setup production integration', () => {
 
   it('renders authoritative readiness and exact requested/eligible values', async () => {
     const { services } = makeServices()
-    renderDrawSetup(services)
+    const { container } = renderDrawSetup(services)
     expect(await screen.findByText('Eligibility and capacity are ready')).toBeInTheDocument()
     expect(screen.getByText('Persisted Gala')).toBeInTheDocument()
     expect(screen.getByText('Grand Prize · Luxury Electric Vehicle')).toBeInTheDocument()
     expect(screen.getByText('Eligible candidates')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Run Practice' })).toBeEnabled()
+
+    const summary = container.querySelector('.draw-setup-production__summary')
+    expect(summary).not.toBeNull()
+    const expected = [
+      ['Event', 'Persisted Gala'],
+      ['Prize category', 'Grand Prize Â· Luxury Electric Vehicle'],
+      ['Mode', 'Practice rehearsal'],
+      ['Winning rule', 'Once per event'],
+      ['Check-in requirement', 'Checked-in participants only'],
+      ['Group filter', 'All groups'],
+    ]
+    for (const [label] of expected) {
+      const card = Array.from(summary?.children ?? []).find((candidate) => candidate.textContent?.includes(label))
+      expect(card).toBeDefined()
+      expect(card?.querySelector('span')).toHaveTextContent(label)
+      expect(card?.querySelector('strong')).toHaveTextContent(/\S+/)
+    }
+  })
+
+  it('separates exclusion summary heading from exclusion details', async () => {
+    const { services } = makeServices({ participants: [
+      { id: 'participant-1', eventId: 'event-1', ticketNumber: '00042', isCheckedIn: true, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' },
+      { id: 'participant-2', eventId: 'event-1', ticketNumber: '42', isCheckedIn: false, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' },
+    ] as Participant[] })
+    const { container } = renderDrawSetup(services)
+    await screen.findByText('Eligibility and capacity are ready')
+
+    const exclusions = container.querySelector('.draw-setup-production__exclusions')
+    expect(exclusions?.querySelector('strong')).toHaveTextContent('Exclusion summary')
+    expect(exclusions?.querySelector('span')).toHaveTextContent('not checked in: 1')
   })
 
   it('confirms Practice, calls the command once, and preserves exact tickets', async () => {
@@ -127,10 +157,16 @@ describe('Draw Setup production integration', () => {
     expect(await screen.findByText('Pending winners')).toBeInTheDocument()
     const winners = screen.getByRole('list').querySelectorAll('li')
     expect(winners).toHaveLength(2)
-    expect(winners[0]).toHaveTextContent('Sequence 1')
-    expect(winners[0]).toHaveTextContent('00042')
-    expect(winners[1]).toHaveTextContent('Sequence 2')
-    expect(winners[1]).toHaveTextContent('42')
+    expect(within(winners[0]).getByText('Sequence')).toBeInTheDocument()
+    expect(within(winners[0]).getByText('1', { exact: true })).toBeInTheDocument()
+    expect(within(winners[0]).getByText('Ticket')).toBeInTheDocument()
+    expect(within(winners[0]).getByText('00042', { exact: true })).toBeInTheDocument()
+    expect(within(winners[0]).getByText('pending')).toBeInTheDocument()
+    expect(within(winners[1]).getByText('Sequence')).toBeInTheDocument()
+    expect(within(winners[1]).getByText('2', { exact: true })).toBeInTheDocument()
+    expect(within(winners[1]).getByText('Ticket')).toBeInTheDocument()
+    expect(within(winners[1]).getByText('42', { exact: true })).toBeInTheDocument()
+    expect(within(winners[1]).getByText('pending')).toBeInTheDocument()
   })
 
   it('blocks insufficient capacity before the command', async () => {

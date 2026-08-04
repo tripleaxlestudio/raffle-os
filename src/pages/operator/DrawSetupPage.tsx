@@ -10,8 +10,8 @@ import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { Badge, Button, ButtonLink, Card, ConfirmationDialog } from '../../shared/ui/index.ts'
 
-function modeFromQuery(value: string | null): AppMode {
-  return value === 'live' ? 'live' : 'practice'
+function modeFromQuery(value: string | null, fallback: AppMode): AppMode {
+  return value === 'live' || value === 'practice' ? value : fallback
 }
 
 function formatWinningRule(rule: DrawSetupReadyViewModel['configuration']['winningRule']) {
@@ -49,15 +49,17 @@ function Confirmation({ mode, view, onCancel, onConfirm, busy }: { mode: AppMode
 type DrawSetupSuccess = { readonly state: 'practice-success' | 'live-success'; readonly result: DrawCommandResult }
 
 function PendingResult({ view, onReturn }: { view: DrawSetupSuccess; onReturn: () => void }) {
-  return <Card className="draw-panel" padding="md"><div aria-live="polite" role="status"><p className="draw-setup-production__eyebrow">{view.state === 'live-success' ? 'Live draw started' : 'Practice result'}</p><h2>Pending winners</h2><p>{view.state === 'live-success' ? 'These winners are pending confirmation in the later workflow.' : 'This rehearsal result is in memory only and is not official.'}</p></div><ol className="draw-setup-production__winners">{view.result.pendingWinners.map((winner) => <li key={winner.id}><span>Sequence {winner.sequenceNumber}</span><strong>{winner.ticketNumber}</strong><Badge variant="pending">pending</Badge></li>)}</ol><Button onClick={onReturn} variant="secondary">Return to ready</Button></Card>
+  return <Card className="draw-panel" padding="md"><div aria-live="polite" role="status"><p className="draw-setup-production__eyebrow">{view.state === 'live-success' ? 'Live draw started' : 'Practice result'}</p><h2>Pending winners</h2><p>{view.state === 'live-success' ? 'These winners are pending confirmation in the later workflow.' : 'This rehearsal result is in memory only and is not official.'}</p></div><ol className="draw-setup-production__winners">{view.result.pendingWinners.map((winner) => <li key={winner.id}><div className="draw-setup-production__winner-field"><span>Sequence</span><strong>{winner.sequenceNumber}</strong></div><div className="draw-setup-production__winner-field"><span>Ticket</span><code>{winner.ticketNumber}</code></div><Badge variant="pending">pending</Badge></li>)}</ol><Button onClick={onReturn} variant="secondary">Return to ready</Button></Card>
 }
 
 type PageState = DrawSetupViewModel | DrawSetupSuccess
 
 export function DrawSetupPage({ services: suppliedServices }: { services?: DrawSetupProductionServices } = {}) {
   const [searchParams] = useSearchParams()
-  const mode = modeFromQuery(searchParams.get('mode'))
+  const hasExplicitMode = searchParams.has('mode')
   const services = useMemo(() => suppliedServices ?? createDrawSetupProductionServices(), [suppliedServices])
+  const [preferredMode, setPreferredMode] = useState<AppMode>('practice')
+  const mode = modeFromQuery(searchParams.get('mode'), preferredMode)
   const [view, setView] = useState<PageState>({ state: 'loading' })
   const [confirmation, setConfirmation] = useState(false)
   const [executing, setExecuting] = useState(false)
@@ -72,6 +74,10 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
     void (async () => {
       try {
         await services.open()
+        if (!hasExplicitMode) {
+          const persistedMode = await services.preferences.get('lastOperatorMode')
+          if (persistedMode !== null) setPreferredMode(persistedMode)
+        }
         const next = await queryDrawSetup(mode, services)
         if (!cancelled) setView(next)
       } catch (cause: unknown) {
@@ -79,7 +85,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
       }
     })()
     return () => { cancelled = true }
-  }, [mode, services])
+  }, [hasExplicitMode, mode, services])
 
   async function start() {
     if (executing || view.state !== 'ready') return

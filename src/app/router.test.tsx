@@ -79,6 +79,21 @@ describe('application routes', () => {
     ).toHaveValue('ready')
   })
 
+  it('keeps prototype chrome off production Draw Setup while preserving it for explicit prototype routes', () => {
+    const production = renderRoute('/draw/setup')
+    expect(screen.queryByRole('combobox', { name: 'Prototype scenario' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Prototype navigation')).not.toBeInTheDocument()
+    expect(screen.queryByText('Practice Mode')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: /Audience Display:/i })).not.toBeInTheDocument()
+    production.unmount()
+
+    renderRoute('/draw/setup?scenario=ready')
+    expect(screen.getByRole('combobox', { name: 'Prototype scenario' })).toBeInTheDocument()
+    expect(screen.getByText('Prototype navigation')).toBeInTheDocument()
+    expect(screen.getByText('Practice Mode')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Audience Display: Connected' })).toBeInTheDocument()
+  })
+
   it.each(operatorPageHeadings)(
     'renders %s as the %s Operator page',
     (path, title) => {
@@ -193,7 +208,7 @@ describe('application routes', () => {
   })
 
   it('exposes prototype direct links only in Operator navigation', () => {
-    renderRoute('/draw/setup')
+    renderRoute('/draw/setup?scenario=ready')
 
     const prototypeNavigation = screen.getByRole('navigation', {
       name: 'Prototype navigation scenarios',
@@ -282,7 +297,7 @@ describe('application routes', () => {
         within(prototypeNavigation).getByRole('link', { name: label }),
       ).toHaveAttribute('href', href)
     }
-    expect(screen.getByText('Production workspace')).toBeVisible()
+    expect(screen.getByText('Static prototype')).toBeVisible()
   })
 
   it('does not expose links to Operator routes on /display', () => {

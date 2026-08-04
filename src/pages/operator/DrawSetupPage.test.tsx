@@ -104,4 +104,45 @@ describe('Draw Setup production integration', () => {
     expect(screen.queryByRole('button', { name: 'Run Practice' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Refresh readiness' }))
   })
+
+  it('blocks missing configuration and invalid category relationships', async () => {
+    const noConfiguration = makeServices({ configuration: null })
+    renderDrawSetup(noConfiguration.services)
+    expect(await screen.findByText('Complete Draw Setup configuration')).toBeInTheDocument()
+
+    const invalidCategory = makeServices({ category: null })
+    renderDrawSetup(invalidCategory.services)
+    expect(await screen.findByText('The selected prize category is unavailable')).toBeInTheDocument()
+  })
+
+  it('blocks an Event with no Participants', async () => {
+    const { services } = makeServices({ participants: [] })
+    renderDrawSetup(services)
+    expect(await screen.findByText('Import valid Participants for this Event')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Import Participants' })).toHaveAttribute('href', '/participants')
+  })
+
+  it('blocks a stale or already-running DrawSession', async () => {
+    const { services } = makeServices({ session: { id: 'session-1', eventId: 'event-1', configurationId: 'configuration-1', mode: 'practice', status: 'pending-confirmation', configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' } as DrawSession })
+    renderDrawSetup(services)
+    expect(await screen.findByText(/cannot start another draw/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Run Practice' })).not.toBeInTheDocument()
+  })
+
+  it('returns to ready on cancellation and exposes safe retry copy on load failure', async () => {
+    const user = userEvent.setup()
+    const { services } = makeServices()
+    renderDrawSetup(services)
+    await user.click(await screen.findByRole('button', { name: 'Run Practice' }))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('button', { name: 'Run Practice' })).toBeVisible()
+
+    const failed = makeServices()
+    failed.services.participants.countByEventId = vi.fn(async () => { throw new Error('private diagnostic') })
+    renderDrawSetup(failed.services)
+    expect(await screen.findByText('Draw Setup could not be loaded')).toBeInTheDocument()
+    expect(screen.getByText(/Authoritative draw setup data could not be loaded/i)).toBeInTheDocument()
+    expect(screen.queryByText('private diagnostic')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled()
+  })
 })

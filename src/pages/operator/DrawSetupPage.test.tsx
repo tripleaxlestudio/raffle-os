@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
@@ -157,10 +157,16 @@ describe('Draw Setup production integration', () => {
     expect(await screen.findByText('Pending winners')).toBeInTheDocument()
     const winners = screen.getByRole('list').querySelectorAll('li')
     expect(winners).toHaveLength(2)
-    expect(winners[0]).toHaveTextContent('Sequence 1')
-    expect(winners[0]).toHaveTextContent('00042')
-    expect(winners[1]).toHaveTextContent('Sequence 2')
-    expect(winners[1]).toHaveTextContent('42')
+    expect(within(winners[0]).getByText('Sequence')).toBeInTheDocument()
+    expect(within(winners[0]).getByText('1', { exact: true })).toBeInTheDocument()
+    expect(within(winners[0]).getByText('Ticket')).toBeInTheDocument()
+    expect(within(winners[0]).getByText('00042', { exact: true })).toBeInTheDocument()
+    expect(within(winners[0]).getByText('pending')).toBeInTheDocument()
+    expect(within(winners[1]).getByText('Sequence')).toBeInTheDocument()
+    expect(within(winners[1]).getByText('2', { exact: true })).toBeInTheDocument()
+    expect(within(winners[1]).getByText('Ticket')).toBeInTheDocument()
+    expect(within(winners[1]).getByText('42', { exact: true })).toBeInTheDocument()
+    expect(within(winners[1]).getByText('pending')).toBeInTheDocument()
   })
 
   it('blocks insufficient capacity before the command', async () => {

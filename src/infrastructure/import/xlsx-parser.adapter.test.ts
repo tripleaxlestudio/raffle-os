@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx'
 import { describe, expect, it } from 'vitest'
-import { parseXlsx } from './xlsx-parser.adapter.ts'
+import { classifyStringCell, parseXlsx } from './xlsx-parser.adapter.ts'
 import { validateParticipantImport } from '../../application/participant-import/participant-import-staging.ts'
 import type { ColumnMapping } from '../../application/participant-import/participant-import-staging.types.ts'
 
@@ -14,6 +14,13 @@ function workbookBuffer(sheets: Record<string, unknown[][]>): ArrayBuffer {
 }
 
 describe('SheetJS XLSX parser adapter', () => {
+  it('classifies Excel-style plain shared strings without trusting derived rich-text fields', () => {
+    const plainCell = { t: 's', v: '00077', h: '00077', r: '00077' } as const
+    expect(classifyStringCell(plainCell)).toBe('string')
+    expect(classifyStringCell({ t: 's', v: '00123', h: '<span>00123</span>' })).toBe('string')
+    expect(classifyStringCell({ t: 's', v: '00077', r: '<r><t>000</t></r><r><t>77</t></r>' })).toBe('rich-text')
+  })
+
   it('preserves strings, source rows, provenance, and ignores numeric cells in other columns', async () => {
     const result = await parseXlsx(workbookBuffer({ Sheet1: [['Ticket Number', 'Name', 'Ignored'], [], ['00042', 'Ada', 42], ['42', 'Bea', 7]] }), { fileMetadata: metadata })
     expect(result.ok).toBe(true)

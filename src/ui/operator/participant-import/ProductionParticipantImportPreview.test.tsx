@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { createMemoryRouter, RouterProvider } from 'react-router'
@@ -25,8 +25,8 @@ function deferred<T>() {
   return { promise, resolve, reject }
 }
 
-function makeServices(options: { event?: Event | null; commit?: (input: ParticipantImportTransactionInput) => Promise<{ removedCount: number; unchangedCount: number }> } = {}) {
-  let records: Participant[] = []
+function makeServices(options: { event?: Event | null; initialRecords?: Participant[]; commit?: (input: ParticipantImportTransactionInput) => Promise<{ removedCount: number; unchangedCount: number }> } = {}) {
+  let records: Participant[] = options.initialRecords?.slice() ?? []
   const services: ParticipantImportProductionServices = {
     database: { openSupported: vi.fn().mockResolvedValue(undefined) },
     preferences: { get: vi.fn().mockResolvedValue(options.event === undefined ? eventId : options.event?.id ?? null) },
@@ -35,6 +35,10 @@ function makeServices(options: { event?: Event | null; commit?: (input: Particip
       countByEventId: vi.fn().mockImplementation(async (id: EventId) => id === eventId ? records.length : 0),
       findByEventId: vi.fn().mockImplementation(async (id: EventId) => id === eventId ? records.slice() : []),
     },
+    getPersistedParticipantsForEvent: vi.fn().mockImplementation(async (id: EventId, limit: number) => {
+      const eventRecords = id === eventId ? records : []
+      return { totalCount: eventRecords.length, records: eventRecords.slice(0, limit), truncated: eventRecords.length > limit }
+    }),
     unitOfWork: { commitParticipantImport: vi.fn().mockImplementation(async (input: ParticipantImportTransactionInput) => {
       if (options.commit) return options.commit(input)
       records = input.participants.slice() as Participant[]
@@ -65,12 +69,99 @@ async function chooseStrategyAndOpenConfirmation(user: ReturnType<typeof userEve
 }
 
 describe('production participant import preview audit', () => {
+  it('keeps validation current and confirmation disabled when all rows are invalid', async () => {
+    const user = userEvent.setup()
+    renderProduction(makeServices())
+    await user.upload(screen.getByLabelText('Choose participant file'), new File(['Ticket Number\n\n'], 'invalid.csv', { type: 'text/csv' }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Validation diagnostics and summary' })).toBeInTheDocument())
+    const progress = screen.getByRole('navigation', { name: 'Participant Import progress' })
+    expect(within(progress).getByText('Validate Data').closest('li')).toHaveAttribute('data-state', 'active')
+    expect(within(progress).getByText('Confirm Import').closest('li')).toHaveAttribute('data-state', 'upcoming')
+    expect(screen.getByRole('button', { name: 'Review and confirm import' })).toBeDisabled()
+  })
+
+  it('renders the integrated operator structure with observable semantics', async () => {
+    renderProduction(makeServices())
+
+    expect(await screen.findByRole('navigation', { name: 'Participant Import progress' })).toBeVisible()
+    expect(screen.getByText('Upload File')).toBeVisible()
+    expect(screen.getByText('Map Columns')).toBeVisible()
+    expect(screen.getByText('Validate Data')).toBeVisible()
+    expect(screen.getByText('Confirm Import')).toBeVisible()
+
+    const eventRegion = await screen.findByRole('region', { name: 'Selected Event' })
+    expect(within(eventRegion).getByText('Draft Event')).toBeVisible()
+    const persistedRegion = screen.getByRole('region', { name: 'Persisted Participants' })
+    expect(persistedRegion).toBeVisible()
+    expect(screen.getByLabelText('Choose participant file')).toBeVisible()
+
+    const user = userEvent.setup()
+    await user.upload(screen.getByLabelText('Choose participant file'), new File(['Ticket Number,Name\n00042,Ada'], 'participants.csv', { type: 'text/csv' }))
+    await waitFor(() => expect(screen.getByRole('table', { name: 'Parsed participant rows' })).toBeVisible())
+    expect(screen.getByRole('table', { name: 'Parsed participant rows' })).toHaveTextContent('00042')
+    expect(screen.getByRole('combobox', { name: /Ticket Number · Required/ })).toBeVisible()
+    expect(screen.getByRole('combobox', { name: /Participant Name · Optional/ })).toBeVisible()
+    expect(screen.getByRole('radio', { name: 'Replace' })).not.toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Merge' })).not.toBeChecked()
+  })
+
   it('resolves production-preview through the real draft Event boundary', async () => {
     const services = makeServices()
     renderProduction(services)
-    expect(await screen.findByText('Draft Event')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Selected Event' })).toBeVisible()
     expect(services.preferences.get).toHaveBeenCalledWith('activeEventId')
     expect(services.events.findById).toHaveBeenCalledWith(eventId)
+  })
+
+  it('loads persisted verification independently on initial open and preserves exact tickets', async () => {
+    const services = makeServices({ initialRecords: [
+      { id: '1' as ParticipantId, eventId, ticketNumber: '00042' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp },
+      { id: '2' as ParticipantId, eventId, ticketNumber: '42' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp },
+    ] })
+    renderProduction(services)
+    expect(await screen.findByText('Total stored Participants: 2')).toBeVisible()
+    expect(screen.getByText('00042')).toBeVisible()
+    expect(screen.getByText('42')).toBeVisible()
+    expect(services.getPersistedParticipantsForEvent).toHaveBeenCalledWith(eventId, 50)
+    expect(screen.queryByLabelText('Choose participant file')).toBeInTheDocument()
+  })
+
+  it('shows empty, bounded, and safe read-failure verification states', async () => {
+    const empty = makeServices()
+    const emptyView = renderProduction(empty)
+    expect(await screen.findByText('No Participants are persisted for this Event.')).toBeVisible()
+    emptyView.unmount()
+
+    const many = Array.from({ length: 51 }, (_, index) => ({ id: `${index}` as ParticipantId, eventId, ticketNumber: `${index}` as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }))
+    const bounded = makeServices({ initialRecords: many })
+    const boundedView = renderProduction(bounded)
+    expect(await screen.findByText('Preview truncated to 50 Participants.')).toBeVisible()
+    expect(screen.getByText('Total stored Participants: 51')).toBeVisible()
+    boundedView.unmount()
+
+    const failed = makeServices()
+    vi.mocked(failed.getPersistedParticipantsForEvent).mockRejectedValue(new Error('SECRET_DATABASE_DETAIL'))
+    renderProduction(failed)
+    const alert = await screen.findByText(/Persisted Participants could not be read safely/)
+    expect(alert).not.toHaveTextContent('SECRET_DATABASE_DETAIL')
+  })
+
+  it('reloads persisted verification when the active Event changes', async () => {
+    const secondEventId = '22222222-2222-4222-8222-222222222222' as EventId
+    const secondEvent: Event = { ...draftEvent, id: secondEventId, name: 'Second Draft Event' }
+    const services = makeServices({ initialRecords: [{ id: '1' as ParticipantId, eventId, ticketNumber: '00042' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }] })
+    vi.mocked(services.preferences.get)
+      .mockResolvedValueOnce(eventId)
+      .mockResolvedValueOnce(secondEventId)
+    vi.mocked(services.events.findById).mockImplementation(async (id) => id === eventId ? draftEvent : secondEvent)
+    vi.mocked(services.getPersistedParticipantsForEvent).mockImplementation(async (id, limit) => id === eventId
+      ? { totalCount: 1, records: [{ id: '1' as ParticipantId, eventId, ticketNumber: '00042' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }], truncated: false }
+      : { totalCount: 1, records: [{ id: '2' as ParticipantId, eventId: secondEventId, ticketNumber: '00700' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }].slice(0, limit), truncated: false })
+    renderProduction(services)
+    expect(await screen.findByText('00042')).toBeVisible()
+    window.dispatchEvent(new Event('focus'))
+    expect(await screen.findByRole('heading', { name: 'Selected Event' })).toBeVisible()
+    expect(await screen.findByText('00700')).toBeVisible()
   })
 
   it('blocks when no Event is selected and blocks immutable Events', async () => {
@@ -123,13 +214,30 @@ describe('production participant import preview audit', () => {
   })
 
   it('renders Replace counts, Merge counts, and bounded persisted verification', async () => {
-    const user = userEvent.setup(); const replace = makeServices(); renderProduction(replace); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Replace'); await user.click(screen.getByLabelText(/I understand/)); await user.click(screen.getByRole('button', { name: 'Confirm Replace' }))
+    const user = userEvent.setup(); const replace = makeServices(); const replaceView = renderProduction(replace); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Replace'); await user.click(screen.getByLabelText(/I understand/)); await user.click(screen.getByRole('button', { name: 'Confirm Replace' }))
     expect(await screen.findByText(/Inserted: 1 · Removed\/replaced: 2 · Unchanged: 0/)).toBeVisible()
 
+    expect(replace.getPersistedParticipantsForEvent).toHaveBeenCalled()
+    replaceView.unmount()
     const merge = makeServices(); renderProduction(merge); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Merge'); await user.click(screen.getByRole('button', { name: 'Confirm atomic Merge' }))
     expect(await screen.findByText(/Inserted: 1 · Removed\/replaced: 0 · Unchanged: 2/)).toBeVisible()
-    expect(screen.getByText('Persisted Participants: 1')).toBeVisible()
+    expect(screen.getByText('Total stored Participants: 1')).toBeVisible()
     expect(screen.getAllByText('00042').length).toBeGreaterThan(0)
+    expect(merge.getPersistedParticipantsForEvent).toHaveBeenCalled()
+  })
+
+  it('does not restore File, mapping, strategy, or confirmation state after remount', async () => {
+    const user = userEvent.setup(); const services = makeServices(); const view = renderProduction(services)
+    await stageFile(user)
+    await user.click(screen.getByRole('radio', { name: 'Merge' }))
+    await user.click(screen.getByRole('button', { name: 'Review and confirm import' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    view.unmount()
+    renderProduction(services)
+    await screen.findByText('No Participants are persisted for this Event.')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Validation diagnostics and summary' })).not.toBeInTheDocument()
+    expect(screen.queryByText('participants.csv')).not.toBeInTheDocument()
   })
 
   it.each([

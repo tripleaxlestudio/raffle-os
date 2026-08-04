@@ -4,13 +4,16 @@ import { DexieParticipantRepository } from './repositories/participant.repositor
 import { DexiePreferenceRepository } from './repositories/preference.repository.ts'
 import { RaffleOSDatabase } from './db.ts'
 import { DexieParticipantImportUnitOfWork } from './transactions/dexie-participant-import-unit-of-work.ts'
+import { getPersistedParticipantsForEvent } from '../../application/participant-import/participant-import-verification.ts'
 
 export function createParticipantImportProductionServices() {
   const database = new RaffleOSDatabase()
+  const participants = new DexieParticipantRepository(database)
   return {
     database,
     events: new DexieEventRepository(database),
-    participants: new DexieParticipantRepository(database),
+    participants,
+    getPersistedParticipantsForEvent: (eventId: Parameters<DexieParticipantRepository['findByEventId']>[0], limit: number) => getPersistedParticipantsForEvent(participants, eventId, limit),
     preferences: new DexiePreferenceRepository(database),
     unitOfWork: new DexieParticipantImportUnitOfWork(database),
     createParticipantId,

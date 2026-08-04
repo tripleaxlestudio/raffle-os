@@ -71,11 +71,23 @@ function inspectCell(sheet: WorkSheet, row: number, column: number, sheetName: s
   if (!cell || cell.t === 'z') return { ...base, sourceType: 'blank' }
   if (cell.w && cell.w.length > limits.maxCellTextLength) return { ...base, sourceType: 'unsupported' }
   if (cell.f !== undefined) return { ...base, sourceType: 'formula' }
-  if (cell.t === 's') return { ...base, sourceType: cell.r !== undefined ? 'rich-text' : 'string' }
+  if (cell.t === 's' && typeof cell.v === 'string') return { ...base, sourceType: classifyStringCell(cell) }
   if (cell.t === 'n') return { ...base, sourceType: 'number' }
   if (cell.t === 'd') return { ...base, sourceType: 'date' }
   if (cell.t === 'b') return { ...base, sourceType: 'boolean' }
   if (cell.t === 'e') return { ...base, sourceType: 'error' }
   return { ...base, sourceType: 'unsupported' }
+}
+
+/**
+ * SheetJS may expose derived HTML (`h`) or the raw rich-text field (`r`) on
+ * an ordinary shared-string cell. Neither field alone changes the source
+ * type: `t: "s"` plus a string `v` is the authoritative plain-string shape.
+ * Rich text is rejected only when `r` contains actual run/formatting markup.
+ */
+export function classifyStringCell(cell: Pick<CellObject, 't' | 'v' | 'r'> & { readonly h?: unknown }): 'string' | 'rich-text' | 'unsupported' {
+  if (typeof cell.v !== 'string') return 'unsupported'
+  if (typeof cell.r === 'string' && /<r(?:\s|>)/i.test(cell.r) && (/<rPr(?:\s|>)/i.test(cell.r) || (cell.r.match(/<r(?:\s|>)/gi)?.length ?? 0) > 1)) return 'rich-text'
+  return 'string'
 }
 function toCellDiagnostic(cell: XlsxCellProvenance): XlsxCellDiagnostic { const code = cell.sourceType === 'formula' ? 'formula-cell' : cell.sourceType === 'date' ? 'date-cell' : cell.sourceType === 'boolean' ? 'boolean-cell' : cell.sourceType === 'error' ? 'error-cell' : cell.sourceType === 'rich-text' ? 'rich-text-cell' : 'unsupported-cell'; return { ...cell, code, message: `Cell at row ${cell.rowNumber}, column ${cell.columnNumber} is not a plain text value.` } }

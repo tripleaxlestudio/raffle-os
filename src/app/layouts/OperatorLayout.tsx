@@ -22,6 +22,9 @@ export function OperatorLayout() {
       ? resolveDashboardPrototypeScenario(searchParams)
       : 'ready'
   const prototype = getDashboardPrototype(scenario)
+  const isProductionParticipantPreview =
+    location.pathname === '/participants' &&
+    searchParams.get('workflow') === 'production-preview'
   const mode =
     location.pathname === '/draw/setup' ||
     location.pathname === '/draw/live'
@@ -44,8 +47,16 @@ export function OperatorLayout() {
       <div className="operator-workspace">
         <OperatorHeader
           connectionStatus={prototype.connectionStatus}
-          eventName={prototype.event.name}
-          eventSchedule={prototype.event.schedule}
+          eventName={
+            isProductionParticipantPreview
+              ? 'Production Preview Event'
+              : prototype.event.name
+          }
+          eventSchedule={
+            isProductionParticipantPreview
+              ? 'Resolved in import workspace'
+              : prototype.event.schedule
+          }
           mode={mode}
           onScenarioChange={handleScenarioChange}
           scenario={scenario}

@@ -11,6 +11,7 @@ import type {
 } from '../../../domain/winners/winner.types.ts'
 
 export interface WinnerRepository {
+  findByEventId(eventId: EventId): Promise<WinnerRecord[]>
   findByDrawSessionId(
     drawSessionId: DrawSessionId,
   ): Promise<WinnerRecord[]>

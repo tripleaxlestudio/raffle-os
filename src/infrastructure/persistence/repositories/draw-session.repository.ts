@@ -145,6 +145,21 @@ export async function attachDrawSessionSnapshotsInTransaction(
     category,
   )
 
+  const candidateSnapshot = snapshots.candidatePoolSnapshot
+  if (
+    candidateSnapshot.eventId !== session.eventId ||
+    candidateSnapshot.configurationId !== configuration.id ||
+    candidateSnapshot.prizeCategoryId !== configuration.prizeCategoryId ||
+    candidateSnapshot.mode !== session.mode ||
+    candidateSnapshot.winningRule !== configuration.winningRule ||
+    candidateSnapshot.requireCheckIn !== configuration.requireCheckIn ||
+    candidateSnapshot.eligibleGroupFilter !== configuration.eligibleGroupFilter
+  ) {
+    throw new RelationshipMismatchError(
+      'The candidate snapshot must exactly match the DrawSession Event, mode, configuration, category, and rules.',
+    )
+  }
+
   const entries = snapshots.candidatePoolSnapshot.candidateEntries
   const participants = await database.participants.bulkGet(
     entries.map((entry) => entry.participantId),
@@ -224,6 +239,21 @@ export class DexieDrawSessionRepository
       return (await this.database.draw_sessions.get(id)) ?? null
     } catch (error: unknown) {
       throw normalizeRepositoryError(error, 'Finding the DrawSession')
+    }
+  }
+
+  async findByEventId(eventId: EventId): Promise<DrawSession[]> {
+    try {
+      const sessions = await this.database.draw_sessions
+        .where('eventId')
+        .equals(eventId)
+        .toArray()
+      return sessions.sort(
+        (left, right) =>
+          left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id),
+      )
+    } catch (error: unknown) {
+      throw normalizeRepositoryError(error, 'Listing Event DrawSessions')
     }
   }
 

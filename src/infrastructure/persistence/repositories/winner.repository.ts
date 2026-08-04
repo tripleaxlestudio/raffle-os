@@ -305,6 +305,18 @@ function compareWinnerHistory(
 export class DexieWinnerRepository implements WinnerRepository {
   private readonly database: RaffleOSDatabase
 
+  async findByEventId(eventId: EventId): Promise<WinnerRecord[]> {
+    try {
+      const winners = await this.database.winner_records
+        .where('eventId')
+        .equals(eventId)
+        .toArray()
+      return winners.sort(compareWinnerHistory)
+    } catch (error: unknown) {
+      throw normalizeRepositoryError(error, 'Listing Event WinnerRecords')
+    }
+  }
+
   constructor(database: RaffleOSDatabase) {
     this.database = database
   }

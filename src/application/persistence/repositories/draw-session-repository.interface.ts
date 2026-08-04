@@ -12,6 +12,7 @@ import type { AppMode } from '../../../domain/types/app-mode.ts'
 
 export interface DrawSessionRepository {
   findById(id: DrawSessionId): Promise<DrawSession | null>
+  findByEventId(eventId: EventId): Promise<DrawSession[]>
   findLatestByEventId(
     eventId: EventId,
     mode?: AppMode,

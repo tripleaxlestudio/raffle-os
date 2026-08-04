@@ -10,6 +10,15 @@ export interface ImportFileMetadata {
   readonly sheetName?: string
 }
 
+export interface ParticipantImportSourceMetadata {
+  readonly fileName: string
+  readonly extension?: string
+  readonly mimeType?: string
+  readonly sizeBytes?: number
+  readonly lastModifiedAt?: string
+  readonly sheetName?: string
+}
+
 export interface RawImportRow {
   readonly rowNumber: number
   readonly values: Readonly<Record<string, unknown>>

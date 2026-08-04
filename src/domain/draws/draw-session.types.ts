@@ -38,6 +38,10 @@ export interface CandidatePoolSnapshotEntry {
 
 export interface CandidatePoolSnapshot {
   readonly snapshotFormatVersion: 1
+  readonly eventId: EventId
+  readonly configurationId: DrawConfigurationId
+  readonly prizeCategoryId: PrizeCategoryId
+  readonly mode: AppMode
   readonly capturedAt: IsoTimestamp
   readonly winningRule: WinningRule
   readonly requireCheckIn: boolean

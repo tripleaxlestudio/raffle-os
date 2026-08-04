@@ -127,6 +127,10 @@ export function validateCandidatePoolSnapshot(
 ): Result<CandidatePoolSnapshot> {
   if (
     snapshot.snapshotFormatVersion !== 1 ||
+    typeof snapshot.eventId !== 'string' ||
+    typeof snapshot.configurationId !== 'string' ||
+    typeof snapshot.prizeCategoryId !== 'string' ||
+    (snapshot.mode !== 'practice' && snapshot.mode !== 'live') ||
     !isIsoTimestamp(snapshot.capturedAt)
   ) {
     return failure(

@@ -348,6 +348,47 @@ describe('RaffleOS database construction and Schema Version 1', () => {
     expect(openSpy).toHaveBeenCalledTimes(1)
   })
 
+  it('uses available browser-style globals when no dependencies are injected', async () => {
+    const originalDependencies = Dexie.dependencies
+    const name = uniqueDatabaseName('browser-defaults')
+
+    vi.stubGlobal('indexedDB', indexedDB)
+    vi.stubGlobal('IDBKeyRange', IDBKeyRange)
+    Dexie.dependencies = { indexedDB, IDBKeyRange }
+
+    try {
+      const database = trackDatabase(new RaffleOSDatabase(name))
+
+      await database.openSupported()
+
+      expect(database.isOpen()).toBe(true)
+    } finally {
+      Dexie.dependencies = originalDependencies
+    }
+  })
+
+  it('reports a typed unavailable error when IndexedDB is missing', async () => {
+    vi.stubGlobal('indexedDB', undefined)
+
+    const database = trackDatabase(
+      new RaffleOSDatabase(uniqueDatabaseName('missing-indexeddb')),
+    )
+
+    await expect(database.openSupported()).rejects.toBeInstanceOf(
+      DatabaseUnavailableError,
+    )
+    expect(database.isOpen()).toBe(false)
+  })
+
+  it('opens with explicitly injected fake-indexeddb dependencies', async () => {
+    const database = createTestDatabase(
+      uniqueDatabaseName('explicit-dependencies'),
+    )
+
+    await expect(database.openSupported()).resolves.toBe(database)
+    expect(database.isOpen()).toBe(true)
+  })
+
   it('opens Version 1 with exactly the ten approved stores', async () => {
     const database = createTestDatabase()
     await database.openSupported()
@@ -637,6 +678,7 @@ describe('safe open boundary and persistence errors', () => {
       code: PERSISTENCE_ERROR_CODES.unsupportedSchemaVersion,
       name: 'UnsupportedSchemaVersionError',
     })
+    expect(applicationDatabase.isOpen()).toBe(false)
     if (!(openError instanceof UnsupportedSchemaVersionError)) {
       throw new Error('Expected a normalized unsupported schema error.')
     }

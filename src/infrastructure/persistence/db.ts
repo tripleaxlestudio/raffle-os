@@ -1,4 +1,5 @@
 import Dexie, {
+  type DexieOptions,
   type Table,
 } from 'dexie'
 import type { AuditRecord } from '../../domain/audit/audit.types.ts'
@@ -103,11 +104,18 @@ export class RaffleOSDatabase extends Dexie {
     databaseName = DEFAULT_DATABASE_NAME,
     options: RaffleOSDatabaseOptions = {},
   ) {
-    super(databaseName, {
+    const dexieOptions: DexieOptions = {
       autoOpen: false,
-      IDBKeyRange: options.IDBKeyRange,
-      indexedDB: options.indexedDB,
-    })
+    }
+
+    if (options.IDBKeyRange !== undefined) {
+      dexieOptions.IDBKeyRange = options.IDBKeyRange
+    }
+    if (options.indexedDB !== undefined) {
+      dexieOptions.indexedDB = options.indexedDB
+    }
+
+    super(databaseName, dexieOptions)
     this.#indexedDbFactory = options.indexedDB
     registerPersistenceMigrations(this)
   }

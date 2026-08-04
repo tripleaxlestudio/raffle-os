@@ -13,6 +13,7 @@ export type AuditAction =
   | 'winner-confirmed'
   | 'winner-cancelled'
   | 'redraw-recorded'
+  | 'participant-import-committed'
 
 export type AuditActor =
   | {

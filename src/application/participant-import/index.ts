@@ -42,6 +42,15 @@ export {
 } from './participant-import-staging.ts'
 export { parseCsv } from './csv-parser.ts'
 export { parseParticipantImport, parseParticipantImportAsync } from './participant-import-parser.ts'
+export { commitParticipantImport } from './participant-import-command.ts'
+export type {
+  CommitParticipantImportCommand,
+  CommitParticipantImportDependencies,
+  CommitParticipantImportResult,
+  ParticipantImportFailure,
+  ParticipantImportFailureCode,
+  ParticipantImportSuccess,
+} from './participant-import-command.ts'
 export { DEFAULT_XLSX_PARSER_LIMITS } from './xlsx-parser.types.ts'
 export type {
   BrowserFileError,

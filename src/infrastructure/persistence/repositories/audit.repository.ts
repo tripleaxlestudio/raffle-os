@@ -22,6 +22,7 @@ const AUDIT_ACTIONS: ReadonlySet<AuditAction> = new Set([
   'winner-confirmed',
   'winner-cancelled',
   'redraw-recorded',
+  'participant-import-committed',
 ])
 
 function validateAuditRecord(audit: AuditRecord): void {

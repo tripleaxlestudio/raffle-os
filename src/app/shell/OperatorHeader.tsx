@@ -15,6 +15,7 @@ interface OperatorHeaderProps {
   mode: AppMode
   onScenarioChange: (scenario: DashboardPrototypeScenario) => void
   scenario: DashboardPrototypeScenario
+  showPrototypeControls?: boolean
 }
 
 export function OperatorHeader({
@@ -24,6 +25,7 @@ export function OperatorHeader({
   mode,
   onScenarioChange,
   scenario,
+  showPrototypeControls = true,
 }: OperatorHeaderProps) {
   return (
     <header className="operator-header">
@@ -33,7 +35,7 @@ export function OperatorHeader({
         <span className="operator-header__schedule">{eventSchedule}</span>
       </div>
       <div className="operator-header__status" aria-label="Operator status">
-        <Select
+        {showPrototypeControls ? <Select
           containerClassName="prototype-scenario-select"
           label="Prototype scenario"
           onChange={(event) => {
@@ -45,8 +47,8 @@ export function OperatorHeader({
         >
           <option value="ready">Ready state</option>
           <option value="attention">Needs attention</option>
-        </Select>
-        <PrototypeNavigator />
+        </Select> : null}
+        {showPrototypeControls ? <PrototypeNavigator /> : null}
         <ModeBadge mode={mode} />
         <ConnectionStatus status={connectionStatus} />
       </div>

@@ -10,7 +10,7 @@ const navigationItems = [
   { label: 'Settings', marker: 'ST', to: '/settings' },
 ] as const
 
-export function OperatorSidebar() {
+export function OperatorSidebar({ production = false }: { production?: boolean }) {
   return (
     <aside className="operator-sidebar" aria-label="Operator sidebar">
       <div className="operator-sidebar__brand">
@@ -47,9 +47,9 @@ export function OperatorSidebar() {
       </nav>
       <div className="operator-sidebar__footer">
         <span className="operator-sidebar__footer-label">
-          Static prototype
+          {production ? 'Production workspace' : 'Static prototype'}
         </span>
-        <span>Phase 2 Prototype</span>
+        <span>{production ? 'Local-first runtime' : 'Phase 2 Prototype'}</span>
       </div>
     </aside>
   )

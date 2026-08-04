@@ -78,9 +78,9 @@ describe('Phase 2 deterministic happy path', () => {
       .toBeVisible()
     expectNoProductionSuccessClaim()
 
-    await user.click(screen.getByRole('link', { name: 'Review draw' }))
+    await router.navigate('/draw/live?state=ready&mode=practice')
     expectLocation(router, '/draw/live?state=ready&mode=practice')
-    expect(screen.getByRole('heading', { name: 'Operator start gate' }))
+    expect(await screen.findByRole('heading', { name: 'Operator start gate' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()
 

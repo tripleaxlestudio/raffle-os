@@ -94,7 +94,7 @@ function invalid(message: string): ParticipantImportFailure {
 
 function validateSummary(command: CommitParticipantImportCommand): ParticipantImportFailure | null {
   const { summary, drafts } = command
-  if (summary.strategy !== command.strategy || summary.validRows !== drafts.length || summary.totalRows !== summary.validRows + summary.invalidRows || summary.invalidRows !== 0 || summary.issueCount !== 0 || summary.emptyTicketRows !== 0 || summary.malformedRows !== 0 || summary.duplicateRows !== 0) {
+  if (summary.strategy !== command.strategy || summary.validRows !== drafts.length || summary.totalRows !== summary.validRows + summary.invalidRows || summary.issueCount < summary.invalidRows || summary.emptyTicketRows > summary.invalidRows || summary.malformedRows > summary.invalidRows || summary.duplicateRows > summary.invalidRows) {
     return { ok: false, code: 'summary-mismatch', message: 'Import summary does not reconcile with the validated draft batch.' }
   }
   return null

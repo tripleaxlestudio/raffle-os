@@ -14,6 +14,7 @@ import { ImportMappingStep } from '../../ui/operator/participant-import/ImportMa
 import { ImportSummaryStep } from '../../ui/operator/participant-import/ImportSummaryStep.tsx'
 import { ImportUploadStep } from '../../ui/operator/participant-import/ImportUploadStep.tsx'
 import { ImportValidationStep } from '../../ui/operator/participant-import/ImportValidationStep.tsx'
+import type { ProductionParticipantImportPreviewProps } from '../../ui/operator/participant-import/ProductionParticipantImportPreview.tsx'
 
 const importProgressSteps = [
   { id: 'upload', label: 'Upload file' },
@@ -22,10 +23,10 @@ const importProgressSteps = [
   { id: 'summary', label: 'Import summary' },
 ] as const satisfies readonly ProgressStep[]
 
-export function ParticipantsPage() {
+export function ParticipantsPage({ services }: ProductionParticipantImportPreviewProps = {}) {
   const [searchParams] = useSearchParams()
   if (searchParams.get('workflow') === 'production-preview') {
-    return <ProductionParticipantImportPreview />
+    return <ProductionParticipantImportPreview services={services} />
   }
   const step = resolvePrototypeImportStep(searchParams)
 

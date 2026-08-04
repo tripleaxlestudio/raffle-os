@@ -79,6 +79,16 @@ describe('commitParticipantImport command boundary', () => {
     expect(drafts).toEqual([{ ticketNumber: '00042', name: 'Ada', isCheckedIn: true }])
   })
 
+  it('commits only validated drafts when the reconciled preview contains invalid rows', async () => {
+    const unitOfWork = { commitParticipantImport: vi.fn().mockResolvedValue({ removedCount: 0, unchangedCount: 0 }) }
+    const result = await commitParticipantImport(command({
+      strategy: 'merge',
+      summary: { totalRows: 2, validRows: 1, invalidRows: 1, emptyTicketRows: 1, malformedRows: 0, duplicateRows: 0, issueCount: 1, strategy: 'merge' },
+    }), dependencies(unitOfWork))
+    expect(result).toMatchObject({ ok: true, insertedCount: 1 })
+    expect(unitOfWork.commitParticipantImport).toHaveBeenCalledWith(expect.objectContaining({ participants: [expect.objectContaining({ ticketNumber: '00042' })] }))
+  })
+
   it('normalizes typed persistence failures without exposing raw errors', async () => {
     const unitOfWork = { commitParticipantImport: vi.fn().mockRejectedValue({ code: 'immutable-record', stack: 'secret' }) }
     const result = await commitParticipantImport(command(), dependencies(unitOfWork))

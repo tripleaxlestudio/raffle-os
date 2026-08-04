@@ -61,10 +61,11 @@ describe('buildCandidatePool', () => {
 
   it('is independent of input order and preserves snapshot context', () => {
     const a = participant('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '1')
-    const b = participant('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '1')
+    const b = participant('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '2')
     const first = buildCandidatePool(input([b, a]))
     const second = buildCandidatePool(input([a, b]))
-    expect(first.ok && second.ok).toBe(true)
+    expect(first).toMatchObject({ ok: true })
+    expect(second).toMatchObject({ ok: true })
     if (!first.ok || !second.ok) return
     expect(first.value.snapshot.candidateEntries).toEqual(second.value.snapshot.candidateEntries)
     expect(first.value.snapshot).toMatchObject({ eventId, configurationId, prizeCategoryId: categoryId, mode: 'live', capturedAt: time, snapshotFormatVersion: 1 })

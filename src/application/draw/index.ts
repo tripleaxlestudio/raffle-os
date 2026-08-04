@@ -26,3 +26,15 @@ export type {
   WinnerSelectionFailureCode,
   WinnerSelectionFailureKind,
 } from './winner-selection-errors.ts'
+export { executeDraw, runDrawCommand, startDraw } from './draw-command.ts'
+export type {
+  DrawCommandDependencies,
+  DrawCommandExecution,
+  DrawCommandInput,
+  DrawCommandResult,
+} from './draw-command.types.ts'
+export type {
+  DrawCommandFailure,
+  DrawCommandFailureCode,
+  DrawCommandFailureKind,
+} from './draw-command-errors.ts'

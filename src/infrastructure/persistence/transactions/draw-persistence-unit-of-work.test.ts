@@ -3,6 +3,7 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from 'vitest'
 import {
   DuplicateRecordError,
@@ -19,6 +20,7 @@ import {
   openTestDatabase,
   seedReadyFixture,
   seedStartedFixture,
+  ticket,
   TIME_2,
   TIME_3,
   TIME_4,
@@ -145,6 +147,99 @@ describe('DexieDrawPersistenceUnitOfWork.persistStartedDraw', () => {
       expect(await database.winner_records.count()).toBe(0)
       expect(await database.audit_records.count()).toBe(0)
     }
+  })
+
+  it.each([
+    'snapshot-write',
+    'session-transition',
+    'winner-write',
+    'partial-winner-write',
+    'audit-write',
+  ] as const)('rolls back every storage stage for a %s failure', async (stage) => {
+    const database = await openTestDatabase(`uow-start-stage-${stage}`)
+    const fixture = makeDrawHistoryFixture()
+    await seedReadyFixture(database, fixture)
+    const unit = new DexieDrawPersistenceUnitOfWork(database)
+    const winners = [makeWinner(fixture, 0, 1), makeWinner(fixture, 1, 2)]
+    const originalSessionPut = database.draw_sessions.put.bind(database.draw_sessions)
+    const originalWinnerBulkAdd = database.winner_records.bulkAdd.bind(database.winner_records)
+
+    if (stage === 'snapshot-write') {
+      vi.spyOn(database.draw_sessions, 'put').mockRejectedValueOnce(new Error('snapshot write failed'))
+    }
+    if (stage === 'session-transition') {
+      vi.spyOn(database.draw_sessions, 'put')
+        .mockImplementationOnce((value) => originalSessionPut(value))
+        .mockRejectedValueOnce(new Error('session transition failed'))
+    }
+    if (stage === 'winner-write') {
+      vi.spyOn(database.winner_records, 'bulkAdd').mockRejectedValueOnce(new Error('winner write failed'))
+    }
+    if (stage === 'partial-winner-write') {
+      vi.spyOn(database.winner_records, 'bulkAdd').mockImplementationOnce((records) => (
+        originalWinnerBulkAdd([records[0]]).then(() => {
+          throw new Error('later winner write failed')
+        })
+      ))
+    }
+    if (stage === 'audit-write') {
+      vi.spyOn(database.audit_records, 'add').mockRejectedValueOnce(new Error('audit write failed'))
+    }
+
+    await expect(unit.persistStartedDraw({
+      drawSessionId: fixture.session.id,
+      expectedStatus: 'ready',
+      snapshots: fixture.snapshots,
+      winners,
+      auditRecord: makeAudit(fixture),
+      at: TIME_3,
+    })).rejects.toBeInstanceOf(Error)
+
+    expect(await database.draw_sessions.get(fixture.session.id)).toEqual(fixture.session)
+    expect(await database.winner_records.count()).toBe(0)
+    expect(await database.audit_records.count()).toBe(0)
+  })
+
+  it('rolls back transaction-time relationship validation after snapshot attachment', async () => {
+    const database = await openTestDatabase('uow-start-relationship-transaction')
+    const fixture = makeDrawHistoryFixture()
+    await seedReadyFixture(database, fixture)
+    const unit = new DexieDrawPersistenceUnitOfWork(database)
+    const invalidWinner = { ...makeWinner(fixture, 0, 1), ticketNumber: ticket('99999') }
+
+    await expect(unit.persistStartedDraw({
+      drawSessionId: fixture.session.id,
+      expectedStatus: 'ready',
+      snapshots: fixture.snapshots,
+      winners: [invalidWinner, makeWinner(fixture, 1, 2)],
+      auditRecord: makeAudit(fixture),
+      at: TIME_3,
+    })).rejects.toBeInstanceOf(RelationshipMismatchError)
+
+    expect(await database.draw_sessions.get(fixture.session.id)).toEqual(fixture.session)
+    expect(await database.winner_records.count()).toBe(0)
+    expect(await database.audit_records.count()).toBe(0)
+  })
+
+  it('rejects a pre-existing conflicting winner inside the transaction and rolls back snapshots', async () => {
+    const database = await openTestDatabase('uow-start-duplicate-transaction')
+    const fixture = makeDrawHistoryFixture()
+    await seedReadyFixture(database, fixture)
+    await database.winner_records.add(makeWinner(fixture, 0, 7))
+    const unit = new DexieDrawPersistenceUnitOfWork(database)
+
+    await expect(unit.persistStartedDraw({
+      drawSessionId: fixture.session.id,
+      expectedStatus: 'ready',
+      snapshots: fixture.snapshots,
+      winners: [makeWinner(fixture, 0, 1), makeWinner(fixture, 1, 2)],
+      auditRecord: makeAudit(fixture),
+      at: TIME_3,
+    })).rejects.toBeInstanceOf(DuplicateRecordError)
+
+    expect(await database.draw_sessions.get(fixture.session.id)).toEqual(fixture.session)
+    expect(await database.winner_records.count()).toBe(1)
+    expect(await database.audit_records.count()).toBe(0)
   })
 })
 

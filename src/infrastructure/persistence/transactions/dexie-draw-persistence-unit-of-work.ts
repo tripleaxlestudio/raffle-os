@@ -118,6 +118,18 @@ export class DexieDrawPersistenceUnitOfWork
           }
           if (
             input.winners.some(
+              (winner) =>
+                winner.eventId !== started.eventId ||
+                winner.prizeCategoryId !== input.snapshots.configurationSnapshot.prizeCategoryId ||
+                winner.status !== 'pending',
+            )
+          ) {
+            throw new RelationshipMismatchError(
+              'Every started-draw WinnerRecord must belong to the DrawSession Event and category and remain pending.',
+            )
+          }
+          if (
+            input.winners.some(
               (winner) => winner.drawSessionId !== started.id,
             )
           ) {

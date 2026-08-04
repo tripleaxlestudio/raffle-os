@@ -1,8 +1,11 @@
 import type { DrawSessionStatus } from '../../../domain/draws/draw-session.types.ts'
 import type { EventStatus } from '../../../domain/events/event.types.ts'
+import type { AppMode } from '../../../domain/types/app-mode.ts'
+import type { IsoTimestamp } from '../../../domain/shared/timestamps.ts'
 import { RaffleOSDatabase } from '../db.ts'
 import { resetDatabase } from './reset-db.ts'
 import { seedDevelopmentDatabase, type DevelopmentSeedResult } from './dev-seed.ts'
+import { ACCEPTANCE_SEED_IDS, SEED_EVENT_IDS } from './dev-seed-fixtures.ts'
 
 export interface AcceptanceInspectResult {
   readonly counts: DevelopmentSeedResult['counts']
@@ -29,6 +32,8 @@ export interface AcceptanceBrowserApi {
   reset(): Promise<{ status: 'deleted'; databaseName: string }>
   seed(): Promise<DevelopmentSeedResult>
   inspect(): Promise<AcceptanceInspectResult>
+  usePractice(): Promise<{ mode: 'practice'; sessionId: string }>
+  useLive(): Promise<{ mode: 'live'; sessionId: string }>
 }
 
 export interface AcceptanceBrowserApiOptions {
@@ -43,6 +48,33 @@ export function installAcceptanceBrowserApi(
 
   const createDatabase = options.createDatabase ?? (() => new RaffleOSDatabase())
   let resetCompleted = false
+
+  async function useAcceptanceMode<M extends AppMode>(mode: M): Promise<{ mode: M; sessionId: string }> {
+    const database = createDatabase()
+    await database.openSupported()
+    const activeEventId = (await database.preferences.get('activeEventId'))?.value
+    if (activeEventId !== SEED_EVENT_IDS.acceptance) {
+      database.close()
+      throw new Error('Acceptance seed is not the active Event.')
+    }
+
+    const sessionId = mode === 'live'
+      ? ACCEPTANCE_SEED_IDS.liveSession
+      : ACCEPTANCE_SEED_IDS.practiceSession
+    const session = await database.draw_sessions.get(sessionId)
+    if (session === undefined || session.status !== 'ready' || session.configurationSnapshot !== null || session.candidatePoolSnapshot !== null) {
+      database.close()
+      throw new Error(`Acceptance ${mode} session is not ready for selection.`)
+    }
+
+    await database.preferences.put({
+      key: 'lastOperatorMode',
+      updatedAt: new Date().toISOString() as IsoTimestamp,
+      value: mode,
+    })
+    database.close()
+    return { mode, sessionId }
+  }
 
   const api: AcceptanceBrowserApi = {
     reset: async () => {
@@ -69,6 +101,8 @@ export function installAcceptanceBrowserApi(
       resetCompleted = false
       return result
     },
+    usePractice: () => useAcceptanceMode('practice'),
+    useLive: () => useAcceptanceMode('live'),
     inspect: async () => {
       const database = createDatabase()
       await database.openSupported()

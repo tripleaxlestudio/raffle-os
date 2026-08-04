@@ -212,10 +212,24 @@ This acceptance harness is development-only. It is not a Settings editor and it 
    await window.__raffleAcceptance.inspect()
    ```
 
-7. Refresh the page, open `/draw/setup?mode=practice`, and verify the production Ready state.
-8. Open `/draw/setup?mode=live` and verify the production Ready state for Live Mode.
+7. Select the seeded Practice session and reload:
+
+   ```js
+   await window.__raffleAcceptance.usePractice()
+   location.reload()
+   ```
+
+   Open `/draw/setup` and verify the production Practice Ready state.
+8. Select the seeded Live session and reload:
+
+   ```js
+   await window.__raffleAcceptance.useLive()
+   location.reload()
+   ```
+
+   Open `/draw/setup` and verify `Mode: Live draw`, the seeded Live ready session, and the Run Live action.
 9. Use the normal production draw controls for subsequent manual verification. The helper does not expose random selection, winner creation, redraws, or official persistence.
 
 `seed()` intentionally refuses to run until `reset()` has completed in the current page lifetime, and the underlying seed still refuses any non-empty database. The profile contains one active Event, one category, one configuration, six Participants, and ready Practice and Live sessions. It includes the distinct ticket strings `"00042"` and `"42"`, both checked-in and unchecked Participants, and multiple groups. Snapshots and official history stores start empty.
 
-The console API is registered only when `import.meta.env.DEV` is true and is absent from production builds.
+`usePractice()` and `useLive()` update only the persisted `lastOperatorMode` preference after validating the seeded active Event and the corresponding ready session. The console API is registered only when `import.meta.env.DEV` is true and is absent from production builds.

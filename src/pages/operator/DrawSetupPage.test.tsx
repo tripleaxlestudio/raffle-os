@@ -35,7 +35,7 @@ function makeServices(overrides: { participants?: Participant[]; event?: Event |
   const services = {
     open: vi.fn(async () => undefined),
     events: { findById: vi.fn(async () => event), findAll: vi.fn(), create: vi.fn(), updateDraft: vi.fn(), transitionStatus: vi.fn(), deleteDraft: vi.fn() },
-    preferences: { get: vi.fn(async () => event?.id ?? null), set: vi.fn() },
+    preferences: { get: vi.fn(async (key: 'activeEventId' | 'lastOperatorMode') => key === 'activeEventId' ? event?.id ?? null : 'practice'), set: vi.fn() },
     configurations: { findById: vi.fn(async () => configuration), findByEventId: vi.fn(async () => configuration === null ? [] : [configuration]), createDraft: vi.fn(), updateDraft: vi.fn(), deleteUnused: vi.fn() },
     categories: { findById: vi.fn(async () => category), findByEventId: vi.fn(async () => category === null ? [] : [category]), create: vi.fn(), updateDraft: vi.fn(), deleteDraft: vi.fn() },
     sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => session === null ? [] : [session]), findLatestByEventId: vi.fn(async () => session), createDraft: vi.fn(), attachSnapshotsAndTransitionToDrawing: vi.fn(), transitionStatus: vi.fn() },
@@ -84,6 +84,19 @@ describe('Draw Setup production integration', () => {
       expect(card?.querySelector('span')).toHaveTextContent(label)
       expect(card?.querySelector('strong')).toHaveTextContent(/\S+/)
     }
+  })
+
+  it('separates exclusion summary heading from exclusion details', async () => {
+    const { services } = makeServices({ participants: [
+      { id: 'participant-1', eventId: 'event-1', ticketNumber: '00042', isCheckedIn: true, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' },
+      { id: 'participant-2', eventId: 'event-1', ticketNumber: '42', isCheckedIn: false, createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' },
+    ] as Participant[] })
+    const { container } = renderDrawSetup(services)
+    await screen.findByText('Eligibility and capacity are ready')
+
+    const exclusions = container.querySelector('.draw-setup-production__exclusions')
+    expect(exclusions?.querySelector('strong')).toHaveTextContent('Exclusion summary')
+    expect(exclusions?.querySelector('span')).toHaveTextContent('not checked in: 1')
   })
 
   it('confirms Practice, calls the command once, and preserves exact tickets', async () => {

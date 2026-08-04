@@ -10,8 +10,8 @@ import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { Badge, Button, ButtonLink, Card, ConfirmationDialog } from '../../shared/ui/index.ts'
 
-function modeFromQuery(value: string | null): AppMode {
-  return value === 'live' ? 'live' : 'practice'
+function modeFromQuery(value: string | null, fallback: AppMode): AppMode {
+  return value === 'live' || value === 'practice' ? value : fallback
 }
 
 function formatWinningRule(rule: DrawSetupReadyViewModel['configuration']['winningRule']) {
@@ -56,8 +56,10 @@ type PageState = DrawSetupViewModel | DrawSetupSuccess
 
 export function DrawSetupPage({ services: suppliedServices }: { services?: DrawSetupProductionServices } = {}) {
   const [searchParams] = useSearchParams()
-  const mode = modeFromQuery(searchParams.get('mode'))
+  const hasExplicitMode = searchParams.has('mode')
   const services = useMemo(() => suppliedServices ?? createDrawSetupProductionServices(), [suppliedServices])
+  const [preferredMode, setPreferredMode] = useState<AppMode>('practice')
+  const mode = modeFromQuery(searchParams.get('mode'), preferredMode)
   const [view, setView] = useState<PageState>({ state: 'loading' })
   const [confirmation, setConfirmation] = useState(false)
   const [executing, setExecuting] = useState(false)
@@ -72,6 +74,10 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
     void (async () => {
       try {
         await services.open()
+        if (!hasExplicitMode) {
+          const persistedMode = await services.preferences.get('lastOperatorMode')
+          if (persistedMode !== null) setPreferredMode(persistedMode)
+        }
         const next = await queryDrawSetup(mode, services)
         if (!cancelled) setView(next)
       } catch (cause: unknown) {
@@ -79,7 +85,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
       }
     })()
     return () => { cancelled = true }
-  }, [mode, services])
+  }, [hasExplicitMode, mode, services])
 
   async function start() {
     if (executing || view.state !== 'ready') return

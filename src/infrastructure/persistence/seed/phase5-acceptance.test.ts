@@ -78,6 +78,23 @@ describe('Phase 5 browser acceptance seed', () => {
     await expect(seedDevelopmentDatabase({ database, profile: 'phase5-acceptance' })).rejects.toThrow(ImmutableRecordError)
   })
 
+  it('switches only the seeded ready session preference between Practice and Live', async () => {
+    const database = createDatabase()
+    await database.openSupported()
+    await seedDevelopmentDatabase({ database, profile: 'phase5-acceptance' })
+    const api = installAcceptanceBrowserApi({ enabled: true, createDatabase: () => database })
+    if (api === undefined) throw new Error('Acceptance API was not installed.')
+
+    await expect(api.useLive()).resolves.toMatchObject({ mode: 'live', sessionId: ACCEPTANCE_SEED_IDS.liveSession })
+    await database.openSupported()
+    expect((await database.preferences.get('lastOperatorMode'))?.value).toBe('live')
+    await expect(api.usePractice()).resolves.toMatchObject({ mode: 'practice', sessionId: ACCEPTANCE_SEED_IDS.practiceSession })
+    await database.openSupported()
+    expect((await database.preferences.get('lastOperatorMode'))?.value).toBe('practice')
+    expect(await database.winner_records.count()).toBe(0)
+    expect(await database.audit_records.count()).toBe(0)
+  })
+
   it('does not install the browser helper when disabled', () => {
     expect(installAcceptanceBrowserApi({ enabled: false })).toBeUndefined()
     expect(globalThis.__raffleAcceptance).toBeUndefined()

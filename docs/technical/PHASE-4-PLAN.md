@@ -23,13 +23,13 @@ The tested repository baseline is:
 
 | Item | Verified value |
 |---|---|
-| Tested `HEAD` | `d776368561a34412321229289bcd95b2adbab8a3` |
-| `origin/main` | `d776368561a34412321229289bcd95b2adbab8a3` |
+| Tested `HEAD` | `d98367a9b3845af0d2615e2cedf4eaaa6f6ab0da` |
+| `origin/main` | `d98367a9b3845af0d2615e2cedf4eaaa6f6ab0da` |
 | Working tree before this document | Clean |
 | Stack | React 19, React Router 7, TypeScript 6, Vite 8, Tailwind CSS 4, Vitest 4, Dexie 4 |
 | Lint | Passed |
 | Typecheck | Passed |
-| Tests | 34 test files passed; 445 tests passed |
+| Tests | 41 test files passed; 499 tests passed |
 | Build | Passed; Vite transformed 96 modules |
 | Whitespace check | `git diff --check` passed before this document |
 
@@ -352,17 +352,16 @@ display, retry, and no success state before commit completion.
 
 ## 19. Phase 3 persistence dependency
 
-Phase 3 automated and source verification passed, but its formal status remains
-**partially complete**. The real-browser IndexedDB opening behavior at the
-`openSupported` boundary failed or remains unresolved, and Chrome and Edge
-persistence acceptance has not passed. The existing acceptance record is the
-source of truth for that status.
+Phase 3 automated and source verification passed, but its historical formal
+status remains **partially complete**. Phase 4 has supplied Microsoft Edge
+Participant Import evidence, while Google Chrome was not run and was waived by
+the project owner for route promotion. The Phase 4 acceptance record is the
+source of truth for current import status; this historical Phase 3 record is
+not rewritten.
 
-Pure parsing, validation, file preview, and mapping may proceed now. Production
-import persistence is not browser-ready until the real-browser opening issue is
-fixed and verified. Slice 5 may proceed with automated repository and
-transaction tests. Slice 6 must retain a visible readiness gate and must not
-claim browser persistence success before both browser checks pass.
+Pure parsing, validation, file preview, mapping, and production persistence are
+implemented and covered by automated tests. Browser acceptance remains partial
+as recorded in `PHASE-4-ACCEPTANCE.md`; no full cross-browser claim is made.
 
 ## 20. Manual Chrome and Edge matrix
 
@@ -372,13 +371,13 @@ observed results; do not infer browser success from jsdom or fake IndexedDB.
 
 | Check | Google Chrome | Microsoft Edge |
 |---|---|---|
-| `openSupported` and schema open | Pending | Pending |
-| CSV select/read/preview | Pending | Pending |
-| XLSX selection boundary or parser | Pending | Pending |
-| mapping and validation preview | Pending | Pending |
-| replace commit and reload | Blocked by persistence gate | Blocked by persistence gate |
-| merge conflict and reload | Blocked by persistence gate | Blocked by persistence gate |
-| exact leading-zero ticket after reopen | Pending | Pending |
+| `openSupported` and schema open | NOT RUN / waived | PASS in supplied Edge evidence |
+| CSV select/read/preview | NOT RUN / waived | PASS in supplied Edge evidence |
+| XLSX selection boundary or parser | NOT RUN / waived | PASS in supplied Edge evidence |
+| mapping and validation preview | NOT RUN / waived | PASS in supplied Edge evidence |
+| replace commit and reload | NOT RUN / waived | PASS in supplied Edge evidence |
+| merge conflict and reload | NOT RUN / waived | PASS in supplied Edge evidence |
+| exact leading-zero ticket after reopen | NOT RUN / waived | PASS in supplied Edge evidence |
 
 ## 21. Acceptance checklist
 
@@ -417,6 +416,11 @@ only surfaced diagnostically.
 
 ## 23. Recommended immediate next task
 
+The original recommendation below is historical and is superseded by the
+completed Slice 7 closeout. The next implementation planning task is Phase 5;
+do not add eligibility, candidate pools, randomness, or winner selection to
+Phase 4.
+
 **Phase 4 Slice 3 — Browser file selection, preview, and column mapping.**
 
 Begin with the browser `File` boundary and bounded CSV read service, then wire
@@ -431,9 +435,9 @@ After creation of this document, verify that only
 
 | Required report item | Value |
 |---|---|
-| Tested HEAD | `d776368561a34412321229289bcd95b2adbab8a3` |
+| Tested HEAD | `d98367a9b3845af0d2615e2cedf4eaaa6f6ab0da` |
 | Slice 1 commit | `13a904738e7c36237fcde973acd9abe867858aa8` |
 | Slice 2 commit | `d776368561a34412321229289bcd95b2adbab8a3` |
-| Current baseline | lint passed; typecheck passed; 34 test files/445 tests passed; build passed; `git diff --check` passed |
-| File created | `docs/technical/PHASE-4-PLAN.md` |
-| Remaining risks | unresolved real-browser IndexedDB `openSupported` issue; pending XLSX dependency decision; merge-field and normalization policy decisions |
+| Current baseline | lint passed; typecheck passed; 41 test files/499 tests passed; build passed; `git diff --check` passed |
+| File created | `docs/technical/PHASE-4-ACCEPTANCE.md` |
+| Remaining risks | Chrome NOT RUN and waived for route promotion; Edge post-promotion regression not independently evidenced; bundle-size warning; audit advisories |

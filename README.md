@@ -5,10 +5,11 @@ numbers. The interface is split into a production-oriented Operator Panel and a
 standalone fullscreen Audience Display for LED screens, projectors, or vMix
 capture.
 
-> **Project status:** Phase 1 application foundation and the Phase 2
-> deterministic static UI prototype are implemented and accepted. The current
-> screens use immutable mock fixtures and query-selected scenarios; they do not
-> perform production raffle operations.
+> **Project status:** Phase 1 and Phase 2 are accepted. Phase 4 provides the
+> production Participant Import pipeline for bounded CSV/XLSX staging,
+> validation, and local atomic persistence. Edge evidence is recorded; Chrome
+> was not run and was waived for route promotion. Eligibility and draw
+> execution are not implemented.
 
 ## Implemented Presentation Prototype
 
@@ -27,11 +28,12 @@ The Phase 2 prototype includes:
 - Vitest and Testing Library coverage for routing, components, screens,
   accessibility semantics, scope boundaries, and the complete mock happy path.
 
-These are presentation prototypes only. Production file import, persistence,
-eligibility evaluation, secure winner selection, confirmation and redraw
+The draw-related screens remain presentation prototypes. Production participant
+file import, CSV/XLSX validation, event-scoped Replace/Merge persistence, audit
+append, and bounded persisted verification are implemented. Eligibility
+evaluation, candidate pools, secure winner selection, confirmation and redraw
 mutation, Operator/Audience synchronization, export, recovery, audio,
-fullscreen control, backend services, and cloud behavior are planned for later
-phases and are not implemented.
+fullscreen control, backend services, and cloud behavior remain unimplemented.
 
 ## Interfaces and Routes
 
@@ -41,7 +43,7 @@ Operator routes share the Operator layout:
 |---|---|
 | `/` | Redirects to `/dashboard` |
 | `/dashboard` | Event-control dashboard |
-| `/participants` | Participant Import wizard |
+| `/participants` | Production Participant Import workflow |
 | `/draw/setup` | Draw configuration |
 | `/draw/live` | Ready and running draw presentation |
 | `/draw/results` | Pending Results and redraw presentation |
@@ -51,10 +53,14 @@ Operator routes share the Operator layout:
 The Audience Display is a separate interface at `/display`. Unknown paths use
 the not-found route.
 
-Prototype states are selected with URL query parameters. Examples:
+`/participants` defaults to production. Use `?workflow=prototype` to preserve
+the Phase 2 deterministic fixture workflow. `?workflow=production-preview` is
+accepted as a production alias; unknown workflow values fall back to
+production. Other prototype states are selected with URL query parameters.
+Examples:
 
 ```text
-/participants?step=review
+/participants?workflow=prototype&step=review
 /draw/setup?mode=live&scenario=insufficient
 /draw/live?state=running&mode=practice&stage=countdown
 /draw/results?scenario=partial
@@ -67,8 +73,8 @@ Prototype states are selected with URL query parameters. Examples:
 /display?state=disconnected
 ```
 
-Query changes select deterministic presentation fixtures. They do not import,
-draw, confirm, redraw, persist, synchronize, or export data.
+Prototype query changes select deterministic presentation fixtures. They do not
+import, draw, confirm, redraw, persist, synchronize, or export data.
 
 ## Technology
 
@@ -82,8 +88,9 @@ draw, confirm, redraw, persist, synchronize, or export data.
 - ESLint 10
 - npm with a committed lockfile
 
-React, React DOM, and React Router are the production dependencies. No
-persistence or state-management library is installed.
+React, React DOM, React Router, Dexie, and the approved SheetJS CE 0.20.3
+tarball are production dependencies. `fake-indexeddb` is test-only. No
+state-management library is installed.
 
 ## Local Development
 
@@ -120,6 +127,8 @@ They are verified environment versions, not declared universal minimums;
 - [Phase 2 Acceptance](docs/technical/PHASE-2-ACCEPTANCE.md) — permanent static
   prototype acceptance record.
 - [Implementation Roadmap](TASKS.md) — ordered phases and verified progress.
+- [Phase 4 Acceptance](docs/technical/PHASE-4-ACCEPTANCE.md) — production
+  import verification and browser disposition.
 - [Agent Guidelines](AGENTS.md) — engineering rules and product invariants.
 
 Read the PRD and relevant technical documentation before implementing product

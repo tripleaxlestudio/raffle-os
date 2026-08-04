@@ -2,9 +2,9 @@
 
 Raffle OS is a planned local-first web application for running event raffles with ticket numbers. It separates a production-oriented Operator Panel from a fullscreen Audience Display intended for LED screens, projectors, or vMix capture.
 
-The Phase 1 application foundation and Phase 2 deterministic static UI prototype are implemented and accepted. The repository now contains routing, separate Operator and Audience layouts, safe error handling, semantic styling and tokens, reusable accessible presentation components, deterministic mock scenarios, high-fidelity static screens, and automated prototype tests.
+The Phase 1 application foundation and Phase 2 deterministic static UI prototype are implemented and accepted. Phase 4 production Participant Import is implemented for bounded CSV/XLSX staging, mapping, validation, and local atomic persistence with audit evidence. The repository contains routing, separate Operator and Audience layouts, safe error handling, semantic styling and tokens, reusable accessible presentation components, deterministic mock scenarios, high-fidelity static screens, and automated tests.
 
-Phase 2 is presentation-only. Production participant import, persistence, eligibility, secure draw selection, winner confirmation, redraw mutation, Operator/Audience synchronization, export, interrupted-session recovery, backend services, and cloud behavior remain unimplemented. Later-phase product capabilities remain planned and must not be described as implemented unless the code confirms them.
+Draw-related screens remain presentation-only. Eligibility, candidate-pool construction, secure draw selection, winner confirmation, redraw mutation, Operator/Audience synchronization, export, interrupted-session recovery, backend services, and cloud behavior remain unimplemented. Later-phase product capabilities remain planned and must not be described as implemented unless the code confirms them.
 
 # Source of Truth
 
@@ -28,7 +28,7 @@ The currently confirmed stack is:
 - ESLint 10
 - npm with a committed lockfile
 
-React, React DOM, and React Router are the current production dependencies. Tailwind CSS and the testing stack are development dependencies. Dexie and state-management libraries are not installed.
+React, React DOM, React Router, Dexie, and the approved SheetJS CE 0.20.3 tarball are current production dependencies. Tailwind CSS, the testing stack, and fake-indexeddb are development dependencies. No state-management library is installed.
 
 The application and Node TypeScript configurations explicitly enable `strict: true`.
 

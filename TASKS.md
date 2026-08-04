@@ -271,32 +271,43 @@ Use realistic mock data only. Do not add production draw, import, eligibility, a
 
 ## Phase 4 — Participant Import and Eligibility
 
+### Current status
+
+The Participant Import portion of Phase 4 is functionally complete. `/participants`
+is production by default; `?workflow=prototype` preserves the Phase 2 fixture
+workflow and `production-preview` is a production alias. CSV/XLSX parsing,
+mapping, validation, atomic Replace/Merge persistence, audit append, and
+bounded verification are implemented. Eligibility evaluation, candidate pools,
+and draw behavior remain deferred to Phase 5. See
+`docs/technical/PHASE-4-ACCEPTANCE.md` for fresh verification and browser
+acceptance status.
+
 ### Import pipeline
 
-- [ ] Define typed raw-row, mapped-row, validation-result, and import-summary models.
-- [ ] Define the participant import pipeline independently of React.
+- [x] Define typed raw-row, mapped-row, validation-result, and import-summary models.
+- [x] Define the participant import pipeline independently of React.
 - [ ] Decide whitespace normalization and duplicate-comparison rules from the PRD open questions.
-- [ ] Support CSV input.
-- [ ] Support XLSX input.
-- [ ] Propose any file-parsing dependency for approval before installation.
-- [ ] Add explicit column mapping.
-- [ ] Add a data preview before commit.
-- [ ] Preserve ticket identifiers as strings from file read onward.
-- [ ] Detect empty ticket numbers.
-- [ ] Detect duplicate ticket numbers.
-- [ ] Detect malformed rows.
-- [ ] Detect missing required columns.
-- [ ] Support optional participant name.
-- [ ] Support optional check-in status.
-- [ ] Support optional group.
-- [ ] Support optional notes.
-- [ ] Produce a reviewable invalid-row report.
+- [x] Support CSV input.
+- [x] Support XLSX input.
+- [x] Propose any file-parsing dependency for approval before installation.
+- [x] Add explicit column mapping.
+- [x] Add a data preview before commit.
+- [x] Preserve ticket identifiers as strings from file read onward.
+- [x] Detect empty ticket numbers.
+- [x] Detect duplicate ticket numbers.
+- [x] Detect malformed rows.
+- [x] Detect missing required columns.
+- [x] Support optional participant name.
+- [x] Support optional check-in status.
+- [x] Support optional group.
+- [x] Support optional notes.
+- [x] Produce a reviewable invalid-row report.
 
 ### Import application behavior
 
-- [ ] Implement replace-import behavior with explicit confirmation.
-- [ ] Decide and document merge-conflict behavior.
-- [ ] Implement merge-import behavior without creating duplicate tickets.
+- [x] Implement replace-import behavior with explicit confirmation.
+- [x] Decide and document merge-conflict behavior.
+- [x] Implement merge-import behavior without creating duplicate tickets.
 - [ ] Add participant search.
 - [ ] Add participant filters.
 - [ ] Display participant validation and eligibility status.
@@ -304,22 +315,22 @@ Use realistic mock data only. Do not add production draw, import, eligibility, a
 
 ### Tests
 
-- [ ] Test leading-zero preservation.
-- [ ] Test duplicate detection within a file.
-- [ ] Test conflicts against stored participants.
-- [ ] Test empty values.
-- [ ] Test malformed rows.
-- [ ] Test missing required columns.
-- [ ] Test replace confirmation behavior.
-- [ ] Test merge conflicts.
-- [ ] Test equivalent CSV and XLSX normalization.
+- [x] Test leading-zero preservation.
+- [x] Test duplicate detection within a file.
+- [x] Test conflicts against stored participants.
+- [x] Test empty values.
+- [x] Test malformed rows.
+- [x] Test missing required columns.
+- [x] Test replace confirmation behavior.
+- [x] Test merge conflicts.
+- [x] Test equivalent CSV and XLSX normalization.
 
 ### Exit criteria
 
 - [ ] CSV and XLSX imports produce equivalent normalized participant records.
 - [ ] Invalid records cannot silently enter the eligible pool.
 - [ ] No ticket number is converted to a number.
-- [ ] Import errors are reviewable before confirmation.
+- [x] Import errors are reviewable before confirmation.
 
 ## Phase 5 — Secure Draw Engine
 

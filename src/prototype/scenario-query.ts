@@ -108,7 +108,7 @@ export function resolvePrototypeImportStep(
 }
 
 export function getPrototypeImportStepPath(step: PrototypeImportStep) {
-  return `/participants?step=${step}`
+  return `/participants?workflow=prototype&step=${step}`
 }
 
 export interface PrototypeDrawSetupQuery {

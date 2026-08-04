@@ -39,9 +39,9 @@ describe('Phase 2 deterministic happy path', () => {
     expectNoProductionSuccessClaim()
 
     await user.click(screen.getByRole('link', { name: 'Participants' }))
-    expectLocation(router, '/participants')
-    expect(screen.getByRole('heading', { name: 'Choose participant file' }))
-      .toBeVisible()
+    await router.navigate('/participants?workflow=prototype')
+    expectLocation(router, '/participants?workflow=prototype')
+    expect(await screen.findByRole('heading', { name: 'Choose participant file' })).toBeVisible()
     expectNoProductionSuccessClaim()
 
     await user.click(
@@ -49,7 +49,7 @@ describe('Phase 2 deterministic happy path', () => {
         name: 'Continue to column mapping',
       }),
     )
-    expectLocation(router, '/participants?step=mapping')
+    expectLocation(router, '/participants?workflow=prototype&step=mapping')
     expect(screen.getByRole('heading', { name: 'Map spreadsheet columns' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()
@@ -57,7 +57,7 @@ describe('Phase 2 deterministic happy path', () => {
     await user.click(
       screen.getByRole('link', { name: 'Validate participant data' }),
     )
-    expectLocation(router, '/participants?step=validation')
+    expectLocation(router, '/participants?workflow=prototype&step=validation')
     expect(screen.getByRole('heading', { name: 'Review validation results' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()
@@ -65,7 +65,7 @@ describe('Phase 2 deterministic happy path', () => {
     await user.click(
       screen.getByRole('link', { name: 'Review import summary' }),
     )
-    expectLocation(router, '/participants?step=summary')
+    expectLocation(router, '/participants?workflow=prototype&step=summary')
     expect(screen.getByRole('heading', { name: 'Review import summary' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()

@@ -91,7 +91,7 @@ describe('application routes', () => {
       'data-interface',
       'operator',
     )
-    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(container.querySelector('.operator-header')).toBeInTheDocument()
 
     const navigation = screen.getByRole('navigation', {
       name: 'Operator navigation',

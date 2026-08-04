@@ -52,7 +52,7 @@ function makeServices(options: { event?: Event | null; initialRecords?: Particip
   return services
 }
 
-function renderProduction(services: ParticipantImportProductionServices, path = '/participants?workflow=production-preview') {
+function renderProduction(services: ParticipantImportProductionServices, path = '/participants') {
   return render(<MemoryRouter initialEntries={[path]}><ParticipantsPage services={services} /></MemoryRouter>)
 }
 
@@ -69,6 +69,30 @@ async function chooseStrategyAndOpenConfirmation(user: ReturnType<typeof userEve
 }
 
 describe('production participant import preview audit', () => {
+  it.each(['/participants', '/participants?workflow=production-preview', '/participants?workflow=unknown', '/participants?workflow='])('promotes %s to the production workflow', (path) => {
+    renderProduction(makeServices(), path)
+    expect(screen.getByLabelText('Choose participant file')).toBeInTheDocument()
+    expect(screen.queryByText('Fictional participant data for static interface review. No file or participant record is read, changed, or stored.')).not.toBeInTheDocument()
+  })
+
+  it('keeps the deterministic prototype behind the explicit workflow query', () => {
+    renderProduction(makeServices(), '/participants?workflow=prototype')
+    expect(screen.getByText(/Fictional participant data for static interface review/)).toBeVisible()
+    expect(document.querySelector('input[type="file"]')).toBeNull()
+    expect(screen.getByText('nusantara-tech-gala-participants.xlsx')).toBeVisible()
+  })
+
+  it('renders the resolved Event and safe no-Event state without preview wording', async () => {
+    const draftView = renderProduction(makeServices({ event: draftEvent }))
+    expect((await screen.findAllByText('Draft Event')).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/Production Preview|Chrome|Edge|acceptance pending/i)).not.toBeInTheDocument()
+
+    draftView.unmount()
+    const noEvent = makeServices({ event: null })
+    renderProduction(noEvent, '/participants?workflow=production-preview')
+    expect(await screen.findByText('No current Event is selected. Select a real Event before importing participants.')).toBeVisible()
+  })
+
   it('keeps validation current and confirmation disabled when all rows are invalid', async () => {
     const user = userEvent.setup()
     renderProduction(makeServices())
@@ -267,8 +291,8 @@ describe('production participant import preview audit', () => {
     expect(screen.queryByRole('heading', { name: 'Participant import complete' })).not.toBeInTheDocument()
   })
 
-  it('keeps the default route prototype and Audience routes private', () => {
-    const services = makeServices(); const prototypeView = render(<MemoryRouter initialEntries={['/participants']}><ParticipantsPage services={services} /></MemoryRouter>)
+  it('keeps the explicit prototype route and Audience routes private', () => {
+    const services = makeServices(); const prototypeView = render(<MemoryRouter initialEntries={['/participants?workflow=prototype']}><ParticipantsPage services={services} /></MemoryRouter>)
     expect(screen.getByText(/Fictional participant data/)).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Browse file' })).toBeInTheDocument()
 

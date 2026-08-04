@@ -4,6 +4,7 @@ import {
   useNavigate,
   useSearchParams,
 } from 'react-router'
+import { useEffect, useState } from 'react'
 import {
   getDashboardPrototype,
   resolveDashboardPrototypeScenario,
@@ -12,24 +13,52 @@ import {
 import { resolvePrototypeDrawMode } from '../../prototype/scenario-query.ts'
 import { OperatorHeader } from '../shell/OperatorHeader.tsx'
 import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
+import { createParticipantImportProductionServices } from '../../application/participant-import/participant-import-production-services.ts'
+import { resolveParticipantWorkflow } from '../../pages/operator/participant-workflow.ts'
+import type { Event } from '../../domain/events/event.types.ts'
 
 export function OperatorLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const [productionEvent, setProductionEvent] = useState<Event | null>(null)
+  const [productionEventLoading, setProductionEventLoading] = useState(false)
   const scenario =
     location.pathname === '/dashboard'
       ? resolveDashboardPrototypeScenario(searchParams)
       : 'ready'
   const prototype = getDashboardPrototype(scenario)
-  const isProductionParticipantPreview =
+  const isProductionParticipantRoute =
     location.pathname === '/participants' &&
-    searchParams.get('workflow') === 'production-preview'
+    resolveParticipantWorkflow(searchParams) === 'production'
   const mode =
     location.pathname === '/draw/setup' ||
     location.pathname === '/draw/live'
       ? resolvePrototypeDrawMode(searchParams.get('mode'))
       : prototype.mode
+
+  useEffect(() => {
+    if (!isProductionParticipantRoute) return
+
+    let active = true
+    const services = createParticipantImportProductionServices()
+    void (async () => {
+      try {
+        await services.database.openSupported()
+        const activeEventId = await services.preferences.get('activeEventId')
+        const event = activeEventId === null ? null : await services.events.findById(activeEventId)
+        if (active) setProductionEvent(event)
+      } catch {
+        if (active) setProductionEvent(null)
+      } finally {
+        if (active) setProductionEventLoading(false)
+      }
+    })()
+
+    return () => {
+      active = false
+    }
+  }, [isProductionParticipantRoute])
 
   function handleScenarioChange(
     nextScenario: DashboardPrototypeScenario,
@@ -47,16 +76,14 @@ export function OperatorLayout() {
       <div className="operator-workspace">
         <OperatorHeader
           connectionStatus={prototype.connectionStatus}
-          eventName={
-            isProductionParticipantPreview
-              ? 'Production Preview Event'
-              : prototype.event.name
-          }
-          eventSchedule={
-            isProductionParticipantPreview
-              ? 'Resolved in import workspace'
-              : prototype.event.schedule
-          }
+          eventName={isProductionParticipantRoute ? productionEvent?.name ?? 'No Event selected' : prototype.event.name}
+          eventSchedule={isProductionParticipantRoute
+            ? productionEventLoading
+              ? 'Resolving active Event'
+              : productionEvent
+                ? `Status: ${productionEvent.status}`
+                : 'No active Event selected'
+            : prototype.event.schedule}
           mode={mode}
           onScenarioChange={handleScenarioChange}
           scenario={scenario}

@@ -15,6 +15,7 @@ import { ImportSummaryStep } from '../../ui/operator/participant-import/ImportSu
 import { ImportUploadStep } from '../../ui/operator/participant-import/ImportUploadStep.tsx'
 import { ImportValidationStep } from '../../ui/operator/participant-import/ImportValidationStep.tsx'
 import type { ProductionParticipantImportPreviewProps } from '../../ui/operator/participant-import/ProductionParticipantImportPreview.tsx'
+import { resolveParticipantWorkflow } from './participant-workflow.ts'
 
 const importProgressSteps = [
   { id: 'upload', label: 'Upload file' },
@@ -25,7 +26,7 @@ const importProgressSteps = [
 
 export function ParticipantsPage({ services }: ProductionParticipantImportPreviewProps = {}) {
   const [searchParams] = useSearchParams()
-  if (searchParams.get('workflow') === 'production-preview') {
+  if (resolveParticipantWorkflow(searchParams) === 'production') {
     return <ProductionParticipantImportPreview services={services} />
   }
   const step = resolvePrototypeImportStep(searchParams)

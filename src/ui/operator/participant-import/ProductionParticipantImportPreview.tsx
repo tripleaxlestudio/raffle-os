@@ -6,7 +6,7 @@ import type { ColumnMapping, ImportStrategy, ParticipantImportValidationResult, 
 import type { Event } from '../../../domain/events/event.types.ts'
 import { ConfirmationDialog } from '../../../shared/ui/ConfirmationDialog.tsx'
 import { Modal } from '../../../shared/ui/Modal.tsx'
-import { Badge, Button, ButtonLink, Card, Select, Table, TableHeader } from '../../../shared/ui/index.ts'
+import { Badge, Button, Card, Select, Table, TableHeader } from '../../../shared/ui/index.ts'
 import { ProgressStepper, type ProgressStep } from '../../../shared/components/ProgressStepper.tsx'
 import { StatusBanner } from '../../../shared/components/StatusBanner.tsx'
 import { createParticipantImportProductionServices } from '../../../application/participant-import/participant-import-production-services.ts'
@@ -89,7 +89,7 @@ export function ProductionParticipantImportPreview({ services: providedServices 
       setCurrentParticipantCount(result.totalCount)
       setVerification(result.totalCount === 0 ? { status: 'empty' } : { status: 'ready', result })
     } catch {
-      if (version === eventReadVersion.current) setVerification({ status: 'failure', message: 'Persisted Participants could not be read safely. Retry by reloading this preview.' })
+      if (version === eventReadVersion.current) setVerification({ status: 'failure', message: 'Persisted Participants could not be read safely. Reload this page to retry.' })
     }
   }, [services])
 
@@ -120,8 +120,8 @@ export function ProductionParticipantImportPreview({ services: providedServices 
         }
       } catch {
         if (active) {
-          setEventError('Local persistence is unavailable. The production preview is blocked until an Event can be resolved.')
-          setVerification({ status: 'failure', message: 'Persisted Participants could not be read safely. Retry by reloading this preview.' })
+          setEventError('Local persistence is unavailable. Participant import is blocked until an Event can be resolved.')
+          setVerification({ status: 'failure', message: 'Persisted Participants could not be read safely. Reload this page to retry.' })
         }
       } finally { if (active) setEventLoading(false) }
     }
@@ -203,9 +203,8 @@ export function ProductionParticipantImportPreview({ services: providedServices 
       : state.status === 'validation-ready' || state.status === 'commit-failure' || staged === null || staged.validation.summary.validRows === 0 || hasBlockingDiagnostics || strategy === null
         ? 'validation'
         : 'summary'
-  return <section className="participant-import production-import-preview" aria-label="Preview participant file" data-workflow-state={state.status}>
-    <StatusBanner badge="Preview" title="Production preview" tone="info">Persistence is enabled for preview verification. Final Chrome and Edge acceptance remains pending.</StatusBanner>
-    <header className="page-header production-import-preview__header"><div className="page-header__copy"><p className="page-header__eyebrow">Participant Operations</p><div className="production-import-preview__title-row"><h1 id="production-import-title">Participant Import</h1><Badge variant="warning">Production Preview</Badge></div><p className="page-header__description">Stage, validate, and atomically import Participants into the current Event.</p></div><ButtonLink variant="quiet" to="/participants">Return to prototype</ButtonLink></header>
+  return <section className="participant-import production-import-preview" aria-label="Participant file import" data-workflow-state={state.status}>
+    <header className="page-header production-import-preview__header"><div className="page-header__copy"><p className="page-header__eyebrow">Participant Operations</p><div className="production-import-preview__title-row"><h1 id="production-import-title">Participant Import</h1></div><p className="page-header__description">Stage, validate, and atomically import Participants into the current Event.</p></div></header>
     <ProgressStepper currentStep={progressStep} steps={productionImportProgressSteps} />
     <div className="production-import-preview__summary-grid"><EventPanel event={event} loading={eventLoading} error={eventError} /><PersistedParticipantSection event={event} verification={verification} /></div>
     <div className="production-import-preview__workspace">

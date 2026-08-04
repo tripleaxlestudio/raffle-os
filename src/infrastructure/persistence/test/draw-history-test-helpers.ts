@@ -165,8 +165,12 @@ export function makeDrawHistoryFixture(
       capturedAt: TIME_2,
     },
     candidatePoolSnapshot: {
+      configurationId: configuration.id,
       snapshotFormatVersion: 1,
       capturedAt: TIME_2,
+      eventId: event.id,
+      mode: 'live',
+      prizeCategoryId: category.id,
       winningRule: configuration.winningRule,
       requireCheckIn: configuration.requireCheckIn,
       eligibleGroupFilter: configuration.eligibleGroupFilter,

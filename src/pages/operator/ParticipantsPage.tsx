@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router'
+import { ProductionParticipantImportPreview } from '../../ui/operator/participant-import/ProductionParticipantImportPreview.tsx'
 import { participantImportFixture } from '../../prototype/data/index.ts'
 import {
   getPrototypeImportStepPath,
@@ -23,6 +24,9 @@ const importProgressSteps = [
 
 export function ParticipantsPage() {
   const [searchParams] = useSearchParams()
+  if (searchParams.get('workflow') === 'production-preview') {
+    return <ProductionParticipantImportPreview />
+  }
   const step = resolvePrototypeImportStep(searchParams)
 
   return (

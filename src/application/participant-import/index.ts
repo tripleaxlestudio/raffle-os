@@ -38,3 +38,20 @@ export {
 } from './participant-import-staging.ts'
 export { parseCsv } from './csv-parser.ts'
 export { parseParticipantImport } from './participant-import-parser.ts'
+export type {
+  BrowserFileError,
+  BrowserFileErrorCode,
+  BrowserFileResult,
+  BrowserFileSuccess,
+} from './participant-import-file.service.ts'
+export {
+  formatBytes,
+  MAX_PARTICIPANT_IMPORT_FILE_BYTES,
+  readParticipantImportFile,
+} from './participant-import-file.service.ts'
+export {
+  normalizeHeader,
+  PARTICIPANT_IMPORT_FIELDS,
+  preventDuplicateSourceMappings,
+  suggestColumnMappings,
+} from './participant-import-mapping.ts'

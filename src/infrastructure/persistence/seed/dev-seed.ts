@@ -19,6 +19,12 @@ import {
   getStandardSeedPrizeCategories,
   getStandardSeedRedrawRecord,
   getStandardSeedWinners,
+  getAcceptanceSeedDrawConfigurations,
+  getAcceptanceSeedDrawSessions,
+  getAcceptanceSeedEvents,
+  getAcceptanceSeedParticipants,
+  getAcceptanceSeedPreferences,
+  getAcceptanceSeedPrizeCategories,
   SEED_ISO_TIMESTAMPS,
 } from './dev-seed-fixtures.ts'
 import {
@@ -28,12 +34,12 @@ import {
 
 export interface DevelopmentSeedInput {
   readonly database: RaffleOSDatabase
-  readonly profile?: 'standard' | 'capacity'
+  readonly profile?: 'standard' | 'capacity' | 'phase5-acceptance'
   readonly participantCount?: number
 }
 
 export interface DevelopmentSeedResult {
-  readonly profile: 'standard' | 'capacity'
+  readonly profile: 'standard' | 'capacity' | 'phase5-acceptance'
   readonly counts: {
     readonly events: number
     readonly participants: number
@@ -138,7 +144,7 @@ export async function seedDevelopmentDatabase(
           redraw_records: 1,
           winner_records: winners.length,
         }
-      } else {
+      } else if (profile === 'capacity') {
         // Capacity profile
         const capacityEventId =
           'c0000000-0000-4000-8000-000000000001' as EventId
@@ -227,6 +233,39 @@ export async function seedDevelopmentDatabase(
           participants: insertedCount,
           preferences: 0,
           prize_categories: 0,
+          redraw_records: 0,
+          winner_records: 0,
+        }
+      } else {
+        const events = getAcceptanceSeedEvents()
+        const prizeCategories = getAcceptanceSeedPrizeCategories()
+        const drawConfigurations = getAcceptanceSeedDrawConfigurations()
+        const participants = getAcceptanceSeedParticipants()
+        const drawSessions = getAcceptanceSeedDrawSessions()
+        const preferences = getAcceptanceSeedPreferences()
+
+        await writeValidatedSeedDataset(database, {
+          auditRecords: [],
+          displayConfigurations: [],
+          drawConfigurations,
+          drawSessions,
+          events,
+          participants,
+          preferences,
+          prizeCategories,
+          redrawRecord: undefined,
+          winners: [],
+        })
+
+        resultCounts = {
+          audit_records: 0,
+          display_configurations: 0,
+          draw_configurations: drawConfigurations.length,
+          draw_sessions: drawSessions.length,
+          events: events.length,
+          participants: participants.length,
+          preferences: preferences.length,
+          prize_categories: prizeCategories.length,
           redraw_records: 0,
           winner_records: 0,
         }

@@ -186,3 +186,36 @@ No production draw path contains `Math.random()`.
 - `src/application/draw/phase-5-integration.test.ts`
 - `src/application/draw/phase-5-performance.test.ts`
 - `docs/technical/PHASE-5-ACCEPTANCE.md`
+
+## Development-only browser seed procedure
+
+This acceptance harness is development-only. It is not a Settings editor and it does not select winners or write official draw history.
+
+1. Start the Vite development server: `npm run dev`.
+2. Open the local URL in Chrome or Edge.
+3. Open DevTools → Console.
+4. Run the reset explicitly:
+
+   ```js
+   await window.__raffleAcceptance.reset()
+   ```
+
+5. Seed the acceptance data:
+
+   ```js
+   await window.__raffleAcceptance.seed()
+   ```
+
+6. Inspect aggregate state:
+
+   ```js
+   await window.__raffleAcceptance.inspect()
+   ```
+
+7. Refresh the page, open `/draw/setup?mode=practice`, and verify the production Ready state.
+8. Open `/draw/setup?mode=live` and verify the production Ready state for Live Mode.
+9. Use the normal production draw controls for subsequent manual verification. The helper does not expose random selection, winner creation, redraws, or official persistence.
+
+`seed()` intentionally refuses to run until `reset()` has completed in the current page lifetime, and the underlying seed still refuses any non-empty database. The profile contains one active Event, one category, one configuration, six Participants, and ready Practice and Live sessions. It includes the distinct ticket strings `"00042"` and `"42"`, both checked-in and unchecked Participants, and multiple groups. Snapshots and official history stores start empty.
+
+The console API is registered only when `import.meta.env.DEV` is true and is absent from production builds.

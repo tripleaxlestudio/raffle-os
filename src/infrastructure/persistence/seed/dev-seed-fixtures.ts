@@ -32,6 +32,7 @@ export const SEED_ISO_TIMESTAMPS = {
 export const SEED_EVENT_IDS = {
   draft: '11111111-1111-4111-8111-111111111111' as EventId,
   history: '22222222-2222-4222-8222-222222222222' as EventId,
+  acceptance: 'aaaaaaa5-0000-4000-8000-000000000001' as EventId,
 } as const
 
 export const SEED_PRIZE_CATEGORY_IDS = {
@@ -49,6 +50,13 @@ export const SEED_DISPLAY_CONFIG_IDS = {
 
 export const SEED_DRAW_SESSION_ID =
   '77777777-7777-4777-8777-777777777777' as DrawSessionId
+
+export const ACCEPTANCE_SEED_IDS = {
+  category: 'aaaaaaa5-0000-4000-8000-000000000002' as PrizeCategoryId,
+  configuration: 'aaaaaaa5-0000-4000-8000-000000000003' as DrawConfigurationId,
+  practiceSession: 'aaaaaaa5-0000-4000-8000-000000000004' as DrawSessionId,
+  liveSession: 'aaaaaaa5-0000-4000-8000-000000000005' as DrawSessionId,
+} as const
 
 export const SEED_WINNER_RECORD_IDS = {
   w1: '88888888-8888-4888-8888-888888888881' as WinnerRecordId,
@@ -308,6 +316,100 @@ export function getStandardSeedPreferences(): ApplicationPreference[] {
       key: 'lastOperatorMode',
       updatedAt: SEED_ISO_TIMESTAMPS.t1,
       value: 'live',
+    },
+  ]
+}
+
+export function getAcceptanceSeedEvents(): Event[] {
+  return [{
+    createdAt: SEED_ISO_TIMESTAMPS.t0,
+    description: 'Phase 5 browser acceptance event',
+    id: SEED_EVENT_IDS.acceptance,
+    name: 'Raffle OS Phase 5 Acceptance',
+    status: 'live',
+    updatedAt: SEED_ISO_TIMESTAMPS.t0,
+  }]
+}
+
+export function getAcceptanceSeedPrizeCategories(): PrizeCategory[] {
+  return [{
+    createdAt: SEED_ISO_TIMESTAMPS.t0,
+    description: 'Browser acceptance prize category',
+    displayOrder: 1,
+    eventId: SEED_EVENT_IDS.acceptance,
+    id: ACCEPTANCE_SEED_IDS.category,
+    name: 'Acceptance Prize',
+    prizeName: 'Acceptance Test Prize',
+  }]
+}
+
+export function getAcceptanceSeedDrawConfigurations(): DrawConfiguration[] {
+  return [{
+    createdAt: SEED_ISO_TIMESTAMPS.t0,
+    eligibleGroupFilter: null,
+    eventId: SEED_EVENT_IDS.acceptance,
+    id: ACCEPTANCE_SEED_IDS.configuration,
+    prizeCategoryId: ACCEPTANCE_SEED_IDS.category,
+    requestedWinners: 2,
+    requireCheckIn: true,
+    updatedAt: SEED_ISO_TIMESTAMPS.t0,
+    winningRule: 'once-per-event',
+  }]
+}
+
+export function getAcceptanceSeedParticipants(): Participant[] {
+  const tickets = ['00042', '42', '00043', '00044', '00045', '00046']
+  return tickets.map((ticketNumber, index) => ({
+    createdAt: SEED_ISO_TIMESTAMPS.t0,
+    eventId: SEED_EVENT_IDS.acceptance,
+    group: index % 2 === 0 ? 'VIP' : 'General',
+    id: `aaaaaaa5-0000-4000-8000-${(index + 10).toString().padStart(12, '0')}` as ParticipantId,
+    isCheckedIn: index < 4,
+    name: `Acceptance Participant ${index + 1}`,
+    notes: undefined,
+    ticketNumber: ticketNumber as Participant['ticketNumber'],
+    updatedAt: SEED_ISO_TIMESTAMPS.t0,
+  }))
+}
+
+export function getAcceptanceSeedDrawSessions(): DrawSession[] {
+  return [
+    {
+      candidatePoolSnapshot: null,
+      configurationId: ACCEPTANCE_SEED_IDS.configuration,
+      configurationSnapshot: null,
+      createdAt: SEED_ISO_TIMESTAMPS.t1,
+      eventId: SEED_EVENT_IDS.acceptance,
+      id: ACCEPTANCE_SEED_IDS.practiceSession,
+      mode: 'practice',
+      status: 'ready',
+      updatedAt: SEED_ISO_TIMESTAMPS.t1,
+    },
+    {
+      candidatePoolSnapshot: null,
+      configurationId: ACCEPTANCE_SEED_IDS.configuration,
+      configurationSnapshot: null,
+      createdAt: SEED_ISO_TIMESTAMPS.t1,
+      eventId: SEED_EVENT_IDS.acceptance,
+      id: ACCEPTANCE_SEED_IDS.liveSession,
+      mode: 'live',
+      status: 'ready',
+      updatedAt: SEED_ISO_TIMESTAMPS.t1,
+    },
+  ]
+}
+
+export function getAcceptanceSeedPreferences(): ApplicationPreference[] {
+  return [
+    {
+      key: 'activeEventId',
+      updatedAt: SEED_ISO_TIMESTAMPS.t1,
+      value: SEED_EVENT_IDS.acceptance,
+    },
+    {
+      key: 'lastOperatorMode',
+      updatedAt: SEED_ISO_TIMESTAMPS.t1,
+      value: 'practice',
     },
   ]
 }

@@ -28,10 +28,10 @@ describe('browser participant import file boundary', () => {
     expect(await readParticipantImportFile(makeFile('x', 'participants.pdf', 'application/pdf'))).toMatchObject({ ok: false, code: 'unsupported-format' })
   })
 
-  it('returns an explicit parser-not-implemented result for XLSX', async () => {
+  it('reads XLSX as an ArrayBuffer without loading the parser at the file boundary', async () => {
     const result = await readParticipantImportFile(makeFile('binary', 'participants.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'))
     expect(result.ok).toBe(true)
-    if (result.ok) expect(result.parserResult).toMatchObject({ ok: false, code: 'parser-not-implemented' })
+    if (result.ok) expect(result.arrayBuffer).toBeInstanceOf(ArrayBuffer)
   })
 
   it('normalizes browser read failures', async () => {

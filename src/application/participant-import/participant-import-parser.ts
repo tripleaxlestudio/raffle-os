@@ -4,6 +4,7 @@ import type {
   ParticipantImportSourceMetadata,
 } from './participant-import-staging.types.ts'
 import { validateParticipantImport } from './participant-import-staging.ts'
+import { parseXlsx } from '../../infrastructure/import/xlsx-parser.adapter.ts'
 import type {
   ParticipantImportParserOptions,
   ParticipantImportParserResult,
@@ -54,6 +55,22 @@ export function parseParticipantImport(
     parsed: parsed.value,
     validation: validateParticipantImport(parsed.value.rows, options.mappings, options.strategy),
   }
+}
+
+export async function parseParticipantImportAsync(
+  input: ArrayBuffer,
+  options: import('./participant-import-parser.types.ts').ParticipantImportXlsxOptions,
+) {
+  const metadata: ImportFileMetadata = {
+    fileName: options.metadata.fileName,
+    fileType: 'xlsx',
+    sizeBytes: options.metadata.sizeBytes ?? input.byteLength,
+    lastModifiedAt: options.metadata.lastModifiedAt,
+    sheetName: options.metadata.sheetName,
+  }
+  const parsed = await parseXlsx(input, { fileMetadata: metadata, worksheet: options.worksheet, limits: options })
+  if (!parsed.ok) return parsed
+  return { ok: true as const, parsed: parsed.value, validation: validateParticipantImport(parsed.value.rows, options.mappings, options.strategy) }
 }
 
 function detectFormat(metadata: ParticipantImportSourceMetadata): 'csv' | 'xlsx' | null {

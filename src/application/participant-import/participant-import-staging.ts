@@ -106,6 +106,20 @@ function validateRow(
   }
 
   const ticketValue = read('ticketNumber')
+  const ticketMapping = mappingByTarget.get('ticketNumber')
+  const ticketProvenance = ticketMapping?.sourceColumn
+    ? row.sourceProvenance?.find((cell) => cell.sourceColumn === ticketMapping.sourceColumn)
+    : undefined
+  if (ticketProvenance && ticketProvenance.sourceType !== 'string' && ticketProvenance.sourceType !== 'blank') {
+    const code = ticketProvenance.sourceType === 'formula' ? 'formula-cell' :
+      ticketProvenance.sourceType === 'number' ? 'numeric-ticket-ambiguous' :
+        ticketProvenance.sourceType === 'date' ? 'date-cell' :
+          ticketProvenance.sourceType === 'boolean' ? 'boolean-cell' :
+            ticketProvenance.sourceType === 'error' ? 'error-cell' :
+              ticketProvenance.sourceType === 'rich-text' ? 'rich-text-cell' :
+                ticketProvenance.sourceType === 'merged' ? 'merged-cell' : 'unsupported-cell'
+    issues.push({ code, field: 'ticketNumber', message: ticketDiagnosticMessage(code, ticketProvenance.formattedText), rowNumber: row.rowNumber, severity: 'error' })
+  }
   let ticketNumber: string | null = null
   if (typeof ticketValue !== 'string' || ticketValue.length === 0) {
     issues.push({
@@ -145,6 +159,13 @@ function validateRow(
     issues,
     participantDraft: null,
   }
+}
+
+function ticketDiagnosticMessage(code: ValidationIssue['code'], evidence?: string): string {
+  const suffix = evidence === undefined ? '' : ` Displayed evidence: ${evidence}`
+  if (code === 'numeric-ticket-ambiguous') return `Ticket Number must be an actual text cell; numeric cell evidence cannot be trusted.${suffix}`
+  if (code === 'formula-cell') return 'Ticket Number formula cells are not evaluated or trusted.'
+  return `Ticket Number cell type ${code} is not accepted.${suffix}`
 }
 
 function readOptionalText(

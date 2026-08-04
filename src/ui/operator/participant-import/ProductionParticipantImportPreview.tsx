@@ -5,6 +5,7 @@ import {
   PARTICIPANT_IMPORT_FIELDS,
   preventDuplicateSourceMappings,
   readParticipantImportFile,
+  parseParticipantImportAsync,
   suggestColumnMappings,
 } from '../../../application/participant-import/index.ts'
 import { parseParticipantImport } from '../../../application/participant-import/participant-import-parser.ts'
@@ -13,22 +14,26 @@ import type {
   ColumnMapping,
   ParticipantImportValidationResult,
   ParsedCsvFile,
+  XlsxParsedFile,
 } from '../../../application/participant-import/index.ts'
 
 export const MAX_PREVIEW_ROWS = 20
 export const MAX_ISSUE_ROWS_SHOWN = 20
 
+type ParsedImportFile = ParsedCsvFile | XlsxParsedFile
 type PreviewState =
   | { readonly status: 'idle' }
   | { readonly status: 'reading'; readonly fileName: string }
-  | { readonly status: 'unsupported' | 'parser-not-implemented' | 'parse-error'; readonly message: string }
-  | { readonly status: 'mapping' | 'validation-ready'; readonly parsed: ParsedCsvFile; readonly mappings: readonly ColumnMapping[]; readonly validation: ParticipantImportValidationResult }
+  | { readonly status: 'unsupported' | 'parse-error'; readonly message: string }
+  | { readonly status: 'mapping' | 'validation-ready'; readonly parsed: ParsedImportFile; readonly mappings: readonly ColumnMapping[]; readonly validation: ParticipantImportValidationResult }
 
 export function ProductionParticipantImportPreview() {
   const inputRef = useRef<HTMLInputElement>(null)
   const readVersion = useRef(0)
   const [state, setState] = useState<PreviewState>({ status: 'idle' })
   const [fileInfo, setFileInfo] = useState<{ name: string; type: string; size: number } | null>(null)
+  const xlsxBuffer = useRef<ArrayBuffer | null>(null)
+  const xlsxMetadata = useRef<Parameters<typeof parseParticipantImportAsync>[1] | null>(null)
 
   async function selectFile(file: File | undefined) {
     if (!file) return
@@ -42,8 +47,13 @@ export function ProductionParticipantImportPreview() {
       setState({ status: result.code === 'unsupported-format' ? 'unsupported' : 'parse-error', message: result.message })
       return
     }
-    if (result.parserResult && !result.parserResult.ok) {
-      setState({ status: result.parserResult.code === 'parser-not-implemented' ? 'parser-not-implemented' : 'parse-error', message: result.parserResult.message })
+    if (result.arrayBuffer) {
+      xlsxBuffer.current = result.arrayBuffer
+      xlsxMetadata.current = { metadata: result.metadata, mappings: [], strategy: 'replace' }
+      const parsedResult = await parseParticipantImportAsync(result.arrayBuffer, xlsxMetadata.current)
+      if (version !== readVersion.current) return
+      if (!parsedResult.ok) { setState({ status: 'parse-error', message: parsedResult.diagnostics[0]?.message ?? 'XLSX could not be parsed.' }); return }
+      setStateForMapping(parsedResult.parsed, suggestColumnMappings(parsedResult.parsed.headers))
       return
     }
     if (!result.text) return
@@ -60,7 +70,7 @@ export function ProductionParticipantImportPreview() {
     setStateForMapping(parsedResult.parsed, suggestColumnMappings(parsedResult.parsed.headers))
   }
 
-  function setStateForMapping(parsed: ParsedCsvFile, mappings: readonly ColumnMapping[]) {
+  function setStateForMapping(parsed: ParsedImportFile, mappings: readonly ColumnMapping[]) {
     const validation = validateParticipantImport(parsed.rows, mappings, 'replace')
     setState({ status: mappings.some((mapping) => mapping.targetField === 'ticketNumber' && mapping.sourceColumn !== null) ? 'validation-ready' : 'mapping', parsed, mappings, validation })
   }
@@ -75,10 +85,13 @@ export function ProductionParticipantImportPreview() {
     readVersion.current += 1
     setState({ status: 'idle' })
     setFileInfo(null)
+    xlsxBuffer.current = null
+    xlsxMetadata.current = null
     if (inputRef.current) inputRef.current.value = ''
   }
 
   const parsedState = state.status === 'mapping' || state.status === 'validation-ready' ? state : null
+  const selectedXlsx = parsedState?.parsed.format === 'xlsx' ? parsedState.parsed : null
   return (
     <section className="participant-import production-import-preview" aria-labelledby="production-import-title" data-workflow-state={state.status}>
       <div className="prototype-notice" role="note"><span aria-hidden="true">PREVIEW</span>Production preview only. No Participant data has been saved yet.</div>
@@ -90,23 +103,25 @@ export function ProductionParticipantImportPreview() {
       <div className="production-import-preview__upload">
         <label htmlFor="participant-file">Choose participant file</label>
         <input ref={inputRef} id="participant-file" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; void selectFile(file) }} />
-        <p>Supported formats: CSV is readable now; XLSX selection is recognized but its parser is not implemented. Maximum file size: {MAX_PARTICIPANT_IMPORT_FILE_BYTES / (1024 * 1024)} MB.</p>
+        <p>Supported formats: bounded CSV and XLSX preview. Maximum file size: {MAX_PARTICIPANT_IMPORT_FILE_BYTES / (1024 * 1024)} MB.</p>
         {fileInfo ? <div role="status"><strong>{fileInfo.name}</strong><span> · {fileInfo.type} · {formatBytesForUi(fileInfo.size)}</span><button type="button" onClick={clearFile}>Remove file</button></div> : null}
       </div>
 
       {state.status === 'reading' ? <p role="status">Reading {state.fileName}…</p> : null}
-      {state.status === 'unsupported' || state.status === 'parse-error' || state.status === 'parser-not-implemented' ? <div className="status-banner status-banner--warning" role="alert"><div className="status-banner__copy"><h2>{state.status === 'parser-not-implemented' ? 'XLSX parser not implemented' : state.status === 'unsupported' ? 'Unsupported file' : 'CSV could not be parsed'}</h2><p>{state.message}</p></div></div> : null}
+      {state.status === 'unsupported' || state.status === 'parse-error' ? <div className="status-banner status-banner--warning" role="alert"><div className="status-banner__copy"><h2>{state.status === 'unsupported' ? 'Unsupported file' : 'File could not be parsed'}</h2><p>{state.message}</p></div></div> : null}
 
       {parsedState ? <>
         <section aria-labelledby="mapping-title" className="production-import-preview__section">
           <h2 id="mapping-title">Map columns</h2>
           <p>Suggestions are reviewable only. Unmapped source columns remain ignored. Ticket Number is required; Participant Name is optional.</p>
+          {selectedXlsx ? <p role="status">Selected worksheet: {selectedXlsx.sheetName}</p> : null}
           <div className="production-import-preview__mapping">
             {PARTICIPANT_IMPORT_FIELDS.map((field) => {
               const mapping = parsedState.mappings.find((item) => item.targetField === field.field)
               return <label key={field.field} htmlFor={`mapping-${field.field}`}><span>{field.label} — {field.requirement === 'required' ? 'Required' : 'Optional'}</span><select id={`mapping-${field.field}`} aria-label={`${field.label} — ${field.requirement}`} value={mapping?.sourceColumn ?? ''} onChange={(event) => changeMapping(field.field, event.target.value || null)}><option value="">Not mapped</option>{parsedState.parsed.headers.map((header) => <option key={header} value={header}>{header}</option>)}</select></label>
             })}
           </div>
+          {selectedXlsx && selectedXlsx.worksheets.filter((sheet) => sheet.visibility === 'visible').length > 1 ? <label htmlFor="xlsx-worksheet"><span>Worksheet</span><select id="xlsx-worksheet" value={selectedXlsx.sheetName} onChange={(event) => { const buffer = xlsxBuffer.current; const metadata = xlsxMetadata.current; if (!buffer || !metadata) return; void parseParticipantImportAsync(buffer, { ...metadata, worksheet: { kind: 'named', name: event.target.value } }).then((result) => { if (result.ok) setStateForMapping(result.parsed, suggestColumnMappings(result.parsed.headers)); else setState({ status: 'parse-error', message: result.diagnostics[0]?.message ?? 'Worksheet could not be parsed.' }) }) }}><option value={selectedXlsx.sheetName}>{selectedXlsx.sheetName}</option>{selectedXlsx.worksheets.filter((sheet) => sheet.visibility === 'visible' && sheet.name !== selectedXlsx.sheetName).map((sheet) => <option key={sheet.name} value={sheet.name}>{sheet.name}</option>)}</select></label> : null}
           <p>Ignored source columns: {parsedState.parsed.headers.filter((header) => !parsedState.mappings.some((mapping) => mapping.sourceColumn === header)).join(', ') || 'none'}</p>
           {parsedState.mappings.some((mapping) => mapping.targetField === 'ticketNumber' && mapping.sourceColumn === null) ? <p role="alert">Map exactly one source column to Ticket Number before validation is ready.</p> : null}
         </section>
@@ -117,7 +132,7 @@ export function ProductionParticipantImportPreview() {
   )
 }
 
-function PreviewTable({ parsed }: { parsed: ParsedCsvFile }) {
+function PreviewTable({ parsed }: { parsed: ParsedImportFile }) {
   const rows = parsed.rows.slice(0, MAX_PREVIEW_ROWS)
   return <section aria-labelledby="raw-preview-title" className="production-import-preview__section"><h2 id="raw-preview-title">Raw row preview</h2><p>Showing the first {rows.length} of {parsed.rows.length} data rows; values are displayed exactly as read.</p><table><caption>Parsed participant file rows</caption><thead><tr><th scope="col">Source row</th>{parsed.headers.map((header) => <th scope="col" key={header}>{header}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row.rowNumber}><th scope="row">{row.rowNumber}</th>{parsed.headers.map((header) => <td key={header}>{String(row.values[header] ?? '')}</td>)}</tr>)}</tbody></table></section>
 }

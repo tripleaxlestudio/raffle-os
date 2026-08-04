@@ -22,6 +22,16 @@ export interface ParticipantImportSourceMetadata {
 export interface RawImportRow {
   readonly rowNumber: number
   readonly values: Readonly<Record<string, unknown>>
+  readonly sourceProvenance?: readonly RawImportCellProvenance[]
+}
+
+export interface RawImportCellProvenance {
+  readonly sourceColumn: string
+  readonly sourceColumnNumber: number
+  readonly sourceType: string
+  readonly formattedText?: string
+  readonly formula?: string
+  readonly cachedResultPresent?: boolean
 }
 
 export type ParticipantImportField =
@@ -57,6 +67,14 @@ export type ValidationIssueCode =
   | 'duplicate-ticket'
   | 'malformed-field'
   | 'malformed-check-in'
+  | 'formula-cell'
+  | 'numeric-ticket-ambiguous'
+  | 'date-cell'
+  | 'boolean-cell'
+  | 'error-cell'
+  | 'rich-text-cell'
+  | 'unsupported-cell'
+  | 'merged-cell'
 
 export interface ValidationIssue {
   readonly code: ValidationIssueCode

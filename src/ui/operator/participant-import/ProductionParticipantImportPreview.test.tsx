@@ -28,7 +28,7 @@ describe('production participant import preview', () => {
     renderPreview()
     const input = screen.getByLabelText('Choose participant file')
     await user.upload(input, new File(['"unterminated'], 'broken.csv', { type: 'text/csv' }))
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'CSV could not be parsed' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'File could not be parsed' })).toBeInTheDocument())
     await user.upload(input, new File(['Ticket Number\n00001'], 'valid.csv', { type: 'text/csv' }))
     await waitFor(() => expect(screen.getByText('valid.csv')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Remove file' }))

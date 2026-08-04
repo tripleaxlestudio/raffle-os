@@ -1,4 +1,3 @@
-import { parseParticipantImport } from './participant-import-parser.ts'
 import type {
   ParticipantImportParserResult,
 } from './participant-import-parser.types.ts'
@@ -22,6 +21,7 @@ export interface BrowserFileSuccess {
   readonly ok: true
   readonly metadata: ParticipantImportSourceMetadata
   readonly text?: string
+  readonly arrayBuffer?: ArrayBuffer
   readonly parserResult?: ParticipantImportParserResult
 }
 
@@ -60,7 +60,11 @@ export async function readParticipantImportFile(
     return { ok: false, code: 'empty-file', message: 'The selected file is empty.' }
   }
   if (extension === 'xlsx') {
-    return { ok: true, metadata, parserResult: parseParticipantImport('', { metadata, mappings: [], strategy: 'replace' }) }
+    try {
+      return { ok: true, metadata, arrayBuffer: await file.arrayBuffer() }
+    } catch {
+      return { ok: false, code: 'read-failed', message: 'The browser could not read this XLSX file. Choose it again or try another file.' }
+    }
   }
 
   try {

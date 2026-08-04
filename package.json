@@ -16,7 +16,8 @@
     "dexie": "4.4.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router": "^7.18.2"
+    "react-router": "^7.18.2",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

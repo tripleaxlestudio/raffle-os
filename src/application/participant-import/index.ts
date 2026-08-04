@@ -15,7 +15,9 @@ export type {
   ValidationIssue,
   ValidationIssueCode,
   ValidationSeverity,
+  RawImportCellProvenance,
 } from './participant-import-staging.types.ts'
+export type { XlsxCellDiagnostic, XlsxCellDiagnosticCode, XlsxCellProvenance, XlsxParsedFile, XlsxParserFailure, XlsxParserLimits, XlsxParserOptions, XlsxParserResult, XlsxParserSuccess, XlsxRowProvenance, XlsxWorksheetPolicy, XlsxWorkbookDiagnostic, XlsxWorkbookDiagnosticCode } from './xlsx-parser.types.ts'
 export type {
   CsvParseResult,
   CsvParserDiagnostic,
@@ -29,6 +31,8 @@ export type {
   ParticipantImportParserOptions,
   ParticipantImportParserResult,
   ParticipantImportParserSuccess,
+  ParticipantImportXlsxOptions,
+  ParticipantImportXlsxSuccess,
 } from './participant-import-parser.types.ts'
 export { DEFAULT_CSV_PARSER_LIMITS } from './csv-parser.types.ts'
 export {
@@ -37,7 +41,8 @@ export {
   validateParticipantImport,
 } from './participant-import-staging.ts'
 export { parseCsv } from './csv-parser.ts'
-export { parseParticipantImport } from './participant-import-parser.ts'
+export { parseParticipantImport, parseParticipantImportAsync } from './participant-import-parser.ts'
+export { DEFAULT_XLSX_PARSER_LIMITS } from './xlsx-parser.types.ts'
 export type {
   BrowserFileError,
   BrowserFileErrorCode,

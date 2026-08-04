@@ -75,7 +75,7 @@ export async function queryDrawSetup(
     })
 
     if (session === null) {
-      return { state: 'blocked', mode, event, configuration, category, session, totalParticipantCount, eligibleCandidateCount: build.ok ? build.value.diagnostics.eligibleCount : 0, excludedCount: build.ok ? build.value.diagnostics.excludedCount : participants.length, exclusionCounts: build.ok ? build.value.diagnostics.exclusionCounts : {}, reason: 'A ready DrawSession is required before starting this draw.' }
+      return { state: 'no-session', mode, event, configuration, category, totalParticipantCount, eligibleCandidateCount: build.ok ? build.value.diagnostics.eligibleCount : 0, excludedCount: build.ok ? build.value.diagnostics.excludedCount : participants.length, exclusionCounts: build.ok ? build.value.diagnostics.exclusionCounts : {} }
     }
 
     if (!build.ok) {

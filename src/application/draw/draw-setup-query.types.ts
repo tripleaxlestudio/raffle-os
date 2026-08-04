@@ -28,9 +28,10 @@ export type DrawSetupViewModel =
   | { readonly state: 'no-configuration'; readonly mode: AppMode; readonly event: Event }
   | { readonly state: 'invalid-category'; readonly mode: AppMode; readonly event: Event; readonly configuration: DrawConfiguration }
   | { readonly state: 'no-participants'; readonly mode: AppMode; readonly event: Event; readonly configuration: DrawConfiguration; readonly category: PrizeCategory; readonly session: DrawSession | null }
+  | { readonly state: 'no-session'; readonly mode: AppMode; readonly event: Event; readonly configuration: DrawConfiguration; readonly category: PrizeCategory; readonly totalParticipantCount: number; readonly eligibleCandidateCount: number; readonly excludedCount: number; readonly exclusionCounts: Readonly<Partial<Record<DrawSetupExclusionReason, number>>> }
   | { readonly state: 'blocked'; readonly mode: AppMode; readonly event: Event; readonly configuration: DrawConfiguration; readonly category: PrizeCategory; readonly session: DrawSession | null; readonly totalParticipantCount: number; readonly eligibleCandidateCount: number; readonly excludedCount: number; readonly exclusionCounts: Readonly<Partial<Record<DrawSetupExclusionReason, number>>>; readonly reason: string }
   | DrawSetupReadyViewModel
-  | { readonly state: 'query-failure'; readonly mode: AppMode; readonly error: DrawSetupQueryError }
+  | { readonly state: 'query-failure'; readonly mode: AppMode; readonly error: DrawSetupQueryError | DrawCommandFailure }
 
 export interface DrawSetupQueryError {
   readonly code: 'persistence-failed' | 'invalid-data'

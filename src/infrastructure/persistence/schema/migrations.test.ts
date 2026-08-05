@@ -22,6 +22,8 @@ import {
   SCHEMA_VERSION_1,
   SCHEMA_V2,
   SCHEMA_VERSION_2,
+  SCHEMA_V3,
+  SCHEMA_VERSION_3,
 } from './schema-v1.ts'
 
 const openedDatabases = new Set<Dexie>()
@@ -65,16 +67,18 @@ describe('centralized persistence migrations', () => {
   it('defines the current supported application schema as Version 2', () => {
     expect(SCHEMA_VERSION_1).toBe(1)
     expect(SCHEMA_VERSION_2).toBe(2)
-    expect(CURRENT_SUPPORTED_SCHEMA_VERSION).toBe(2)
+    expect(SCHEMA_VERSION_3).toBe(3)
+    expect(CURRENT_SUPPORTED_SCHEMA_VERSION).toBe(3)
   })
 
   it('centralizes the exact Version 1 store contract', () => {
-    expect(PERSISTENCE_MIGRATIONS).toHaveLength(2)
+    expect(PERSISTENCE_MIGRATIONS).toHaveLength(3)
     expect(PERSISTENCE_MIGRATIONS[0]).toEqual({
       stores: SCHEMA_V1,
       version: 1,
     })
     expect(PERSISTENCE_MIGRATIONS[1]).toEqual({ stores: SCHEMA_V2, version: 2 })
+    expect(PERSISTENCE_MIGRATIONS[2]).toEqual({ stores: SCHEMA_V3, version: 3 })
     expect(Object.keys(SCHEMA_V1).sort()).toEqual(
       [...SCHEMA_V1_STORE_NAMES].sort(),
     )
@@ -110,9 +114,9 @@ describe('centralized persistence migrations', () => {
     expect(PERSISTENCE_MIGRATIONS[0]?.upgrade).toBeUndefined()
 
     await database.open()
-    expect(database.verno).toBe(2)
+    expect(database.verno).toBe(3)
     expect(database.tables.map((table) => table.name).sort()).toEqual(
-      [...SCHEMA_V1_STORE_NAMES, 'presentation_checkpoints'].sort(),
+      [...SCHEMA_V1_STORE_NAMES, 'presentation_checkpoints', 'command_receipts'].sort(),
     )
   })
 
@@ -137,6 +141,7 @@ describe('centralized persistence migrations', () => {
         stores: {
           ...SCHEMA_V1,
           ...SCHEMA_V2,
+          ...SCHEMA_V3,
           migration_test_sentinel: 'id',
         },
         upgrade: async (transaction) => {
@@ -145,7 +150,7 @@ describe('centralized persistence migrations', () => {
             id: 'v2-upgrade-ran',
           })
         },
-        version: 3,
+      version: 4,
       },
     ]
     const versionTwoDatabase = createDexie(name)
@@ -156,7 +161,7 @@ describe('centralized persistence migrations', () => {
 
     await versionTwoDatabase.open()
 
-    expect(versionTwoDatabase.verno).toBe(3)
+    expect(versionTwoDatabase.verno).toBe(4)
     expect(upgradeCalls).toBe(1)
     expect(
       await versionTwoDatabase.table('events').get(

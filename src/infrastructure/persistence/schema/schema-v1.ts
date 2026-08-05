@@ -36,5 +36,11 @@ export const SCHEMA_V2 = {
   presentation_checkpoints: 'drawSessionId, stage, persistedAt',
 } as const
 
+export const SCHEMA_VERSION_3 = 3 as const
+export const SCHEMA_V3 = {
+  command_receipts:
+    '&commandId, drawSessionId, operation, [drawSessionId+operation], status, createdAt, committedAt',
+} as const
+
 export type SchemaV1StoreName =
   (typeof SCHEMA_V1_STORE_NAMES)[number]

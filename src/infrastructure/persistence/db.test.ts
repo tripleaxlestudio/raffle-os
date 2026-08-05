@@ -73,6 +73,7 @@ import {
   SCHEMA_V1,
   SCHEMA_V1_STORE_NAMES,
   SCHEMA_V2,
+  SCHEMA_V3,
 } from './schema/schema-v1.ts'
 
 function unwrap<T>(result: Result<T>): T {
@@ -335,7 +336,7 @@ async function writeFixtureSet(
 describe('RaffleOS database construction and Schema Version 1', () => {
   it('uses the production defaults without constructing a singleton', () => {
     expect(DEFAULT_DATABASE_NAME).toBe('RaffleOS_DB')
-    expect(APPLICATION_SCHEMA_VERSION).toBe(2)
+    expect(APPLICATION_SCHEMA_VERSION).toBe(3)
   })
 
   it('does not open on construction and accepts a custom database name', async () => {
@@ -404,9 +405,9 @@ describe('RaffleOS database construction and Schema Version 1', () => {
     const nativeStores = Array.from(
       database.backendDB().objectStoreNames,
     ).sort()
-    const expectedStores = [...SCHEMA_V1_STORE_NAMES, 'presentation_checkpoints'].sort()
+    const expectedStores = [...SCHEMA_V1_STORE_NAMES, 'presentation_checkpoints', 'command_receipts'].sort()
 
-    expect(database.verno).toBe(2)
+    expect(database.verno).toBe(3)
     expect(dexieStores).toEqual(expectedStores)
     expect(nativeStores).toEqual(expectedStores)
   })
@@ -656,9 +657,10 @@ describe('safe open boundary and persistence errors', () => {
         indexedDB,
       }),
     )
-    newerDatabase.version(3).stores({
+    newerDatabase.version(4).stores({
       ...SCHEMA_V1,
       ...SCHEMA_V2,
+      ...SCHEMA_V3,
       newer_version_sentinel: 'id',
     })
     await newerDatabase.open()
@@ -699,14 +701,15 @@ describe('safe open boundary and persistence errors', () => {
         indexedDB,
       }),
     )
-    verificationDatabase.version(3).stores({
+    verificationDatabase.version(4).stores({
       ...SCHEMA_V1,
       ...SCHEMA_V2,
+      ...SCHEMA_V3,
       newer_version_sentinel: 'id',
     })
     await verificationDatabase.open()
 
-    expect(verificationDatabase.verno).toBe(3)
+    expect(verificationDatabase.verno).toBe(4)
     expect(
       await verificationDatabase
         .table('newer_version_sentinel')

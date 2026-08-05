@@ -15,6 +15,7 @@ import type {
 import type { PrizeCategory } from '../../domain/prizes/prize.types.ts'
 import type {
   AuditRecordId,
+  CommandId,
   DisplayConfigurationId,
   DrawConfigurationId,
   DrawSessionId,
@@ -27,6 +28,7 @@ import type {
 import type { RedrawRecord } from '../../domain/winners/redraw.types.ts'
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
 import type { PresentationCheckpointRecord } from '../../domain/workflow/presentation-checkpoint.types.ts'
+import type { CommandReceiptRecord } from '../../application/persistence/command-receipt-repository.interface.ts'
 import { normalizeDatabaseOpenError } from './errors/persistence-errors.ts'
 import {
   CURRENT_SUPPORTED_SCHEMA_VERSION,
@@ -102,6 +104,7 @@ export class RaffleOSDatabase extends Dexie {
     PresentationCheckpointRecord,
     DrawSessionId
   >
+  declare readonly command_receipts: Table<CommandReceiptRecord, CommandId>
 
   readonly #indexedDbFactory: IDBFactory | undefined
 
@@ -157,7 +160,7 @@ export class RaffleOSDatabase extends Dexie {
   async checkReadiness(): Promise<{ readonly ok: true } | { readonly ok: false; readonly code: string; readonly reason: string }> {
     try {
       await this.openSupported()
-      const required = ['events', 'participants', 'prize_categories', 'draw_configurations', 'display_configurations', 'draw_sessions', 'winner_records', 'redraw_records', 'audit_records', 'preferences', 'presentation_checkpoints'] as const
+      const required = ['events', 'participants', 'prize_categories', 'draw_configurations', 'display_configurations', 'draw_sessions', 'winner_records', 'redraw_records', 'audit_records', 'preferences', 'presentation_checkpoints', 'command_receipts'] as const
       for (const name of required) {
         if (!this.tables.some((table) => table.name === name)) return { ok: false, code: 'unsupported-schema', reason: 'The local database schema is missing a required store.' }
         await this.table(name).count()

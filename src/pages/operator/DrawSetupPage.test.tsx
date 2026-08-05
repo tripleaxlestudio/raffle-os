@@ -17,7 +17,8 @@ function services(overrides: { record?: DrawAuthoringRecord | null; event?: type
   const current = overrides.record === undefined ? record : overrides.record
   const load = vi.fn(async () => ({ ok: true as const, event: overrides.event === undefined ? event : overrides.event, categories: [category], record: current }))
   const save = overrides.save ?? vi.fn(async () => ({ ok: true as const, record: current ?? record }))
-  return { open: vi.fn(async () => undefined), preferences: { get: vi.fn(async () => event.id) }, authoringService: { load, save }, } as unknown as DrawSetupProductionServices
+  const participant = { id: 'participant-1', eventId: event.id, ticketNumber: '00042', isCheckedIn: true, createdAt: event.createdAt, updatedAt: event.updatedAt }
+  return { open: vi.fn(async () => undefined), checkStorage: vi.fn(async () => ({ ok: true as const })), checkCrypto: vi.fn(async () => ({ ok: true as const })), preferences: { get: vi.fn(async () => event.id) }, events: { findById: vi.fn(async () => event) }, configurations: { findById: vi.fn(async () => configuration) }, categories: { findById: vi.fn(async () => category) }, sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => [session]) }, participants: { countByEventId: vi.fn(async () => 1), findByEventId: vi.fn(async () => [participant]) }, winners: { findByEventId: vi.fn(async () => []) }, authoringService: { load, save }, } as unknown as DrawSetupProductionServices
 }
 
 function renderPage(value: DrawSetupProductionServices) { return render(<MemoryRouter><DrawSetupPage services={value} /></MemoryRouter>) }
@@ -46,9 +47,23 @@ describe('Draw Setup persisted authoring', () => {
     const save = vi.fn(async () => ({ ok: false as const, error: new DrawAuthoringError('invalid-winner-count', 'Winner count must be an integer from 1 through 100.') }))
     renderPage(services({ save }))
     await screen.findByText('Prize name')
-    await user.click(screen.getByLabelText(/Live — official/))
+    await user.click(screen.getByRole('radio', { name: 'Live' }))
     expect(screen.getByText(/Mode is stored on the ready DrawSession/i)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
     expect(await screen.findByText(/Winner count must be an integer/i)).toBeInTheDocument()
+  })
+
+  it('renders mode options and readiness as separate accessible items', async () => {
+    renderPage(services())
+    expect(await screen.findByRole('radio', { name: 'Practice' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Live' })).toBeInTheDocument()
+    expect(screen.getByText('Rehearsal only. No official result is created.')).toBeInTheDocument()
+    expect(screen.getByText('Official session. Result becomes pending after the start gate.')).toBeInTheDocument()
+    expect(screen.getByText('Eligible participants')).toBeInTheDocument()
+    expect(screen.getByText('Requested winners')).toBeInTheDocument()
+    expect(screen.getByText('Storage')).toBeInTheDocument()
+    expect(screen.getByText('Secure Web Crypto')).toBeInTheDocument()
+    expect(screen.getAllByText('1', { selector: 'dd' })).toHaveLength(2)
+    expect(screen.getAllByText('Ready', { selector: 'dd' })).toHaveLength(2)
   })
 })

@@ -2719,6 +2719,103 @@
     top: 0;
   }
 
+  .draw-mode-options {
+    display: grid;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .draw-mode-options legend {
+    margin-bottom: var(--space-2);
+    color: var(--text-muted);
+    font-family: var(--font-family-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .draw-mode-options__list {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .draw-mode-option {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-3);
+    min-width: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-muted);
+    cursor: pointer;
+  }
+
+  .draw-mode-option:focus-within {
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+  }
+
+  .draw-mode-option__copy {
+    display: grid;
+    min-width: 0;
+    gap: var(--space-1);
+  }
+
+  .draw-mode-option__copy strong {
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+  }
+
+  .draw-mode-option__copy small {
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-normal);
+  }
+
+  .draw-readiness-summary {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-muted);
+  }
+
+  .draw-readiness-summary > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: var(--space-4);
+    min-height: 2rem;
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .draw-readiness-summary > div:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .draw-readiness-summary dt {
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+  }
+
+  .draw-readiness-summary dd {
+    margin: 0;
+    color: var(--text-primary);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-align: right;
+    white-space: nowrap;
+  }
+
   .draw-panel,
   .live-panel {
     overflow: hidden;

@@ -46,6 +46,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   const [saved, setSaved] = useState(false)
   const [eventMissing, setEventMissing] = useState(false)
   const [readiness, setReadiness] = useState<DrawReadinessResult | null>(null)
+  const [dirty, setDirty] = useState(false)
   const [confirmLive, setConfirmLive] = useState(false)
   const [handoffBusy, setHandoffBusy] = useState(false)
 
@@ -62,6 +63,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
       setCategories(result.categories as DrawAuthoringRecord['category'][])
       setRecord(result.record)
       setForm(formFromRecord(result.record, result.event?.id ?? activeEventId ?? ''))
+      setDirty(false)
       if (result.record !== null && services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto }))
       else setReadiness(null)
     } catch (cause: unknown) {
@@ -72,7 +74,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   useEffect(() => { void Promise.resolve().then(load) }, [load])
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setSaved(false); setError(null); setReadiness(null); setForm((current) => ({ ...current, [key]: value }))
+    setSaved(false); setError(null); setDirty(true); setForm((current) => ({ ...current, [key]: value }))
   }
 
   async function save() {
@@ -81,7 +83,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
     const draft: DrawAuthoringDraft = { ...form, eligibleGroupFilter: form.eligibleGroupFilter === '' ? null : form.eligibleGroupFilter }
     if (services.authoringService === undefined) { setError(new DrawAuthoringError('persistence-unavailable', 'Draw authoring services are unavailable.', { retryable: true })); setSaving(false); return }
     const result = await services.authoringService.save(draft)
-    if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setSaved(true); if (services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })) }
+    if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setDirty(false); setSaved(true); if (services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })) }
     else setError(result.error)
     setSaving(false)
   }
@@ -106,6 +108,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   const started = record !== null && record.session.status !== 'ready'
   const readinessBlocked = readiness !== null && readiness.state !== 'ready'
   const eligibilityNotEvaluated = readiness?.state === 'session-conflict'
+  const staleReadiness = dirty
   return <section aria-labelledby="draw-setup-title" className="draw-setup">
     <PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description={record?.event.name ?? 'Create a persisted ready session'} />
     {saved ? <StatusBanner badge="Saved" title="Ready DrawSession persisted" tone="success">The values below were read back from local persistence. No winner, checkpoint, or started-draw audit was created.</StatusBanner> : null}
@@ -138,9 +141,9 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
               <label className="draw-mode-option"><input id="draw-mode-live" type="radio" name="draw-mode" value="live" aria-labelledby="draw-mode-live-label" aria-describedby="draw-mode-live-description" checked={form.mode === 'live'} onChange={() => update('mode', 'live')} disabled={started} /><span className="draw-mode-option__copy"><strong id="draw-mode-live-label">Live</strong><small id="draw-mode-live-description">Official session. Result becomes pending after the start gate.</small></span></label>
             </div></fieldset>
             <p>{form.mode === 'live' ? 'Live handoff leads to the official start gate. It does not start a draw here.' : 'Practice is rehearsal only and does not create official results.'} Mode is stored on the ready DrawSession; URL parameters cannot override it.</p>
-            {record !== null ? <dl className="draw-readiness-summary" aria-label="Draw readiness summary" aria-live="polite"><div><dt>Eligible participants</dt><dd>{readiness?.data?.authoritativeEligibleCount ?? (eligibilityNotEvaluated ? 'Not evaluated' : 'Checking…')}</dd></div><div><dt>Requested winners</dt><dd>{readiness?.data?.requestedWinnerCount ?? record.configuration.requestedWinners}</dd></div><div><dt>Storage</dt><dd>{readiness === null ? 'Checking…' : readiness.state === 'storage-unavailable' ? 'Blocked' : 'Ready'}</dd></div><div><dt>Secure Web Crypto</dt><dd>{readiness?.state === 'crypto-unavailable' ? 'Blocked' : readiness === null ? 'Checking…' : 'Ready'}</dd></div></dl> : null}
+            {record !== null ? <dl className="draw-readiness-summary" aria-label="Draw readiness summary" aria-live="polite"><div><dt>Eligible participants</dt><dd>{staleReadiness ? 'Save changes to evaluate' : readiness?.data?.authoritativeEligibleCount ?? (eligibilityNotEvaluated ? 'Not evaluated' : 'Checking…')}</dd></div><div><dt>Requested winners</dt><dd>{readiness?.data?.requestedWinnerCount ?? record.configuration.requestedWinners}</dd></div><div><dt>Storage</dt><dd>{readiness === null ? 'Checking…' : readiness.state === 'storage-unavailable' ? 'Blocked' : 'Ready'}</dd></div><div><dt>Secure Web Crypto</dt><dd>{readiness?.state === 'crypto-unavailable' ? 'Blocked' : readiness === null ? 'Checking…' : 'Ready'}</dd></div></dl> : null}
             <Button type="submit" size="lg" isLoading={saving} disabled={started || form.prizeCategoryId === ''}>{record === null ? 'Save ready configuration' : 'Save changes'}</Button>
-            {record !== null ? <Button ref={handoffTriggerRef} type="button" size="lg" variant="secondary" disabled={saving || handoffBusy || readinessBlocked || readiness === null} isLoading={handoffBusy} onClick={() => { if (form.mode === 'live') setConfirmLive(true); else void handoff() }}>{form.mode === 'live' ? 'Continue to Live start gate' : 'Open Practice start gate'}</Button> : null}
+            {record !== null ? <Button ref={handoffTriggerRef} type="button" size="lg" variant="secondary" disabled={saving || handoffBusy || dirty || readinessBlocked || readiness === null} isLoading={handoffBusy} onClick={() => { if (form.mode === 'live') setConfirmLive(true); else void handoff() }}>{form.mode === 'live' ? 'Continue to Live start gate' : 'Open Practice start gate'}</Button> : null}
             {readiness?.retryable ? <Button type="button" variant="secondary" onClick={() => void refreshReadiness()}>Retry readiness</Button> : null}
           </div>
         </div>

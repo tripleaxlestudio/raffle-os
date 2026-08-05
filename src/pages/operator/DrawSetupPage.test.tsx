@@ -13,13 +13,13 @@ const configuration = { id: 'configuration-1', eventId: event.id, prizeCategoryI
 const session = { id: 'session-1', eventId: event.id, configurationId: configuration.id, mode: 'practice', status: 'ready', configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: event.createdAt, updatedAt: event.updatedAt } as const
 const record = { event, category, configuration, session, eligibleCount: 4 } as unknown as DrawAuthoringRecord
 
-function services(overrides: { record?: DrawAuthoringRecord | null; event?: typeof event | null; save?: DrawSetupProductionServices['authoringService'] extends infer S ? S extends { save: (...args: never[]) => unknown } ? S['save'] : never : never; conflict?: 'drawing' | 'pending-confirmation' } = {}) {
+function services(overrides: { record?: DrawAuthoringRecord | null; event?: typeof event | null; save?: DrawSetupProductionServices['authoringService'] extends infer S ? S extends { save: (...args: never[]) => unknown } ? S['save'] : never : never; conflict?: 'drawing' | 'pending-confirmation'; conflictAfterSave?: 'drawing' | 'pending-confirmation' } = {}) {
   const current = overrides.record === undefined ? record : overrides.record
   const load = vi.fn(async () => ({ ok: true as const, event: overrides.event === undefined ? event : overrides.event, categories: [category], record: current }))
-  const save = overrides.save ?? vi.fn(async () => ({ ok: true as const, record: current ?? record }))
+  let activeConflict = overrides.conflict
+  const save = overrides.save ?? vi.fn(async () => { activeConflict = overrides.conflictAfterSave; return { ok: true as const, record: current ?? record } })
   const participant = { id: 'participant-1', eventId: event.id, ticketNumber: '00042', isCheckedIn: true, createdAt: event.createdAt, updatedAt: event.updatedAt }
-  const conflictSession = { ...session, id: 'live-conflict', mode: 'live' as const, status: overrides.conflict }
-  return { open: vi.fn(async () => undefined), checkStorage: vi.fn(async () => ({ ok: true as const })), checkCrypto: vi.fn(async () => ({ ok: true as const })), preferences: { get: vi.fn(async () => event.id) }, events: { findById: vi.fn(async () => event) }, configurations: { findById: vi.fn(async () => configuration) }, categories: { findById: vi.fn(async () => category) }, sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => overrides.conflict === undefined ? [session] : [session, conflictSession]) }, participants: { countByEventId: vi.fn(async () => 1), findByEventId: vi.fn(async () => [participant]) }, winners: { findByEventId: vi.fn(async () => []) }, authoringService: { load, save }, } as unknown as DrawSetupProductionServices
+  return { open: vi.fn(async () => undefined), checkStorage: vi.fn(async () => ({ ok: true as const })), checkCrypto: vi.fn(async () => ({ ok: true as const })), preferences: { get: vi.fn(async () => event.id) }, events: { findById: vi.fn(async () => event) }, configurations: { findById: vi.fn(async () => configuration) }, categories: { findById: vi.fn(async () => category) }, sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => activeConflict === undefined ? [session] : [session, { ...session, id: 'live-conflict', mode: 'live' as const, status: activeConflict }]) }, participants: { countByEventId: vi.fn(async () => 1), findByEventId: vi.fn(async () => [participant]) }, winners: { findByEventId: vi.fn(async () => []) }, authoringService: { load, save }, } as unknown as DrawSetupProductionServices
 }
 
 function renderPage(value: DrawSetupProductionServices) { return render(<MemoryRouter><DrawSetupPage services={value} /></MemoryRouter>) }
@@ -66,6 +66,32 @@ describe('Draw Setup persisted authoring', () => {
     expect(screen.getByText('Secure Web Crypto')).toBeInTheDocument()
     expect(screen.getAllByText('1', { selector: 'dd' })).toHaveLength(2)
     expect(screen.getAllByText('Ready', { selector: 'dd' })).toHaveLength(2)
+  })
+
+  it('marks a dirty form as needing save without evaluating draft state', async () => {
+    const user = userEvent.setup()
+    renderPage(services())
+    await screen.findByRole('radio', { name: 'Practice' })
+    await user.clear(screen.getByLabelText('Winner count'))
+    await user.type(screen.getByLabelText('Winner count'), '2')
+    expect(screen.getByText('Save changes to evaluate', { selector: 'dd' })).toBeInTheDocument()
+    expect(screen.queryByText('Checking…')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open Practice start gate' })).toBeDisabled()
+  })
+
+  it('refreshes readiness after one successful save and reflects a conflict', async () => {
+    const user = userEvent.setup()
+    const value = services({ conflictAfterSave: 'pending-confirmation' })
+    renderPage(value)
+    await screen.findByRole('radio', { name: 'Practice' })
+    await user.clear(screen.getByLabelText('Winner count'))
+    await user.type(screen.getByLabelText('Winner count'), '2')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(await screen.findByText('Not evaluated', { selector: 'dd' })).toBeInTheDocument()
+    expect(screen.queryByText('Save changes to evaluate')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Draw handoff is blocked' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open Practice start gate' })).toBeDisabled()
+    expect((value as unknown as { checkStorage: { mock: { calls: unknown[][] } } }).checkStorage.mock.calls.length).toBeGreaterThanOrEqual(2)
   })
 
   it.each(['pending-confirmation', 'drawing'] as const)('%s conflict resolves every readiness row', async (conflict) => {

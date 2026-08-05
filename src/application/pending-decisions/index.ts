@@ -13,6 +13,7 @@ export type {
   RedrawPendingWinnersCommand,
 } from './command.types.ts'
 export { LOCAL_OPERATOR } from './command.types.ts'
+export { ConfirmationService, type ConfirmationApplicationResult } from './confirmation-service.ts'
 export type { PendingDecisionError, PendingDecisionErrorCode, PendingDecisionErrorKind } from './validation.ts'
 export {
   areEquivalentDecisionPayloads,

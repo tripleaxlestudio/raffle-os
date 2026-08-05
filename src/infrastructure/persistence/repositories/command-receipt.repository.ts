@@ -81,7 +81,7 @@ export class DexieCommandReceiptRepository implements CommandReceiptRepository {
     this.#assertEquivalent(existing, payload)
     if (existing.status === 'committed') return outcomeFromRecord(existing)
     if (existing.drawSessionId !== outcome.drawSessionId || existing.operation !== outcome.operation) throw new RelationshipMismatchError('The receipt outcome does not match the command scope.')
-    const committedAt = outcome.status === 'committed' ? now() : undefined
+    const committedAt = outcome.status === 'committed' ? (outcome.committedAt ?? now()) : undefined
     const finalized: CommandReceiptRecord = {
       ...existing,
       affectedWinnerIds: outcome.affectedWinnerIds,

@@ -1,4 +1,5 @@
 import type { AuditRecord } from '../../domain/audit/audit.types.ts'
+import type { CommandId } from '../../domain/shared/identifiers.ts'
 import type {
   DrawSessionStatus,
   DrawStartSnapshots,
@@ -54,6 +55,25 @@ export interface RecordRedrawReplacementInput {
   readonly sessionTransition?: DrawSessionTransitionInput
 }
 
+export interface ConfirmPendingWinnersPersistenceInput {
+  readonly commandId: CommandId
+  readonly actor: 'local-operator'
+  readonly drawSessionId: DrawSessionId
+  readonly operation: 'confirm-pending-winners'
+  readonly targets: readonly { readonly winnerId: WinnerRecordId; readonly expectedStatus: 'pending' }[]
+  readonly canonicalPayload: unknown
+}
+
+export interface ConfirmPendingWinnersPersistenceOutcome {
+  readonly status: 'committed'
+  readonly commandId: CommandId
+  readonly operation: 'confirm-pending-winners'
+  readonly drawSessionId: DrawSessionId
+  readonly affectedWinnerIds: readonly WinnerRecordId[]
+  readonly sessionStatus?: DrawSessionStatus
+  readonly committedAt?: IsoTimestamp
+}
+
 export interface DrawPersistenceUnitOfWork {
   persistStartedDraw(input: PersistStartedDrawInput): Promise<void>
   transitionWinnersWithAudit(
@@ -62,4 +82,7 @@ export interface DrawPersistenceUnitOfWork {
   recordRedrawReplacement(
     input: RecordRedrawReplacementInput,
   ): Promise<void>
+  confirmPendingWinners?(
+    input: ConfirmPendingWinnersPersistenceInput,
+  ): Promise<ConfirmPendingWinnersPersistenceOutcome>
 }

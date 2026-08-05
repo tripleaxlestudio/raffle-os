@@ -1,11 +1,21 @@
 import type {
   DrawPersistenceUnitOfWork,
+  ConfirmPendingWinnersPersistenceInput,
+  ConfirmPendingWinnersPersistenceOutcome,
   PersistStartedDrawInput,
   RecordRedrawReplacementInput,
   TransitionWinnersWithAuditInput,
 } from '../../../application/persistence/draw-persistence-unit-of-work.interface.ts'
+import type { AuditRecord } from '../../../domain/audit/audit.types.ts'
+import type { ConfirmPendingWinnersCommand, CanonicalDecisionPayload } from '../../../application/pending-decisions/command.types.ts'
+import { LOCAL_OPERATOR } from '../../../application/pending-decisions/command.types.ts'
+import { validateCommandTargets } from '../../../application/pending-decisions/validation.ts'
+import { resolveWinnerStatus } from '../../../domain/pending-decisions/lifecycle.ts'
+import { isoTimestampFromDate } from '../../../domain/shared/timestamps.ts'
+import { createAuditRecordId } from '../../../domain/shared/identifiers.ts'
 import {
   canTransitionWinnerStatus,
+  transitionWinnerStatus,
   validateWinnerRecord,
 } from '../../../domain/winners/winner.invariants.ts'
 import type { RaffleOSDatabase } from '../db.ts'
@@ -15,6 +25,7 @@ import {
   RecordNotFoundError,
   RelationshipMismatchError,
   ValidationError,
+  TransactionError,
 } from '../errors/persistence-errors.ts'
 import {
   appendAuditInTransaction,
@@ -34,6 +45,7 @@ import {
   normalizeRepositoryError,
   requireValid,
 } from '../repositories/repository-helpers.ts'
+import { DexieCommandReceiptRepository } from '../repositories/command-receipt.repository.ts'
 
 function requireAuditRecords(
   count: number,
@@ -74,9 +86,11 @@ export class DexieDrawPersistenceUnitOfWork
   implements DrawPersistenceUnitOfWork
 {
   private readonly database: RaffleOSDatabase
+  private readonly receipts: DexieCommandReceiptRepository
 
   constructor(database: RaffleOSDatabase) {
     this.database = database
+    this.receipts = new DexieCommandReceiptRepository(database)
   }
 
   async persistStartedDraw(
@@ -418,6 +432,118 @@ export class DexieDrawPersistenceUnitOfWork
         error,
         'Recording the audited redraw replacement',
       )
+    }
+  }
+
+  async confirmPendingWinners(
+    input: ConfirmPendingWinnersPersistenceInput,
+  ): Promise<ConfirmPendingWinnersPersistenceOutcome> {
+    try {
+      const command: ConfirmPendingWinnersCommand = { ...input, mode: 'live' }
+      const payload = input.canonicalPayload as CanonicalDecisionPayload
+      return await this.database.transaction(
+        'rw',
+        [
+          this.database.events,
+          this.database.participants,
+          this.database.draw_sessions,
+          this.database.winner_records,
+          this.database.audit_records,
+          this.database.command_receipts,
+        ],
+        async (transaction) => {
+          const receipt = await this.receipts.create(
+            command.commandId,
+            LOCAL_OPERATOR,
+            payload,
+            this.receipts.inTransaction(transaction),
+          )
+          if (!('canonicalPayload' in receipt)) return {
+            affectedWinnerIds: receipt.affectedWinnerIds,
+            commandId: receipt.commandId,
+            committedAt: receipt.committedAt,
+            drawSessionId: receipt.drawSessionId,
+            operation: 'confirm-pending-winners' as const,
+            sessionStatus: receipt.sessionStatus,
+            status: 'committed' as const,
+          }
+          if (receipt.status === 'committed') {
+            return {
+              affectedWinnerIds: receipt.affectedWinnerIds,
+              commandId: receipt.commandId,
+              committedAt: receipt.committedAt,
+              drawSessionId: receipt.drawSessionId,
+              operation: 'confirm-pending-winners' as const,
+              sessionStatus: receipt.sessionStatus,
+              status: 'committed',
+            }
+          }
+
+          const atResult = isoTimestampFromDate(new Date())
+          if (!atResult.ok) throw new TransactionError('Persistence could not generate a canonical commit timestamp.')
+          const at = atResult.value
+          const session = await this.database.draw_sessions.get(command.drawSessionId)
+          const winners = await this.database.winner_records.where('drawSessionId').equals(command.drawSessionId).toArray()
+          const targetResult = validateCommandTargets(command, session ?? null, winners)
+          if (!targetResult.ok) throw new ValidationError(targetResult.error.message)
+          if (session === undefined || session.status !== 'pending-confirmation') {
+            throw new ImmutableRecordError('Confirmation requires a pending-confirmation Live DrawSession.')
+          }
+
+          const targetIds = new Set(command.targets.map((target) => target.winnerId))
+          const transitions = targetResult.value.map((winner) => ({ winnerId: winner.id, from: 'pending' as const, to: 'confirmed' as const, at }))
+          const nextWinners = winners.map((winner) => targetIds.has(winner.id)
+            ? requireValid(transitionWinnerStatus(winner, 'confirmed', at))
+            : winner)
+          const nextSessionStatus = resolveWinnerStatus(nextWinners.map((winner) => winner.status))
+          const audits: AuditRecord[] = targetResult.value.map((winner) => ({
+            action: 'winner-confirmed',
+            actor: { type: 'operator', name: LOCAL_OPERATOR },
+            detail: { afterStatus: 'confirmed', beforeStatus: 'pending', commandId: command.commandId, drawSessionId: command.drawSessionId, ticketNumber: winner.ticketNumber, winnerId: winner.id },
+            eventId: session.eventId,
+            id: createAuditRecordId(),
+            timestamp: at,
+          }))
+          if (nextSessionStatus === 'completed') {
+            audits.push({
+              action: 'draw-session-completed',
+              actor: { type: 'operator', name: LOCAL_OPERATOR },
+              detail: { commandId: command.commandId, drawSessionId: command.drawSessionId },
+              eventId: session.eventId,
+              id: createAuditRecordId(),
+              timestamp: at,
+            })
+          }
+
+          for (const transition of transitions) {
+            await transitionWinnerInTransaction(this.database, transition.winnerId, transition.from, transition.to, transition.at)
+          }
+          for (const audit of audits) await appendAuditInTransaction(this.database, audit)
+          if (nextSessionStatus === 'completed') {
+            await transitionDrawSessionInTransaction(this.database, session.id, 'pending-confirmation', 'completed', at)
+          }
+          const outcome = await this.receipts.finalize(command.commandId, payload, {
+            affectedWinnerIds: targetResult.value.map((winner) => winner.id),
+            commandId: command.commandId,
+            committedAt: at,
+            drawSessionId: command.drawSessionId,
+            operation: command.operation,
+            sessionStatus: nextSessionStatus,
+            status: 'committed',
+          }, this.receipts.inTransaction(transaction))
+          return {
+            affectedWinnerIds: outcome.affectedWinnerIds,
+            commandId: outcome.commandId,
+            committedAt: outcome.committedAt,
+            drawSessionId: outcome.drawSessionId,
+            operation: 'confirm-pending-winners' as const,
+            sessionStatus: outcome.sessionStatus,
+            status: 'committed' as const,
+          }
+        },
+      )
+    } catch (error: unknown) {
+      throw normalizeRepositoryError(error, 'Confirming pending WinnerRecords')
     }
   }
 }

@@ -36,6 +36,7 @@ export type CommandReceiptReconciliation =
   | { readonly kind: 'conflict'; readonly receipt: CommandReceiptRecord }
 
 export interface CommandReceiptRepository {
+  inTransaction(transaction: Transaction): CommandReceiptTransaction
   read(commandId: CommandId, transaction?: CommandReceiptTransaction): Promise<CommandReceiptRecord | undefined>
   findBySession(drawSessionId: DrawSessionId, transaction?: CommandReceiptTransaction): Promise<readonly CommandReceiptRecord[]>
   create(commandId: CommandId, actor: PendingDecisionActor, payload: CanonicalDecisionPayload, transaction?: CommandReceiptTransaction): Promise<CommandReceiptRecord | PendingDecisionOutcome>

@@ -153,4 +153,19 @@ export class RaffleOSDatabase extends Dexie {
       throw normalizeDatabaseOpenError(error)
     }
   }
+
+  async checkReadiness(): Promise<{ readonly ok: true } | { readonly ok: false; readonly code: string; readonly reason: string }> {
+    try {
+      await this.openSupported()
+      const required = ['events', 'participants', 'prize_categories', 'draw_configurations', 'display_configurations', 'draw_sessions', 'winner_records', 'redraw_records', 'audit_records', 'preferences', 'presentation_checkpoints'] as const
+      for (const name of required) {
+        if (!this.tables.some((table) => table.name === name)) return { ok: false, code: 'unsupported-schema', reason: 'The local database schema is missing a required store.' }
+        await this.table(name).count()
+      }
+      return { ok: true }
+    } catch (error: unknown) {
+      const normalized = normalizeDatabaseOpenError(error)
+      return { ok: false, code: normalized.code, reason: 'Local storage could not be opened or read safely.' }
+    }
+  }
 }

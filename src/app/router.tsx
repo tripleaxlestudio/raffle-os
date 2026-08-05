@@ -9,6 +9,7 @@ import { OperatorLayout } from './layouts/OperatorLayout.tsx'
 import { AudienceDisplayPage } from '../pages/display/AudienceDisplayPage.tsx'
 import { DashboardPage } from '../pages/operator/DashboardPage.tsx'
 import { DrawSetupRoute } from '../pages/operator/DrawSetupRoute.tsx'
+import { DrawRunPage } from '../pages/operator/DrawRunPage.tsx'
 import { HistoryPage } from '../pages/operator/HistoryPage.tsx'
 import { LiveDrawPage } from '../pages/operator/LiveDrawPage.tsx'
 import { ParticipantsPage } from '../pages/operator/ParticipantsPage.tsx'
@@ -37,6 +38,10 @@ const operatorRoutes = {
     {
       path: 'draw/setup',
       element: <DrawSetupRoute />,
+    },
+    {
+      path: 'draw/run/:drawSessionId',
+      element: <DrawRunPage />,
     },
     {
       path: 'draw/live',

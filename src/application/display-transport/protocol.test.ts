@@ -35,6 +35,7 @@ describe('display protocol envelope', () => {
   it('rejects malformed envelopes and unsupported protocol versions', () => {
     expect(parseEnvelope({})).toMatchObject({ ok: false, error: { kind: 'invalid-envelope' } });
     expect(parseEnvelope({ ...envelope(), protocolVersion: 999 })).toMatchObject({ ok: false, error: { kind: 'unsupported-version', received: 999 } });
+    expect(parseEnvelope({ ...envelope(), message: { type: 'display-state', stage: 'reveal', name: 'private' } })).toMatchObject({ ok: false, error: { kind: 'invalid-envelope', path: 'message' } });
   });
 
   it('rejects invalid message stage and session/scope mismatches', () => {

@@ -1,0 +1,102 @@
+import { describe, expect, it } from 'vitest'
+import {
+  parsePublicDisplaySnapshot,
+  projectPublicDisplaySnapshot,
+  publicSnapshotToProtocolState,
+  serializePublicDisplaySnapshot,
+  type PresentationProjectionSource,
+} from './public-projection.ts'
+import { parseEnvelope, PROTOCOL_VERSION } from './protocol.ts'
+
+const session = '00000000-0000-4000-8000-000000000001' as never
+const timestamp = '2026-08-05T00:00:00.000Z' as never
+
+const source = (overrides: Record<string, unknown> = {}): PresentationProjectionSource => ({
+  drawSessionId: session,
+  stage: 'standby',
+  blackoutRequested: false,
+  mode: 'live',
+  ...overrides,
+} as PresentationProjectionSource)
+
+const result = {
+  drawSessionId: session,
+  winners: [
+    { sequence: 1, ticketNumber: '00042', winnerId: 'internal-winner-1', name: 'Private Name', isCheckedIn: true, group: 'VIP', notes: 'private', candidate: true, eligibility: 'internal', filter: 'internal' },
+    { sequence: 2, ticketNumber: '42', winnerId: 'internal-winner-2' },
+  ],
+}
+
+describe('public display projection privacy boundary', () => {
+  it('projects standby using only the public whitelist', () => {
+    const projection = projectPublicDisplaySnapshot(source({ participant: { name: 'Private Name' }, operatorControls: { start: true }, result }))
+    expect(projection).toEqual({ drawSessionId: session, stage: 'standby', blackoutRequested: false, mode: 'live' })
+    expect(Object.keys(projection).sort()).toEqual(['blackoutRequested', 'drawSessionId', 'mode', 'stage'])
+  })
+
+  it('projects minimum countdown metadata and orthogonal blackout state', () => {
+    const projection = projectPublicDisplaySnapshot(source({ stage: 'countdown', stageStartedAt: timestamp, blackoutRequested: true, result }))
+    expect(projection).toEqual({ drawSessionId: session, stage: 'countdown', stageStartedAt: timestamp, blackoutRequested: true, mode: 'live' })
+  })
+
+  it('projects rolling without candidate or participant data', () => {
+    const projection = projectPublicDisplaySnapshot(source({ stage: 'rolling', stageStartedAt: timestamp, result }))
+    expect(projection).not.toHaveProperty('ticketNumbers')
+    expect(JSON.stringify(projection)).not.toMatch(/winnerId|name|isCheckedIn|group|notes|candidate|eligibility|filter|operatorControls/)
+  })
+
+  it('projects reveal and safe pending handoff with exact public tickets only', () => {
+    const reveal = projectPublicDisplaySnapshot(source({ stage: 'reveal', stageStartedAt: timestamp, result }))
+    const pending = projectPublicDisplaySnapshot(source({ stage: 'pending-handoff', stageStartedAt: timestamp, result }))
+    expect(reveal.ticketNumbers).toEqual(['00042', '42'])
+    expect(pending.stage).toBe('pending-handoff')
+    expect(pending).not.toHaveProperty('confirmed')
+    expect(JSON.stringify(reveal)).not.toMatch(/winnerId|name|isCheckedIn|group|notes|candidate|eligibility|filter/)
+  })
+
+  it('maps ready to standby and keeps Practice/Live as the only mode distinction', () => {
+    expect(projectPublicDisplaySnapshot(source({ stage: 'ready', mode: 'practice' }))).toEqual({ drawSessionId: session, stage: 'standby', blackoutRequested: false, mode: 'practice' })
+  })
+
+  it('rejects empty, malformed, and non-string tickets through the typed boundary', () => {
+    expect(() => projectPublicDisplaySnapshot(source({ stage: 'reveal', stageStartedAt: timestamp, result: { ...result, winners: [{ sequence: 1, ticketNumber: '' }] } }))).toThrowError(expect.objectContaining({ code: 'invalid-ticket' }))
+    expect(() => projectPublicDisplaySnapshot(source({ stage: 'reveal', stageStartedAt: timestamp, result: { ...result, winners: [{ sequence: 1, ticketNumber: 42 }] } }))).toThrowError(expect.objectContaining({ code: 'invalid-ticket' }))
+    expect(() => projectPublicDisplaySnapshot(source({ stage: 'reveal', stageStartedAt: 'not-a-date', result }))).toThrowError(expect.objectContaining({ code: 'invalid-source' }))
+  })
+
+  it('rejects cross-session results and parsed snapshots', () => {
+    const otherSession = '00000000-0000-4000-8000-000000000002'
+    expect(() => projectPublicDisplaySnapshot(source({ stage: 'reveal', stageStartedAt: timestamp, result: { ...result, drawSessionId: otherSession } }))).toThrowError(expect.objectContaining({ code: 'session-mismatch', expectedSession: session, receivedSession: otherSession }))
+    const projection = projectPublicDisplaySnapshot(source())
+    expect(() => parsePublicDisplaySnapshot(projection, otherSession as never)).toThrowError(expect.objectContaining({ code: 'session-mismatch' }))
+  })
+
+  it('freezes and detaches the result from later source mutation', () => {
+    const mutable = { ...result, winners: result.winners.map((winner) => ({ ...winner })) }
+    const projection = projectPublicDisplaySnapshot(source({ stage: 'reveal', stageStartedAt: timestamp, result: mutable }))
+    mutable.winners[0]!.ticketNumber = 'changed'
+    expect(Object.isFrozen(projection)).toBe(true)
+    expect(Object.isFrozen(projection.ticketNumbers)).toBe(true)
+    expect(projection.ticketNumbers).toEqual(['00042', '42'])
+  })
+
+  it('round-trips exact ticket strings and produces a protocol-valid public state', () => {
+    const projection = projectPublicDisplaySnapshot(source({ stage: 'reveal', stageStartedAt: timestamp, result }))
+    const roundTrip = parsePublicDisplaySnapshot(JSON.parse(serializePublicDisplaySnapshot(projection)), session)
+    expect(roundTrip.ticketNumbers).toEqual(['00042', '42'])
+    expect(roundTrip.ticketNumbers?.[0]).not.toBe(roundTrip.ticketNumbers?.[1])
+    const protocolResult = parseEnvelope({
+      protocolVersion: PROTOCOL_VERSION,
+      messageId: 'projection-message',
+      sender: { kind: 'operator', id: 'operator-1' },
+      scope: { eventId: 'event-1', displayId: 'display-1' },
+      drawSessionId: session,
+      epoch: 1,
+      sequence: 1,
+      emittedAt: timestamp,
+      message: publicSnapshotToProtocolState(projection),
+    })
+    expect(protocolResult.ok).toBe(true)
+    expect(() => parsePublicDisplaySnapshot({ ...projection, name: 'private' })).toThrowError(expect.objectContaining({ code: 'invalid-public-snapshot' }))
+  })
+})

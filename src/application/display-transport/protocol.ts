@@ -20,6 +20,7 @@ export type PublicDisplayStage =
   | 'countdown'
   | 'rolling'
   | 'reveal'
+  | 'pending-handoff'
   | 'confirmed'
   | 'blackout'
   | 'disconnected-safe';
@@ -32,6 +33,11 @@ export type PublicMessage =
   | {
       readonly type: 'display-state';
       readonly stage: PublicDisplayStage;
+      readonly drawSessionId?: string;
+      readonly stageStartedAt?: string;
+      readonly blackoutRequested?: boolean;
+      readonly mode?: 'practice' | 'live';
+      readonly ticketNumbers?: readonly string[];
     }
   | {
       readonly type: 'display-restore-request';
@@ -83,6 +89,7 @@ const isStage = (value: unknown): value is PublicDisplayStage =>
   value === 'countdown' ||
   value === 'rolling' ||
   value === 'reveal' ||
+  value === 'pending-handoff' ||
   value === 'confirmed' ||
   value === 'blackout' ||
   value === 'disconnected-safe';
@@ -92,8 +99,12 @@ const invalid = (path: string, message: string): ParseEnvelopeResult => ({
   error: { kind: 'invalid-envelope', path, message },
 });
 
+const hasOnlyKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean =>
+  Object.keys(value).every((key) => keys.includes(key));
+
 export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
   if (!isRecord(value)) return invalid('$', 'Envelope must be an object.');
+  if (!hasOnlyKeys(value, ['protocolVersion', 'messageId', 'sender', 'scope', 'drawSessionId', 'epoch', 'sequence', 'emittedAt', 'message'])) return invalid('$', 'Envelope contains unsupported fields.');
   if (value.protocolVersion === undefined) return invalid('protocolVersion', 'Protocol version is required.');
   if (value.protocolVersion !== PROTOCOL_VERSION) {
     return { ok: false, error: { kind: 'unsupported-version', received: value.protocolVersion } };
@@ -119,8 +130,11 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
   const stage = message.stage;
   const validCapability = isCapability(capability) ? capability : undefined;
   const validStage = isStage(stage) ? stage : undefined;
-  if (messageType === 'display-ready' && validCapability === undefined) return invalid('message.capability', 'Capability is invalid.');
+  if (messageType === 'display-ready' && (!hasOnlyKeys(message, ['type', 'capability']) || validCapability === undefined)) return invalid('message', 'Display-ready message contains unsupported or invalid fields.');
   if (messageType === 'display-state' && validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
+  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'blackoutRequested', 'mode', 'ticketNumbers'])) return invalid('message', 'Display-state message contains unsupported fields.');
+  if (messageType === 'display-restore-request' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Restore request contains unsupported fields.');
+  if (messageType === 'display-close' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Close message contains unsupported fields.');
   if (messageType !== 'display-ready' && messageType !== 'display-state' && messageType !== 'display-restore-request' && messageType !== 'display-close') {
     return invalid('message.type', 'Message type is unsupported.');
   }
@@ -131,7 +145,21 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
     parsedMessage = { type: messageType, capability: { ...validCapability } };
   } else if (messageType === 'display-state') {
     if (validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
-    parsedMessage = { type: messageType, stage: validStage };
+    const ticketNumbers = message.ticketNumbers;
+    if (message.drawSessionId !== undefined && !isNonEmptyString(message.drawSessionId)) return invalid('message.drawSessionId', 'Projection session ID must be a non-empty string.');
+    if (message.stageStartedAt !== undefined && (!isNonEmptyString(message.stageStartedAt) || Number.isNaN(Date.parse(message.stageStartedAt)))) return invalid('message.stageStartedAt', 'Stage timestamp must be valid.');
+    if (message.blackoutRequested !== undefined && typeof message.blackoutRequested !== 'boolean') return invalid('message.blackoutRequested', 'Blackout state must be boolean.');
+    if (message.mode !== undefined && message.mode !== 'practice' && message.mode !== 'live') return invalid('message.mode', 'Display mode is invalid.');
+    if (ticketNumbers !== undefined && (!Array.isArray(ticketNumbers) || ticketNumbers.some((ticket) => !isNonEmptyString(ticket)))) return invalid('message.ticketNumbers', 'Ticket numbers must be non-empty strings.');
+    parsedMessage = {
+      type: messageType,
+      stage: validStage,
+      ...(message.drawSessionId === undefined ? {} : { drawSessionId: message.drawSessionId }),
+      ...(message.stageStartedAt === undefined ? {} : { stageStartedAt: message.stageStartedAt }),
+      ...(message.blackoutRequested === undefined ? {} : { blackoutRequested: message.blackoutRequested }),
+      ...(message.mode === undefined ? {} : { mode: message.mode }),
+      ...(ticketNumbers === undefined ? {} : { ticketNumbers: [...ticketNumbers] }),
+    };
   } else {
     parsedMessage = { type: messageType };
   }

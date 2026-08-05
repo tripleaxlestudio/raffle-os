@@ -66,7 +66,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     })
   }
 
-  const publishSnapshot = (next: PublicDisplaySnapshot, force: boolean): PublisherResult => {
+  const publishSnapshot = (next: PublicDisplaySnapshot, force: boolean, restore = false): PublisherResult => {
     const serialized = serializePublicDisplaySnapshot(next)
     if (!force && serialized === serializedSnapshot) return { ok: true, snapshot: next, published: false }
     const nextSequence = sequence + 1
@@ -77,7 +77,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       epoch,
       sequence: nextSequence,
       emittedAt: options.clock.now(),
-      message: publicSnapshotToProtocolState(next),
+      message: { ...publicSnapshotToProtocolState(next), ...(restore ? { restore: true } : {}) },
     })
     const result = currentTransport.publish(envelope)
     if (!result.ok) {
@@ -102,13 +102,13 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   }
 
   const onEnvelope = (envelope: ProtocolEnvelope): void => {
-    if (closed || envelope.message.type !== 'display-ready') return
+    if (closed || (envelope.message.type !== 'display-ready' && envelope.message.type !== 'display-restore-request')) return
     if (envelope.sender.kind !== 'display' || envelope.sender.id.length === 0) return
     if (validateEnvelopeContext(envelope, options.scope) !== undefined) return
     if (options.expectedSession !== undefined && envelope.drawSessionId !== undefined && envelope.drawSessionId !== options.expectedSession) return
     if (snapshot === undefined) return
-    // A ready response is an explicit restore response and may repeat the same snapshot.
-    publishSnapshot(snapshot, true)
+    // Ready and restore are explicit, idempotent requests for the current public snapshot.
+    publishSnapshot(snapshot, true, true)
   }
 
   const subscribeTransport = (): void => { unsubscribe = currentTransport.subscribe(onEnvelope) }

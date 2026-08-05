@@ -7,6 +7,7 @@ export type Transport = {
   readonly capability: TransportCapability;
   publish(envelope: ProtocolEnvelope): TransportResult;
   subscribe(listener: TransportListener): () => void;
+  onClose?: (listener: () => void) => () => void;
   close(): void;
 };
 
@@ -18,6 +19,7 @@ const unavailable = (reason: string): TransportResult => ({ ok: false, error: { 
 const createChannelTransport = (channel: { postMessage(value: unknown): void; addEventListener(type: 'message', listener: (event: MessageEvent<unknown>) => void): void; removeEventListener(type: 'message', listener: (event: MessageEvent<unknown>) => void): void; close(): void }, capability: TransportCapability): Transport => {
   let closed = false;
   const subscriptions = new Set<TransportListener>();
+  const closeListeners = new Set<() => void>();
   const onMessage = (event: MessageEvent<unknown>): void => {
     const parsed = parseEnvelope(event.data);
     if (!parsed.ok) return;
@@ -48,7 +50,10 @@ const createChannelTransport = (channel: { postMessage(value: unknown): void; ad
       subscriptions.clear();
       channel.removeEventListener('message', onMessage);
       channel.close();
+      closeListeners.forEach((listener) => { try { listener() } catch { /* close observers are isolated */ } });
+      closeListeners.clear();
     },
+    onClose(listener) { if (closed) { listener(); return () => undefined } closeListeners.add(listener); return () => closeListeners.delete(listener) },
   };
 };
 
@@ -71,13 +76,17 @@ export const createInMemoryTransportPair = (channelName: string, capability: Tra
   const make = (): Transport => {
     let closed = false;
     const subscriptions = new Set<TransportListener>();
+    const closeListeners = new Set<() => void>();
     const lastBySender = new Map<string, SequenceTracker>();
     const forward = (value: unknown): void => {
       const parsed = parseEnvelope(value);
       if (!parsed.ok) return;
       const senderKey = `${parsed.envelope.sender.kind}:${parsed.envelope.sender.id}`;
       const orderingError = acceptSequence(lastBySender.get(senderKey), parsed.envelope);
-      if (orderingError) return;
+      if (orderingError !== undefined) {
+        if (orderingError.kind === 'sequence-out-of-order') return;
+        return;
+      }
       lastBySender.set(senderKey, parsed.envelope);
       subscriptions.forEach((listener) => {
         try {
@@ -100,7 +109,8 @@ export const createInMemoryTransportPair = (channelName: string, capability: Tra
         hub.listeners.add(forward);
         return () => { subscriptions.delete(listener); if (subscriptions.size === 0) hub.listeners.delete(forward); };
       },
-      close() { closed = true; subscriptions.clear(); },
+      onClose(listener) { if (closed) { listener(); return () => undefined } closeListeners.add(listener); return () => closeListeners.delete(listener) },
+      close() { if (closed) return; closed = true; subscriptions.clear(); hub.listeners.delete(forward); closeListeners.forEach((listener) => { try { listener() } catch { /* close observers are isolated */ } }); closeListeners.clear(); },
     };
   };
   return [make(), make()];

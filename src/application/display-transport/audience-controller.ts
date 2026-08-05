@@ -1,13 +1,5 @@
-import {
-  parsePublicDisplaySnapshot,
-  type PublicDisplaySnapshot,
-} from './public-projection.ts'
-import {
-  createProtocolEnvelope,
-  validateEnvelopeContext,
-  type ProtocolEnvelope,
-  type ProtocolScope,
-} from './protocol.ts'
+import { acceptSequence, createProtocolEnvelope, validateEnvelopeContext, type ProtocolEnvelope, type ProtocolScope, type SequenceTracker } from './protocol.ts'
+import { parsePublicDisplaySnapshot, type PublicDisplaySnapshot } from './public-projection.ts'
 import type { Transport } from './transport.ts'
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
 
@@ -24,88 +16,121 @@ export type AudienceController = {
 
 type AudienceControllerOptions = {
   readonly transport: Transport
+  readonly transportFactory?: () => Transport
   readonly scope: ProtocolScope
   readonly expectedSession?: DrawSessionId
   readonly sourceId?: string
   readonly now?: () => string
+  readonly reconnectDelayMs?: number
+  readonly scheduleReconnect?: (callback: () => void, delayMs: number) => unknown
+  readonly cancelReconnect?: (handle: unknown) => void
 }
 
-export function createAudienceController({
-  transport,
-  scope,
-  expectedSession,
-  sourceId,
-  now,
-}: AudienceControllerOptions): AudienceController {
-  let state: AudienceControllerState =
-    transport.capability.transport === 'available'
-      ? { kind: 'connecting' }
-      : { kind: 'disconnected-safe' }
-  let acceptedSession = expectedSession
+export function createAudienceController(options: AudienceControllerOptions): AudienceController {
+  let currentTransport = options.transport
+  let state: AudienceControllerState = currentTransport.capability.transport === 'available' ? { kind: 'connecting' } : { kind: 'disconnected-safe' }
+  let acceptedSession = options.expectedSession
+  let acceptedOrdering: SequenceTracker | undefined
+  let acceptedOperator: string | undefined
+  const acceptedMessageIds = new Set<string>()
+  let restoreRequested = false
+  let reconnectHandle: unknown = null
   let closed = false
+  let unsubscribe: () => void = () => undefined
+  let unsubscribeClose: () => void = () => undefined
   const listeners = new Set<() => void>()
+  const notify = () => listeners.forEach((listener) => { try { listener() } catch { /* one display cannot break another */ } })
+  const now = () => options.now?.() ?? new Date().toISOString()
+  const schedule = options.scheduleReconnect ?? ((callback, delay) => globalThis.setTimeout(callback, delay))
+  const cancel = options.cancelReconnect ?? ((handle) => globalThis.clearTimeout(handle as number))
 
-  const notify = () => listeners.forEach((listener) => listener())
+  const send = (message: ProtocolEnvelope['message'], sequence: number): void => {
+    if (closed || currentTransport.capability.transport !== 'available') return
+    currentTransport.publish(createProtocolEnvelope({
+      sender: { kind: 'display', id: options.sourceId ?? options.scope.displayId },
+      scope: options.scope,
+      ...(acceptedSession === undefined ? {} : { drawSessionId: acceptedSession }),
+      epoch: 1,
+      sequence,
+      emittedAt: now(),
+      message,
+    }))
+  }
+  const sendReady = () => send({ type: 'display-ready', capability: { broadcastChannel: currentTransport.capability.broadcastChannel, fullscreen: currentTransport.capability.fullscreen } }, 0)
+  const requestRestore = () => {
+    if (restoreRequested) return
+    restoreRequested = true
+    send({ type: 'display-restore-request', ...(acceptedOrdering === undefined ? {} : { requestedEpoch: acceptedOrdering.epoch, requestedSequence: acceptedOrdering.sequence }) }, 1)
+  }
 
-  const onEnvelope = (envelope: ProtocolEnvelope) => {
-    if (closed || envelope.message.type !== 'display-state') return
-
-    const contextError = validateEnvelopeContext(
-      envelope,
-      scope,
-      acceptedSession,
-    )
-    if (contextError) return
-
+  const onEnvelope = (envelope: ProtocolEnvelope): void => {
+    if (closed || envelope.message.type !== 'display-state' || envelope.sender.kind !== 'operator') return
+    if (validateEnvelopeContext(envelope, options.scope) !== undefined) return
+    const sender = `${envelope.sender.kind}:${envelope.sender.id}`
+    if (acceptedOperator !== undefined && sender !== acceptedOperator) return
+    if (acceptedSession !== undefined && envelope.drawSessionId !== acceptedSession) return
+    if (acceptedMessageIds.has(envelope.messageId)) return
+    const message = envelope.message
+    const isRestore = message.restore === true
+    const orderingError = isRestore ? undefined : acceptSequence(acceptedOrdering, envelope)
+    if (orderingError !== undefined) {
+      if (orderingError.kind === 'sequence-gap' || orderingError.kind === 'sequence-out-of-order') requestRestore()
+      return
+    }
     try {
-      const message = envelope.message
-      const snapshot = parsePublicDisplaySnapshot(
-        {
-          drawSessionId: message.drawSessionId,
-          stage: message.stage,
-          ...(message.stageStartedAt === undefined
-            ? {}
-            : { stageStartedAt: message.stageStartedAt }),
-          blackoutRequested: message.blackoutRequested ?? false,
-          ...(message.mode === undefined ? {} : { mode: message.mode }),
-          ...(message.ticketNumbers === undefined
-            ? {}
-            : { ticketNumbers: message.ticketNumbers }),
-        },
-        acceptedSession,
-      )
+      const snapshot = parsePublicDisplaySnapshot({
+        drawSessionId: message.drawSessionId,
+        stage: message.stage,
+        ...(message.stageStartedAt === undefined ? {} : { stageStartedAt: message.stageStartedAt }),
+        blackoutRequested: message.blackoutRequested ?? false,
+        ...(message.mode === undefined ? {} : { mode: message.mode }),
+        ...(message.ticketNumbers === undefined ? {} : { ticketNumbers: message.ticketNumbers }),
+      }, acceptedSession)
+      acceptedMessageIds.add(envelope.messageId)
+      acceptedOrdering = { epoch: envelope.epoch, sequence: envelope.sequence }
+      acceptedOperator = sender
       acceptedSession ??= snapshot.drawSessionId
+      restoreRequested = false
       state = { kind: 'snapshot', snapshot }
       notify()
     } catch {
-      // Invalid public messages never replace the last accepted presentation.
+      // Invalid, private, cross-session, or otherwise malformed snapshots never replace safe state.
     }
   }
 
-  const unsubscribe = transport.subscribe(onEnvelope)
-  if (transport.capability.transport === 'available') {
-    transport.publish(createProtocolEnvelope({
-      sender: { kind: 'display', id: sourceId ?? scope.displayId },
-      scope,
-      ...(expectedSession === undefined ? {} : { drawSessionId: expectedSession }),
-      epoch: 1,
-      sequence: 0,
-      emittedAt: now?.() ?? new Date().toISOString(),
-      message: { type: 'display-ready', capability: { broadcastChannel: transport.capability.broadcastChannel, fullscreen: transport.capability.fullscreen } },
-    }))
+  const enterDisconnected = () => {
+    if (closed) return
+    state = { kind: 'disconnected-safe' }
+    notify()
+    if (options.transportFactory !== undefined && reconnectHandle === null) {
+      reconnectHandle = schedule(() => {
+        reconnectHandle = null
+        if (closed) return
+        currentTransport = options.transportFactory?.() ?? currentTransport
+        attach()
+        if (currentTransport.capability.transport === 'available') sendReady()
+      }, options.reconnectDelayMs ?? 100)
+    }
   }
+  const attach = () => {
+    unsubscribe()
+    unsubscribeClose()
+    unsubscribe = currentTransport.subscribe(onEnvelope)
+    unsubscribeClose = currentTransport.onClose?.(enterDisconnected) ?? (() => undefined)
+  }
+  attach()
+  if (currentTransport.capability.transport === 'available') sendReady()
 
   return {
     getState: () => state,
-    subscribe(listener) {
-      listeners.add(listener)
-      return () => listeners.delete(listener)
-    },
+    subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
     close() {
       if (closed) return
       closed = true
+      if (reconnectHandle !== null) { cancel(reconnectHandle); reconnectHandle = null }
       unsubscribe()
-      transport.close()
+      unsubscribeClose()
+      currentTransport.close()
       state = { kind: 'disconnected-safe' }
       notify()
       listeners.clear()

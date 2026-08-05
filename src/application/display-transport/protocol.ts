@@ -38,9 +38,12 @@ export type PublicMessage =
       readonly blackoutRequested?: boolean;
       readonly mode?: 'practice' | 'live';
       readonly ticketNumbers?: readonly string[];
+      readonly restore?: boolean;
     }
   | {
       readonly type: 'display-restore-request';
+      readonly requestedEpoch?: number;
+      readonly requestedSequence?: number;
     }
   | {
       readonly type: 'display-close';
@@ -92,6 +95,9 @@ export type ProtocolError =
   | { readonly kind: 'sequence-duplicate'; readonly epoch: number; readonly sequence: number }
   | { readonly kind: 'sequence-stale'; readonly epoch: number; readonly sequence: number }
   | { readonly kind: 'sequence-out-of-order'; readonly expected: number; readonly received: number }
+  | { readonly kind: 'sequence-gap'; readonly expected: number; readonly received: number }
+  | { readonly kind: 'duplicate-message'; readonly messageId: string }
+  | { readonly kind: 'restore-rejected'; readonly reason: 'session-mismatch' | 'scope-mismatch' | 'invalid-request' }
   | { readonly kind: 'transport-unavailable'; readonly reason: string }
   | { readonly kind: 'transport-closed' };
 
@@ -154,8 +160,8 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
   const validStage = isStage(stage) ? stage : undefined;
   if (messageType === 'display-ready' && (!hasOnlyKeys(message, ['type', 'capability']) || validCapability === undefined)) return invalid('message', 'Display-ready message contains unsupported or invalid fields.');
   if (messageType === 'display-state' && validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
-  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'blackoutRequested', 'mode', 'ticketNumbers'])) return invalid('message', 'Display-state message contains unsupported fields.');
-  if (messageType === 'display-restore-request' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Restore request contains unsupported fields.');
+  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'blackoutRequested', 'mode', 'ticketNumbers', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
+  if (messageType === 'display-restore-request' && !hasOnlyKeys(message, ['type', 'requestedEpoch', 'requestedSequence'])) return invalid('message', 'Restore request contains unsupported fields.');
   if (messageType === 'display-close' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Close message contains unsupported fields.');
   if (messageType !== 'display-ready' && messageType !== 'display-state' && messageType !== 'display-restore-request' && messageType !== 'display-close') {
     return invalid('message.type', 'Message type is unsupported.');
@@ -172,6 +178,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
     if (message.stageStartedAt !== undefined && (!isNonEmptyString(message.stageStartedAt) || Number.isNaN(Date.parse(message.stageStartedAt)))) return invalid('message.stageStartedAt', 'Stage timestamp must be valid.');
     if (message.blackoutRequested !== undefined && typeof message.blackoutRequested !== 'boolean') return invalid('message.blackoutRequested', 'Blackout state must be boolean.');
     if (message.mode !== undefined && message.mode !== 'practice' && message.mode !== 'live') return invalid('message.mode', 'Display mode is invalid.');
+    if (message.restore !== undefined && typeof message.restore !== 'boolean') return invalid('message.restore', 'Restore marker must be boolean.');
     if (ticketNumbers !== undefined && (!Array.isArray(ticketNumbers) || ticketNumbers.some((ticket) => !isNonEmptyString(ticket)))) return invalid('message.ticketNumbers', 'Ticket numbers must be non-empty strings.');
     parsedMessage = {
       type: messageType,
@@ -181,6 +188,15 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
       ...(message.blackoutRequested === undefined ? {} : { blackoutRequested: message.blackoutRequested }),
       ...(message.mode === undefined ? {} : { mode: message.mode }),
       ...(ticketNumbers === undefined ? {} : { ticketNumbers: [...ticketNumbers] }),
+      ...(message.restore === undefined ? {} : { restore: message.restore }),
+    };
+  } else if (messageType === 'display-restore-request') {
+    if (message.requestedEpoch !== undefined && (typeof message.requestedEpoch !== 'number' || !Number.isSafeInteger(message.requestedEpoch) || message.requestedEpoch < 0)) return invalid('message.requestedEpoch', 'Requested epoch is invalid.');
+    if (message.requestedSequence !== undefined && (typeof message.requestedSequence !== 'number' || !Number.isSafeInteger(message.requestedSequence) || message.requestedSequence < 0)) return invalid('message.requestedSequence', 'Requested sequence is invalid.');
+    parsedMessage = {
+      type: messageType,
+      ...(typeof message.requestedEpoch !== 'number' ? {} : { requestedEpoch: message.requestedEpoch }),
+      ...(typeof message.requestedSequence !== 'number' ? {} : { requestedSequence: message.requestedSequence }),
     };
   } else {
     parsedMessage = { type: messageType };

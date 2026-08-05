@@ -14,6 +14,8 @@ import { createBroadcastChannelTransport } from '../../../application/display-tr
 import type { ProtocolScope } from '../../../application/display-transport/protocol.ts'
 import { Button, Card } from '../../../shared/ui/index.ts'
 
+let publisherLifecycleEpoch = 0
+
 interface ProductionDrawPresentationProps {
   readonly result: PresentationResultProjection
   readonly mode: 'live' | 'practice'
@@ -36,7 +38,7 @@ export function ProductionDrawPresentation({ result, mode, eventName, eventId = 
   const [controllerState, setControllerState] = useState<PresentationControllerState>({ stage: 'result-locked', countdownLabel: null, error: null })
   const [blackoutRequested, setBlackoutRequested] = useState(initialPresentation?.blackoutRequested ?? false)
   const scope: ProtocolScope = useMemo(() => ({ eventId: 'production-event', displayId: 'public-display' }), [])
-  const publisher = useMemo(() => createOperatorPublisher({ transport: createBroadcastChannelTransport('raffle-os-display', scope), transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope), scope, senderId: `operator:${eventId}:${result.drawSessionId}`, expectedSession: result.drawSessionId, clock: { now: () => new Date().toISOString() as IsoTimestamp } }), [eventId, result.drawSessionId, scope])
+  const publisher = useMemo(() => createOperatorPublisher({ transport: createBroadcastChannelTransport('raffle-os-display', scope), transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope), scope, senderId: `operator:${eventId}:${result.drawSessionId}`, expectedSession: result.drawSessionId, epoch: ++publisherLifecycleEpoch, clock: { now: () => new Date().toISOString() as IsoTimestamp } }), [eventId, result.drawSessionId, scope])
   const sourceForState = useCallback((next: PresentationControllerState) => next.stage === 'failed' || next.stage === 'result-locked'
     ? { drawSessionId: result.drawSessionId, stage: 'ready' as const, blackoutRequested: next.blackoutRequested ?? false, mode, result }
     : { drawSessionId: result.drawSessionId, stage: next.stage, stageStartedAt: next.stageStartedAt, blackoutRequested: next.blackoutRequested ?? false, mode, result }, [mode, result])

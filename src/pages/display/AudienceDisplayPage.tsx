@@ -29,7 +29,8 @@ function safeStatusScenario(state: 'connecting' | 'disconnected-safe'): PublicAu
 
 export function AudienceDisplayPage({ transport: suppliedTransport, scope = productionScope, expectedSession }: AudienceDisplayPageProps) {
   const transport = useMemo(() => suppliedTransport ?? createBroadcastChannelTransport('raffle-os-display', scope), [scope, suppliedTransport])
-  const controller = useMemo(() => createAudienceController({ transport, scope, expectedSession }), [expectedSession, scope, transport])
+  const transportFactory = useMemo(() => suppliedTransport === undefined ? () => createBroadcastChannelTransport('raffle-os-display', scope) : undefined, [scope, suppliedTransport])
+  const controller = useMemo(() => createAudienceController({ transport, transportFactory, scope, expectedSession }), [expectedSession, scope, transport, transportFactory])
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   useEffect(() => () => controller.close(), [controller])
 

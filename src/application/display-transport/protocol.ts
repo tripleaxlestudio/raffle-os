@@ -58,6 +58,28 @@ export type ProtocolEnvelope = {
   readonly message: PublicMessage;
 };
 
+export type ProtocolEnvelopeFactory = (input: {
+  readonly sender: ProtocolSender;
+  readonly scope: ProtocolScope;
+  readonly drawSessionId?: string;
+  readonly epoch: number;
+  readonly sequence: number;
+  readonly emittedAt: string;
+  readonly message: PublicMessage;
+}) => ProtocolEnvelope;
+
+export const createProtocolEnvelope: ProtocolEnvelopeFactory = (input) => ({
+  protocolVersion: PROTOCOL_VERSION,
+  messageId: `${input.sender.kind}:${input.sender.id}:${input.epoch}:${input.sequence}`,
+  sender: { ...input.sender },
+  scope: { ...input.scope },
+  ...(input.drawSessionId === undefined ? {} : { drawSessionId: input.drawSessionId }),
+  epoch: input.epoch,
+  sequence: input.sequence,
+  emittedAt: input.emittedAt,
+  message: input.message,
+});
+
 export type ParseEnvelopeResult =
   | { readonly ok: true; readonly envelope: ProtocolEnvelope }
   | { readonly ok: false; readonly error: ProtocolError };

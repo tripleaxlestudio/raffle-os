@@ -3,6 +3,7 @@ import {
   type PublicDisplaySnapshot,
 } from './public-projection.ts'
 import {
+  createProtocolEnvelope,
   validateEnvelopeContext,
   type ProtocolEnvelope,
   type ProtocolScope,
@@ -25,12 +26,16 @@ type AudienceControllerOptions = {
   readonly transport: Transport
   readonly scope: ProtocolScope
   readonly expectedSession?: DrawSessionId
+  readonly sourceId?: string
+  readonly now?: () => string
 }
 
 export function createAudienceController({
   transport,
   scope,
   expectedSession,
+  sourceId,
+  now,
 }: AudienceControllerOptions): AudienceController {
   let state: AudienceControllerState =
     transport.capability.transport === 'available'
@@ -78,6 +83,17 @@ export function createAudienceController({
   }
 
   const unsubscribe = transport.subscribe(onEnvelope)
+  if (transport.capability.transport === 'available') {
+    transport.publish(createProtocolEnvelope({
+      sender: { kind: 'display', id: sourceId ?? scope.displayId },
+      scope,
+      ...(expectedSession === undefined ? {} : { drawSessionId: expectedSession }),
+      epoch: 1,
+      sequence: 0,
+      emittedAt: now?.() ?? new Date().toISOString(),
+      message: { type: 'display-ready', capability: { broadcastChannel: transport.capability.broadcastChannel, fullscreen: transport.capability.fullscreen } },
+    }))
+  }
 
   return {
     getState: () => state,

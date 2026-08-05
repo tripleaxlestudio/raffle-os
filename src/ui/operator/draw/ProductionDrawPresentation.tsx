@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { DrawSessionId } from '../../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../../domain/shared/timestamps.ts'
 import type { PresentationStage } from '../../../domain/workflow/presentation-workflow.types.ts'
@@ -9,12 +9,16 @@ import { PresentationController, type PresentationClock, type PresentationContro
 import { PRESENTATION_POLICY } from '../../../application/workflow/presentation-policy.ts'
 import { PresentationError, safePresentationMessage } from '../../../application/workflow/presentation-errors.ts'
 import type { PresentationResultProjection } from '../../../application/workflow/presentation-projection.ts'
+import { createOperatorPublisher } from '../../../application/display-transport/operator-publisher.ts'
+import { createBroadcastChannelTransport } from '../../../application/display-transport/transport.ts'
+import type { ProtocolScope } from '../../../application/display-transport/protocol.ts'
 import { Button, Card } from '../../../shared/ui/index.ts'
 
 interface ProductionDrawPresentationProps {
   readonly result: PresentationResultProjection
   readonly mode: 'live' | 'practice'
   readonly eventName: string
+  readonly eventId?: string
   readonly prizeCategory: string
   readonly prizeName: string
   readonly checkpoints?: { findByDrawSessionId(id: DrawSessionId): Promise<PresentationCheckpointRecord | null>; upsert(checkpoint: PresentationCheckpointRecord): Promise<void> }
@@ -28,9 +32,14 @@ function browserClock(): PresentationClock {
   return { now: () => new Date().toISOString() as IsoTimestamp, setTimeout: (callback, delayMs) => window.setTimeout(callback, delayMs), clearTimeout: (handle) => window.clearTimeout(handle as number), prefersReducedMotion: () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false }
 }
 
-export function ProductionDrawPresentation({ result, mode, eventName, prizeCategory, prizeName, checkpoints, practiceResult, onFailure, initialPresentation, onHandoff }: ProductionDrawPresentationProps) {
+export function ProductionDrawPresentation({ result, mode, eventName, eventId = 'production-event', prizeCategory, prizeName, checkpoints, practiceResult, onFailure, initialPresentation, onHandoff }: ProductionDrawPresentationProps) {
   const [controllerState, setControllerState] = useState<PresentationControllerState>({ stage: 'result-locked', countdownLabel: null, error: null })
   const [blackoutRequested, setBlackoutRequested] = useState(initialPresentation?.blackoutRequested ?? false)
+  const scope: ProtocolScope = useMemo(() => ({ eventId: 'production-event', displayId: 'public-display' }), [])
+  const publisher = useMemo(() => createOperatorPublisher({ transport: createBroadcastChannelTransport('raffle-os-display', scope), transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope), scope, senderId: `operator:${eventId}:${result.drawSessionId}`, expectedSession: result.drawSessionId, clock: { now: () => new Date().toISOString() as IsoTimestamp } }), [eventId, result.drawSessionId, scope])
+  const sourceForState = useCallback((next: PresentationControllerState) => next.stage === 'failed' || next.stage === 'result-locked'
+    ? { drawSessionId: result.drawSessionId, stage: 'ready' as const, blackoutRequested: next.blackoutRequested ?? false, mode, result }
+    : { drawSessionId: result.drawSessionId, stage: next.stage, stageStartedAt: next.stageStartedAt, blackoutRequested: next.blackoutRequested ?? false, mode, result }, [mode, result])
   const controller = useMemo(() => new PresentationController({
     result, mode, clock: browserClock(),
     persistStage: async (stage, stageStartedAt) => {
@@ -57,11 +66,16 @@ export function ProductionDrawPresentation({ result, mode, eventName, prizeCateg
       }
       setBlackoutRequested(requested)
     },
-    onState: setControllerState, policy: PRESENTATION_POLICY,
-  }), [mode, checkpoints, practiceResult, result])
+    onState: (next) => { setControllerState(next); if (next.blackoutRequested !== undefined) setBlackoutRequested(next.blackoutRequested); if (next.stage !== 'failed' && next.stage !== 'result-locked') void publisher.publish(sourceForState(next)) }, policy: PRESENTATION_POLICY,
+  }), [checkpoints, mode, practiceResult, publisher, result, sourceForState])
 
   useEffect(() => {
-    void (initialPresentation === undefined ? controller.start() : controller.resume(initialPresentation.stage, initialPresentation.stageStartedAt))
+    publisher.start({ drawSessionId: result.drawSessionId, stage: 'ready', blackoutRequested: initialPresentation?.blackoutRequested ?? false, mode, result })
+    return () => publisher.close()
+  }, [initialPresentation?.blackoutRequested, mode, publisher, result])
+
+  useEffect(() => {
+    void (initialPresentation === undefined ? controller.start() : controller.resume(initialPresentation.stage, initialPresentation.stageStartedAt, initialPresentation.blackoutRequested))
     return () => controller.dispose()
   }, [controller, initialPresentation])
   useEffect(() => { if (mode === 'live' && controllerState.stage === 'pending-handoff') onHandoff?.() }, [controllerState.stage, mode, onHandoff])

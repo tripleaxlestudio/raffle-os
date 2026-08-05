@@ -11,7 +11,7 @@ export interface PresentationClock {
   clearTimeout(handle: unknown): void
   prefersReducedMotion(): boolean
 }
-export interface PresentationControllerState { readonly stage: PresentationControllerStage; readonly countdownLabel: 3 | 2 | 1 | null; readonly error: PresentationError | null }
+export interface PresentationControllerState { readonly stage: PresentationControllerStage; readonly countdownLabel: 3 | 2 | 1 | null; readonly error: PresentationError | null; readonly stageStartedAt?: IsoTimestamp; readonly blackoutRequested?: boolean }
 export interface PresentationControllerOptions {
   readonly result: PresentationResultProjection
   readonly mode: 'live' | 'practice'
@@ -35,12 +35,12 @@ export class PresentationController {
 
   constructor(options: PresentationControllerOptions) { this.options = options; this.result = options.result; this.policy = options.policy ?? PRESENTATION_POLICY }
   getState(): PresentationControllerState { return this.state }
-  async resume(stage: PresentationStage, stageStartedAt: IsoTimestamp): Promise<void> {
+  async resume(stage: PresentationStage, stageStartedAt: IsoTimestamp, blackoutRequested = false): Promise<void> {
     this.reactivateAfterStrictModeReplay()
     if (this.disposed || this.state.stage !== 'result-locked' || this.bootstrapStarted) return
     this.bootstrapStarted = true
     if (stage === 'reveal' || stage === 'pending-handoff') {
-      this.state = { stage, countdownLabel: null, error: null }
+      this.state = { stage, countdownLabel: null, error: null, stageStartedAt, blackoutRequested }
       this.options.onState(this.state)
       return
     }
@@ -52,7 +52,7 @@ export class PresentationController {
       return
     }
     const label = stage === 'countdown' ? (Math.max(1, 3 - Math.floor(elapsed / this.policy.countdownLabelDurationMs)) as 3 | 2 | 1) : null
-    this.state = { stage, countdownLabel: label, error: null }
+    this.state = { stage, countdownLabel: label, error: null, stageStartedAt, blackoutRequested }
     this.options.onState(this.state)
     this.schedule(Math.max(0, duration - elapsed), () => { void this.transition(stage === 'countdown' ? 'rolling' : 'reveal') })
   }
@@ -63,7 +63,11 @@ export class PresentationController {
   }
   async setBlackout(requested: boolean): Promise<void> {
     if (this.disposed || this.options.persistBlackout === undefined) return
-    try { await this.options.persistBlackout(requested) } catch (cause: unknown) { this.fail(new PresentationError('blackout-update-failure', 'Blackout intent could not be saved. The presentation stage and result were preserved.', true, true, cause)) }
+    try {
+      await this.options.persistBlackout(requested)
+      this.state = { ...this.state, blackoutRequested: requested }
+      this.options.onState(this.state)
+    } catch (cause: unknown) { this.fail(new PresentationError('blackout-update-failure', 'Blackout intent could not be saved. The presentation stage and result were preserved.', true, true, cause)) }
   }
   async start(): Promise<void> {
     this.reactivateAfterStrictModeReplay()
@@ -117,7 +121,7 @@ export class PresentationController {
       const startedAt = this.options.clock.now()
       await this.options.persistStage(next, startedAt)
       if (this.disposed || lifecycleVersion !== this.lifecycleVersion) return
-      this.state = { stage: next, countdownLabel: next === 'countdown' ? 3 : null, error: null }
+      this.state = { stage: next, countdownLabel: next === 'countdown' ? 3 : null, error: null, stageStartedAt: startedAt, blackoutRequested: this.state.blackoutRequested }
       this.options.onState(this.state)
     } catch (cause: unknown) {
       const error = cause instanceof PresentationError ? cause : new PresentationError(next === 'pending-handoff' ? 'pending-handoff-write-failure' : 'unexpected-presentation-failure', next === 'pending-handoff' ? 'Pending handoff could not be saved. Retry the handoff; the official result is preserved.' : 'Presentation could not continue safely.', true, true, cause)
@@ -133,6 +137,6 @@ export class PresentationController {
     this.transitioning = false
     this.state = { stage: 'result-locked', countdownLabel: null, error: null }
   }
-  private fail(error: PresentationError): void { this.clearTimer(); this.state = { stage: 'failed', countdownLabel: null, error }; this.options.onState(this.state) }
+  private fail(error: PresentationError): void { this.clearTimer(); this.state = { ...this.state, stage: 'failed', countdownLabel: null, error }; this.options.onState(this.state) }
   private clearTimer(): void { if (this.timeout !== null) { this.options.clock.clearTimeout(this.timeout); this.timeout = null } }
 }

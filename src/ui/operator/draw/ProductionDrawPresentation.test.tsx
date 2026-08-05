@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { StrictMode } from 'react'
+import { act, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProductionDrawPresentation } from './ProductionDrawPresentation.tsx'
 import type { PresentationResultProjection } from '../../../application/workflow/presentation-projection.ts'
 
@@ -9,6 +10,7 @@ function result(count: number): PresentationResultProjection {
 
 describe('ProductionDrawPresentation', () => {
   beforeEach(() => { vi.stubGlobal('matchMedia', () => ({ matches: true, addListener: vi.fn(), removeListener: vi.fn() })) })
+  afterEach(() => { vi.useRealTimers() })
 
   it.each([1, 20, 50, 100])('reveals %i winners in sequence order without changing ticket strings', async (count) => {
     render(<ProductionDrawPresentation result={result(count)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" practiceResult={{ drawSessionId: result(count).drawSessionId, winners: result(count).winners as never, createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1 }} onFailure={() => undefined} />)
@@ -33,5 +35,19 @@ describe('ProductionDrawPresentation', () => {
     render(<ProductionDrawPresentation result={result(1)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" checkpoints={{ findByDrawSessionId: async () => null, upsert: async () => { throw new Error('write rejected') } }} onFailure={() => undefined} />)
     expect(await screen.findByText('Official result is locked, but presentation could not start.')).toBeInTheDocument()
     expect(screen.queryByText('Preparing locked result presentation…')).not.toBeInTheDocument()
+  })
+
+  it('survives Strict Mode recovery hydration and continues from the persisted stage', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-05T00:00:00.000Z'))
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn() }))
+    const recoveredAt = '2026-08-05T00:00:00.000Z' as never
+    render(<StrictMode><ProductionDrawPresentation result={result(1)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'countdown', stageStartedAt: recoveredAt, blackoutRequested: false }} checkpoints={{ findByDrawSessionId: async () => null, upsert: async () => undefined }} onFailure={() => undefined} /></StrictMode>)
+
+    await Promise.resolve()
+    expect(screen.getByRole('heading', { name: 'Get ready' })).toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000) })
+    expect(screen.getByRole('heading', { name: 'Selecting winners' })).toBeInTheDocument()
+    expect(screen.queryByText('The presentation stage transition is invalid.')).not.toBeInTheDocument()
   })
 })

@@ -13,6 +13,23 @@ after refresh can still enter the error state:
 This record does not claim Phase 6 passed. The local blackout preview was
 observed working, but it does not close the recovery acceptance gate.
 
+## Browser stabilization pass
+
+The stabilization pass added automated regressions and fixes for the two
+acceptance-boundary defects found in the Phase 6 implementation:
+
+- Strict Mode cleanup/re-bootstrap now invalidates stale async transitions and
+  allows the same hydrated presentation controller to resume from its persisted
+  stage without an invalid-transition error or result mutation.
+- An official pending session with a missing checkpoint remains mutation-locked
+  as an orphan recovery state. The lock is released only after a persisted
+  `pending-handoff` checkpoint.
+
+The in-app browser connector could not be bootstrapped in this environment
+because its sandbox metadata was unavailable. Therefore no browser PASS is
+claimed from this pass. Owner browser verification remains required for the
+valid Live refresh flow and each route/mutation row listed below.
+
 ## Baseline and closeout
 
 | Field | Evidence |
@@ -30,7 +47,7 @@ observed working, but it does not close the recovery acceptance gate.
 |---|---|
 | `npm.cmd run lint` | PASS |
 | `npm.cmd run typecheck` | PASS |
-| `npm.cmd run test` | PASS — 69 test files, 665 tests |
+| `npm.cmd run test` | PASS — 70 test files, 672 tests |
 | `npm.cmd run build` | PASS — existing Vite warning for chunks larger than 500 kB |
 | `git diff --check` | PASS |
 
@@ -63,10 +80,10 @@ remain open.
 | BroadcastChannel/Audience synchronization | PASS scope audit: absent, deferred to Phase 7 |
 | Schema v3 | PASS scope audit: absent |
 | Package/dependency changes | PASS scope audit: none |
-| Valid Live refresh recovery without invalid-transition error | NOT PASSED — known browser defect |
-| Pending route refresh | DEFERRED |
-| Orphan recovery | DEFERRED |
-| Mutation-lock browser smoke | DEFERRED |
+| Valid Live refresh recovery without invalid-transition error | OWNER VERIFY REQUIRED — automated Strict Mode regression passes; browser evidence not yet available |
+| Pending route refresh | OWNER VERIFY REQUIRED |
+| Orphan recovery | OWNER VERIFY REQUIRED — automated missing-checkpoint lock/recovery boundary passes |
+| Mutation-lock browser smoke | OWNER VERIFY REQUIRED — application/persistence boundary regression passes |
 | Chrome evidence or new owner waiver | DEFERRED; no new evidence or waiver recorded |
 
 ## Manual checks observed
@@ -83,19 +100,20 @@ are recorded here without extending them into unobserved browser claims:
   when the preview was enabled.
 - Exact leading-zero ticket rendering.
 
-These observations do not constitute final Slice 6 manual acceptance because the
-recovery path is still defective and the deferred checks below were not closed.
+These observations do not constitute final Slice 6 manual acceptance because
+the recovery fix still lacks owner browser verification and the deferred checks
+below were not closed.
 
 ## Known browser defect
 
-Valid Live presentation recovery after refresh can still enter:
+Before this stabilization pass, valid Live presentation recovery after refresh
+could enter:
 
 > The presentation stage transition is invalid.
 
-The result must not be described as reselection-safe in the browser until this
-path is reproduced, fixed, and re-verified. No fix is claimed in this closeout;
-Slice 7 only changes evidence and documentation, except for blockers that would
-be proven by automated/integration tests.
+The controller lifecycle fix is covered by automated regressions, but the result
+must not be described as browser-verified or reselection-safe until the owner
+reproduces the refresh path and confirms the error is gone in the target browser.
 
 ## Deferred or not-yet-passed checks
 

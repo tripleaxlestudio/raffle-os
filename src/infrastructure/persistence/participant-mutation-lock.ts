@@ -8,5 +8,5 @@ export async function assertParticipantMutationAllowed(database: RaffleOSDatabas
   const active = sessions.find((session) => session.mode === 'live' && session.status === 'pending-confirmation')
   if (active === undefined) return
   const checkpoint = await database.presentation_checkpoints.get(active.id)
-  if (checkpoint !== undefined && checkpoint.stage !== 'pending-handoff') throw new ParticipantMutationLockedError()
+  if (checkpoint === undefined || checkpoint.stage !== 'pending-handoff') throw new ParticipantMutationLockedError()
 }

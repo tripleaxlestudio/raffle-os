@@ -75,6 +75,19 @@ describe('PresentationController', () => {
     expect(controller.getState().stage).toBe('rolling')
   })
 
+  it('re-hydrates after Strict Mode cleanup without an invalid transition or a second result', async () => {
+    const persistStage = vi.fn(async () => undefined)
+    const controller = new PresentationController({ result, mode: 'live', clock: makeClock(), persistStage, onState: () => undefined })
+    await controller.resume('countdown', now)
+    controller.dispose()
+    await controller.resume('countdown', now)
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(controller.getState().stage).toBe('rolling')
+    expect(controller.getState().error).toBeNull()
+    expect(controller.result).toBe(result)
+    expect(persistStage).toHaveBeenCalledTimes(1)
+  })
+
   it('updates blackout without changing the stage or locked result', async () => {
     const persistStage = vi.fn(async () => undefined)
     const persistBlackout = vi.fn(async () => undefined)

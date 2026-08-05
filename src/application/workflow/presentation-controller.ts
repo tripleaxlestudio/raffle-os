@@ -30,11 +30,13 @@ export class PresentationController {
   private disposed = false
   private transitioning = false
   private bootstrapStarted = false
+  private lifecycleVersion = 0
   private state: PresentationControllerState = { stage: 'result-locked', countdownLabel: null, error: null }
 
   constructor(options: PresentationControllerOptions) { this.options = options; this.result = options.result; this.policy = options.policy ?? PRESENTATION_POLICY }
   getState(): PresentationControllerState { return this.state }
   async resume(stage: PresentationStage, stageStartedAt: IsoTimestamp): Promise<void> {
+    this.reactivateAfterStrictModeReplay()
     if (this.disposed || this.state.stage !== 'result-locked' || this.bootstrapStarted) return
     this.bootstrapStarted = true
     if (stage === 'reveal' || stage === 'pending-handoff') {
@@ -64,7 +66,7 @@ export class PresentationController {
     try { await this.options.persistBlackout(requested) } catch (cause: unknown) { this.fail(new PresentationError('blackout-update-failure', 'Blackout intent could not be saved. The presentation stage and result were preserved.', true, true, cause)) }
   }
   async start(): Promise<void> {
-    if (this.disposed && this.state.stage === 'result-locked') this.disposed = false
+    this.reactivateAfterStrictModeReplay()
     if (this.disposed || this.state.stage !== 'result-locked' || this.bootstrapStarted) return
     this.bootstrapStarted = true
     if (this.options.clock.prefersReducedMotion()) { await this.transition('reveal'); return }
@@ -85,7 +87,11 @@ export class PresentationController {
     this.options.onState(this.state)
     await this.start()
   }
-  dispose(): void { this.disposed = true; this.clearTimer() }
+  dispose(): void {
+    this.disposed = true
+    this.lifecycleVersion += 1
+    this.clearTimer()
+  }
   private schedule(delayMs: number, callback?: () => void): void {
     try { this.timeout = this.options.clock.setTimeout(() => { if (callback !== undefined) callback(); else void this.tick() }, delayMs) } catch (cause: unknown) { this.fail(new PresentationError('timer-controller-failure', 'Presentation was interrupted safely.', true, true, cause)) }
   }
@@ -106,16 +112,26 @@ export class PresentationController {
     if (this.disposed || this.transitioning || this.state.stage === next || this.state.stage === 'failed') return
     if (this.state.stage === 'reveal' || (next === 'countdown' && this.state.stage !== 'result-locked')) { this.fail(new PresentationError('invalid-stage-transition', 'The presentation stage transition is invalid.', false)); return }
     this.transitioning = true
+    const lifecycleVersion = this.lifecycleVersion
     try {
       const startedAt = this.options.clock.now()
       await this.options.persistStage(next, startedAt)
-      if (this.disposed) return
+      if (this.disposed || lifecycleVersion !== this.lifecycleVersion) return
       this.state = { stage: next, countdownLabel: next === 'countdown' ? 3 : null, error: null }
       this.options.onState(this.state)
     } catch (cause: unknown) {
       const error = cause instanceof PresentationError ? cause : new PresentationError(next === 'pending-handoff' ? 'pending-handoff-write-failure' : 'unexpected-presentation-failure', next === 'pending-handoff' ? 'Pending handoff could not be saved. Retry the handoff; the official result is preserved.' : 'Presentation could not continue safely.', true, true, cause)
       this.fail(error)
-    } finally { this.transitioning = false }
+    } finally {
+      if (lifecycleVersion === this.lifecycleVersion) this.transitioning = false
+    }
+  }
+  private reactivateAfterStrictModeReplay(): void {
+    if (!this.disposed) return
+    this.disposed = false
+    this.bootstrapStarted = false
+    this.transitioning = false
+    this.state = { stage: 'result-locked', countdownLabel: null, error: null }
   }
   private fail(error: PresentationError): void { this.clearTimer(); this.state = { stage: 'failed', countdownLabel: null, error }; this.options.onState(this.state) }
   private clearTimer(): void { if (this.timeout !== null) { this.options.clock.clearTimeout(this.timeout); this.timeout = null } }

@@ -100,6 +100,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         blackoutRequested: message.blackoutRequested ?? false,
         ...(message.mode === undefined ? {} : { mode: message.mode }),
         ...(message.ticketNumbers === undefined ? {} : { ticketNumbers: message.ticketNumbers }),
+        ...(message.winnerStatuses === undefined ? {} : { winnerStatuses: message.winnerStatuses }),
       }, acceptedSession)
       acceptedMessageIds.add(envelope.messageId)
       acceptedOrdering = { epoch: envelope.epoch, sequence: envelope.sequence }

@@ -14,13 +14,20 @@ const publicContext = { eventName: 'Raffle OS Audience', eventSubtitle: 'Public 
 type AudienceDisplayPageProps = Readonly<{ transport?: Transport; scope?: ProtocolScope; expectedSession?: DrawSessionId }>
 
 function snapshotScenario(snapshot: PublicDisplaySnapshot): PublicAudienceScenario {
+  const statuses = snapshot.winnerStatuses ?? []
+  const hasTickets = (snapshot.ticketNumbers?.length ?? 0) > 0
+  const committedState = snapshot.stage === 'pending-handoff' && !hasTickets
+    ? 'standby' as const
+    : snapshot.stage === 'pending-handoff' && hasTickets && statuses.length > 0 && statuses.every((status) => status === 'confirmed')
+      ? 'confirmed' as const
+      : snapshot.stage
   return {
     ...publicContext,
-    state: snapshot.stage,
-    message: snapshot.stage === 'standby' ? 'Draw will begin shortly' : snapshot.stage === 'countdown' ? 'Get ready' : snapshot.stage === 'rolling' ? 'Drawing in progress' : undefined,
+    state: committedState,
+    message: committedState === 'standby' ? (snapshot.stage === 'pending-handoff' ? 'No active winners' : 'Draw will begin shortly') : committedState === 'countdown' ? 'Get ready' : committedState === 'rolling' ? 'Drawing in progress' : undefined,
     countdownValue: snapshot.stage === 'countdown' ? '—' : undefined,
     ticketNumbers: snapshot.ticketNumbers,
-    statusMessage: snapshot.stage === 'pending-handoff' ? 'Public result' : snapshot.stage === 'reveal' ? 'Results under verification' : undefined,
+    statusMessage: committedState === 'confirmed' ? 'Confirmed result' : snapshot.stage === 'pending-handoff' ? (snapshot.winnerStatuses === undefined ? 'Public result' : 'Results under verification') : snapshot.stage === 'reveal' ? 'Results under verification' : undefined,
   }
 }
 
@@ -61,6 +68,7 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope = prod
     case 'rolling': return <RollingStage scenario={scenario} />
     case 'reveal':
     case 'pending-handoff': return <WinnerStage scenario={scenario} />
+    case 'confirmed': return <WinnerStage scenario={scenario} />
   }
   })()
   return <>{rendered}{controls}</>

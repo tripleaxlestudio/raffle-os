@@ -55,6 +55,8 @@ describe('production Audience route', () => {
     expect(screen.getByText('00042')).toBeVisible()
     expect(screen.getByText('42')).toBeVisible()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    act(() => { publisher.publish(stateMessage(5, { stage: 'pending-handoff', stageStartedAt: '2026-08-05T00:00:00.000Z', ticketNumbers: ['00042', '42'], winnerStatuses: ['confirmed', 'confirmed'] })) })
+    expect(screen.getByText('Confirmed result')).toBeVisible()
     display.close()
     publisher.close()
   })

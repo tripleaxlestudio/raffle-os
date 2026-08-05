@@ -7,7 +7,12 @@ import type { PrizeCategory } from '../../domain/prizes/prize.types.ts'
 import type { RedrawReason, RedrawRecord } from '../../domain/winners/redraw.types.ts'
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
 import type { CommandId } from '../../domain/shared/identifiers.ts'
+import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { calculateReplacementCapacity, LOCAL_OPERATOR, type PendingDecisionCommand } from '../../application/pending-decisions/index.ts'
+import { createOperatorPublisher } from '../../application/display-transport/operator-publisher.ts'
+import { createBroadcastChannelTransport } from '../../application/display-transport/transport.ts'
+import { projectCommittedAudienceState } from '../../application/display-transport/authoritative-projection.ts'
+import type { ProtocolScope } from '../../application/display-transport/protocol.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { Badge, Button, Card, ConfirmationDialog } from '../../shared/ui/index.ts'
@@ -16,7 +21,7 @@ type Decision = 'confirm' | 'cancel' | 'redraw-pending' | 'redraw-confirmed'
 type LoadState =
   | { readonly status: 'loading' }
   | { readonly status: 'error'; readonly title: string; readonly message: string }
-  | { readonly status: 'ready'; readonly session: DrawSession; readonly event: Event; readonly category: PrizeCategory; readonly winners: readonly WinnerRecord[]; readonly redraws: readonly RedrawRecord[] }
+  | { readonly status: 'ready'; readonly session: DrawSession; readonly event: Event; readonly category: PrizeCategory; readonly winners: readonly WinnerRecord[]; readonly redraws: readonly RedrawRecord[]; readonly blackoutRequested: boolean }
 
 const reasons: readonly { value: RedrawReason; label: string }[] = [
   { value: 'absent', label: 'Absent' },
@@ -37,6 +42,7 @@ function statusLabel(status: WinnerRecord['status']): string {
 
 export function ProductionPendingResultsPage() {
   const services = useMemo(() => createDrawSetupProductionServices(), [])
+  const scope: ProtocolScope = useMemo(() => ({ eventId: 'production-event', displayId: 'public-display' }), [])
   const { drawSessionId } = useParams<{ drawSessionId: string }>()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -46,6 +52,14 @@ export function ProductionPendingResultsPage() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const commandRef = useRef<{ id: CommandId; command: PendingDecisionCommand } | null>(null)
+  const publisher = useMemo(() => createOperatorPublisher({
+    transport: createBroadcastChannelTransport('raffle-os-display', scope),
+    transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope),
+    scope,
+    senderId: `operator:pending:${drawSessionId ?? 'unknown'}`,
+    expectedSession: drawSessionId,
+    clock: { now: () => new Date().toISOString() as IsoTimestamp },
+  }), [drawSessionId, scope])
 
   const load = useCallback(async () => {
     setState({ status: 'loading' })
@@ -69,7 +83,8 @@ export function ProductionPendingResultsPage() {
       ])
       if (event === null) { setState({ status: 'error', title: 'Event unavailable', message: 'The related Event could not be loaded safely.' }); return }
       if (category === null) { setState({ status: 'error', title: 'Prize category unavailable', message: 'The related PrizeCategory could not be loaded safely.' }); return }
-      setState({ status: 'ready', session, event, category, winners: winners.sort((a, b) => a.sequenceNumber - b.sequenceNumber), redraws })
+      const checkpoint = services.presentationCheckpoints === undefined ? null : await services.presentationCheckpoints.findByDrawSessionId(session.id)
+      setState({ status: 'ready', session, event, category, winners: winners.sort((a, b) => a.sequenceNumber - b.sequenceNumber), redraws, blackoutRequested: checkpoint?.blackoutRequested ?? false })
     } catch (error: unknown) {
       const text = error instanceof Error && /version/i.test(error.message) ? 'This local database is newer than the supported application version.' : 'Authoritative production results could not be read safely. Retry the local read.'
       setState({ status: 'error', title: 'Production result unavailable', message: text })
@@ -77,6 +92,21 @@ export function ProductionPendingResultsPage() {
   }, [drawSessionId, services])
 
   useEffect(() => { void Promise.resolve().then(load) }, [load])
+  useEffect(() => () => publisher.close(), [publisher])
+  useEffect(() => publisher.subscribe((status) => {
+    if (status.kind === 'transport-error') setMessage(status.error.kind === 'transport-unavailable' || status.error.kind === 'transport-closed' ? 'Official result is saved, but the Audience display is disconnected. Retry publication when it is available.' : 'Official result is saved, but the Audience projection could not be published.')
+  }), [publisher])
+  useEffect(() => {
+    if (state.status !== 'ready') return
+    const result = projectCommittedAudienceState({
+      session: state.session,
+      winners: state.winners,
+      stageStartedAt: (state.session.updatedAt ?? new Date().toISOString()) as IsoTimestamp,
+      blackoutRequested: state.blackoutRequested,
+    })
+    if (publisher.getSnapshot() === undefined) publisher.start(result)
+    else publisher.publish(result)
+  }, [drawSessionId, publisher, state])
 
   if (state.status === 'loading') return <section aria-busy="true" aria-live="polite"><PageHeader eyebrow="Live production" headingId="pending-title" title="Pending Results" description="Reading the authoritative local result…" /></section>
   if (state.status === 'error') return <section aria-live="polite"><PageHeader eyebrow="Live production" headingId="pending-title" title={state.title} description={state.message} /><StatusBanner badge="Read-only recovery" title={state.title} tone="warning">No decision or random selection was run. Retry the local read or return to Draw Setup.</StatusBanner><Button onClick={() => void load()}>Retry read</Button></section>

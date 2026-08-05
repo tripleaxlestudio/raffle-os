@@ -3,11 +3,12 @@ import type { DrawSessionId } from '../../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../../domain/shared/timestamps.ts'
 import type { PresentationStage } from '../../../domain/workflow/presentation-workflow.types.ts'
 import { checkpointFromState } from '../../../domain/workflow/presentation-checkpoint.types.ts'
-import { savePracticePresentationStage, type PracticeResultProjection } from '../../../application/draw/practice-result-storage.ts'
+import { savePracticeBlackout, savePracticePresentationStage, type PracticeResultProjection } from '../../../application/draw/practice-result-storage.ts'
 import { PresentationController, type PresentationClock, type PresentationControllerState } from '../../../application/workflow/presentation-controller.ts'
 import { PRESENTATION_POLICY } from '../../../application/workflow/presentation-policy.ts'
 import { PresentationError, safePresentationMessage } from '../../../application/workflow/presentation-errors.ts'
 import type { PresentationResultProjection } from '../../../application/workflow/presentation-projection.ts'
+import type { PresentationCheckpointRecord } from '../../../domain/workflow/presentation-checkpoint.types.ts'
 import { Button, Card } from '../../../shared/ui/index.ts'
 
 interface ProductionDrawPresentationProps {
@@ -16,9 +17,11 @@ interface ProductionDrawPresentationProps {
   readonly eventName: string
   readonly prizeCategory: string
   readonly prizeName: string
-  readonly checkpoints?: { findByDrawSessionId(id: DrawSessionId): Promise<{ readonly blackoutRequested: boolean } | null>; upsert(checkpoint: ReturnType<typeof checkpointFromState>): Promise<void> }
+  readonly checkpoints?: { findByDrawSessionId(id: DrawSessionId): Promise<PresentationCheckpointRecord | null>; upsert(checkpoint: PresentationCheckpointRecord): Promise<void> }
   readonly practiceResult?: PracticeResultProjection
   readonly onFailure: (error: PresentationError) => void
+  readonly initialPresentation?: { readonly stage: PresentationStage; readonly stageStartedAt: IsoTimestamp; readonly blackoutRequested: boolean }
+  readonly onHandoff?: () => void
 }
 
 function browserClock(): PresentationClock {
@@ -30,8 +33,9 @@ function browserClock(): PresentationClock {
   }
 }
 
-export function ProductionDrawPresentation({ result, mode, eventName, prizeCategory, prizeName, checkpoints, practiceResult, onFailure }: ProductionDrawPresentationProps) {
+export function ProductionDrawPresentation({ result, mode, eventName, prizeCategory, prizeName, checkpoints, practiceResult, onFailure, initialPresentation, onHandoff }: ProductionDrawPresentationProps) {
   const [controllerState, setControllerState] = useState<PresentationControllerState>({ stage: 'result-locked', countdownLabel: null, error: null })
+  const [blackoutRequested, setBlackoutRequested] = useState(initialPresentation?.blackoutRequested ?? false)
   const controller = useMemo(() => new PresentationController({
       result,
       mode,
@@ -46,25 +50,40 @@ export function ProductionDrawPresentation({ result, mode, eventName, prizeCateg
         try {
           const prior = await checkpoints.findByDrawSessionId(result.drawSessionId)
           await checkpoints.upsert(checkpointFromState({ drawSessionId: result.drawSessionId, stage, stageStartedAt, blackoutRequested: prior?.blackoutRequested ?? false }, browserClock().now()))
-        } catch (cause: unknown) { throw new PresentationError('checkpoint-write-failure', 'Official result is locked, but presentation could not start.', true, true, cause) }
+        } catch (cause: unknown) { throw new PresentationError(stage === 'pending-handoff' ? 'pending-handoff-write-failure' : 'checkpoint-write-failure', stage === 'pending-handoff' ? 'Pending handoff could not be saved. Retry the handoff; the official result is preserved.' : 'Official result is locked, but presentation could not start.', true, true, cause) }
+      },
+      persistBlackout: async (requested) => {
+        if (mode === 'practice') {
+          if (practiceResult === undefined) throw new PresentationError('practice-projection-invalid', 'Practice result projection is unavailable.', false, true)
+          savePracticeBlackout(practiceResult, requested)
+        } else {
+          if (checkpoints === undefined) throw new PresentationError('blackout-update-failure', 'Blackout intent could not be saved. The result and stage were preserved.', true, true)
+          const current = await checkpoints.findByDrawSessionId(result.drawSessionId)
+          if (current === null) throw new PresentationError('blackout-update-failure', 'Blackout intent could not be saved because the checkpoint is unavailable.', true, true)
+          await checkpoints.upsert({ ...current, blackoutRequested: requested, persistedAt: browserClock().now() })
+        }
+        setBlackoutRequested(requested)
       },
       onState: setControllerState,
       policy: PRESENTATION_POLICY,
     }), [mode, checkpoints, practiceResult, result])
 
   useEffect(() => {
-    void controller.start()
+    void (initialPresentation === undefined ? controller.start() : controller.resume(initialPresentation.stage, initialPresentation.stageStartedAt))
     return () => controller.dispose()
-  }, [controller])
+  }, [controller, initialPresentation])
+
+  useEffect(() => { if (mode === 'live' && controllerState.stage === 'pending-handoff') onHandoff?.() }, [controllerState.stage, mode, onHandoff])
 
   useEffect(() => { if (controllerState.error !== null) onFailure(controllerState.error) }, [controllerState.error, onFailure])
 
   const stage = controllerState.stage
-  if (stage === 'failed') return <Card className="presentation-failure" padding="lg"><p className="operator-eyebrow">Safe presentation state</p><h2>{safePresentationMessage(controllerState.error)}</h2><p>The locked result was preserved. Retry presentation from this same result or return to Draw Setup.</p><Button onClick={() => { void controller.retry() }}>Retry presentation</Button></Card>
+  if (stage === 'failed') return <Card className={blackoutRequested ? 'presentation-failure production-presentation--blackout' : 'presentation-failure'} padding="lg"><p className="operator-eyebrow">Safe presentation state</p><h2>{safePresentationMessage(controllerState.error)}</h2><p>The locked result was preserved. Retry presentation from this same result or return to Draw Setup.</p><Button onClick={() => { void controller.retry() }}>Retry presentation</Button></Card>
   if (stage === 'result-locked') return <Card padding="lg"><p>Preparing locked result presentation…</p></Card>
   if (stage === 'countdown') return <PresentationFrame mode={mode} eventName={eventName} prizeCategory={prizeCategory} prizeName={prizeName} heading="Get ready" announcement={`Countdown ${controllerState.countdownLabel ?? 3}`}><div className="production-countdown" aria-hidden="true">{controllerState.countdownLabel}</div><Button onClick={() => { void controller?.skip() }}>Skip animation</Button></PresentationFrame>
   if (stage === 'rolling') return <PresentationFrame mode={mode} eventName={eventName} prizeCategory={prizeCategory} prizeName={prizeName} heading="Selecting winners" announcement="Selecting winners"><div className="production-rolling" aria-hidden="true"><span>• • • • •</span><span>SELECTING</span><span>— — — — —</span></div><Button onClick={() => { void controller?.skip() }}>Skip animation</Button></PresentationFrame>
-  return <PresentationFrame mode={mode} eventName={eventName} prizeCategory={prizeCategory} prizeName={prizeName} heading="Winner reveal" announcement="Winner reveal"><ol className={`production-winner-list production-winner-list--${result.winners.length}`} aria-label={`${result.winners.length} ${mode === 'live' ? 'official' : 'Practice'} winners`}>{result.winners.map((winner) => <li key={winner.winnerId}><span>#{winner.sequence}</span><strong>{winner.ticketNumber}</strong></li>)}</ol><p className="presentation-completion">Presentation complete. Pending handoff will be available in the next workflow.</p></PresentationFrame>
+  if (stage === 'pending-handoff') return <Card padding="lg"><p className="operator-eyebrow">Practice · rehearsal only</p><h2>Practice presentation complete</h2><p>The Practice result remains available only in this browser tab. No official record was created.</p><ol>{result.winners.map((winner) => <li key={winner.winnerId}><code>{winner.ticketNumber}</code></li>)}</ol></Card>
+  return <PresentationFrame mode={mode} eventName={eventName} prizeCategory={prizeCategory} prizeName={prizeName} heading="Winner reveal" announcement="Winner reveal"><ol className={`production-winner-list production-winner-list--${result.winners.length}`} aria-label={`${result.winners.length} ${mode === 'live' ? 'official' : 'Practice'} winners`}>{result.winners.map((winner) => <li key={winner.winnerId}><span>#{winner.sequence}</span><strong>{winner.ticketNumber}</strong></li>)}</ol><p className="presentation-completion">Presentation complete. Continue safely to Pending Results when ready.</p><Button onClick={() => { void controller.handoff() }}>Continue safely to Pending</Button></PresentationFrame>
 }
 
 function PresentationFrame({ children, mode, eventName, prizeCategory, prizeName, heading, announcement }: { children: ReactNode; mode: 'live' | 'practice'; eventName: string; prizeCategory: string; prizeName: string; heading: string; announcement: string }) {

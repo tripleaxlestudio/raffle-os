@@ -19,6 +19,7 @@ export interface PracticeResultProjection {
     readonly stage: PresentationStage
     readonly stageStartedAt: IsoTimestamp
     readonly presentationPolicyVersion: 1
+    readonly blackoutRequested?: boolean
   }
 }
 
@@ -36,7 +37,8 @@ function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): b
 function isValidProjection(value: unknown, drawSessionId: DrawSessionId): value is PracticeResultProjection {
   if (!isRecord(value) || !Object.keys(value).every((key) => ['drawSessionId', 'winners', 'createdAt', 'policyVersion', 'presentation'].includes(key)) || !['drawSessionId', 'winners', 'createdAt', 'policyVersion'].every((key) => key in value)) return false
   if (value.drawSessionId !== drawSessionId || value.policyVersion !== 1 || typeof value.createdAt !== 'string' || !isIsoTimestamp(value.createdAt)) return false
-  if (value.presentation !== undefined && (!isRecord(value.presentation) || !hasOnlyKeys(value.presentation, ['storageFormatVersion', 'stage', 'stageStartedAt', 'presentationPolicyVersion']) || value.presentation.storageFormatVersion !== 1 || value.presentation.presentationPolicyVersion !== 1 || !['countdown', 'rolling', 'reveal'].includes(String(value.presentation.stage)) || !isIsoTimestamp(value.presentation.stageStartedAt))) return false
+  const presentation = value.presentation
+  if (presentation !== undefined && (!isRecord(presentation) || !Object.keys(presentation).every((key) => ['storageFormatVersion', 'stage', 'stageStartedAt', 'presentationPolicyVersion', 'blackoutRequested'].includes(key)) || !['storageFormatVersion', 'stage', 'stageStartedAt', 'presentationPolicyVersion'].every((key) => key in presentation) || presentation.storageFormatVersion !== 1 || presentation.presentationPolicyVersion !== 1 || !['countdown', 'rolling', 'reveal', 'pending-handoff'].includes(String(presentation.stage)) || !isIsoTimestamp(presentation.stageStartedAt) || (presentation.blackoutRequested !== undefined && typeof presentation.blackoutRequested !== 'boolean'))) return false
   if (!parseDrawSessionId(value.drawSessionId).ok || !Array.isArray(value.winners) || value.winners.length < 1 || value.winners.length > 100) return false
 
   const sequences = new Set<number>()
@@ -108,4 +110,10 @@ export function practiceResultFromWinners(drawSessionId: DrawSessionId, winners:
 
 export function savePracticePresentationStage(result: PracticeResultProjection, stage: PresentationStage, stageStartedAt: IsoTimestamp): void {
   savePracticeResult({ ...result, presentation: { storageFormatVersion: 1, presentationPolicyVersion: 1, stage, stageStartedAt } })
+}
+
+export function savePracticeBlackout(result: PracticeResultProjection, blackoutRequested: boolean): void {
+  const presentation = result.presentation
+  if (presentation === undefined) throw new PresentationError('practice-projection-invalid', 'Practice presentation metadata is unavailable.', false, true)
+  savePracticeResult({ ...result, presentation: { ...presentation, blackoutRequested } })
 }

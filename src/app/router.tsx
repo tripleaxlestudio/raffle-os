@@ -15,6 +15,7 @@ import { HistoryPage } from '../pages/operator/HistoryPage.tsx'
 import { LiveDrawPage } from '../pages/operator/LiveDrawPage.tsx'
 import { ParticipantsPage } from '../pages/operator/ParticipantsPage.tsx'
 import { PendingResultsPage } from '../pages/operator/PendingResultsPage.tsx'
+import { ProductionPendingResultsPage } from '../pages/operator/ProductionPendingResultsPage.tsx'
 import { SettingsPage } from '../pages/operator/SettingsPage.tsx'
 import { NotFoundPage } from '../pages/system/NotFoundPage.tsx'
 
@@ -68,6 +69,10 @@ const productionDrawRunRoutes = {
     {
       path: 'draw/run/:drawSessionId',
       element: <DrawRunPage />,
+    },
+    {
+      path: 'draw/pending/:drawSessionId',
+      element: <ProductionPendingResultsPage />,
     },
   ],
 } satisfies RouteObject

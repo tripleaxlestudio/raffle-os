@@ -14,6 +14,7 @@ import { Button, Card, ConfirmationDialog } from '../../shared/ui/index.ts'
 import { projectLivePresentationResult, type PresentationResultProjection } from '../../application/workflow/presentation-projection.ts'
 import { ProductionDrawPresentation } from '../../ui/operator/draw/ProductionDrawPresentation.tsx'
 import { PresentationError, safePresentationMessage } from '../../application/workflow/presentation-errors.ts'
+import type { PresentationCheckpointRecord } from '../../domain/workflow/presentation-checkpoint.types.ts'
 
 type GateState = 'loading' | 'ready' | 'holding' | 'invoking' | 'locked' | 'error'
 
@@ -37,6 +38,7 @@ export function DrawRunPage() {
   const [practiceProjection, setPracticeProjection] = useState<PracticeResultProjection | null>(null)
   const [presentationResult, setPresentationResult] = useState<PresentationResultProjection | null>(null)
   const [presentationBootstrapError, setPresentationBootstrapError] = useState<PresentationError | null>(null)
+  const [checkpoint, setCheckpoint] = useState<PresentationCheckpointRecord | null>(null)
   const attemptRef = useRef(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const holdRef = useRef<HoldController | null>(null)
@@ -57,6 +59,9 @@ export function DrawRunPage() {
       if (next.data?.session.status === 'pending-confirmation') {
         const winners = await services.winners.findByDrawSessionId(sessionId!)
         if (winners.length > 0) {
+          const savedCheckpoint = services.presentationCheckpoints === undefined ? null : await services.presentationCheckpoints.findByDrawSessionId(sessionId!)
+          if (savedCheckpoint?.stage === 'pending-handoff' || savedCheckpoint === null) { navigate(`/draw/pending/${sessionId}`, { replace: true }); return }
+          setCheckpoint(savedCheckpoint)
           setPresentationResult(projectLivePresentationResult(sessionId!, winners))
           setState('locked')
           return
@@ -81,7 +86,7 @@ export function DrawRunPage() {
       setError(toLiveStartGateError(cause))
       setState('error')
     }
-  }, [drawSessionId, services, sessionId])
+  }, [drawSessionId, navigate, services, sessionId])
 
   useEffect(() => { void Promise.resolve().then(load) }, [load])
 
@@ -149,7 +154,7 @@ export function DrawRunPage() {
 
   if (state === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Production start gate" headingId="draw-run-title" title="Draw Start Gate" description="Validating the persisted DrawSession…" /></section>
   if (presentationBootstrapError !== null) return <section aria-labelledby="draw-run-title" className="draw-setup"><PageHeader eyebrow="Presentation error" headingId="draw-run-title" title="Presentation could not start" description={safePresentationMessage(presentationBootstrapError)} /><StatusBanner badge="Safe result state" title={safePresentationMessage(presentationBootstrapError)} tone="warning">No secure selection was run and the Practice result was not changed.</StatusBanner><div className="draw-action-bar__actions"><Button onClick={() => { attemptRef.current = false; void load() }}>Retry presentation</Button><Button variant="secondary" onClick={() => navigate('/draw/setup')}>Back to Draw Setup</Button></div></section>
-  if (state === 'locked' && readiness?.data !== undefined && presentationResult !== null) return <section aria-labelledby="draw-run-title" className="draw-setup"><h1 id="draw-run-title" className="sr-only">Result Locked</h1><p className="sr-only" role="region" aria-label={`${presentationResult.winners.length} winners selected`}>{presentationResult.winners.length} winners selected</p>{practiceProjection === null ? null : <p className="sr-only">Practice projection restored for this tab; ticket reveal remains deferred.</p>}<ProductionDrawPresentation result={presentationResult} mode={readiness.data.mode} eventName={readiness.data.event.name} prizeCategory={readiness.data.category.name} prizeName={readiness.data.category.prizeName} checkpoints={services.presentationCheckpoints} practiceResult={practiceProjection ?? undefined} onFailure={() => undefined} /></section>
+  if (state === 'locked' && readiness?.data !== undefined && presentationResult !== null) return <section aria-labelledby="draw-run-title" className="draw-setup"><h1 id="draw-run-title" className="sr-only">Result Locked</h1><p className="sr-only" role="region" aria-label={`${presentationResult.winners.length} winners selected`}>{presentationResult.winners.length} winners selected</p>{practiceProjection === null ? null : <p className="sr-only">Practice projection restored for this tab; ticket reveal remains deferred.</p>}<ProductionDrawPresentation result={presentationResult} mode={readiness.data.mode} eventName={readiness.data.event.name} prizeCategory={readiness.data.category.name} prizeName={readiness.data.category.prizeName} checkpoints={services.presentationCheckpoints} practiceResult={practiceProjection ?? undefined} initialPresentation={checkpoint ?? (practiceProjection?.presentation === undefined ? undefined : { stage: practiceProjection.presentation.stage, stageStartedAt: practiceProjection.presentation.stageStartedAt, blackoutRequested: practiceProjection.presentation.blackoutRequested ?? false })} onHandoff={() => navigate(`/draw/pending/${sessionId}`)} onFailure={() => undefined} /></section>
   if (readiness?.data === undefined) return <section aria-labelledby="draw-run-title"><PageHeader eyebrow="Production start gate" headingId="draw-run-title" title="Draw Start Gate" description="The persisted session is not ready for the next workflow." /><StatusBanner badge="Blocked" title={error?.message ?? 'Cannot open this DrawSession'} tone="warning">{readiness?.reason ?? 'Verify the persisted setup and return to Draw Setup.'}</StatusBanner><div className="draw-action-bar__actions"><Button onClick={() => { attemptRef.current = false; void load() }} disabled={!readiness?.retryable && error === null}>Retry validation</Button><Button variant="secondary" onClick={() => navigate('/draw/setup')}>Back to Draw Setup</Button></div></section>
 
   const data = readiness.data

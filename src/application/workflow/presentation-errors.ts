@@ -12,6 +12,9 @@ export type PresentationErrorCode =
   | 'timer-controller-failure'
   | 'reveal-projection-failure'
   | 'unexpected-presentation-failure'
+  | 'pending-handoff-write-failure'
+  | 'blackout-update-failure'
+  | 'recovery-timer-failure'
 
 export class PresentationError extends Error {
   readonly code: PresentationErrorCode

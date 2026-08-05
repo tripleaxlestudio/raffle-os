@@ -16,6 +16,7 @@ export const PERSISTENCE_ERROR_CODES = {
   checkpointDeleteFailure: 'checkpoint-delete-failed',
   unsupportedSchemaVersion: 'unsupported-schema-version',
   validation: 'validation-failed',
+  participantMutationLocked: 'participant-mutation-locked',
 } as const
 
 export type PersistenceErrorCode =
@@ -33,6 +34,9 @@ export class PersistenceError extends Error {
     this.code = code
     this.name = 'PersistenceError'
   }
+}
+export class ParticipantMutationLockedError extends PersistenceError {
+  constructor(message = 'Participant mutations are blocked while an active Live draw presentation is in progress.') { super(PERSISTENCE_ERROR_CODES.participantMutationLocked, message); this.name = 'ParticipantMutationLockedError' }
 }
 
 export class DatabaseUnavailableError extends PersistenceError {

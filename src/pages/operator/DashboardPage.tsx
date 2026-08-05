@@ -29,7 +29,7 @@ export function DashboardPage() {
 
       <PageHeader
         actions={
-          <ButtonLink size="lg" to="/draw/setup">
+          <ButtonLink size="lg" to="/dev/prototypes/draw/setup?mode=practice&scenario=ready">
             Set up next draw
           </ButtonLink>
         }

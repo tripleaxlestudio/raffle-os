@@ -10,8 +10,8 @@ import {
 
 function renderDisplay(path = '/display') {
   const prototypePath = path === '/display'
-    ? '/display/prototype'
-    : path.replace('/display?', '/display/prototype?')
+    ? '/dev/prototypes/display'
+    : path.replace('/display?', '/dev/prototypes/display?')
   const router = createMemoryRouter(appRoutes, {
     initialEntries: [prototypePath],
   })

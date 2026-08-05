@@ -38,7 +38,7 @@ function SettingsTabs({
             }
             key={item.value}
             role="tab"
-            to={`/settings?section=${item.value}`}
+            to={`/dev/prototypes/settings?section=${item.value}`}
           >
             <span aria-hidden="true">
               {String(settingsSections.indexOf(item) + 1).padStart(2, '0')}
@@ -286,7 +286,7 @@ export function SettingsPage() {
       </div>
       <PageHeader
         actions={
-          <ButtonLink size="lg" to="/display/prototype?state=standby">
+          <ButtonLink size="lg" to="/dev/prototypes/display?state=standby">
             Preview display
           </ButtonLink>
         }

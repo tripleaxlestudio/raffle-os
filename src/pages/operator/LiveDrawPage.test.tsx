@@ -4,7 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { appRoutes } from '../../app/router.tsx'
 
-function renderLiveDraw(path = '/draw/live') {
+function renderLiveDraw(path = '/dev/prototypes/draw/live') {
   const router = createMemoryRouter(appRoutes, {
     initialEntries: [path],
   })
@@ -15,7 +15,7 @@ function renderLiveDraw(path = '/draw/live') {
 
 describe('Live Draw static prototype', () => {
   it('renders the ready configuration recap and system readiness', () => {
-    renderLiveDraw('/draw/live?state=ready&mode=practice')
+    renderLiveDraw('/dev/prototypes/draw/live?state=ready&mode=practice')
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Live Draw' }),
@@ -34,7 +34,7 @@ describe('Live Draw static prototype', () => {
   })
 
   it('renders a stronger textual warning for Live mode', () => {
-    renderLiveDraw('/draw/live?state=ready&mode=live')
+    renderLiveDraw('/dev/prototypes/draw/live?state=ready&mode=live')
 
     expect(
       screen.getByText(
@@ -49,7 +49,7 @@ describe('Live Draw static prototype', () => {
 
   it('opens confirmation and returns focus when cancelled', async () => {
     const user = userEvent.setup()
-    renderLiveDraw('/draw/live?state=ready&mode=practice')
+    renderLiveDraw('/dev/prototypes/draw/live?state=ready&mode=practice')
     const trigger = screen.getByRole('button', {
       name: 'Hold to start draw',
     })
@@ -73,7 +73,7 @@ describe('Live Draw static prototype', () => {
   it('routes confirmation to the deterministic countdown state', async () => {
     const user = userEvent.setup()
     const { router } = renderLiveDraw(
-      '/draw/live?state=ready&mode=live',
+      '/dev/prototypes/draw/live?state=ready&mode=live',
     )
 
     await user.click(
@@ -97,7 +97,7 @@ describe('Live Draw static prototype', () => {
 
   it('renders a static countdown with deterministic navigation', () => {
     renderLiveDraw(
-      '/draw/live?state=running&mode=practice&stage=countdown',
+      '/dev/prototypes/draw/live?state=running&mode=practice&stage=countdown',
     )
 
     expect(
@@ -108,7 +108,7 @@ describe('Live Draw static prototype', () => {
       screen.getByRole('link', { name: 'Show rolling state' }),
     ).toHaveAttribute(
       'href',
-      '/draw/live?state=running&mode=practice&stage=rolling',
+      '/dev/prototypes/draw/live?state=running&mode=practice&stage=rolling',
     )
     expect(
       screen.getByText(/Configuration appears locked/i),
@@ -117,7 +117,7 @@ describe('Live Draw static prototype', () => {
 
   it('renders exact leading-zero tickets without declaring a winner', () => {
     renderLiveDraw(
-      '/draw/live?state=running&mode=live&stage=rolling',
+      '/dev/prototypes/draw/live?state=running&mode=live&stage=rolling',
     )
 
     const ticketStream = screen.getByLabelText('Static ticket stream')
@@ -138,6 +138,6 @@ describe('Live Draw static prototype', () => {
     expect(screen.queryByText('Bima Raharja')).not.toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'Review Pending Results' }),
-    ).toHaveAttribute('href', '/draw/results')
+    ).toHaveAttribute('href', '/dev/prototypes/draw/results')
   })
 })

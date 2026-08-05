@@ -10,6 +10,7 @@ import type { IsoTimestamp } from '../../../domain/shared/timestamps.ts'
 import type { ParticipantImportTransactionInput } from '../../../application/persistence/participant-import-unit-of-work.interface.ts'
 import type { ParticipantImportProductionServices } from '../../../application/participant-import/participant-import-production-services.ts'
 import { ParticipantsPage } from '../../../pages/operator/ParticipantsPage.tsx'
+import { PrototypeParticipantsPage } from '../../../pages/operator/PrototypeParticipantsPage.tsx'
 import { appRoutes } from '../../../app/router.tsx'
 
 const eventId = '11111111-1111-4111-8111-111111111111' as EventId
@@ -75,11 +76,10 @@ describe('production participant import preview audit', () => {
     expect(screen.queryByText('Fictional participant data for static interface review. No file or participant record is read, changed, or stored.')).not.toBeInTheDocument()
   })
 
-  it('keeps the deterministic prototype behind the explicit workflow query', () => {
+  it('keeps the production route authoritative even when a prototype query is supplied', () => {
     renderProduction(makeServices(), '/participants?workflow=prototype')
-    expect(screen.getByText(/Fictional participant data for static interface review/)).toBeVisible()
-    expect(document.querySelector('input[type="file"]')).toBeNull()
-    expect(screen.getByText('nusantara-tech-gala-participants.xlsx')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Participant Import' })).toBeVisible()
+    expect(screen.queryByText(/Fictional participant data for static interface review/)).not.toBeInTheDocument()
   })
 
   it('renders the resolved Event and safe no-Event state without preview wording', async () => {
@@ -292,7 +292,7 @@ describe('production participant import preview audit', () => {
   })
 
   it('keeps the explicit prototype route and Audience routes private', () => {
-    const services = makeServices(); const prototypeView = render(<MemoryRouter initialEntries={['/participants?workflow=prototype']}><ParticipantsPage services={services} /></MemoryRouter>)
+    const prototypeView = render(<MemoryRouter initialEntries={['/dev/prototypes/participants?workflow=prototype']}><PrototypeParticipantsPage /></MemoryRouter>)
     expect(screen.getByText(/Fictional participant data/)).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Browse file' })).toBeInTheDocument()
 

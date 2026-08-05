@@ -107,7 +107,7 @@ function RedrawPanel({
               >
                 Return to Pending Results
               </ButtonLink>
-              <ButtonLink to="/history?view=session-detail">
+              <ButtonLink to="/dev/prototypes/history?view=session-detail">
                 Review in History
               </ButtonLink>
             </>
@@ -322,7 +322,7 @@ function ResultsContent({
       <PageHeader
         actions={
           scenario === 'confirmed' ? (
-            <ButtonLink size="lg" to="/history?view=session-detail">
+            <ButtonLink size="lg" to="/dev/prototypes/history?view=session-detail">
               Review static history
             </ButtonLink>
           ) : (
@@ -482,7 +482,7 @@ function ResultsContent({
           <span>Fixture records remain frozen and unchanged.</span>
         </div>
         <div>
-          <ButtonLink to="/draw/live?state=running&mode=live&stage=rolling" variant="secondary">
+          <ButtonLink to="/dev/prototypes/draw/live?state=running&mode=live&stage=rolling" variant="secondary">
             Return to Live Draw
           </ButtonLink>
           <Button

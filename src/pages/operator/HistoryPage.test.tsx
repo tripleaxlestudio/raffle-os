@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest'
 import { appRoutes } from '../../app/router.tsx'
 import { historyFixture } from '../../prototype/data/index.ts'
 
-function renderHistory(path = '/history') {
+function renderHistory(path = '/dev/prototypes/history') {
   const router = createMemoryRouter(appRoutes, {
-    initialEntries: [path],
+    initialEntries: [path.startsWith('/dev/') ? path : `/dev/prototypes${path}`],
   })
   const view = render(<RouterProvider router={router} />)
 
@@ -22,10 +22,10 @@ describe('History static prototype', () => {
     expect(screen.getByText('29 Jul 2026, 21:18:42 WIB')).toBeVisible()
     expect(
       screen.getAllByRole('link', { name: 'Open detail' })[0],
-    ).toHaveAttribute('href', '/history?view=session-detail')
+    ).toHaveAttribute('href', '/dev/prototypes/history?view=session-detail')
     unmount()
 
-    const { container } = renderHistory('/history?view=unknown')
+    const { container } = renderHistory('/dev/prototypes/history?view=unknown')
     expect(container.querySelector('.history-page')).toHaveAttribute(
       'data-history-view',
       'sessions',
@@ -33,7 +33,7 @@ describe('History static prototype', () => {
   })
 
   it('renders all winners and the replacement linkage directly', () => {
-    renderHistory('/history?view=winners')
+    renderHistory('/dev/prototypes/history?view=winners')
 
     const table = screen.getByRole('table', {
       name: 'Prototype winner history',
@@ -46,7 +46,7 @@ describe('History static prototype', () => {
   })
 
   it('renders deterministic chronological audit entries', () => {
-    renderHistory('/history?view=audit')
+    renderHistory('/dev/prototypes/history?view=audit')
 
     for (const entry of historyFixture.auditEntries) {
       expect(screen.getByText(entry.action)).toBeVisible()
@@ -57,7 +57,7 @@ describe('History static prototype', () => {
   })
 
   it('renders session detail, snapshot, cancelled record, and disabled exports', () => {
-    renderHistory('/history?view=session-detail')
+    renderHistory('/dev/prototypes/history?view=session-detail')
 
     expect(screen.getByText('DRAW-GP-001')).toBeVisible()
     expect(screen.getByText('3,814')).toBeVisible()
@@ -75,11 +75,11 @@ describe('History static prototype', () => {
       screen.getByRole('link', {
         name: 'Review presentation settings',
       }),
-    ).toHaveAttribute('href', '/settings?section=branding')
+    ).toHaveAttribute('href', '/dev/prototypes/settings?section=branding')
   })
 
   it('exposes selected tab state for direct views', () => {
-    renderHistory('/history?view=audit')
+    renderHistory('/dev/prototypes/history?view=audit')
 
     expect(screen.getByRole('tab', { name: 'Audit Log' })).toHaveAttribute(
       'aria-selected',

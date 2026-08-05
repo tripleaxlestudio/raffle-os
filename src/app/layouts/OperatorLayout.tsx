@@ -24,19 +24,19 @@ export function OperatorLayout() {
   const [productionEvent, setProductionEvent] = useState<Event | null>(null)
   const [productionEventLoading, setProductionEventLoading] = useState(false)
   const scenario =
-    location.pathname === '/dashboard'
+    location.pathname === '/dev/prototypes/dashboard'
       ? resolveDashboardPrototypeScenario(searchParams)
       : 'ready'
   const prototype = getDashboardPrototype(scenario)
   const isProductionParticipantRoute =
-    location.pathname === '/participants' &&
+    location.pathname === '/dev/prototypes/participants' &&
     resolveParticipantWorkflow(searchParams) === 'production'
   const isProductionDrawSetupRoute =
-    location.pathname === '/draw/setup' && !searchParams.has('scenario')
+    location.pathname === '/dev/prototypes/draw/setup' && !searchParams.has('scenario')
   const isProductionEventRoute = isProductionParticipantRoute || isProductionDrawSetupRoute
   const mode =
-    location.pathname === '/draw/setup' ||
-    location.pathname === '/draw/live'
+    location.pathname === '/dev/prototypes/draw/setup' ||
+    location.pathname === '/dev/prototypes/draw/live'
       ? resolvePrototypeDrawMode(searchParams.get('mode'))
       : prototype.mode
 
@@ -66,7 +66,7 @@ export function OperatorLayout() {
   function handleScenarioChange(
     nextScenario: DashboardPrototypeScenario,
   ) {
-    void navigate(`/dashboard?scenario=${nextScenario}`)
+    void navigate(`/dev/prototypes/dashboard?scenario=${nextScenario}`)
   }
 
   return (

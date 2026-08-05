@@ -4,9 +4,9 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { appRoutes } from '../../app/router.tsx'
 
-function renderDashboard(path = '/dashboard') {
+function renderDashboard(path = '/dev/prototypes/dashboard') {
   const router = createMemoryRouter(appRoutes, {
-    initialEntries: [path],
+    initialEntries: [path.startsWith('/dev/') ? path : `/dev/prototypes${path}`],
   })
 
   const view = render(<RouterProvider router={router} />)
@@ -86,7 +86,7 @@ describe('Dashboard static prototype', () => {
     const primaryAction = screen.getByRole('link', {
       name: 'Set up next draw',
     })
-    expect(primaryAction).toHaveAttribute('href', '/draw/setup')
+    expect(primaryAction).toHaveAttribute('href', '/dev/prototypes/draw/setup?mode=practice&scenario=ready')
     expect(primaryAction).toHaveClass('ui-button--primary')
   })
 
@@ -99,7 +99,7 @@ describe('Dashboard static prototype', () => {
       'attention',
     )
 
-    expect(router.state.location.pathname).toBe('/dashboard')
+    expect(router.state.location.pathname).toBe('/dev/prototypes/dashboard')
     expect(router.state.location.search).toBe('?scenario=attention')
     expect(
       await screen.findByText('Resolve two readiness checks before going Live'),

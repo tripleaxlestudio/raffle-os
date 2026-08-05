@@ -51,7 +51,7 @@ function HistoryTabs({ view }: { view: PrototypeHistoryView }) {
             }
             key={item.value}
             role="tab"
-            to={`/history?view=${item.value}`}
+            to={`/dev/prototypes/history?view=${item.value}`}
           >
             {item.label}
           </Link>
@@ -112,7 +112,7 @@ function SessionsView() {
               <td>
                 <ButtonLink
                   size="sm"
-                  to="/history?view=session-detail"
+                  to="/dev/prototypes/history?view=session-detail"
                   variant="quiet"
                 >
                   Open detail
@@ -224,7 +224,7 @@ function SessionDetailView() {
   return (
     <div className="history-detail">
       <div className="history-detail__toolbar">
-        <ButtonLink to="/history?view=sessions" variant="secondary">
+        <ButtonLink to="/dev/prototypes/history?view=sessions" variant="secondary">
           Back to Draw Sessions
         </ButtonLink>
         <div>
@@ -335,7 +335,7 @@ function SessionDetailView() {
   )
 }
 
-export function HistoryPage() {
+export function PrototypeHistoryPage() {
   const [searchParams] = useSearchParams()
   const view = resolvePrototypeHistoryView(searchParams)
   const production = searchParams.get('source') === 'production'
@@ -356,7 +356,7 @@ export function HistoryPage() {
         actions={
           <>
             <ButtonLink
-              to="/settings?section=branding"
+              to="/dev/prototypes/settings?section=branding"
               variant="secondary"
             >
               Review presentation settings
@@ -378,6 +378,10 @@ export function HistoryPage() {
       {view === 'session-detail' ? <SessionDetailView /> : null}
     </section>
   )
+}
+
+export function HistoryPage() {
+  return <ProductionHistoryPage />
 }
 
 function ProductionHistoryPage() {

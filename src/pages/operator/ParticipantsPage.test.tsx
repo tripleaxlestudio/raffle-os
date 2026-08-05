@@ -8,9 +8,9 @@ import {
 import { describe, expect, it, vi } from 'vitest'
 import { appRoutes } from '../../app/router.tsx'
 import { participantImportFixture } from '../../prototype/data/index.ts'
-import { ParticipantsPage } from './ParticipantsPage.tsx'
+import { PrototypeParticipantsPage as ParticipantsPage } from './PrototypeParticipantsPage.tsx'
 
-function renderParticipants(path = '/participants?workflow=prototype') {
+function renderParticipants(path = '/dev/prototypes/participants?workflow=prototype') {
   const router = createMemoryRouter(appRoutes, {
     initialEntries: [path],
   })
@@ -22,12 +22,12 @@ function renderParticipants(path = '/participants?workflow=prototype') {
 
 describe('Participant Import static prototype', () => {
   it.each([
-    ['/participants?workflow=prototype', 'upload'],
-    ['/participants?workflow=prototype&step=unsupported', 'upload'],
-    ['/participants?workflow=prototype&step=upload', 'upload'],
-    ['/participants?workflow=prototype&step=mapping', 'mapping'],
-    ['/participants?workflow=prototype&step=validation', 'validation'],
-    ['/participants?workflow=prototype&step=summary', 'summary'],
+    ['/dev/prototypes/participants?workflow=prototype', 'upload'],
+    ['/dev/prototypes/participants?workflow=prototype&step=unsupported', 'upload'],
+    ['/dev/prototypes/participants?workflow=prototype&step=upload', 'upload'],
+    ['/dev/prototypes/participants?workflow=prototype&step=mapping', 'mapping'],
+    ['/dev/prototypes/participants?workflow=prototype&step=validation', 'validation'],
+    ['/dev/prototypes/participants?workflow=prototype&step=summary', 'summary'],
   ])('resolves %s to the %s step', (path, expectedStep) => {
     const { container } = renderParticipants(path)
 
@@ -44,7 +44,7 @@ describe('Participant Import static prototype', () => {
   })
 
   it('renders supported-format guidance and the fictional selected file without a file input', () => {
-    const { container } = renderParticipants('/participants?workflow=prototype&step=upload')
+    const { container } = renderParticipants('/dev/prototypes/participants?workflow=prototype&step=upload')
 
     expect(screen.getByText(/Supported formats: XLSX and CSV/i)).toBeVisible()
     expect(
@@ -60,12 +60,12 @@ describe('Participant Import static prototype', () => {
     })
     expect(primaryAction).toHaveAttribute(
       'href',
-      '/participants?workflow=prototype&step=mapping',
+      '/dev/prototypes/participants?step=mapping',
     )
   })
 
   it('renders required, optional, and unmapped fields with leading-zero guidance', () => {
-    renderParticipants('/participants?workflow=prototype&step=mapping')
+    renderParticipants('/dev/prototypes/participants?workflow=prototype&step=mapping')
 
     expect(
       screen.getByRole('combobox', {
@@ -94,10 +94,10 @@ describe('Participant Import static prototype', () => {
       screen.getByRole('link', {
         name: 'Validate participant data',
       }),
-    ).toHaveAttribute('href', '/participants?workflow=prototype&step=validation')
+    ).toHaveAttribute('href', '/dev/prototypes/participants?step=validation')
     expect(
       screen.getByRole('link', { name: 'Return to upload' }),
-    ).toHaveAttribute('href', '/participants?workflow=prototype&step=upload')
+    ).toHaveAttribute('href', '/dev/prototypes/participants?step=upload')
   })
 
   it('renders validation totals, optional-name guidance, and an inert download notice', async () => {
@@ -105,7 +105,7 @@ describe('Participant Import static prototype', () => {
     const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click')
     const fixtureBefore = JSON.stringify(participantImportFixture)
 
-    renderParticipants('/participants?workflow=prototype&step=validation')
+    renderParticipants('/dev/prototypes/participants?workflow=prototype&step=validation')
 
     const totals = screen.getByRole('region', {
       name: 'Participant validation totals',
@@ -170,11 +170,11 @@ describe('Participant Import static prototype', () => {
     ).toBeDisabled()
     expect(
       screen.getByRole('link', { name: 'Review import summary' }),
-    ).toHaveAttribute('href', '/participants?workflow=prototype&step=summary')
+    ).toHaveAttribute('href', '/dev/prototypes/participants?step=summary')
   })
 
   it('renders a presentation-only summary without claiming import success', () => {
-    renderParticipants('/participants?workflow=prototype&step=summary')
+    renderParticipants('/dev/prototypes/participants?workflow=prototype&step=summary')
 
     expect(screen.getByText('1,250')).toBeVisible()
     expect(screen.getByText('1,186')).toBeVisible()
@@ -189,15 +189,15 @@ describe('Participant Import static prototype', () => {
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'Return to Dashboard' }),
-    ).toHaveAttribute('href', '/dashboard')
+    ).toHaveAttribute('href', '/dev/prototypes/dashboard')
     expect(
       screen.getByRole('link', { name: 'Review validation' }),
-    ).toHaveAttribute('href', '/participants?workflow=prototype&step=validation')
+    ).toHaveAttribute('href', '/dev/prototypes/participants?step=validation')
     expect(
       screen.getByRole('link', { name: 'Continue to Draw Setup' }),
     ).toHaveAttribute(
       'href',
-      '/draw/setup?mode=practice&scenario=ready',
+      '/dev/prototypes/draw/setup?mode=practice&scenario=ready',
     )
   })
 
@@ -220,30 +220,30 @@ describe('Participant Import static prototype', () => {
 
   it('uses route history for Continue, Back, and Forward navigation', async () => {
     const user = userEvent.setup()
-    const { router } = renderParticipants('/participants?workflow=prototype&step=upload')
+    const { router } = renderParticipants('/dev/prototypes/participants?workflow=prototype&step=upload')
 
     await user.click(
       screen.getByRole('link', {
         name: 'Continue to column mapping',
       }),
     )
-    expect(router.state.location.search).toBe('?workflow=prototype&step=mapping')
+    expect(router.state.location.search).toBe('?step=mapping')
 
     await user.click(
       screen.getByRole('link', {
         name: 'Validate participant data',
       }),
     )
-    expect(router.state.location.search).toBe('?workflow=prototype&step=validation')
+    expect(router.state.location.search).toBe('?step=validation')
 
     await router.navigate(-1)
     await waitFor(() => {
-      expect(router.state.location.search).toBe('?workflow=prototype&step=mapping')
+      expect(router.state.location.search).toBe('?step=mapping')
     })
 
     await router.navigate(1)
     await waitFor(() => {
-      expect(router.state.location.search).toBe('?workflow=prototype&step=validation')
+      expect(router.state.location.search).toBe('?step=validation')
     })
   })
 
@@ -258,7 +258,7 @@ describe('Participant Import static prototype', () => {
     expect(Object.isFrozen(participantImportFixture.summary)).toBe(true)
     expect(originalMapping?.sourceColumn).toBeNull()
 
-    renderParticipants('/participants?workflow=prototype&step=mapping')
+    renderParticipants('/dev/prototypes/participants?workflow=prototype&step=mapping')
     await user.selectOptions(
       screen.getByRole('combobox', {
         name: /Check-in Status — Optional/i,
@@ -283,7 +283,7 @@ describe('Participant Import static prototype', () => {
 
     try {
       const { container } = render(
-          <MemoryRouter initialEntries={['/participants?workflow=prototype&step=upload']}>
+          <MemoryRouter initialEntries={['/dev/prototypes/participants?workflow=prototype&step=upload']}>
           <ParticipantsPage />
         </MemoryRouter>,
       )

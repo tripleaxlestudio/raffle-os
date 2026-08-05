@@ -8,9 +8,9 @@ import {
   redrawFixture,
 } from '../../prototype/data/index.ts'
 
-function renderResults(path = '/draw/results') {
+function renderResults(path = '/dev/prototypes/draw/results') {
   const router = createMemoryRouter(appRoutes, {
-    initialEntries: [path],
+    initialEntries: [path.startsWith('/dev/') ? path : `/dev/prototypes${path}`],
   })
   const view = render(<RouterProvider router={router} />)
 
@@ -66,7 +66,7 @@ describe('Pending Results static prototype', () => {
     expect(screen.getAllByText('Confirmed').length).toBeGreaterThanOrEqual(10)
     expect(
       screen.getByRole('link', { name: 'Review static history' }),
-    ).toHaveAttribute('href', '/history?view=session-detail')
+    ).toHaveAttribute('href', '/dev/prototypes/history?view=session-detail')
   })
 
   it('reconciles every partial row status with the exact summary counts', () => {
@@ -168,13 +168,13 @@ describe('Pending Results static prototype', () => {
       screen.getByRole('link', { name: 'Open redraw' }),
     ).toHaveAttribute(
       'href',
-      '/draw/results?scenario=pending&panel=redraw&selection=multiple',
+      '/dev/prototypes/draw/results?scenario=pending&panel=redraw&selection=multiple',
     )
     expect(
       screen.getByRole('link', { name: 'Return to Live Draw' }),
     ).toHaveAttribute(
       'href',
-      '/draw/live?state=running&mode=live&stage=rolling',
+      '/dev/prototypes/draw/live?state=running&mode=live&stage=rolling',
     )
   })
 })
@@ -284,7 +284,7 @@ describe('Redraw presentation panel', () => {
     ).toBeVisible()
     expect(
       within(panel).getByRole('link', { name: 'Review in History' }),
-    ).toHaveAttribute('href', '/history?view=session-detail')
+    ).toHaveAttribute('href', '/dev/prototypes/history?view=session-detail')
   })
 
   it('does not mutate the redraw fixture during panel interactions', async () => {

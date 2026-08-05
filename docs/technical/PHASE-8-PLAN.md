@@ -102,10 +102,9 @@ controls in Audience or use presentation animation/transport as persistence.
 - No new random-selection algorithm or animation-driven selection.
 - No Audience-side confirm, cancel, redraw, eligibility calculation, or
   official persistence.
-- No export, final history redesign, backup/restore, legal certification, or
-  external audit claim unless separately approved. Existing audit/history
-  records remain available as dependencies; export/backup boundaries are
-  assessed in Section 16.
+- No CSV/XLSX export or backup/restore. History/read-model reconciliation is
+  explicitly in Phase 8; export and backup boundaries remain outside Phase 8.
+  No legal certification or external audit claim is made.
 - No silent deletion or rewriting of Phase 6/7 evidence or official history.
 - No schema migration during this planning task.
 
@@ -117,7 +116,7 @@ controls in Audience or use presentation animation/transport as persistence.
 | `WinnerRecord` | Authority for each selected slot and its lifecycle. `pending` is not final; `confirmed` is final; `cancelled` remains official audit evidence but is not final. |
 | Pending result | A read projection of a persisted Live session whose selected records still require operator decision. Route render only reads; it never selects or mutates. |
 | Presentation checkpoint | Recovery metadata for countdown/rolling/reveal/pending handoff. It never authorizes a mutation and never stores winner/private payloads. |
-| Mutation lock | Application/persistence guard for one decision command per target session. It must be safe to release or reconcile after crash; a stale UI lock must not permanently block recovery. |
+| Mutation lock | Application/persistence guard for one decision command per target session. Transactional preconditions plus unique schema-v3 receipts are the default; a persistent lock is added only if focused cross-tab race tests prove they are insufficient. |
 | Audience projection | Derived public state from authoritative session/winner records and operator-approved decision events. It carries only public display data, never action authority or Participant data. |
 
 The route parameter is untrusted input. Every command must reload and validate
@@ -134,22 +133,25 @@ inside the transaction boundary.
 
 `pending → redraw-selecting → replacement-persisting → pending replacement`
 
+`confirmed → redraw-selecting → replacement-persisting → pending replacement`
+
 For a redraw of an already confirmed result, the existing domain allowance
-(`confirmed → cancelled` only with audited redraw context) must remain explicit;
-the replacement is a new pending record. A replacement is not automatically
-confirmed unless the approved command contract explicitly makes that a single
-atomic decision.
+(`confirmed → cancelled` only with audited redraw context) is a separate
+destructive command. It preserves the original, creates a new pending
+replacement, and atomically moves a completed session back to
+`pending-confirmation`. A replacement is never automatically confirmed.
 
 ### Session lifecycle
 
-- `pending-confirmation`: at least one unresolved selected result remains.
+- `pending-confirmation`: at least one WinnerRecord remains `pending`, including
+  a pending replacement. There is no persisted partial-completion status.
 - `confirming`, `cancelling`, and `redraw-selecting` are controller/command
   phases, not necessarily persisted statuses. They must not be inferred from a
   route render.
-- `completed`: all slots are resolved as confirmed or cancelled/replaced under
-  the approved definition of completion.
-- `cancelled`: the whole session is intentionally abandoned, if this command
-  is approved; it must not erase WinnerRecords.
+- `completed`: zero WinnerRecords remain pending and at least one WinnerRecord
+  is confirmed.
+- `cancelled`: all winners are cancelled and no replacement is pending or
+  confirmed. Cancellation preserves every WinnerRecord and RedrawRecord.
 
 ### Failure and recovery
 
@@ -162,19 +164,20 @@ reconciled from the persisted receipt, not guessed from UI state.
 ## 8. Command and idempotency model
 
 Each command carries a caller-generated `commandId`, `drawSessionId`, mode,
-target WinnerRecord IDs, expected statuses, actor, timestamp, and a canonical
-operation payload. The command handler validates an idempotency key scoped to
+target WinnerRecord IDs, expected statuses, a typed unauthenticated actor
+(`local-operator`), and a canonical operation payload. The command handler validates an idempotency key scoped to
 the operation and session. A retry with the same key and equivalent payload
 returns the original outcome; the same key with a different payload is a safe
 conflict. A new key is rejected when current persisted statuses no longer
 match the expected precondition.
 
 Confirm/cancel must be one transaction covering precondition reads, winner
-transitions, session completion calculation, command receipt/lock update, and
-append-only audit records. Redraw must additionally cover replacement
-eligibility, original cancellation, replacement append, `RedrawRecord`, and
-audit. No command is initiated by route render, refresh, timer, Audience
-message, or reconnect.
+transitions, session resolution, command receipt update, and append-only audit
+records. Redraw must additionally cover replacement eligibility, original
+cancellation, replacement append, `RedrawRecord`, and audit. The persistence
+layer generates canonical commit timestamps; UI-supplied time is not
+authoritative. No command is initiated by route render, refresh, timer,
+Audience message, or reconnect.
 
 The current repositories have no durable command identity or receipt. An
 in-memory/UI disabled button is insufficient for duplicate-submit prevention.
@@ -182,24 +185,29 @@ in-memory/UI disabled button is insufficient for duplicate-submit prevention.
 ## 9. Confirmation contract
 
 Input: Live `drawSessionId`, one or more pending WinnerRecord IDs (or an
-explicit all-pending selector), `commandId`, actor, and timestamp. The handler
+explicit all-pending selector), `commandId`, typed actor `local-operator`, and
+an operation timestamp. The handler
 must verify every target belongs to the same Live session and is currently
 `pending`; an empty selection is invalid. It transitions only selected records
-to `confirmed`, writes `confirmedAt`, and appends one audit record per
+to `confirmed`, writes `confirmedAt` from the persistence-generated canonical
+commit timestamp, and appends one audit record per
 decision (or a typed batch detail with every target) plus command evidence.
 
 Partial confirmation leaves all untargeted records pending and keeps the
-session unresolved. When no pending records remain, the session transitions to
-`completed` atomically. A duplicate command is idempotent; a second command
-against already confirmed records is rejected as stale/no-op according to the
-approved API contract, never duplicated.
+session `pending-confirmation`. When no pending records remain and at least one
+winner is confirmed, the session transitions to `completed` atomically. A
+duplicate command is idempotent; a second command against already confirmed
+records is rejected as stale/no-op according to the approved API contract,
+never duplicated.
 
 ## 10. Cancellation contract
 
 Input: Live session, one or more pending WinnerRecord IDs, `commandId`, actor,
 reason, optional note, and timestamp. The reason vocabulary must be explicit;
-`other` requires a non-empty note. Cancellation changes status and
-`cancelledAt`, retains the record, and appends immutable audit evidence. It
+`other` requires a non-empty note. The actor is typed `local-operator`.
+Cancellation changes status and
+`cancelledAt` from the persistence-generated canonical commit timestamp,
+retains the record, and appends immutable audit evidence. It
 must not silently return a ticket to an eligible pool without the policy being
 applied by the eligibility evaluator.
 
@@ -218,16 +226,24 @@ replacement records using the existing secure random source without
 replacement. It must preserve exact ticket strings.
 
 For each original, the atomic transaction must: validate expected status;
-cancel the original with audited redraw context; append a distinct pending
-replacement; append one `RedrawRecord` linking both IDs and reason; append
-audit evidence; and update session lifecycle only when the resulting set is
-resolved. Multiple redraws must not reuse a participant or ticket. A failed
+exclude the original from the same operation and all active slots in the
+session; cancel the original with audited redraw context; append a distinct
+pending replacement; append one `RedrawRecord` linking both IDs and reason;
+append audit evidence; and resolve the session from the resulting statuses. A
+confirmed-original redraw is a separate destructive command and atomically
+moves `completed` to `pending-confirmation` when the replacement is pending.
+Multiple redraws must not reuse a participant or ticket. Candidate selection is
+transaction-scoped: no externally observable replacement is selected or
+revealed before commit, and an aborted transaction exposes nothing. A failed
 transaction leaves the original and replacement state unchanged.
 
 The existing `RedrawRecord` shape is a useful foundation, but the current
 repository enforces only same-session/relationship invariants and does not yet
 provide the command-level workflow, candidate construction, or durable
-idempotency required here.
+idempotency required here. A cancelled original cannot be selected again in
+the same replacement operation or occupy another active slot in the same
+session; future-draw eligibility follows confirmed history and the configured
+event/category rule.
 
 ## 12. Eligibility and duplicate-winner policy
 
@@ -236,11 +252,10 @@ idempotency required here.
 - Pending winners in an in-flight Live session remain disallowed for another
   Live draw; cancellation/replacement must recompute this decision from
   persisted state.
-- A cancelled original is not a confirmed win, but its eligibility effect for
-  the current redraw and future draws must be explicit per reason and owner
-  policy. The default Phase 8 proposal is: do not reselect the same original
-  participant in its active replacement operation; future eligibility follows
-  the configured rule and confirmed history, not a deleted record.
+- A cancelled original cannot be selected again in the same replacement
+  operation or occupy another active slot in the same session. It is not a
+  confirmed win; future-draw eligibility follows confirmed history and the
+  configured event/category rule, not deletion of the cancelled record.
 - A replacement cannot use a participant/ticket already occupying an active
   slot in the same session, a confirmed disallowed winner, a missing/mismatched
   Participant, or a ticket outside the immutable candidate snapshot.
@@ -270,21 +285,24 @@ the existing stores are included in atomic Dexie transactions. It can therefore
 represent the business facts of a single committed confirm/cancel/redraw.
 
 Schema v2 does not durably represent a unique command identity, an idempotent
-command outcome, an in-progress mutation lock, or an unambiguous recovery
-receipt after a crash between UI intent and transaction completion. Audit detail
-alone is not sufficient as a unique indexed receipt, and checkpoint v2 is a
-presentation record, not a mutation journal.
+command outcome, or an unambiguous recovery receipt after a crash between UI
+intent and transaction completion. Audit detail alone is not sufficient as a
+unique indexed receipt, and checkpoint v2 is a presentation record, not a
+mutation journal.
 
-Recommendation: owner approval is required before implementation of an
-additive migration, likely schema v3, containing a narrowly scoped command
-receipt/idempotency store and, if needed after transaction design review, a
-recoverable mutation-lock/operation record. Preserve all v1/v2 stores and
+Owner decision: approve additive IndexedDB schema v3 with a mandatory,
+narrowly scoped command receipt/idempotency store. The receipt persists command
+ID, operation scope/payload fingerprint, status/outcome, persistence-generated
+canonical commit timestamp, and typed actor (`local-operator`) so an
+unknown/timeout retry can reconcile safely. Preserve all v1/v2 stores and
 records; do not rewrite history. Define upgrade readback, duplicate-key,
-interrupted-upgrade, and downgrade/unsupported-version behavior before coding.
-If the owner rejects a migration, Phase 8 must be reduced to a documented
-single-tab best-effort workflow and cannot claim crash-safe idempotency.
+interrupted-upgrade, and unsupported-version behavior before coding.
 
-No schema change is approved by this plan.
+A persistent mutation-lock store is not required by default. First prove with
+focused cross-tab race tests that transactional preconditions plus unique
+command receipts prevent duplicate official effects. Add a lock store only if
+those tests demonstrate that they are insufficient; that additive change
+requires a new owner decision.
 
 ## 15. Recovery and crash-safety policy
 
@@ -295,9 +313,10 @@ No schema change is approved by this plan.
 - A committed receipt returns the committed outcome; a missing receipt with
   unchanged expected statuses is retryable; conflicting statuses require
   reconciliation, not a blind retry.
-- Mutation locks are scoped to a session/operation and have a persisted
-  ownership/lease or equivalent reconciliation rule. Crash recovery must
-  release only stale/uncommitted locks after verifying no official effect.
+- Receipt ownership is scoped to a session/operation. Crash recovery reconciles
+  the receipt and authoritative records; it does not require a persistent lock
+  unless cross-tab race tests prove receipts and transactional preconditions
+  insufficient.
 - Storage failure, quota failure, or transaction abort leaves official records
   unchanged and presents a safe retry/recovery action.
 - Audience disconnect/reconnect cannot affect official persistence. Reconnect
@@ -311,15 +330,15 @@ No schema change is approved by this plan.
 Phase 8 must write the facts required by current history: session ID, category,
 prize, mode, eligible count/snapshot relationship, winner status/timestamps,
 cancel reason, redraw lineage, and audit records. Existing `HistoryPage` and
-repository read paths are dependencies and may need read-model additions to
-show the new lifecycle accurately.
+repository read paths must be reconciled to show the new lifecycle accurately;
+this is a Phase 8 requirement, not an optional follow-up.
 
 Final export is explicitly defined by the PRD as confirmed results while
-pending/cancelled evidence remains auditable. Implementing or expanding CSV/
-XLSX export is not required for the core Phase 8 mutation slice unless the
-owner makes export reconciliation an acceptance blocker. Backup/restore remains
-outside Phase 8 pending a separate portable-format decision. Phase 8 must not
-silently omit or overwrite cancelled/replaced evidence from local history.
+pending/cancelled evidence remains auditable. CSV/XLSX export and backup/restore
+are outside Phase 8. History/read-model reconciliation is required in Phase 8:
+history must accurately expose pending, confirmed, cancelled, replaced,
+session-resolution, reason, lineage, actor, and canonical commit timestamp
+facts without silently omitting or overwriting evidence.
 
 ## 17. Operator UI plan
 
@@ -331,7 +350,8 @@ Promote only `ProductionPendingResultsPage`; keep the fixture-driven
 - explicit selection for individual or all pending winners;
 - confirm action with confirmation dialog and duplicate-submit disabled state;
 - cancel/redraw action with required reason and `other` note validation;
-- replacement preview that is clearly provisional until persistence commits;
+- replacement eligibility/capacity information before commit; never preview
+  the actual randomly selected replacement before persistence commits;
 - safe loading, conflict, storage-failure, retry, and recovery states;
 - visible Live/official language and no Participant/private data in Audience;
 - no action that runs merely because the route loaded or refreshed.
@@ -342,11 +362,11 @@ guards remain in the domain/application and persistence boundary.
 
 ## 18. Audience synchronization implications
 
-Operator remains authoritative. A confirmed result may project `confirmed`
-state; a pending reveal must remain visibly provisional; cancellation should
-remove the cancelled ticket from the active public result projection only after
-the official transaction commits; a replacement should be projected only after
-its WinnerRecord/RedrawRecord transaction commits. The public payload remains
+Operator remains authoritative. A revealed but unresolved result is
+`provisional/pending`; `confirmed` is published only after persistence commits.
+Cancellation removes the cancelled ticket from the active public projection
+only after commit. A replacement is published as pending only after its
+WinnerRecord/RedrawRecord transaction commits. The public payload remains
 ticket-only and must not expose Participant name, group, check-in, notes,
 private identifiers, command IDs, or redraw reasons.
 
@@ -364,11 +384,12 @@ Define state transitions, operation discriminated unions, reason validation,
 completion rules, conflict/error taxonomy, and invariants. Add focused tests;
 do not wire UI yet.
 
-### Slice 2 — Persistence/idempotency decision and implementation boundary
+### Slice 2 — Schema v3 receipts and idempotency boundary
 
-Obtain owner approval for additive schema v3 if required. Implement the
-command receipt/lock repository and atomic transaction composition only after
-approval, with migration/readback/rollback-boundary tests.
+Implement the approved additive schema v3 mandatory command receipt store and
+atomic transaction composition, with migration/readback/unsupported-version
+tests. Add no persistent lock store unless focused cross-tab race tests prove
+that unique receipts and transactional preconditions are insufficient.
 
 ### Slice 3 — Confirmation workflow
 
@@ -384,7 +405,9 @@ completion/recovery, safe failures, and eligibility regression tests.
 
 Implement secure replacement selection from the session snapshot, reason/note,
 duplicate prevention, lineage, atomic rollback, and confirmed/cancelled/future
-eligibility tests.
+eligibility tests. Include confirmed-original redraw as a separate destructive
+command; its committed pending replacement moves `completed` back to
+`pending-confirmation`. Do not reveal the selected replacement before commit.
 
 ### Slice 6 — Production pending Operator route
 
@@ -403,8 +426,8 @@ mutation authority is added.
 
 `PRD + existing Phase 6/7 contracts`
 → `Slice 1 lifecycle/commands`
-→ `owner schema gate`
-→ `Slice 2 receipts/locks`
+→ `owner-approved schema v3 receipts`
+→ `Slice 2 command receipts`
 → `Slice 3 confirmation` and `Slice 4 cancellation`
 → `Slice 5 redraw + eligibility`
 → `Slice 6 production Operator route`
@@ -413,25 +436,31 @@ mutation authority is added.
 
 Phase 6 persistence, eligibility, checkpoint, and mutation-lock tests are
 regression gates for every slice. Phase 7 protocol/projection/privacy tests are
-regression gates for Slice 7. Export/history/backup decisions do not block the
-core mutation implementation unless explicitly promoted by owner approval.
+regression gates for Slice 7. History/read-model reconciliation is a Phase 8
+gate; CSV/XLSX export and backup/restore remain outside Phase 8.
 
 ## 21. Automated test strategy
 
-- Domain transition tests: valid/invalid edges, partial completion, timestamps,
-  reason/note, and exact state invariants.
+- Domain transition tests: valid/invalid edges, pending-confirmation while any
+  pending remains, completed resolution with at least one confirmed winner,
+  all-cancelled resolution, completed → pending-confirmation during
+  confirmed-original redraw, timestamps, reason/note, and exact invariants.
 - Command tests: same-command retry, same-key payload conflict, stale
-  precondition, duplicate targets, no-op, route-render non-execution, and
-  idempotent official effect.
-- Persistence tests: atomic commit/rollback, migration/readback if approved,
-  receipt recovery, stale lock reconciliation, quota/error behavior, and no
+  precondition, duplicate targets, route-render non-execution, idempotent
+  official effect, cross-tab commands using different command IDs, and retry
+  after an unknown/timeout result.
+- Persistence tests: atomic commit/rollback, schema v3 migration/readback,
+  receipt recovery, persistence-generated canonical commit timestamps,
+  `local-operator` actor, cross-tab race behavior, quota/error behavior, and no
   deleted audit evidence.
 - Eligibility tests: previous confirmed winners, pending in-flight winners,
   cancelled originals, category/event rules, insufficient redraw capacity,
   duplicate participant/ticket prevention, and `00042` string preservation.
-- Redraw tests: pending and approved confirmed-original policy, reason required,
-  original/replacement lineage, no duplicate replacement, and failed
-  transaction leaves original unchanged.
+- Redraw tests: pending and confirmed-original policy, completed →
+  pending-confirmation, reason required, original/replacement lineage, no
+  duplicate replacement, cancelled original excluded from the same operation
+  and active session slots, no externally observable replacement selection or
+  reveal before commit, and failed transaction leaves original unchanged.
 - React/route tests: production route only, explicit confirmations, partial
   statuses, refresh/reopen, loading/error/recovery, accessibility, and no
   prototype fixture leakage.
@@ -442,10 +471,11 @@ core mutation implementation unless explicitly promoted by owner approval.
 
 | Area | Required automated evidence |
 |---|---|
-| Confirmation | All/individual/partial confirm; exact one effect under duplicate submit; pending targets only; audit records; completed session only after all resolved |
+| Confirmation | All/individual/partial confirm; exact one effect under duplicate submit; pending targets only; audit records; completed only with zero pending and at least one confirmed |
 | Cancellation | Required reason/note; append-only cancelled record; partial cancellation; idempotent retry; no silent deletion |
-| Redraw | Valid pool and capacity; secure no-replacement selection; no active/confirmed-ineligible duplicate; reason; lineage; atomic rollback |
-| Recovery | Refresh/crash/timeout in every command phase; receipt reconciliation; stale lock recovery; no reselection |
+| Redraw | Valid pool and capacity; secure no-replacement selection; no active/confirmed-ineligible duplicate; cancelled original excluded; reason; lineage; atomic rollback; completed → pending-confirmation |
+| Recovery | Refresh/crash/timeout in every command phase; receipt reconciliation; retry after unknown/timeout; cross-tab different command IDs; no reselection |
+| Commit boundary | Replacement eligibility/capacity may be shown pre-commit; actual random selection is transaction-scoped and neither exposed nor revealed before commit |
 | Authority/privacy | WinnerRecord/DrawSession remain authoritative; checkpoint has no winner/private payload; Audience cannot mutate; exact public fields only |
 | Mode | Practice writes no official mutation; Live writes official transaction/audit; labels and route boundaries are explicit |
 | Existing regression | Full Phase 6 and Phase 7 automated suites remain green, including exact tickets, presentation recovery, blackout, transport ordering, and privacy |
@@ -461,7 +491,8 @@ Audience in same-origin separate windows:
 - cancel pending result with each reason policy and verify history;
 - redraw/replacement for one and multiple records, including lineage;
 - refresh/reopen at pending, confirming, cancelling, and redraw states;
-- duplicate-submit attempts, timeout/retry, and mutation-lock recovery;
+- duplicate-submit attempts, timeout/retry, receipt recovery, and cross-tab
+  race behavior;
 - blackout, Audience disconnect/reconnect, multiple Audience windows, and
   confirmed/cancelled/replacement projection;
 - fullscreen enter/exit/denial and safe fallback;
@@ -483,23 +514,25 @@ manual rows.
 
 ## 24. Risks and rollback
 
-Primary risks are schema/idempotency gaps, partial writes, stale locks after
-crash, redraw selecting an ineligible participant, ambiguous partial-session
-completion, and public projection exposing private data. Mitigate with
-transaction-level preconditions, additive migration only, append-only audit,
-receipt reconciliation, candidate revalidation, and public projection tests.
+Primary risks are receipt migration/idempotency gaps, partial writes, cross-tab
+races, redraw selecting an ineligible participant, replacement leakage before
+commit, ambiguous all-cancelled/completed resolution, and public projection
+exposing private data. Mitigate with transaction-level preconditions, mandatory
+additive v3 receipts, append-only audit, receipt reconciliation, candidate
+revalidation, commit-gated replacement projection, and public projection tests.
 
 Rollback must mean stopping the new command path and leaving v1/v2 data and
 historical records intact. Do not downgrade an IndexedDB schema in place or
-delete receipts/audit records to make a failed workflow look clean. If a
-migration is approved, unsupported-version behavior and backup/restore of test
-fixtures must be documented before release.
+delete receipts/audit records to make a failed workflow look clean.
+Unsupported-version behavior and backup/restore of test fixtures must be
+documented before release; product backup/restore remains outside Phase 8.
 
 ## 25. Exit criteria
 
 - Owner-approved command and authority contracts are implemented and reviewed.
-- Any schema migration has explicit owner approval, additive compatibility,
-  migration tests, and a rollback/unsupported-version policy.
+- Schema v3 command receipts are implemented as additive mandatory persistence,
+  with migration tests and an unsupported-version policy. No mutation-lock
+  store exists unless separately justified by failing cross-tab race tests.
 - Confirm/cancel/redraw are atomic, auditable, idempotent, and recovery-safe.
 - Eligibility and duplicate prevention pass for all supported winner counts and
   exact string tickets.
@@ -508,26 +541,34 @@ fixtures must be documented before release.
   decisions; Audience remains read-only.
 - Required automated verification passes with exact file/test counts recorded.
 - Combined Phase 6/7 manual debt is run and accepted in Chrome and Edge.
-- History contains cancelled and replacement lineage; export/backup boundaries
-  are documented and no unapproved scope is claimed.
+- History/read-model reconciliation exposes cancelled and replacement lineage,
+  resolution states, canonical commit timestamps, and actor. CSV/XLSX export
+  and backup/restore remain outside Phase 8.
 
 ## 26. Approval gate
 
-Before implementation, the owner must approve: the authority/state model;
-whether partial session completion uses existing status plus derived pending
-count or needs a new persisted status; the pending/cancelled eligibility rule;
-whether confirmed-original redraw is in Phase 8; the command receipt/lock
-schema decision; Audience semantics for pending versus confirmed results; and
-the export/history/backup boundary. No implementation slice should bypass this
-gate or silently convert a prototype control into an official action.
+Before implementation, the owner has approved: existing
+`pending-confirmation` while any WinnerRecord is pending; completed only when
+zero pending and at least one confirmed; cancelled only when all are cancelled
+with no pending/confirmed replacement; cancelled-original same-operation and
+same-session exclusion; confirmed-original redraw as a separate destructive
+command with completed → pending-confirmation; additive mandatory schema v3
+command receipts; no persistent lock unless race tests require it; commit-gated
+Audience semantics; Phase 8 history/read-model reconciliation; export and
+backup/restore outside Phase 8; no pre-commit random replacement preview; and
+persistence-generated canonical timestamps with `local-operator`. The gate
+still requires implementation review of the detailed contracts and tests; no
+slice may bypass it or silently convert a prototype control into an official
+action.
 
 ## 27. Proposed commit sequence
 
-1. `docs(phase8): plan result confirmation and redraw workflow` — this plan
-   only; already reviewed as the planning deliverable.
+1. `docs(phase8): finalize pending mutation workflow plan` — this revised plan
+   only; the required planning deliverable.
 2. `feat(phase8): add pending decision domain contracts` — Slice 1.
-3. `feat(phase8): add mutation receipts and recovery locks` — Slice 2, only
-   after schema approval.
+3. `feat(phase8): add schema v3 command receipts` — Slice 2; use the approved
+   additive receipt store and add no persistent lock unless race tests require
+   it.
 4. `feat(phase8): persist idempotent confirmation workflow` — Slice 3.
 5. `feat(phase8): persist audited cancellation workflow` — Slice 4.
 6. `feat(phase8): add redraw replacement and eligibility guards` — Slice 5.

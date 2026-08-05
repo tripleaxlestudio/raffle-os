@@ -6,6 +6,8 @@ import { SchemaMigrationError } from '../errors/persistence-errors.ts'
 import {
   SCHEMA_V1,
   SCHEMA_VERSION_1,
+  SCHEMA_V2,
+  SCHEMA_VERSION_2,
 } from './schema-v1.ts'
 
 export interface PersistenceMigration {
@@ -16,13 +18,17 @@ export interface PersistenceMigration {
   ) => PromiseLike<void> | void
 }
 
-export const CURRENT_SUPPORTED_SCHEMA_VERSION = SCHEMA_VERSION_1
+export const CURRENT_SUPPORTED_SCHEMA_VERSION = SCHEMA_VERSION_2
 
 export const PERSISTENCE_MIGRATIONS:
   readonly PersistenceMigration[] = [
     {
       stores: SCHEMA_V1,
       version: SCHEMA_VERSION_1,
+    },
+    {
+      stores: SCHEMA_V2,
+      version: SCHEMA_VERSION_2,
     },
   ]
 

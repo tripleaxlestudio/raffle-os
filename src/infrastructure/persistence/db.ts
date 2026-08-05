@@ -26,6 +26,7 @@ import type {
 } from '../../domain/shared/identifiers.ts'
 import type { RedrawRecord } from '../../domain/winners/redraw.types.ts'
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
+import type { PresentationCheckpointRecord } from '../../domain/workflow/presentation-checkpoint.types.ts'
 import { normalizeDatabaseOpenError } from './errors/persistence-errors.ts'
 import {
   CURRENT_SUPPORTED_SCHEMA_VERSION,
@@ -96,6 +97,10 @@ export class RaffleOSDatabase extends Dexie {
   declare readonly preferences: Table<
     ApplicationPreference,
     ApplicationPreferenceKey
+  >
+  declare readonly presentation_checkpoints: Table<
+    PresentationCheckpointRecord,
+    DrawSessionId
   >
 
   readonly #indexedDbFactory: IDBFactory | undefined

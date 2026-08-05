@@ -72,6 +72,7 @@ import {
 import {
   SCHEMA_V1,
   SCHEMA_V1_STORE_NAMES,
+  SCHEMA_V2,
 } from './schema/schema-v1.ts'
 
 function unwrap<T>(result: Result<T>): T {
@@ -334,7 +335,7 @@ async function writeFixtureSet(
 describe('RaffleOS database construction and Schema Version 1', () => {
   it('uses the production defaults without constructing a singleton', () => {
     expect(DEFAULT_DATABASE_NAME).toBe('RaffleOS_DB')
-    expect(APPLICATION_SCHEMA_VERSION).toBe(1)
+    expect(APPLICATION_SCHEMA_VERSION).toBe(2)
   })
 
   it('does not open on construction and accepts a custom database name', async () => {
@@ -393,7 +394,7 @@ describe('RaffleOS database construction and Schema Version 1', () => {
     expect(database.isOpen()).toBe(true)
   })
 
-  it('opens Version 1 with exactly the ten approved stores', async () => {
+  it('opens Version 2 with all Version 1 stores plus the checkpoint store', async () => {
     const database = createTestDatabase()
     await database.openSupported()
 
@@ -403,9 +404,9 @@ describe('RaffleOS database construction and Schema Version 1', () => {
     const nativeStores = Array.from(
       database.backendDB().objectStoreNames,
     ).sort()
-    const expectedStores = [...SCHEMA_V1_STORE_NAMES].sort()
+    const expectedStores = [...SCHEMA_V1_STORE_NAMES, 'presentation_checkpoints'].sort()
 
-    expect(database.verno).toBe(1)
+    expect(database.verno).toBe(2)
     expect(dexieStores).toEqual(expectedStores)
     expect(nativeStores).toEqual(expectedStores)
   })
@@ -655,8 +656,9 @@ describe('safe open boundary and persistence errors', () => {
         indexedDB,
       }),
     )
-    newerDatabase.version(2).stores({
+    newerDatabase.version(3).stores({
       ...SCHEMA_V1,
+      ...SCHEMA_V2,
       newer_version_sentinel: 'id',
     })
     await newerDatabase.open()
@@ -697,13 +699,14 @@ describe('safe open boundary and persistence errors', () => {
         indexedDB,
       }),
     )
-    verificationDatabase.version(2).stores({
+    verificationDatabase.version(3).stores({
       ...SCHEMA_V1,
+      ...SCHEMA_V2,
       newer_version_sentinel: 'id',
     })
     await verificationDatabase.open()
 
-    expect(verificationDatabase.verno).toBe(2)
+    expect(verificationDatabase.verno).toBe(3)
     expect(
       await verificationDatabase
         .table('newer_version_sentinel')

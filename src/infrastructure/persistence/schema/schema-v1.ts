@@ -31,5 +31,10 @@ export const SCHEMA_V1_STORE_NAMES = [
   'preferences',
 ] as const
 
+export const SCHEMA_VERSION_2 = 2 as const
+export const SCHEMA_V2 = {
+  presentation_checkpoints: 'drawSessionId, stage, persistedAt',
+} as const
+
 export type SchemaV1StoreName =
   (typeof SCHEMA_V1_STORE_NAMES)[number]

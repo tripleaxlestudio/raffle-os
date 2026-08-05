@@ -6,6 +6,7 @@ import {
 import { RouteErrorPage } from './errors/RouteErrorPage.tsx'
 import { AudienceDisplayShell } from './layouts/AudienceDisplayShell.tsx'
 import { OperatorLayout } from './layouts/OperatorLayout.tsx'
+import { ProductionOperatorLayout } from './layouts/ProductionOperatorLayout.tsx'
 import { AudienceDisplayPage } from '../pages/display/AudienceDisplayPage.tsx'
 import { DashboardPage } from '../pages/operator/DashboardPage.tsx'
 import { DrawSetupRoute } from '../pages/operator/DrawSetupRoute.tsx'
@@ -40,10 +41,6 @@ const operatorRoutes = {
       element: <DrawSetupRoute />,
     },
     {
-      path: 'draw/run/:drawSessionId',
-      element: <DrawRunPage />,
-    },
-    {
       path: 'draw/live',
       element: <LiveDrawPage />,
     },
@@ -62,8 +59,22 @@ const operatorRoutes = {
   ],
 } satisfies RouteObject
 
+const productionDrawRunRoutes = {
+  id: 'production-draw-run',
+  path: '/',
+  element: <ProductionOperatorLayout />,
+  errorElement: <RouteErrorPage />,
+  children: [
+    {
+      path: 'draw/run/:drawSessionId',
+      element: <DrawRunPage />,
+    },
+  ],
+} satisfies RouteObject
+
 export const appRoutes = [
   operatorRoutes,
+  productionDrawRunRoutes,
   {
     path: '/display',
     element: <AudienceDisplayShell />,

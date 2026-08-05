@@ -11,6 +11,8 @@ import { createDrawSetupProductionServices } from '../../infrastructure/composit
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { Button, Card, ConfirmationDialog } from '../../shared/ui/index.ts'
+import { projectLivePresentationResult, type PresentationResultProjection } from '../../application/workflow/presentation-projection.ts'
+import { ProductionDrawPresentation } from '../../ui/operator/draw/ProductionDrawPresentation.tsx'
 
 type GateState = 'loading' | 'ready' | 'holding' | 'invoking' | 'locked' | 'error'
 
@@ -31,8 +33,8 @@ export function DrawRunPage() {
   const [error, setError] = useState<LiveStartGateError | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [holding, setHolding] = useState(false)
-  const [lockedCount, setLockedCount] = useState<number | null>(null)
   const [practiceProjection, setPracticeProjection] = useState<PracticeResultProjection | null>(null)
+  const [presentationResult, setPresentationResult] = useState<PresentationResultProjection | null>(null)
   const attemptRef = useRef(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const holdRef = useRef<HoldController | null>(null)
@@ -52,7 +54,7 @@ export function DrawRunPage() {
       if (next.data?.session.status === 'pending-confirmation') {
         const winners = await services.winners.findByDrawSessionId(sessionId!)
         if (winners.length > 0) {
-          setLockedCount(winners.length)
+          setPresentationResult(projectLivePresentationResult(sessionId!, winners))
           setState('locked')
           return
         }
@@ -60,8 +62,8 @@ export function DrawRunPage() {
       if (next.state === 'ready' && next.data?.session.mode === 'practice') {
         const storedPracticeResult = readPracticeResult(sessionId as DrawSessionId)
         if (storedPracticeResult !== null && storedPracticeResult.winners.length === next.data.requestedWinnerCount) {
+          setPresentationResult(storedPracticeResult)
           setPracticeProjection(storedPracticeResult)
-          setLockedCount(storedPracticeResult.winners.length)
           setState('locked')
           return
         }
@@ -91,7 +93,6 @@ export function DrawRunPage() {
         const readBack = await services.sessions.findById(sessionId)
         const winners = await services.winners.findByDrawSessionId(sessionId)
         if (readBack?.status === 'pending-confirmation' && winners.length > 0) {
-          setLockedCount(winners.length)
           setState('locked')
           return
         }
@@ -101,14 +102,14 @@ export function DrawRunPage() {
         const projection = practiceResultFromWinners(sessionId, result.value.pendingWinners, result.value.auditRecord.timestamp)
         savePracticeResult(projection)
         setPracticeProjection(projection)
-        setLockedCount(projection.winners.length)
+        setPresentationResult(projection)
         setState('locked')
         return
       }
       const officialSession = await services.sessions.findById(sessionId)
       const officialWinners = await services.winners.findByDrawSessionId(sessionId)
       if (officialSession?.status !== 'pending-confirmation' || officialWinners.length === 0) throw new LiveStartGateError('official-result-persisted-response-failed', 'The official result could not be verified after the command completed. Do not retry from this screen; reload to read the authoritative session.', 'resolve-existing-result')
-      setLockedCount(officialWinners.length)
+      setPresentationResult(projectLivePresentationResult(sessionId!, officialWinners))
       setState('locked')
     } catch (cause: unknown) {
       setError(toLiveStartGateError(cause))
@@ -139,7 +140,7 @@ export function DrawRunPage() {
   const confirmStart = useCallback(() => { setConfirmOpen(false); void attemptStart() }, [attemptStart])
 
   if (state === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Production start gate" headingId="draw-run-title" title="Draw Start Gate" description="Validating the persisted DrawSession…" /></section>
-  if (state === 'locked' && readiness?.data !== undefined) return <section aria-labelledby="draw-run-title" className="draw-setup"><PageHeader eyebrow={readiness.data.mode === 'live' ? 'Live result locked' : 'Practice result locked'} headingId="draw-run-title" title="Result Locked" description="Selection is complete; presentation has not started in Slice 4." /><StatusBanner badge={readiness.data.mode === 'live' ? 'Official result locked' : 'Practice only'} title={`${lockedCount ?? 0} winner${lockedCount === 1 ? '' : 's'} selected`} tone="success">The ticket numbers remain hidden until the presentation workflow is implemented. DrawSession <code>{drawSessionId}</code> is safe to reopen without reselection.</StatusBanner>{practiceProjection === null ? null : <p data-practice-projection-count={practiceProjection.winners.length}>Practice projection restored for this tab; ticket reveal remains deferred.</p>}<Button onClick={() => navigate('/draw/setup')}>Back to Draw Setup</Button></section>
+  if (state === 'locked' && readiness?.data !== undefined && presentationResult !== null) return <section aria-labelledby="draw-run-title" className="draw-setup"><h1 id="draw-run-title" className="sr-only">Result Locked</h1><p className="sr-only" role="region" aria-label={`${presentationResult.winners.length} winners selected`}>{presentationResult.winners.length} winners selected</p>{practiceProjection === null ? null : <p className="sr-only">Practice projection restored for this tab; ticket reveal remains deferred.</p>}<ProductionDrawPresentation result={presentationResult} mode={readiness.data.mode} eventName={readiness.data.event.name} prizeCategory={readiness.data.category.name} prizeName={readiness.data.category.prizeName} checkpoints={services.presentationCheckpoints} practiceResult={practiceProjection ?? undefined} onFailure={() => undefined} /></section>
   if (readiness?.data === undefined) return <section aria-labelledby="draw-run-title"><PageHeader eyebrow="Production start gate" headingId="draw-run-title" title="Draw Start Gate" description="The persisted session is not ready for the next workflow." /><StatusBanner badge="Blocked" title={error?.message ?? 'Cannot open this DrawSession'} tone="warning">{readiness?.reason ?? 'Verify the persisted setup and return to Draw Setup.'}</StatusBanner><div className="draw-action-bar__actions"><Button onClick={() => { attemptRef.current = false; void load() }} disabled={!readiness?.retryable && error === null}>Retry validation</Button><Button variant="secondary" onClick={() => navigate('/draw/setup')}>Back to Draw Setup</Button></div></section>
 
   const data = readiness.data

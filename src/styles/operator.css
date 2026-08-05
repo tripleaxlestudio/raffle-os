@@ -1250,6 +1250,50 @@
   }
 }
 
+.production-presentation {
+  display: grid;
+  gap: var(--space-6);
+  min-height: min(42rem, calc(100vh - 8rem));
+  align-content: start;
+}
+
+.production-presentation > header {
+  border-bottom: 1px solid var(--border-default);
+  padding-bottom: var(--space-4);
+}
+
+.production-presentation h1,
+.production-presentation p { margin: 0; }
+.production-presentation__content { display: grid; gap: var(--space-5); justify-items: center; }
+.production-countdown { color: var(--text-primary); font: 800 clamp(8rem, 22vw, 16rem)/.8 var(--font-family-mono); }
+.production-rolling { display: grid; gap: var(--space-4); justify-items: center; color: var(--text-muted); font: 700 clamp(2rem, 5vw, 4rem)/1 var(--font-family-mono); letter-spacing: .16em; }
+.production-winner-list { display: grid; width: min(100%, 72rem); margin: 0; padding: 0; list-style: none; gap: var(--space-3); grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.production-winner-list li { display: grid; min-width: 0; gap: var(--space-2); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-4); background: var(--surface-muted); }
+.production-winner-list li span { color: var(--text-muted); font: 700 var(--font-size-xs)/1 var(--font-family-mono); }
+.production-winner-list li strong { overflow-wrap: anywhere; color: var(--text-primary); font: 800 clamp(1.25rem, 3vw, 2.25rem)/1 var(--font-family-mono); }
+.production-winner-list--1 { grid-template-columns: minmax(0, 34rem); justify-content: center; }
+.production-winner-list--1 li { padding: var(--space-6); text-align: center; }
+.production-winner-list--1 li strong { font-size: clamp(3rem, 9vw, 7rem); }
+.production-winner-list--20 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.production-winner-list--50,
+.production-winner-list--100 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.presentation-completion { color: var(--text-muted); text-align: center; }
+.presentation-failure { display: grid; gap: var(--space-4); max-width: 42rem; }
+
+@media (max-width: 62rem) {
+  .production-winner-list,
+  .production-winner-list--20,
+  .production-winner-list--50,
+  .production-winner-list--100 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 40rem) {
+  .production-winner-list,
+  .production-winner-list--20,
+  .production-winner-list--50,
+  .production-winner-list--100 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* Production participant import integration */
 .production-import-preview {
   display: grid;

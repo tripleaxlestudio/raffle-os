@@ -3,6 +3,8 @@ import { parseDrawSessionId, parseWinnerRecordId } from '../../domain/shared/ide
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
 import { isIsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { LiveStartGateError } from './live-start-gate-errors.ts'
+import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
+import type { PresentationStage } from '../../domain/workflow/presentation-workflow.types.ts'
 
 const PREFIX = 'raffle-os:practice-result:v1:'
 
@@ -11,6 +13,12 @@ export interface PracticeResultProjection {
   readonly winners: readonly { readonly winnerId: WinnerRecord['id']; readonly sequence: number; readonly ticketNumber: WinnerRecord['ticketNumber'] }[]
   readonly createdAt: string
   readonly policyVersion: 1
+  readonly presentation?: {
+    readonly storageFormatVersion: 1
+    readonly stage: PresentationStage
+    readonly stageStartedAt: IsoTimestamp
+    readonly presentationPolicyVersion: 1
+  }
 }
 
 function key(id: DrawSessionId): string { return `${PREFIX}${id}` }
@@ -25,8 +33,9 @@ function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): b
 }
 
 function isValidProjection(value: unknown, drawSessionId: DrawSessionId): value is PracticeResultProjection {
-  if (!isRecord(value) || !hasOnlyKeys(value, ['drawSessionId', 'winners', 'createdAt', 'policyVersion'])) return false
+  if (!isRecord(value) || !Object.keys(value).every((key) => ['drawSessionId', 'winners', 'createdAt', 'policyVersion', 'presentation'].includes(key)) || !['drawSessionId', 'winners', 'createdAt', 'policyVersion'].every((key) => key in value)) return false
   if (value.drawSessionId !== drawSessionId || value.policyVersion !== 1 || typeof value.createdAt !== 'string' || !isIsoTimestamp(value.createdAt)) return false
+  if (value.presentation !== undefined && (!isRecord(value.presentation) || !hasOnlyKeys(value.presentation, ['storageFormatVersion', 'stage', 'stageStartedAt', 'presentationPolicyVersion']) || value.presentation.storageFormatVersion !== 1 || value.presentation.presentationPolicyVersion !== 1 || !['countdown', 'rolling', 'reveal'].includes(String(value.presentation.stage)) || !isIsoTimestamp(value.presentation.stageStartedAt))) return false
   if (!parseDrawSessionId(value.drawSessionId).ok || !Array.isArray(value.winners) || value.winners.length < 1 || value.winners.length > 100) return false
 
   const sequences = new Set<number>()
@@ -79,5 +88,9 @@ export function readPracticeResult(drawSessionId: DrawSessionId): PracticeResult
 }
 
 export function practiceResultFromWinners(drawSessionId: DrawSessionId, winners: readonly WinnerRecord[], createdAt: string): PracticeResultProjection {
-  return { drawSessionId, winners: winners.map((winner) => ({ winnerId: winner.id, sequence: winner.sequenceNumber, ticketNumber: winner.ticketNumber })), createdAt, policyVersion: 1 }
+  return { drawSessionId, winners: winners.map((winner) => ({ winnerId: winner.id, sequence: winner.sequenceNumber, ticketNumber: winner.ticketNumber })), createdAt, policyVersion: 1, presentation: { storageFormatVersion: 1, stage: 'countdown', stageStartedAt: createdAt as IsoTimestamp, presentationPolicyVersion: 1 } }
+}
+
+export function savePracticePresentationStage(result: PracticeResultProjection, stage: PresentationStage, stageStartedAt: IsoTimestamp): void {
+  savePracticeResult({ ...result, presentation: { storageFormatVersion: 1, presentationPolicyVersion: 1, stage, stageStartedAt } })
 }

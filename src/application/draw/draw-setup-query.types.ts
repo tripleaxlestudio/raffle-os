@@ -59,6 +59,7 @@ export interface DrawSetupProductionServices extends DrawSetupQueryRepositories 
   readonly checkStorage?: import('./draw-readiness-query.ts').DrawReadinessDependencies['checkStorage']
   readonly checkCrypto?: import('./draw-readiness-query.ts').DrawReadinessDependencies['checkCrypto']
   readonly command?: DrawSetupCommandService
+  readonly presentationCheckpoints?: import('../persistence/repositories/presentation-checkpoint-repository.interface.ts').PresentationCheckpointRepository
 }
 
 export type DrawSetupFailure = DrawCommandFailure

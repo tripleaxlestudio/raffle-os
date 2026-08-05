@@ -74,6 +74,27 @@ export interface ConfirmPendingWinnersPersistenceOutcome {
   readonly committedAt?: IsoTimestamp
 }
 
+export interface CancelPendingWinnersPersistenceInput {
+  readonly commandId: CommandId
+  readonly actor: 'local-operator'
+  readonly drawSessionId: DrawSessionId
+  readonly operation: 'cancel-pending-winners'
+  readonly reason: import('../../domain/winners/redraw.types.ts').RedrawReason
+  readonly note?: string
+  readonly targets: readonly { readonly winnerId: WinnerRecordId; readonly expectedStatus: 'pending' }[]
+  readonly canonicalPayload: unknown
+}
+
+export interface CancelPendingWinnersPersistenceOutcome {
+  readonly status: 'committed'
+  readonly commandId: CommandId
+  readonly operation: 'cancel-pending-winners'
+  readonly drawSessionId: DrawSessionId
+  readonly affectedWinnerIds: readonly WinnerRecordId[]
+  readonly sessionStatus?: DrawSessionStatus
+  readonly committedAt?: IsoTimestamp
+}
+
 export interface DrawPersistenceUnitOfWork {
   persistStartedDraw(input: PersistStartedDrawInput): Promise<void>
   transitionWinnersWithAudit(
@@ -85,4 +106,7 @@ export interface DrawPersistenceUnitOfWork {
   confirmPendingWinners?(
     input: ConfirmPendingWinnersPersistenceInput,
   ): Promise<ConfirmPendingWinnersPersistenceOutcome>
+  cancelPendingWinners?(
+    input: CancelPendingWinnersPersistenceInput,
+  ): Promise<CancelPendingWinnersPersistenceOutcome>
 }

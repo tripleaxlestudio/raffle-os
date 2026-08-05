@@ -2,12 +2,14 @@ import type {
   DrawPersistenceUnitOfWork,
   ConfirmPendingWinnersPersistenceInput,
   ConfirmPendingWinnersPersistenceOutcome,
+  CancelPendingWinnersPersistenceInput,
+  CancelPendingWinnersPersistenceOutcome,
   PersistStartedDrawInput,
   RecordRedrawReplacementInput,
   TransitionWinnersWithAuditInput,
 } from '../../../application/persistence/draw-persistence-unit-of-work.interface.ts'
 import type { AuditRecord } from '../../../domain/audit/audit.types.ts'
-import type { ConfirmPendingWinnersCommand, CanonicalDecisionPayload } from '../../../application/pending-decisions/command.types.ts'
+import type { CancelPendingWinnersCommand, ConfirmPendingWinnersCommand, CanonicalDecisionPayload } from '../../../application/pending-decisions/command.types.ts'
 import { LOCAL_OPERATOR } from '../../../application/pending-decisions/command.types.ts'
 import { validateCommandTargets } from '../../../application/pending-decisions/validation.ts'
 import { resolveWinnerStatus } from '../../../domain/pending-decisions/lifecycle.ts'
@@ -544,6 +546,76 @@ export class DexieDrawPersistenceUnitOfWork
       )
     } catch (error: unknown) {
       throw normalizeRepositoryError(error, 'Confirming pending WinnerRecords')
+    }
+  }
+
+  async cancelPendingWinners(
+    input: CancelPendingWinnersPersistenceInput,
+  ): Promise<CancelPendingWinnersPersistenceOutcome> {
+    try {
+      const payload = input.canonicalPayload as CanonicalDecisionPayload
+      return await this.database.transaction('rw', [
+        this.database.events,
+        this.database.participants,
+        this.database.draw_sessions,
+        this.database.winner_records,
+        this.database.audit_records,
+        this.database.command_receipts,
+      ], async (transaction) => {
+        const command: CancelPendingWinnersCommand = {
+          actor: input.actor,
+          commandId: input.commandId,
+          drawSessionId: input.drawSessionId,
+          mode: 'live',
+          operation: 'cancel-pending-winners',
+          reason: input.reason,
+          ...(input.note === undefined ? {} : { note: input.note }),
+          targets: input.targets,
+        }
+        const receipt = await this.receipts.create(input.commandId, LOCAL_OPERATOR, payload, this.receipts.inTransaction(transaction))
+        if (!('canonicalPayload' in receipt)) return { affectedWinnerIds: receipt.affectedWinnerIds, commandId: receipt.commandId, committedAt: receipt.committedAt, drawSessionId: receipt.drawSessionId, operation: 'cancel-pending-winners' as const, sessionStatus: receipt.sessionStatus, status: 'committed' as const }
+        if (receipt.status === 'committed') return { affectedWinnerIds: receipt.affectedWinnerIds, commandId: receipt.commandId, committedAt: receipt.committedAt, drawSessionId: receipt.drawSessionId, operation: 'cancel-pending-winners' as const, sessionStatus: receipt.sessionStatus, status: 'committed' as const }
+
+        const atResult = isoTimestampFromDate(new Date())
+        if (!atResult.ok) throw new TransactionError('Persistence could not generate a canonical commit timestamp.')
+        const at = atResult.value
+        const session = await this.database.draw_sessions.get(input.drawSessionId)
+        const winners = await this.database.winner_records.where('drawSessionId').equals(input.drawSessionId).toArray()
+        const targetResult = validateCommandTargets(command, session ?? null, winners)
+        if (!targetResult.ok) throw new ValidationError(targetResult.error.message)
+        if (session === undefined || session.status !== 'pending-confirmation') throw new ImmutableRecordError('Cancellation requires a pending-confirmation Live DrawSession.')
+
+        const targetIds = targetResult.value.map((winner) => winner.id)
+        const targetSet = new Set(targetIds)
+        const nextWinners = winners.map((winner) => targetSet.has(winner.id) ? requireValid(transitionWinnerStatus(winner, 'cancelled', at)) : winner)
+        const nextSessionStatus = resolveWinnerStatus(nextWinners.map((winner) => winner.status))
+        const audits: AuditRecord[] = targetResult.value.map((winner) => ({
+          action: 'winner-cancelled',
+          actor: { type: 'operator', name: LOCAL_OPERATOR },
+          detail: {
+            afterStatus: 'cancelled', beforeStatus: 'pending', commandId: input.commandId,
+            drawSessionId: input.drawSessionId, ...(input.note === undefined ? {} : { normalizedNote: input.note }), reason: input.reason,
+            resultingSessionStatus: nextSessionStatus, targetWinnerIds: targetIds,
+            ticketNumber: winner.ticketNumber, winnerId: winner.id,
+          },
+          eventId: session.eventId,
+          id: createAuditRecordId(),
+          timestamp: at,
+        }))
+        if (nextSessionStatus === 'completed' || nextSessionStatus === 'cancelled') audits.push({
+          action: nextSessionStatus === 'completed' ? 'draw-session-completed' : 'draw-session-cancelled',
+          actor: { type: 'operator', name: LOCAL_OPERATOR },
+          detail: { commandId: input.commandId, drawSessionId: input.drawSessionId, resultingSessionStatus: nextSessionStatus, targetWinnerIds: targetIds },
+          eventId: session.eventId, id: createAuditRecordId(), timestamp: at,
+        })
+        for (const winner of targetResult.value) await transitionWinnerInTransaction(this.database, winner.id, 'pending', 'cancelled', at)
+        for (const audit of audits) await appendAuditInTransaction(this.database, audit)
+        if (nextSessionStatus !== session.status) await transitionDrawSessionInTransaction(this.database, session.id, session.status, nextSessionStatus, at)
+        const outcome = await this.receipts.finalize(input.commandId, payload, { affectedWinnerIds: targetIds, commandId: input.commandId, committedAt: at, drawSessionId: input.drawSessionId, operation: 'cancel-pending-winners', sessionStatus: nextSessionStatus, status: 'committed' }, this.receipts.inTransaction(transaction))
+        return { ...outcome, operation: 'cancel-pending-winners' as const, status: 'committed' as const }
+      })
+    } catch (error: unknown) {
+      throw normalizeRepositoryError(error, 'Cancelling pending WinnerRecords')
     }
   }
 }

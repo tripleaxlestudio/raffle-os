@@ -5,11 +5,22 @@ import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
 
 export type AudienceControllerState =
   | { readonly kind: 'connecting' }
-  | { readonly kind: 'disconnected-safe' }
-  | { readonly kind: 'snapshot'; readonly snapshot: PublicDisplaySnapshot }
+  | { readonly kind: 'unavailable'; readonly connection: 'unavailable' }
+  | { readonly kind: 'disconnected-safe'; readonly connection: AudienceConnectionState }
+  | { readonly kind: 'snapshot'; readonly connection: AudienceConnectionState; readonly snapshot: PublicDisplaySnapshot }
+
+export type AudienceConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'disconnected-safe'
+  | 'unavailable'
+  | 'reconnect-pending'
+  | 'restore-pending'
+  | 'failed-safe'
 
 export type AudienceController = {
   readonly getState: () => AudienceControllerState
+  readonly getConnectionState: () => AudienceConnectionState
   readonly subscribe: (listener: () => void) => () => void
   readonly close: () => void
 }
@@ -28,7 +39,8 @@ type AudienceControllerOptions = {
 
 export function createAudienceController(options: AudienceControllerOptions): AudienceController {
   let currentTransport = options.transport
-  let state: AudienceControllerState = currentTransport.capability.transport === 'available' ? { kind: 'connecting' } : { kind: 'disconnected-safe' }
+  let connection: AudienceConnectionState = currentTransport.capability.transport === 'available' ? 'connecting' : 'unavailable'
+  let state: AudienceControllerState = currentTransport.capability.transport === 'available' ? { kind: 'connecting' } : { kind: 'unavailable', connection: 'unavailable' }
   let acceptedSession = options.expectedSession
   let acceptedOrdering: SequenceTracker | undefined
   let acceptedOperator: string | undefined
@@ -60,6 +72,9 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   const requestRestore = () => {
     if (restoreRequested) return
     restoreRequested = true
+    connection = 'restore-pending'
+    if (state.kind === 'snapshot') state = { ...state, connection }
+    notify()
     send({ type: 'display-restore-request', ...(acceptedOrdering === undefined ? {} : { requestedEpoch: acceptedOrdering.epoch, requestedSequence: acceptedOrdering.sequence }) }, 1)
   }
 
@@ -91,7 +106,8 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       acceptedOperator = sender
       acceptedSession ??= snapshot.drawSessionId
       restoreRequested = false
-      state = { kind: 'snapshot', snapshot }
+      connection = 'connected'
+      state = { kind: 'snapshot', connection, snapshot }
       notify()
     } catch {
       // Invalid, private, cross-session, or otherwise malformed snapshots never replace safe state.
@@ -100,13 +116,17 @@ export function createAudienceController(options: AudienceControllerOptions): Au
 
   const enterDisconnected = () => {
     if (closed) return
-    state = { kind: 'disconnected-safe' }
+    connection = options.transportFactory === undefined ? 'disconnected-safe' : 'reconnect-pending'
+    state = { kind: 'disconnected-safe', connection }
     notify()
     if (options.transportFactory !== undefined && reconnectHandle === null) {
       reconnectHandle = schedule(() => {
         reconnectHandle = null
         if (closed) return
         currentTransport = options.transportFactory?.() ?? currentTransport
+        connection = currentTransport.capability.transport === 'available' ? 'connecting' : 'unavailable'
+        state = currentTransport.capability.transport === 'available' ? { kind: 'connecting' } : { kind: 'unavailable', connection: 'unavailable' }
+        notify()
         attach()
         if (currentTransport.capability.transport === 'available') sendReady()
       }, options.reconnectDelayMs ?? 100)
@@ -123,6 +143,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
 
   return {
     getState: () => state,
+    getConnectionState: () => connection,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
     close() {
       if (closed) return
@@ -131,7 +152,8 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       unsubscribe()
       unsubscribeClose()
       currentTransport.close()
-      state = { kind: 'disconnected-safe' }
+      connection = 'disconnected-safe'
+      state = { kind: 'disconnected-safe', connection }
       notify()
       listeners.clear()
     },

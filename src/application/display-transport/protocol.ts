@@ -21,9 +21,7 @@ export type PublicDisplayStage =
   | 'rolling'
   | 'reveal'
   | 'pending-handoff'
-  | 'confirmed'
-  | 'blackout'
-  | 'disconnected-safe';
+  | 'confirmed';
 
 export type PublicMessage =
   | {
@@ -118,9 +116,7 @@ const isStage = (value: unknown): value is PublicDisplayStage =>
   value === 'rolling' ||
   value === 'reveal' ||
   value === 'pending-handoff' ||
-  value === 'confirmed' ||
-  value === 'blackout' ||
-  value === 'disconnected-safe';
+  value === 'confirmed';
 
 const invalid = (path: string, message: string): ParseEnvelopeResult => ({
   ok: false,

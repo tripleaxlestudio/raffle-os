@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { createAudienceController } from '../../application/display-transport/audience-controller.ts'
+import { createFullscreenController, type FullscreenState } from '../../application/display-transport/fullscreen-controller.ts'
 import type { PublicDisplaySnapshot } from '../../application/display-transport/public-projection.ts'
 import { createBroadcastChannelTransport, type Transport } from '../../application/display-transport/transport.ts'
 import type { ProtocolScope } from '../../application/display-transport/protocol.ts'
@@ -27,16 +28,33 @@ function safeStatusScenario(state: 'connecting' | 'disconnected-safe'): PublicAu
   return { ...publicContext, state, message: state === 'connecting' ? 'Connecting to the operator' : 'Display connection interrupted', instruction: state === 'connecting' ? 'Waiting for a public presentation snapshot.' : 'Please wait for the operator.' }
 }
 
+function FullscreenControls({ controller, state }: { readonly controller: ReturnType<typeof createFullscreenController>; readonly state: FullscreenState }) {
+  if (!controller.isSupported()) return null
+  const active = state === 'fullscreen' || state === 'entering' || state === 'exiting'
+  return <div className="audience-fullscreen-controls" aria-label="Public display controls">
+    <button type="button" onClick={() => { void (state === 'fullscreen' ? controller.exit() : controller.enter()) }} disabled={state === 'entering' || state === 'exiting'}>
+      {state === 'fullscreen' ? 'Exit fullscreen' : 'Enter fullscreen'}
+    </button>
+    <span role="status">{state === 'denied' ? 'Fullscreen was not allowed; windowed display remains available.' : state === 'failed' ? 'Fullscreen is unavailable; windowed display remains available.' : active ? (state === 'fullscreen' ? 'Fullscreen active' : 'Updating display mode') : 'Windowed display'}</span>
+  </div>
+}
+
 export function AudienceDisplayPage({ transport: suppliedTransport, scope = productionScope, expectedSession }: AudienceDisplayPageProps) {
   const transport = useMemo(() => suppliedTransport ?? createBroadcastChannelTransport('raffle-os-display', scope), [scope, suppliedTransport])
   const transportFactory = useMemo(() => suppliedTransport === undefined ? () => createBroadcastChannelTransport('raffle-os-display', scope) : undefined, [scope, suppliedTransport])
   const controller = useMemo(() => createAudienceController({ transport, transportFactory, scope, expectedSession }), [expectedSession, scope, transport, transportFactory])
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
+  const fullscreen = useMemo(() => createFullscreenController({ target: typeof document === 'undefined' ? undefined : document.documentElement }), [])
+  const fullscreenState = useSyncExternalStore(fullscreen.subscribe, fullscreen.getState, fullscreen.getState)
   useEffect(() => () => controller.close(), [controller])
+  useEffect(() => () => fullscreen.close(), [fullscreen])
 
-  if (state.kind === 'connecting' || state.kind === 'disconnected-safe') return <DisconnectedStage scenario={safeStatusScenario(state.kind)} />
-  if (state.snapshot.blackoutRequested) return <BlackoutStage />
+  const controls = <FullscreenControls controller={fullscreen} state={fullscreenState} />
+  if (state.kind === 'connecting' || state.kind === 'disconnected-safe' || state.kind === 'unavailable') return <><DisconnectedStage scenario={safeStatusScenario(state.kind === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}</>
+  if (state.connection !== 'connected') return <><DisconnectedStage scenario={safeStatusScenario(state.connection === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}</>
+  if (state.snapshot.blackoutRequested) return <><BlackoutStage />{controls}</>
   const scenario = snapshotScenario(state.snapshot)
+  const rendered = (() => {
   switch (scenario.state) {
     case 'standby': return <StandbyStage scenario={scenario} />
     case 'countdown': return <CountdownStage scenario={scenario} />
@@ -44,4 +62,6 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope = prod
     case 'reveal':
     case 'pending-handoff': return <WinnerStage scenario={scenario} />
   }
+  })()
+  return <>{rendered}{controls}</>
 }

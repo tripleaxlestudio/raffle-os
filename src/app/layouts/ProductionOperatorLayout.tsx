@@ -1,8 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import type { Event } from '../../domain/events/event.types.ts'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
+import { createBroadcastChannelTransport } from '../../application/display-transport/transport.ts'
+import type { ProtocolScope } from '../../application/display-transport/protocol.ts'
+
+function ProductionDisplayIndicator() {
+  const scope: ProtocolScope = useMemo(() => ({ eventId: 'production-event', displayId: 'public-display' }), [])
+  const transport = useMemo(() => createBroadcastChannelTransport('raffle-os-display', scope), [scope])
+  const [status, setStatus] = useState<'waiting' | 'ready' | 'unavailable'>(() => transport.capability.transport === 'available' ? 'waiting' : 'unavailable')
+  useEffect(() => {
+    if (transport.capability.transport !== 'available') return () => undefined
+    const unsubscribe = transport.subscribe((envelope) => {
+      if (envelope.sender.kind === 'display' && envelope.message.type === 'display-ready' && envelope.scope.eventId === scope.eventId && envelope.scope.displayId === scope.displayId) setStatus('ready')
+    })
+    return () => { unsubscribe(); transport.close() }
+  }, [scope, transport])
+  return <span className="operator-display-indicator" role="status" data-display-status={status}>{status === 'ready' ? 'Display responded' : status === 'waiting' ? 'Waiting for display' : 'Display unavailable'}</span>
+}
 
 function ProductionOperatorHeader({ event, loading }: { event: Event | null; loading: boolean }) {
   return (
@@ -58,6 +74,7 @@ export function ProductionOperatorLayout() {
       <OperatorSidebar production />
       <div className="operator-workspace">
         <ProductionOperatorHeader event={event} loading={loading} />
+        <ProductionDisplayIndicator />
         <main className="operator-main"><Outlet /></main>
       </div>
     </div>

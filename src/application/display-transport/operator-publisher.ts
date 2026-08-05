@@ -18,6 +18,8 @@ import type { Transport } from './transport.ts'
 export type PublisherClock = { readonly now: () => IsoTimestamp }
 export type PublisherStatus =
   | { readonly kind: 'ready' }
+  | { readonly kind: 'waiting-for-display' }
+  | { readonly kind: 'display-ready' }
   | { readonly kind: 'transport-error'; readonly error: ProtocolError }
   | { readonly kind: 'projection-error'; readonly message: string }
   | { readonly kind: 'closed' }
@@ -107,6 +109,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     if (validateEnvelopeContext(envelope, options.scope) !== undefined) return
     if (options.expectedSession !== undefined && envelope.drawSessionId !== undefined && envelope.drawSessionId !== options.expectedSession) return
     if (snapshot === undefined) return
+    if (envelope.message.type === 'display-ready') report({ kind: 'display-ready' })
     // Ready and restore are explicit, idempotent requests for the current public snapshot.
     publishSnapshot(snapshot, true, true)
   }
@@ -133,7 +136,11 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       }
       started = true
       const result = projectAndPublish(initial, true)
-      if (result.ok) report({ kind: 'ready' })
+      if (result.ok) {
+        report({ kind: 'ready' })
+        if (currentTransport.capability.transport === 'available') report({ kind: 'waiting-for-display' })
+        else report({ kind: 'transport-error', error: { kind: 'transport-unavailable', reason: 'Display transport is unavailable.' } })
+      }
       return result
     },
     publish(source) {

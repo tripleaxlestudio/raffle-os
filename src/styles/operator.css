@@ -169,6 +169,25 @@
     flex-wrap: nowrap;
   }
 
+  .operator-display-indicator {
+    display: inline-flex;
+    min-height: 1.75rem;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-bottom: 1px solid var(--border-default);
+    color: var(--text-muted);
+    font-family: var(--font-family-mono);
+    font-size: 0.6875rem;
+  }
+
+  .operator-display-indicator[data-display-status="ready"] {
+    color: var(--status-success);
+  }
+
+  .operator-display-indicator[data-display-status="unavailable"] {
+    color: var(--status-warning);
+  }
+
   .prototype-scenario-select {
     display: grid;
     grid-template-columns: auto minmax(8.5rem, 10rem);

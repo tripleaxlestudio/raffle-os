@@ -1,33 +1,145 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
-import { projectLivePresentationResult, type PresentationResultProjection } from '../../application/workflow/presentation-projection.ts'
+import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
+import type { Event } from '../../domain/events/event.types.ts'
+import type { PrizeCategory } from '../../domain/prizes/prize.types.ts'
+import type { RedrawReason, RedrawRecord } from '../../domain/winners/redraw.types.ts'
+import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
+import type { CommandId } from '../../domain/shared/identifiers.ts'
+import { calculateReplacementCapacity, LOCAL_OPERATOR, type PendingDecisionCommand } from '../../application/pending-decisions/index.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
-import { Card } from '../../shared/ui/index.ts'
+import { Badge, Button, Card, ConfirmationDialog } from '../../shared/ui/index.ts'
 
-type LoadState = { status: 'loading' } | { status: 'ready'; result: PresentationResultProjection; eventName: string; prizeName: string; categoryName: string } | { status: 'error'; message: string }
+type Decision = 'confirm' | 'cancel' | 'redraw-pending' | 'redraw-confirmed'
+type LoadState =
+  | { readonly status: 'loading' }
+  | { readonly status: 'error'; readonly title: string; readonly message: string }
+  | { readonly status: 'ready'; readonly session: DrawSession; readonly event: Event; readonly category: PrizeCategory; readonly winners: readonly WinnerRecord[]; readonly redraws: readonly RedrawRecord[] }
+
+const reasons: readonly { value: RedrawReason; label: string }[] = [
+  { value: 'absent', label: 'Absent' },
+  { value: 'invalid-ticket', label: 'Invalid ticket' },
+  { value: 'ineligible', label: 'Ineligible' },
+  { value: 'previous-winner', label: 'Previous winner' },
+  { value: 'operator-error', label: 'Operator error' },
+  { value: 'other', label: 'Other' },
+]
+
+function commandId(): CommandId {
+  return crypto.randomUUID() as CommandId
+}
+
+function statusLabel(status: WinnerRecord['status']): string {
+  return status === 'pending' ? 'Pending' : status === 'confirmed' ? 'Confirmed' : 'Cancelled'
+}
 
 export function ProductionPendingResultsPage() {
   const services = useMemo(() => createDrawSetupProductionServices(), [])
   const { drawSessionId } = useParams<{ drawSessionId: string }>()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [decision, setDecision] = useState<Decision | null>(null)
+  const [reason, setReason] = useState<RedrawReason>('absent')
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const commandRef = useRef<{ id: CommandId; command: PendingDecisionCommand } | null>(null)
+
   const load = useCallback(async () => {
-    if (drawSessionId === undefined) { setState({ status: 'error', message: 'Pending DrawSession was not specified.' }); return }
+    setState({ status: 'loading' })
+    setSelected(new Set())
+    if (drawSessionId === undefined || drawSessionId.trim() === '') {
+      setState({ status: 'error', title: 'Invalid DrawSession', message: 'The requested DrawSession identifier is missing or invalid.' })
+      return
+    }
     try {
       await services.open()
       const session = await services.sessions.findById(drawSessionId as never)
-      if (session === null) { setState({ status: 'error', message: 'Pending DrawSession was not found.' }); return }
-      if (session.status !== 'pending-confirmation' || session.mode !== 'live') { setState({ status: 'error', message: 'This DrawSession is not a pending-confirmation Live result.' }); return }
-      const winners = await services.winners.findByDrawSessionId(session.id)
-      const event = await services.events.findById(session.eventId)
-      const category = session.configurationSnapshot === null ? null : await services.categories.findById(session.configurationSnapshot.prizeCategoryId)
-      if (event === null || category === null) { setState({ status: 'error', message: 'The pending result relationships could not be verified.' }); return }
-      setState({ status: 'ready', result: projectLivePresentationResult(session.id, winners), eventName: event.name, categoryName: category.name, prizeName: category.prizeName })
-    } catch { setState({ status: 'error', message: 'Pending results could not be read safely. Retry the local read.' }) }
+      if (session === null) { setState({ status: 'error', title: 'DrawSession not found', message: 'The requested local result does not exist.' }); return }
+      if (session.mode !== 'live') { setState({ status: 'error', title: 'Live result required', message: 'Production decisions are available only for Live DrawSessions.' }); return }
+      if (!['pending-confirmation', 'completed', 'cancelled'].includes(session.status)) { setState({ status: 'error', title: 'Unsupported result state', message: `This result is ${session.status} and cannot be decided here.` }); return }
+      if (session.configurationSnapshot === null) { setState({ status: 'error', title: 'Incomplete result', message: 'The authoritative configuration snapshot is missing.' }); return }
+      const [event, category, winners, redraws] = await Promise.all([
+        services.events.findById(session.eventId),
+        services.categories.findById(session.configurationSnapshot.prizeCategoryId),
+        services.winners.findByDrawSessionId(session.id),
+        services.redraws?.findByDrawSessionId(session.id) ?? Promise.resolve([] as RedrawRecord[]),
+      ])
+      if (event === null) { setState({ status: 'error', title: 'Event unavailable', message: 'The related Event could not be loaded safely.' }); return }
+      if (category === null) { setState({ status: 'error', title: 'Prize category unavailable', message: 'The related PrizeCategory could not be loaded safely.' }); return }
+      setState({ status: 'ready', session, event, category, winners: winners.sort((a, b) => a.sequenceNumber - b.sequenceNumber), redraws })
+    } catch (error: unknown) {
+      const text = error instanceof Error && /version/i.test(error.message) ? 'This local database is newer than the supported application version.' : 'Authoritative production results could not be read safely. Retry the local read.'
+      setState({ status: 'error', title: 'Production result unavailable', message: text })
+    }
   }, [drawSessionId, services])
+
   useEffect(() => { void Promise.resolve().then(load) }, [load])
-  if (state.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Pending confirmation" headingId="pending-title" title="Pending Results" description="Reading the authoritative local result…" /></section>
-  if (state.status === 'error') return <section><PageHeader eyebrow="Pending confirmation" headingId="pending-title" title="Pending Results unavailable" description={state.message} /><StatusBanner badge="Read-only recovery" title={state.message} tone="warning">Retry the read or return to Draw Setup. No draw command was run.</StatusBanner><button type="button" onClick={() => void load()}>Retry read</button></section>
-  return <section aria-labelledby="pending-title" className="draw-setup"><PageHeader eyebrow="Production · read-only" headingId="pending-title" title="Pending Results" description={`${state.eventName} · ${state.categoryName} · ${state.prizeName}`} /><StatusBanner badge="Pending confirmation" title="Official result is preserved" tone="info">Confirmation and redraw actions will be available in Phase 8.</StatusBanner><Card padding="md"><ol aria-label="Official winners">{state.result.winners.map((winner) => <li key={winner.winnerId}><span>#{winner.sequence}</span> <code>{winner.ticketNumber}</code></li>)}</ol></Card><p><Link to="/draw/setup">Return to Draw Setup</Link></p></section>
+
+  if (state.status === 'loading') return <section aria-busy="true" aria-live="polite"><PageHeader eyebrow="Live production" headingId="pending-title" title="Pending Results" description="Reading the authoritative local result…" /></section>
+  if (state.status === 'error') return <section aria-live="polite"><PageHeader eyebrow="Live production" headingId="pending-title" title={state.title} description={state.message} /><StatusBanner badge="Read-only recovery" title={state.title} tone="warning">No decision or random selection was run. Retry the local read or return to Draw Setup.</StatusBanner><Button onClick={() => void load()}>Retry read</Button></section>
+
+  const { session, event, category, winners, redraws } = state
+  const pending = winners.filter((winner) => winner.status === 'pending')
+  const confirmed = winners.filter((winner) => winner.status === 'confirmed')
+  const cancelled = winners.filter((winner) => winner.status === 'cancelled')
+  const selectedWinners = winners.filter((winner) => selected.has(winner.id))
+  const canDecide = selectedWinners.length > 0 && !busy
+  const replacementCapacity = calculateReplacementCapacity({ candidatePoolSnapshot: session.candidatePoolSnapshot, requestedReplacementCount: selectedWinners.length || 1, targetWinnerIds: selectedWinners.map((winner) => winner.id), winners }).eligibleCandidateCount
+  const capacityEnough = replacementCapacity >= selectedWinners.length
+
+  function toggle(id: string) { setSelected((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next }) }
+  function selectAll() { setSelected(new Set(pending.map((winner) => winner.id))) }
+  function openDecision(next: Decision) { setMessage(null); setReason('absent'); setNote(''); setDecision(next) }
+
+  async function submit() {
+    if (decision === null || selectedWinners.length === 0 || services.pendingDecisions === undefined) return
+    if (decision !== 'confirm' && note.trim().length === 0 && reason === 'other') { setMessage('A trimmed note is required for the Other reason.'); return }
+    const id = commandRef.current?.id ?? commandId()
+    const base = { actor: LOCAL_OPERATOR, commandId: id, drawSessionId: session.id, mode: 'live' as const }
+    setBusy(true)
+    try {
+      if (decision === 'confirm') {
+        const command = { ...base, operation: 'confirm-pending-winners' as const, targets: selectedWinners.map((winner) => ({ winnerId: winner.id, expectedStatus: 'pending' as const })) }
+        commandRef.current = { id, command }
+        const result = await services.pendingDecisions.confirmation.confirm(command)
+        if (result.status === 'unknown') { setMessage('The command outcome is unknown. Reload authoritative records before retrying with the same command ID.'); return }
+        if ('error' in result) { setMessage(result.error.message); return }
+        setDecision(null); commandRef.current = null; setMessage(result.status === 'idempotent-replay' ? 'The committed receipt was replayed safely.' : 'Official result updated.'); await load(); return
+      }
+      if (decision === 'cancel') {
+        const command = { ...base, operation: 'cancel-pending-winners' as const, reason, ...(note.trim() ? { note: note.trim() } : {}), targets: selectedWinners.map((winner) => ({ winnerId: winner.id, expectedStatus: 'pending' as const })) }
+        commandRef.current = { id, command }
+        const result = await services.pendingDecisions.cancellation.cancel(command)
+        if (result.status === 'unknown') { setMessage('The command outcome is unknown. Reload authoritative records before retrying with the same command ID.'); return }
+        if ('error' in result) { setMessage(result.error.message); return }
+        setDecision(null); commandRef.current = null; setMessage(result.status === 'idempotent-replay' ? 'The committed receipt was replayed safely.' : 'Official result updated.'); await load(); return
+      }
+      const command = decision === 'redraw-confirmed'
+        ? { ...base, operation: 'redraw-confirmed-winners' as const, reason, ...(note.trim() ? { note: note.trim() } : {}), targets: selectedWinners.map((winner) => ({ winnerId: winner.id, expectedStatus: 'confirmed' as const })) }
+        : { ...base, operation: 'redraw-pending-winners' as const, reason, ...(note.trim() ? { note: note.trim() } : {}), targets: selectedWinners.map((winner) => ({ winnerId: winner.id, expectedStatus: 'pending' as const })) }
+      commandRef.current = { id, command }
+      const result = await services.pendingDecisions.redraw.redraw(command)
+      if (result.status === 'unknown') { setMessage('The command outcome is unknown. Reload authoritative records before retrying with the same command ID.'); return }
+      if ('error' in result) { setMessage(result.error.message); return }
+      setDecision(null); commandRef.current = null; setMessage(result.status === 'idempotent-replay' ? 'The committed receipt was replayed safely.' : 'Official result updated.'); await load()
+    } catch { setMessage('The command could not be persisted safely. Reload authoritative records before retrying.') }
+    finally { setBusy(false) }
+  }
+
+  const isReadOnly = session.status === 'cancelled'
+  const dialogTitle = decision === 'confirm' ? `Confirm ${selectedWinners.length} winner${selectedWinners.length === 1 ? '' : 's'}` : decision === 'cancel' ? `Cancel ${selectedWinners.length} pending winner${selectedWinners.length === 1 ? '' : 's'}` : decision === 'redraw-confirmed' ? 'Redraw confirmed winners' : 'Redraw pending winners'
+  return <section aria-labelledby="pending-title" className="draw-setup">
+    <PageHeader eyebrow="Live · official production" headingId="pending-title" title="Pending Results" description={`${event.name} · ${category.name} · ${category.prizeName}`} />
+    {message === null ? null : <StatusBanner badge="Operator action" title="Reconciliation required" tone="warning">{message}</StatusBanner>}
+    <StatusBanner badge={isReadOnly ? 'Cancelled' : session.status === 'completed' ? 'Completed' : 'Pending confirmation'} title={isReadOnly ? 'Resolved result · read only' : session.status === 'completed' ? 'All current winners are confirmed' : 'Official result is awaiting a decision'} tone={isReadOnly ? 'warning' : 'info'}>{isReadOnly ? 'This session remains in official history and cannot be changed here.' : 'Changes are persisted locally with an audit receipt.'}</StatusBanner>
+    <Card padding="md"><div className="history-detail__summary-grid" aria-label="Result summary"><span>Total selected <strong>{winners.length}</strong></span><span>Pending <strong>{pending.length}</strong></span><span>Confirmed <strong>{confirmed.length}</strong></span><span>Cancelled <strong>{cancelled.length}</strong></span><span>Replacements <strong>{winners.filter((winner) => winner.sequenceNumber > (session.configurationSnapshot?.requestedWinners ?? Number.MAX_SAFE_INTEGER)).length}</strong></span></div></Card>
+    {!isReadOnly && pending.length > 0 ? <Card padding="md"><div className="results-panel-heading"><div><p>Decision queue</p><h2>Select pending winners</h2></div><Button onClick={selectAll} variant="secondary">Select All Pending</Button></div><ul aria-label="Pending winners">{winners.map((winner) => <li key={winner.id}><label><input checked={selected.has(winner.id)} disabled={winner.status !== 'pending' || busy} onChange={() => toggle(winner.id)} type="checkbox" /> <code>{winner.ticketNumber}</code> <Badge variant={winner.status === 'pending' ? 'pending' : winner.status === 'confirmed' ? 'confirmed' : 'danger'}>{statusLabel(winner.status)}</Badge>{winner.status === 'cancelled' ? ' · preserved in official history' : ''}</label></li>)}</ul><div className="button-row"><Button disabled={!canDecide} onClick={() => openDecision('confirm')}>Confirm selected</Button><Button disabled={!canDecide} onClick={() => openDecision('cancel')} variant="danger">Cancel selected</Button><Button disabled={!canDecide || !capacityEnough} onClick={() => openDecision('redraw-pending')} variant="secondary">Redraw selected</Button></div></Card> : null}
+    {session.status === 'completed' && confirmed.length > 0 ? <Card padding="md"><h2>Confirmed-original redraw</h2><p>A confirmed result can be reopened only through a separate destructive decision.</p><Button disabled={busy} onClick={() => { setSelected(new Set(confirmed.map((winner) => winner.id))); openDecision('redraw-confirmed') }} variant="danger">Redraw confirmed winners</Button></Card> : null}
+    <Card padding="md"><h2>Authoritative winner records</h2><ol aria-label="Official winners">{winners.map((winner) => { const redraw = redraws.find((candidate) => candidate.originalWinnerRecordId === winner.id); const replacement = redraw === undefined ? undefined : winners.find((candidate) => candidate.id === redraw.replacementWinnerRecordId); return <li key={winner.id}><code>{winner.ticketNumber}</code> <Badge variant={winner.status === 'pending' ? 'pending' : winner.status === 'confirmed' ? 'confirmed' : 'danger'}>{statusLabel(winner.status)}</Badge>{winner.confirmedAt ? ` · confirmed ${winner.confirmedAt}` : ''}{winner.cancelledAt ? ` · cancelled ${winner.cancelledAt}` : ''}{redraw === undefined ? null : <> · replacement <code>{replacement?.ticketNumber ?? 'unavailable'}</code> ({replacement?.status ?? 'unavailable'})</>}</li> })}</ol><p><small>Replacement capacity available for a new redraw: {replacementCapacity}. Capacity is a read-only count; no replacement identity has been selected or exposed.</small></p></Card>
+    <p><Link to="/history?source=production">Open official history</Link> · <Link to="/draw/setup">Return to Draw Setup</Link></p>
+    <ConfirmationDialog confirmDisabled={busy || (decision === 'redraw-pending' && !capacityEnough) || (decision !== 'confirm' && reason === 'other' && note.trim() === '')} confirmLabel={decision === 'confirm' ? 'Confirm officially' : decision === 'cancel' ? 'Cancel officially' : 'Redraw officially'} confirmLoading={busy} consequence={<>{decision === 'confirm' ? <>Confirm {selectedWinners.length} winner{selectedWinners.length === 1 ? '' : 's'} in Live mode. Other winners remain pending.</> : decision === 'cancel' ? <>Cancellation remains in official history, does not draw a replacement, and cannot be undone by deleting the record.</> : <>This is an official destructive Live action. The selected original result will remain visible and the replacement will be pending after commit. Capacity available: {replacementCapacity}.</>} {decision === 'redraw-confirmed' ? 'A completed result will become pending-confirmation; unaffected confirmed winners remain confirmed.' : ''}{decision === 'confirm' ? null : <div><label htmlFor="reason">Reason</label><select id="reason" disabled={busy} onChange={(event) => setReason(event.target.value as RedrawReason)} value={reason}>{reasons.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><label htmlFor="note">Note {reason === 'other' ? '(required)' : '(optional)'}</label><textarea id="note" disabled={busy} onChange={(event) => setNote(event.target.value)} value={note} /></div>}</>} onCancel={() => { if (!busy) setDecision(null) }} onConfirm={() => void submit()} open={decision !== null} title={dialogTitle} tone={decision === 'confirm' ? 'warning' : 'danger'} />
+  </section>
 }

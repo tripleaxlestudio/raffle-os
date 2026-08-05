@@ -54,6 +54,14 @@ export interface DrawSetupCommandService {
 }
 
 export interface DrawSetupProductionServices extends DrawSetupQueryRepositories {
+  readonly redraws?: import('../persistence/repositories/redraw-repository.interface.ts').RedrawRepository
+  readonly pendingDecisions?: {
+    readonly confirmation: import('../pending-decisions/confirmation-service.ts').ConfirmationService
+    readonly cancellation: import('../pending-decisions/cancellation-service.ts').CancellationService
+    readonly redraw: import('../pending-decisions/redraw-service.ts').RedrawService
+    readonly persistence: import('../persistence/draw-persistence-unit-of-work.interface.ts').DrawPersistenceUnitOfWork
+    readonly receipts: import('../persistence/command-receipt-repository.interface.ts').CommandReceiptRepository
+  }
   readonly authoringService?: import('./draw-authoring.types.ts').DrawAuthoringService
   readonly open: () => Promise<void>
   readonly checkStorage?: import('./draw-readiness-query.ts').DrawReadinessDependencies['checkStorage']

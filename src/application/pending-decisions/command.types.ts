@@ -1,5 +1,6 @@
 import type { DrawSessionStatus } from '../../domain/draws/draw-session.types.ts'
 import type { CommandId, DrawSessionId, WinnerRecordId } from '../../domain/shared/identifiers.ts'
+import type { TicketNumber } from '../../domain/participants/participant.types.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 import type { AppMode } from '../../domain/types/app-mode.ts'
 import type { WinnerStatus } from '../../domain/winners/winner.types.ts'
@@ -78,6 +79,8 @@ export interface PendingDecisionOutcome {
   readonly drawSessionId: DrawSessionId
   readonly sessionStatus?: DrawSessionStatus
   readonly affectedWinnerIds: readonly WinnerRecordId[]
+  readonly replacementWinnerIds?: readonly WinnerRecordId[]
+  readonly replacementTickets?: readonly TicketNumber[]
   readonly committedAt?: IsoTimestamp
 }
 

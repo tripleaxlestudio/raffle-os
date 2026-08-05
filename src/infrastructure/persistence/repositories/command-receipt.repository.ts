@@ -20,6 +20,8 @@ function payloadFromRecord(record: CommandReceiptRecord): CanonicalDecisionPaylo
 function outcomeFromRecord(record: CommandReceiptRecord): PendingDecisionOutcome {
   return {
     affectedWinnerIds: record.affectedWinnerIds,
+    replacementWinnerIds: record.replacementWinnerIds,
+    replacementTickets: record.replacementTickets,
     commandId: record.commandId,
     committedAt: record.committedAt,
     drawSessionId: record.drawSessionId,
@@ -85,6 +87,8 @@ export class DexieCommandReceiptRepository implements CommandReceiptRepository {
     const finalized: CommandReceiptRecord = {
       ...existing,
       affectedWinnerIds: outcome.affectedWinnerIds,
+      replacementWinnerIds: outcome.replacementWinnerIds,
+      replacementTickets: outcome.replacementTickets,
       committedAt,
       outcomeStatus: outcome.status,
       sessionStatus: outcome.sessionStatus,

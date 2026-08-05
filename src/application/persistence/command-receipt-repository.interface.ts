@@ -6,6 +6,7 @@ import type {
   PendingDecisionOutcome,
 } from '../pending-decisions/command.types.ts'
 import type { CommandId, DrawSessionId, WinnerRecordId } from '../../domain/shared/identifiers.ts'
+import type { TicketNumber } from '../../domain/participants/participant.types.ts'
 import type { DrawSessionStatus } from '../../domain/draws/draw-session.types.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 
@@ -20,6 +21,8 @@ export interface CommandReceiptRecord {
   readonly status: CommandReceiptStatus
   readonly outcomeStatus: PendingDecisionOutcome['status']
   readonly affectedWinnerIds: readonly WinnerRecordId[]
+  readonly replacementWinnerIds?: readonly WinnerRecordId[]
+  readonly replacementTickets?: readonly TicketNumber[]
   readonly sessionStatus?: DrawSessionStatus
   readonly createdAt: IsoTimestamp
   readonly committedAt?: IsoTimestamp

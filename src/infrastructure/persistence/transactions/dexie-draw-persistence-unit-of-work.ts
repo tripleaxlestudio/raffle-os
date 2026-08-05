@@ -4,6 +4,8 @@ import type {
   ConfirmPendingWinnersPersistenceOutcome,
   CancelPendingWinnersPersistenceInput,
   CancelPendingWinnersPersistenceOutcome,
+  RedrawWinnersPersistenceOutcome,
+  RedrawWinnersPersistenceInput,
   PersistStartedDrawInput,
   RecordRedrawReplacementInput,
   TransitionWinnersWithAuditInput,
@@ -48,6 +50,10 @@ import {
   requireValid,
 } from '../repositories/repository-helpers.ts'
 import { DexieCommandReceiptRepository } from '../repositories/command-receipt.repository.ts'
+import type { RandomSource } from '../../../application/draw/random-source.ts'
+import { createWebCryptoRandomSource } from '../../random/web-crypto-random-source.ts'
+import { createRedrawRecordId, createWinnerRecordId } from '../../../domain/shared/identifiers.ts'
+import { buildRedrawCandidates, selectRedrawCandidates } from '../../../domain/draws/redraw-eligibility.ts'
 
 function requireAuditRecords(
   count: number,
@@ -89,10 +95,12 @@ export class DexieDrawPersistenceUnitOfWork
 {
   private readonly database: RaffleOSDatabase
   private readonly receipts: DexieCommandReceiptRepository
+  private readonly randomSource: RandomSource
 
-  constructor(database: RaffleOSDatabase) {
+  constructor(database: RaffleOSDatabase, options: { readonly randomSource?: RandomSource } = {}) {
     this.database = database
     this.receipts = new DexieCommandReceiptRepository(database)
+    this.randomSource = options.randomSource ?? createWebCryptoRandomSource()
   }
 
   async persistStartedDraw(
@@ -616,6 +624,142 @@ export class DexieDrawPersistenceUnitOfWork
       })
     } catch (error: unknown) {
       throw normalizeRepositoryError(error, 'Cancelling pending WinnerRecords')
+    }
+  }
+
+  async redrawPendingWinners(
+    input: RedrawWinnersPersistenceInput,
+  ): Promise<RedrawWinnersPersistenceOutcome> {
+    return this.persistRedraw(input)
+  }
+
+  async redrawConfirmedWinners(
+    input: RedrawWinnersPersistenceInput,
+  ): Promise<RedrawWinnersPersistenceOutcome> {
+    return this.persistRedraw(input)
+  }
+
+  private async persistRedraw(
+    input: RedrawWinnersPersistenceInput,
+  ): Promise<RedrawWinnersPersistenceOutcome> {
+    try {
+      const payload = input.canonicalPayload as CanonicalDecisionPayload
+      return await this.database.transaction('rw', [
+        this.database.events,
+        this.database.participants,
+        this.database.prize_categories,
+        this.database.draw_sessions,
+        this.database.winner_records,
+        this.database.redraw_records,
+        this.database.audit_records,
+        this.database.command_receipts,
+      ], async (transaction) => {
+        const receipt = await this.receipts.create(input.commandId, LOCAL_OPERATOR, payload, this.receipts.inTransaction(transaction))
+        if (!('canonicalPayload' in receipt)) return {
+          affectedWinnerIds: receipt.affectedWinnerIds,
+          commandId: receipt.commandId,
+          committedAt: receipt.committedAt,
+          drawSessionId: receipt.drawSessionId,
+          operation: input.operation,
+          replacementWinnerIds: receipt.replacementWinnerIds ?? [],
+          replacementTickets: receipt.replacementTickets ?? [],
+          sessionStatus: receipt.sessionStatus ?? 'pending-confirmation',
+          status: 'committed' as const,
+        }
+        if (receipt.status === 'committed') return {
+          affectedWinnerIds: receipt.affectedWinnerIds,
+          commandId: receipt.commandId,
+          committedAt: receipt.committedAt,
+          drawSessionId: receipt.drawSessionId,
+          operation: input.operation,
+          replacementWinnerIds: receipt.replacementWinnerIds ?? [],
+          replacementTickets: receipt.replacementTickets ?? [],
+          sessionStatus: receipt.sessionStatus ?? 'pending-confirmation',
+          status: 'committed' as const,
+        }
+
+        const atResult = isoTimestampFromDate(new Date())
+        if (!atResult.ok) throw new TransactionError('Persistence could not generate a canonical commit timestamp.')
+        const at = atResult.value
+        const session = await this.database.draw_sessions.get(input.drawSessionId)
+        if (session === undefined) throw new RecordNotFoundError('The DrawSession required for redraw was not found.')
+        if (session.mode !== 'live') throw new ImmutableRecordError('Redraw requires a Live DrawSession.')
+        const expectedStatus = input.operation === 'redraw-confirmed-winners' ? 'confirmed' : 'pending'
+        const expectedSessionStatus = input.operation === 'redraw-confirmed-winners' ? 'completed' : 'pending-confirmation'
+        if (session.status !== expectedSessionStatus) throw new ImmutableRecordError(`Redraw requires a ${expectedSessionStatus} DrawSession.`)
+        if (session.configurationSnapshot === null || session.candidatePoolSnapshot === null) throw new ImmutableRecordError('Redraw requires immutable DrawSession snapshots.')
+
+        const winners = await this.database.winner_records.where('eventId').equals(session.eventId).toArray()
+        const sessionWinners = winners.filter((winner) => winner.drawSessionId === session.id)
+        const targetIds = new Set(input.targets.map((target) => target.winnerId))
+        if (targetIds.size !== input.targets.length) throw new DuplicateRecordError('Redraw targets must be unique.')
+        const originals = input.targets.map((target) => {
+          const winner = sessionWinners.find((candidate) => candidate.id === target.winnerId)
+          if (winner === undefined) throw new RecordNotFoundError('A redraw target WinnerRecord was not found.')
+          if (winner.status !== expectedStatus) throw new ImmutableRecordError(`WinnerRecord status is ${winner.status}, not the expected ${expectedStatus}.`)
+          if (winner.eventId !== session.eventId) throw new RelationshipMismatchError('Every redraw target must belong to the session Event.')
+          return winner
+        })
+        const event = await this.database.events.get(session.eventId)
+        if (event === undefined) throw new RecordNotFoundError('The DrawSession Event was not found.')
+        const category = await this.database.prize_categories.get(session.configurationSnapshot.prizeCategoryId)
+        if (category === undefined) throw new RecordNotFoundError('The DrawSession PrizeCategory was not found.')
+        const participants = await this.database.participants.where('eventId').equals(session.eventId).toArray()
+        const participantById = new Map(participants.map((participant) => [participant.id, participant]))
+        const candidateSnapshot = session.candidatePoolSnapshot
+        const snapshotParticipantIds = new Set<string>()
+        const snapshotTickets = new Set<string>()
+        for (const entry of candidateSnapshot.candidateEntries) {
+          if (snapshotParticipantIds.has(entry.participantId) || snapshotTickets.has(entry.ticketNumber)) throw new ValidationError('The immutable candidate snapshot contains duplicate participants or tickets.')
+          snapshotParticipantIds.add(entry.participantId)
+          snapshotTickets.add(entry.ticketNumber)
+          const participant = participantById.get(entry.participantId)
+          if (participant === undefined || participant.eventId !== session.eventId || participant.ticketNumber !== entry.ticketNumber) throw new RelationshipMismatchError('An immutable candidate snapshot entry no longer matches its Participant.')
+        }
+        const eligible = buildRedrawCandidates(event, category, session.configurationSnapshot, candidateSnapshot, participants, winners, (await this.database.draw_sessions.where('eventId').equals(session.eventId).toArray()), originals)
+        if (eligible.length < originals.length) throw new ValidationError(`Insufficient redraw capacity: ${eligible.length} eligible replacement(s) for ${originals.length} target(s).`)
+        const selected = selectRedrawCandidates(eligible, originals.length, this.randomSource)
+        const existingSequences = sessionWinners.map((winner) => winner.sequenceNumber)
+        let nextSequence = Math.max(0, ...existingSequences) + 1
+        const replacements = selected.map((entry) => ({
+          id: createWinnerRecordId(),
+          eventId: session.eventId,
+          prizeCategoryId: session.configurationSnapshot!.prizeCategoryId,
+          drawSessionId: session.id,
+          participantId: entry.participantId,
+          ticketNumber: entry.ticketNumber,
+          sequenceNumber: nextSequence++,
+          status: 'pending' as const,
+          createdAt: at,
+          updatedAt: at,
+        }))
+        const redraws = originals.map((original, index) => ({
+          id: createRedrawRecordId(),
+          eventId: session.eventId,
+          drawSessionId: session.id,
+          originalWinnerRecordId: original.id,
+          replacementWinnerRecordId: replacements[index]!.id,
+          reason: input.reason,
+          ...(payload.note === undefined ? {} : { reasonNote: payload.note }),
+          createdAt: at,
+        }))
+        const audits: AuditRecord[] = []
+        for (const [index, original] of originals.entries()) {
+          const replacement = replacements[index]!
+          audits.push({ action: 'winner-cancelled', actor: { type: 'operator', name: LOCAL_OPERATOR }, detail: { afterStatus: 'cancelled', beforeStatus: original.status, commandId: input.commandId, drawSessionId: session.id, reason: input.reason, ...(payload.note === undefined ? {} : { normalizedNote: payload.note }), ticketNumber: original.ticketNumber, winnerId: original.id }, eventId: session.eventId, id: createAuditRecordId(), timestamp: at })
+          audits.push({ action: 'redraw-recorded', actor: { type: 'operator', name: LOCAL_OPERATOR }, detail: { commandId: input.commandId, drawSessionId: session.id, originalWinnerId: original.id, originalTicketNumber: original.ticketNumber, replacementWinnerId: replacement.id, replacementTicketNumber: replacement.ticketNumber, reason: input.reason, ...(payload.note === undefined ? {} : { normalizedNote: payload.note }), actor: LOCAL_OPERATOR, resultingSessionStatus: 'pending-confirmation' }, eventId: session.eventId, id: createAuditRecordId(), timestamp: at })
+        }
+
+        if (session.status === 'completed') await transitionDrawSessionInTransaction(this.database, session.id, 'completed', 'pending-confirmation', at)
+        for (const original of originals) await transitionWinnerInTransaction(this.database, original.id, expectedStatus, 'cancelled', at, true)
+        await appendWinnerBatchInTransaction(this.database, replacements)
+        for (const redraw of redraws) await appendRedrawInTransaction(this.database, redraw)
+        for (const audit of audits) await appendAuditInTransaction(this.database, audit)
+        const outcome = await this.receipts.finalize(input.commandId, payload, { affectedWinnerIds: originals.map((winner) => winner.id), commandId: input.commandId, committedAt: at, drawSessionId: session.id, operation: input.operation, replacementWinnerIds: replacements.map((winner) => winner.id), replacementTickets: replacements.map((winner) => winner.ticketNumber), sessionStatus: 'pending-confirmation', status: 'committed' }, this.receipts.inTransaction(transaction))
+        return { ...outcome, operation: input.operation, replacementWinnerIds: replacements.map((winner) => winner.id), replacementTickets: replacements.map((winner) => winner.ticketNumber), sessionStatus: 'pending-confirmation', status: 'committed' as const }
+      })
+    } catch (error: unknown) {
+      throw normalizeRepositoryError(error, 'Persisting the audited redraw replacement')
     }
   }
 }

@@ -58,6 +58,7 @@ export interface DrawSetupProductionServices extends DrawSetupQueryRepositories 
   readonly open: () => Promise<void>
   readonly checkStorage?: import('./draw-readiness-query.ts').DrawReadinessDependencies['checkStorage']
   readonly checkCrypto?: import('./draw-readiness-query.ts').DrawReadinessDependencies['checkCrypto']
+  readonly command?: DrawSetupCommandService
 }
 
 export type DrawSetupFailure = DrawCommandFailure

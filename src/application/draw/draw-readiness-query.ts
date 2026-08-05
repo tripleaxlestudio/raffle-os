@@ -32,8 +32,6 @@ export async function queryDrawReadiness(
     const category = await dependencies.categories.findById(configuration.prizeCategoryId)
     if (category === null) return blocked('missing-category', 'The PrizeCategory for this DrawSession is unavailable.', false, 'category-not-found')
     if (configuration.eventId !== event.id || category.eventId !== event.id || session.eventId !== event.id) return blocked('stale-data', 'Persisted Event, category, configuration, and session relationships are inconsistent.', false, 'relationship-mismatch')
-    if (session.status !== 'ready') return blocked('session-not-ready', `This DrawSession is ${session.status.replace('-', ' ')} and is not a startable session.`, false, 'session-not-ready')
-
     const sessions = await dependencies.sessions.findByEventId(event.id)
     const conflicting = sessions.find((candidate) => candidate.id !== session.id && candidate.mode === 'live' && (candidate.status === 'drawing' || candidate.status === 'pending-confirmation'))
     if (conflicting !== undefined) return blocked('session-conflict', conflicting.status === 'pending-confirmation' ? 'A pending Live result must be resolved before another Live session can be handed off.' : 'Another Live draw is active for this Event.', false, 'session-conflict')
@@ -45,6 +43,7 @@ export async function queryDrawReadiness(
     const eligibility = evaluateEligibility({ activeEvent: event, drawConfiguration: configuration, prizeCategory: category, mode: session.mode, participants, winnerRecords: winners, ruleContext: { officialSessions } })
     if (!eligibility.ok) return blocked('failed', 'Authoritative eligibility could not be evaluated from persisted data.', true, 'eligibility-failed')
     const data: DrawReadinessData = { event, category, configuration, session, authoritativeEligibleCount: eligibility.value.eligibleCount, requestedWinnerCount: configuration.requestedWinners, mode: session.mode }
+    if (session.status !== 'ready') return { state: 'session-not-ready', data, reason: `This DrawSession is ${session.status.replace('-', ' ')} and is not a startable session.`, retryable: false, errorCode: 'session-not-ready' }
     if (eligibility.value.eligibleCount < configuration.requestedWinners) return { state: 'insufficient-capacity', data, reason: `There are ${eligibility.value.eligibleCount} eligible participants for ${configuration.requestedWinners} requested winners. Reduce the winner count or correct participant eligibility.`, retryable: false, errorCode: 'insufficient-capacity' }
     return { state: 'ready', data, retryable: false }
   } catch {

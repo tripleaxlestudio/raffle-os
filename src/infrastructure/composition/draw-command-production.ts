@@ -10,6 +10,9 @@ import { RaffleOSDatabase } from '../persistence/db.ts'
 import { DexieDrawAuthoringUnitOfWork } from '../persistence/transactions/dexie-draw-authoring-unit-of-work.ts'
 import type { DrawSetupProductionServices } from '../../application/draw/draw-setup-query.types.ts'
 import { createWebCryptoRandomSource } from '../random/web-crypto-random-source.ts'
+import { executeDraw } from '../../application/draw/draw-command.ts'
+import { DexieDrawPersistenceUnitOfWork } from '../persistence/transactions/dexie-draw-persistence-unit-of-work.ts'
+import { createAuditRecordId, createWinnerRecordId } from '../../domain/shared/identifiers.ts'
 
 export function createDrawSetupProductionServices(): DrawSetupProductionServices {
   const database = new RaffleOSDatabase()
@@ -21,6 +24,7 @@ export function createDrawSetupProductionServices(): DrawSetupProductionServices
   const preferences = new DexiePreferenceRepository(database)
   const winners = new DexieWinnerRepository(database)
   const authoring = new DexieDrawAuthoringUnitOfWork(database)
+  const persistence = new DexieDrawPersistenceUnitOfWork(database)
   const repositories = { events, configurations, categories, sessions, participants, winners, authoring }
-  return { ...repositories, preferences, authoringService: createDrawAuthoringService(repositories), open: async () => { await database.openSupported() }, checkStorage: () => database.checkReadiness(), checkCrypto: async () => { try { createWebCryptoRandomSource(globalThis.crypto).nextUint32(); return { ok: true as const } } catch { return { ok: false as const, reason: 'Secure Web Crypto randomness is unavailable; this session cannot be handed off.' } } } }
+  return { ...repositories, preferences, authoringService: createDrawAuthoringService(repositories), open: async () => { await database.openSupported() }, checkStorage: () => database.checkReadiness(), checkCrypto: async () => { try { createWebCryptoRandomSource(globalThis.crypto).nextUint32(); return { ok: true as const } } catch { return { ok: false as const, reason: 'Secure Web Crypto randomness is unavailable; this session cannot be handed off.' } } }, command: { execute: (input) => executeDraw(input, { ...repositories, randomSource: createWebCryptoRandomSource(globalThis.crypto), persistence, now: () => new Date().toISOString() as import('../../domain/shared/timestamps.ts').IsoTimestamp, createWinnerRecordId, createAuditRecordId }) } }
 }

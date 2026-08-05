@@ -1,119 +1,121 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
-import { queryDrawSetup } from '../../application/draw/draw-setup-query.ts'
-import type { DrawSetupProductionServices, DrawSetupReadyViewModel, DrawSetupViewModel } from '../../application/draw/draw-setup-query.types.ts'
-import type { DrawCommandResult } from '../../application/draw/draw-command.types.ts'
-import type { AppMode } from '../../domain/types/app-mode.ts'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { DrawAuthoringDraft, DrawAuthoringRecord } from '../../application/draw/draw-authoring.types.ts'
+import type { DrawSetupProductionServices } from '../../application/draw/draw-setup-query.types.ts'
+import { DrawAuthoringError } from '../../application/draw/draw-authoring-errors.ts'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
-import { mapDrawSetupError } from '../../ui/operator/draw/draw-setup-error-mapper.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
-import { Badge, Button, ButtonLink, Card, ConfirmationDialog } from '../../shared/ui/index.ts'
+import { Button, Card, Checkbox, Input, Select } from '../../shared/ui/index.ts'
 
-function modeFromQuery(value: string | null, fallback: AppMode): AppMode {
-  return value === 'live' || value === 'practice' ? value : fallback
+type FormState = {
+  eventId: string
+  prizeCategoryId: string
+  requestedWinners: string
+  winningRule: string
+  requireCheckIn: boolean
+  eligibleGroupFilter: string
+  mode: string
+  configurationId?: string
+  sessionId?: string
 }
 
-function formatWinningRule(rule: DrawSetupReadyViewModel['configuration']['winningRule']) {
-  return rule === 'once-per-event' ? 'Once per event' : rule === 'once-per-category' ? 'Once per category' : 'Allow repeat'
+const emptyForm: FormState = { eventId: '', prizeCategoryId: '', requestedWinners: '1', winningRule: 'once-per-event', requireCheckIn: false, eligibleGroupFilter: '', mode: 'practice' }
+
+function formFromRecord(record: DrawAuthoringRecord | null, eventId: string): FormState {
+  if (record === null) return { ...emptyForm, eventId }
+  return { eventId: record.event.id, prizeCategoryId: record.category.id, requestedWinners: String(record.configuration.requestedWinners), winningRule: record.configuration.winningRule, requireCheckIn: record.configuration.requireCheckIn, eligibleGroupFilter: record.configuration.eligibleGroupFilter ?? '', mode: record.session.mode, configurationId: record.configuration.id, sessionId: record.session.id }
 }
 
-function SetupSummary({ view }: { view: DrawSetupReadyViewModel }) {
-  return <div className="draw-setup-production__summary">
-    <Card padding="sm"><span>Event</span><strong>{view.event.name}</strong></Card>
-    <Card padding="sm"><span>Prize category</span><strong>{view.category.name} · {view.category.prizeName}</strong></Card>
-    <Card padding="sm"><span>Mode</span><strong>{view.mode === 'live' ? 'Live draw' : 'Practice rehearsal'}</strong></Card>
-    <Card padding="sm"><span>Winning rule</span><strong>{formatWinningRule(view.configuration.winningRule)}</strong></Card>
-    <Card padding="sm"><span>Check-in requirement</span><strong>{view.configuration.requireCheckIn ? 'Checked-in participants only' : 'All participants'}</strong></Card>
-    <Card padding="sm"><span>Group filter</span><strong>{view.configuration.eligibleGroupFilter ?? 'All groups'}</strong></Card>
-  </div>
+function errorText(error: DrawAuthoringError): string {
+  return error.message
 }
-
-function Capacity({ view }: { view: Pick<DrawSetupReadyViewModel, 'totalParticipantCount' | 'eligibleCandidateCount' | 'excludedCount' | 'configuration' | 'exclusionCounts'> }) {
-  return <Card className="draw-panel" padding="md">
-    <div className="draw-panel__heading"><p>Readiness</p><h2>Eligible pool capacity</h2></div>
-    <dl aria-label="Eligible pool summary" className="eligible-pool-metrics">
-      <div><dt>Total participants</dt><dd>{view.totalParticipantCount}</dd></div>
-      <div><dt>Eligible candidates</dt><dd>{view.eligibleCandidateCount}</dd></div>
-      <div><dt>Excluded</dt><dd>{view.excludedCount}</dd></div>
-      <div className="eligible-pool-metrics__highlight"><dt>Requested winners</dt><dd>{view.configuration.requestedWinners}</dd></div>
-    </dl>
-    {Object.keys(view.exclusionCounts).length > 0 ? <div className="draw-setup-production__exclusions"><strong>Exclusion summary</strong>{Object.entries(view.exclusionCounts).map(([reason, count]) => <span key={reason}>{reason.replaceAll('-', ' ')}: {count}</span>)}</div> : null}
-  </Card>
-}
-
-function Confirmation({ mode, view, onCancel, onConfirm, busy }: { mode: AppMode; view: DrawSetupReadyViewModel; onCancel: () => void; onConfirm: () => void; busy: boolean }) {
-  return <ConfirmationDialog confirmDisabled={busy} confirmLabel={busy ? 'Starting…' : mode === 'live' ? 'Confirm live draw' : 'Run practice'} confirmLoading={busy} consequence={mode === 'live' ? <>Event <strong>{view.event.name}</strong>, category <strong>{view.category.name}</strong>, <strong>{view.configuration.requestedWinners}</strong> requested winners, and <strong>{view.eligibleCandidateCount}</strong> eligible candidates will use the frozen eligibility snapshot and record an official pending draw.</> : <>This is a rehearsal only. No official WinnerRecords, DrawSession mutation, or AuditRecord will be written.</>} onCancel={onCancel} onConfirm={onConfirm} open title={mode === 'live' ? 'Confirm live draw start' : 'Run practice rehearsal'} />
-}
-
-type DrawSetupSuccess = { readonly state: 'practice-success' | 'live-success'; readonly result: DrawCommandResult }
-
-function PendingResult({ view, onReturn }: { view: DrawSetupSuccess; onReturn: () => void }) {
-  return <Card className="draw-panel" padding="md"><div aria-live="polite" role="status"><p className="draw-setup-production__eyebrow">{view.state === 'live-success' ? 'Live draw started' : 'Practice result'}</p><h2>Pending winners</h2><p>{view.state === 'live-success' ? 'These winners are pending confirmation in the later workflow.' : 'This rehearsal result is in memory only and is not official.'}</p></div><ol className="draw-setup-production__winners">{view.result.pendingWinners.map((winner) => <li key={winner.id}><div className="draw-setup-production__winner-field"><span>Sequence</span><strong>{winner.sequenceNumber}</strong></div><div className="draw-setup-production__winner-field"><span>Ticket</span><code>{winner.ticketNumber}</code></div><Badge variant="pending">pending</Badge></li>)}</ol><Button onClick={onReturn} variant="secondary">Return to ready</Button></Card>
-}
-
-type PageState = DrawSetupViewModel | DrawSetupSuccess
 
 export function DrawSetupPage({ services: suppliedServices }: { services?: DrawSetupProductionServices } = {}) {
-  const [searchParams] = useSearchParams()
-  const hasExplicitMode = searchParams.has('mode')
   const services = useMemo(() => suppliedServices ?? createDrawSetupProductionServices(), [suppliedServices])
-  const [preferredMode, setPreferredMode] = useState<AppMode>('practice')
-  const mode = modeFromQuery(searchParams.get('mode'), preferredMode)
-  const [view, setView] = useState<PageState>({ state: 'loading' })
-  const [confirmation, setConfirmation] = useState(false)
-  const [executing, setExecuting] = useState(false)
+  const [form, setForm] = useState<FormState>(emptyForm)
+  const [record, setRecord] = useState<DrawAuthoringRecord | null>(null)
+  const [categories, setCategories] = useState<DrawAuthoringRecord['category'][]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<DrawAuthoringError | null>(null)
+  const [saved, setSaved] = useState(false)
+  const [eventMissing, setEventMissing] = useState(false)
 
-  async function load() {
-    setView({ state: 'loading' })
-    try { await services.open(); setView(await queryDrawSetup(mode, services)) } catch (cause: unknown) { setView({ state: 'query-failure', mode, error: { code: 'persistence-failed', message: 'Authoritative draw setup data could not be loaded.', cause } }) }
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      await services.open()
+      if (services.authoringService === undefined) { setError(new DrawAuthoringError('persistence-unavailable', 'Draw authoring services are unavailable.', { retryable: true })); return }
+      const activeEventId = await services.preferences.get('activeEventId')
+      const result = await services.authoringService.load({ eventId: activeEventId ?? undefined })
+      if (!result.ok) { setError(result.error); return }
+      setEventMissing(result.event === null)
+      setCategories(result.categories as DrawAuthoringRecord['category'][])
+      setRecord(result.record)
+      setForm(formFromRecord(result.record, result.event?.id ?? activeEventId ?? ''))
+    } catch (cause: unknown) {
+      setError(new DrawAuthoringError('read-failure', 'Authoritative Draw Setup data could not be read.', { retryable: true, cause }))
+    } finally { setLoading(false) }
+  }, [services])
+
+  useEffect(() => { void Promise.resolve().then(load) }, [load])
+
+  function update<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setSaved(false); setError(null); setForm((current) => ({ ...current, [key]: value }))
   }
 
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      try {
-        await services.open()
-        if (!hasExplicitMode) {
-          const persistedMode = await services.preferences.get('lastOperatorMode')
-          if (persistedMode !== null) setPreferredMode(persistedMode)
-        }
-        const next = await queryDrawSetup(mode, services)
-        if (!cancelled) setView(next)
-      } catch (cause: unknown) {
-        if (!cancelled) setView({ state: 'query-failure', mode, error: { code: 'persistence-failed', message: 'Authoritative draw setup data could not be loaded.', cause } })
-      }
-    })()
-    return () => { cancelled = true }
-  }, [hasExplicitMode, mode, services])
-
-  async function start() {
-    if (executing || view.state !== 'ready') return
-    setExecuting(true)
-    const result = await services.command.execute({ eventId: view.event.id, drawSessionId: view.session.id, configurationId: view.configuration.id, prizeCategoryId: view.category.id, mode, expectedStatus: 'ready' })
-    setExecuting(false)
-    setConfirmation(false)
-    if (result.ok) setView({ state: mode === 'live' ? 'live-success' : 'practice-success', result: result.value })
-    else setView({ state: 'query-failure', mode, error: { code: 'persistence-failed', message: result.error.message, cause: result.error } })
+  async function save() {
+    if (saving) return
+    setSaving(true); setSaved(false); setError(null)
+    const draft: DrawAuthoringDraft = { ...form, eligibleGroupFilter: form.eligibleGroupFilter === '' ? null : form.eligibleGroupFilter }
+    if (services.authoringService === undefined) { setError(new DrawAuthoringError('persistence-unavailable', 'Draw authoring services are unavailable.', { retryable: true })); setSaving(false); return }
+    const result = await services.authoringService.save(draft)
+    if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setSaved(true) }
+    else setError(result.error)
+    setSaving(false)
   }
 
-  if (view.state === 'loading') return <section className="draw-setup" aria-busy="true"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description="Loading authoritative Event, configuration, category, session, and Participant readiness…" /><StatusBanner badge="Loading" title="Preparing draw readiness" tone="info">Practice and Live execution are disabled until persisted data is ready.</StatusBanner></section>
-  if (view.state === 'practice-success' || view.state === 'live-success') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description={view.result.event.name} /><PendingResult view={view} onReturn={() => void load()} /></section>
-  if (view.state === 'no-active-event') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description="No active Event selected" /><StatusBanner badge="Blocked" title="Select or create an Event first" tone="warning">Draw Setup uses only the active persisted Event. Go to the Dashboard or Event setup to select one.</StatusBanner><ButtonLink to="/dashboard" variant="secondary">Return to Dashboard</ButtonLink></section>
-  if (view.state === 'no-configuration') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description={view.event.name} /><StatusBanner badge="Configuration required" title="Complete Draw Setup configuration" tone="warning">No valid DrawConfiguration exists for this Event. Create the configuration before starting a draw.</StatusBanner><ButtonLink to="/settings" variant="secondary">Open Settings</ButtonLink></section>
-  if (view.state === 'invalid-category') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description={view.event.name} /><StatusBanner badge="Blocked" title="The selected prize category is unavailable" tone="warning">The DrawConfiguration does not reference a valid category owned by this Event. No category was selected automatically.</StatusBanner></section>
-  if (view.state === 'no-participants') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description={view.event.name} /><StatusBanner badge="Participants required" title="Import valid Participants for this Event" tone="warning">There are no persisted Participants for the active Event, so neither Practice nor Live can start.</StatusBanner><ButtonLink to="/participants" variant="secondary">Import Participants</ButtonLink></section>
-  if (view.state === 'query-failure') { const error = mapDrawSetupError(view.error); return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description="Readiness unavailable" /><StatusBanner badge={error.retryable ? 'Recoverable error' : 'Blocked'} title={error.title} tone="warning">{error.explanation} {error.suggestedAction ?? ''}</StatusBanner>{error.retryable ? <Button onClick={() => void load()}>Retry</Button> : null}</section> }
-  if (view.state === 'no-session') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description={view.event.name} /><StatusBanner badge="DrawSession required" title="No startable DrawSession exists" tone="warning">A valid ready DrawSession must exist for this Event, category, and configuration. No draw has occurred. Refresh after a ready session is created.</StatusBanner><Capacity view={view} /><Button onClick={() => void load()} variant="secondary">Refresh readiness</Button></section>
-  if (view.state === 'blocked') return <section className="draw-setup"><PageHeader eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" description={view.event.name} /><StatusBanner badge="Proceeding blocked" title="Draw cannot start from the current persisted state" tone="warning">{view.reason}</StatusBanner><Capacity view={view} /><Button onClick={() => void load()} variant="secondary">Refresh readiness</Button></section>
-  if (view.state !== 'ready') return null
+  const selectedCategory = categories.find((category) => category.id === form.prizeCategoryId)
 
-  return <section aria-labelledby="draw-setup-title" className="draw-setup" data-draw-mode={mode}>
-    <PageHeader actions={<div className="draw-mode-context"><Badge variant={mode}>{mode === 'live' ? 'LIVE FLOW' : 'PRACTICE'}</Badge><span>{mode === 'live' ? 'Official draw' : 'Rehearsal only'}</span></div>} description={`${view.event.name} · ${view.category.name}`} eyebrow="Draw configuration" headingId="draw-setup-title" title="Draw Setup" />
-    <StatusBanner badge="Ready" title="Eligibility and capacity are ready" tone="success">The final command will rebuild and validate the authoritative candidate snapshot at execution time.</StatusBanner>
-    <SetupSummary view={view} />
-    <Capacity view={view} />
-    <div className="draw-action-bar"><div><strong>{mode === 'live' ? 'Start official Live draw' : 'Run Practice rehearsal'}</strong><span>{view.eligibleCandidateCount} eligible candidates · {view.configuration.requestedWinners} requested winners</span></div><div className="draw-action-bar__actions"><ButtonLink to="/dashboard" variant="secondary">Return to Dashboard</ButtonLink><Button disabled={executing} isLoading={executing} onClick={() => setConfirmation(true)} size="lg">{mode === 'live' ? 'Start Live draw' : 'Run Practice'}</Button></div></div>
-    {confirmation ? <Confirmation busy={executing} mode={mode} onCancel={() => { if (!executing) setConfirmation(false) }} onConfirm={() => void start()} view={view} /> : null}
+  if (loading) return <section className="draw-setup" aria-busy="true"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="Loading persisted Event and configuration…" /><StatusBanner badge="Loading" title="Preparing Draw Setup" tone="info">Configuration drafts are not active until they are saved.</StatusBanner></section>
+  if (eventMissing || form.eventId === '') return <section className="draw-setup"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="No persisted Event is available" /><StatusBanner badge="Event required" title="Create or select an Event first" tone="warning">Draw Setup does not create demo Events or categories automatically.</StatusBanner>{error?.retryable ? <Button onClick={() => void load()}>Retry</Button> : null}</section>
+
+  const started = record !== null && record.session.status !== 'ready'
+  return <section aria-labelledby="draw-setup-title" className="draw-setup">
+    <PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description={record?.event.name ?? 'Create a persisted ready session'} />
+    {saved ? <StatusBanner badge="Saved" title="Ready DrawSession persisted" tone="success">The values below were read back from local persistence. No winner, checkpoint, or started-draw audit was created.</StatusBanner> : null}
+    {error ? <StatusBanner badge={error.retryable ? 'Retryable error' : 'Validation error'} title="Draw Setup could not be saved" tone="warning">{errorText(error)}{error.retryable ? ' You can retry without losing the form values.' : ''}</StatusBanner> : null}
+    {started ? <StatusBanner badge="Locked" title="This DrawSession is not editable" tone="warning">The persisted session is {record?.session.status.replace('-', ' ')}. It was not reset to ready and its official data remains untouched.</StatusBanner> : null}
+    <Card className="draw-panel" padding="md">
+      <form onSubmit={(event) => { event.preventDefault(); void save() }}>
+        <div className="draw-setup__layout">
+          <div className="draw-setup__main">
+            <Select label="Event" value={form.eventId} onChange={(event) => update('eventId', event.target.value)} disabled>
+              <option value={form.eventId}>{record?.event.name ?? form.eventId}</option>
+            </Select>
+            <Select label="Prize category" value={form.prizeCategoryId} onChange={(event) => update('prizeCategoryId', event.target.value)} disabled={started}>
+              <option value="">Select a category</option>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </Select>
+            <Input label="Prize name" value={selectedCategory?.prizeName ?? ''} readOnly description="Prize name belongs to the persisted PrizeCategory." />
+            <Input label="Winner count" type="number" min={1} max={100} step={1} value={form.requestedWinners} onChange={(event) => update('requestedWinners', event.target.value)} disabled={started} />
+            <Select label="Winning rule" value={form.winningRule} onChange={(event) => update('winningRule', event.target.value)} disabled={started}>
+              <option value="once-per-event">Once per event</option><option value="once-per-category">Once per category</option><option value="allow-repeat">Allow repeat</option>
+            </Select>
+            <Input label="Eligible group filter" value={form.eligibleGroupFilter} onChange={(event) => update('eligibleGroupFilter', event.target.value)} disabled={started} description="Leave empty to include all groups." />
+            <Checkbox label="Require participant check-in" checked={form.requireCheckIn} onChange={(event) => update('requireCheckIn', event.target.checked)} disabled={started} description="Only checked-in participants are eligible." />
+          </div>
+          <div className="draw-setup__aside">
+            <fieldset className="field-group"><legend>Authoring mode</legend><div className="field-group__content">
+              <label><input type="radio" name="draw-mode" value="practice" checked={form.mode === 'practice'} onChange={() => update('mode', 'practice')} disabled={started} /> Practice — rehearsal only</label>
+              <label><input type="radio" name="draw-mode" value="live" checked={form.mode === 'live'} onChange={() => update('mode', 'live')} disabled={started} /> Live — official session authoring</label>
+            </div></fieldset>
+            <p>Mode is stored on the ready DrawSession. URL parameters cannot override it.</p>
+            <Button type="submit" size="lg" isLoading={saving} disabled={started || form.prizeCategoryId === ''}>{record === null ? 'Save ready configuration' : 'Save changes'}</Button>
+          </div>
+        </div>
+      </form>
+    </Card>
   </section>
 }

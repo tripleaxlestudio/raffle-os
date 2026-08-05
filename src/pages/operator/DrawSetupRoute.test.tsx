@@ -13,7 +13,7 @@ describe('Draw Setup route isolation', () => {
 
   it('uses the production composition when no prototype scenario is supplied', () => {
     render(<MemoryRouter initialEntries={['/draw/setup']}><DrawSetupRoute /></MemoryRouter>)
-    expect(screen.getByText(/Loading authoritative Event/i)).toBeInTheDocument()
+    expect(screen.getByText(/Loading persisted Event/i)).toBeInTheDocument()
     expect(screen.queryByText('Fictional setup data only.')).not.toBeInTheDocument()
   })
 })

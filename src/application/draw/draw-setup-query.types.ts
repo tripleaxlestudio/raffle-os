@@ -54,7 +54,7 @@ export interface DrawSetupCommandService {
 }
 
 export interface DrawSetupProductionServices extends DrawSetupQueryRepositories {
-  readonly command: DrawSetupCommandService
+  readonly authoringService?: import('./draw-authoring.types.ts').DrawAuthoringService
   readonly open: () => Promise<void>
 }
 

@@ -23,7 +23,7 @@ const permittedSessionTransitions: Readonly<
   Record<DrawSessionStatus, readonly DrawSessionStatus[]>
 > = {
   cancelled: [],
-  completed: [],
+  completed: ['pending-confirmation'],
   draft: ['ready', 'cancelled'],
   drawing: ['pending-confirmation', 'cancelled'],
   'pending-confirmation': ['completed', 'cancelled'],

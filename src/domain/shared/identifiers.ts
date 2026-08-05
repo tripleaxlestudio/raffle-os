@@ -18,6 +18,7 @@ export type DrawSessionId = Identifier<'DrawSessionId'>
 export type WinnerRecordId = Identifier<'WinnerRecordId'>
 export type RedrawRecordId = Identifier<'RedrawRecordId'>
 export type AuditRecordId = Identifier<'AuditRecordId'>
+export type CommandId = Identifier<'CommandId'>
 export type DisplayConfigurationId =
   Identifier<'DisplayConfigurationId'>
 

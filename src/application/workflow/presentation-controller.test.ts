@@ -62,4 +62,27 @@ describe('PresentationController', () => {
     expect(controller.getState().stage).toBe('countdown')
     expect(persistStage).toHaveBeenCalledTimes(1)
   })
+
+  it('guards duplicate Strict Mode recovery bootstrap and concurrent expiry callbacks', async () => {
+    const persistStage = vi.fn(async () => undefined)
+    const controller = new PresentationController({ result, mode: 'live', clock: makeClock(), persistStage, onState: () => undefined })
+    await Promise.all([
+      controller.resume('countdown', '2026-08-05T00:00:00.000Z' as IsoTimestamp),
+      controller.resume('countdown', '2026-08-05T00:00:00.000Z' as IsoTimestamp),
+    ])
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(persistStage).toHaveBeenCalledTimes(1)
+    expect(controller.getState().stage).toBe('rolling')
+  })
+
+  it('updates blackout without changing the stage or locked result', async () => {
+    const persistStage = vi.fn(async () => undefined)
+    const persistBlackout = vi.fn(async () => undefined)
+    const controller = new PresentationController({ result, mode: 'live', clock: makeClock(), persistStage, persistBlackout, onState: () => undefined })
+    await controller.start()
+    await controller.setBlackout(true)
+    expect(controller.getState().stage).toBe('countdown')
+    expect(controller.result).toBe(result)
+    expect(persistBlackout).toHaveBeenCalledWith(true)
+  })
 })

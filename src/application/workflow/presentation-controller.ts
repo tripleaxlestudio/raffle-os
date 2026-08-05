@@ -29,12 +29,14 @@ export class PresentationController {
   private timeout: unknown = null
   private disposed = false
   private transitioning = false
+  private bootstrapStarted = false
   private state: PresentationControllerState = { stage: 'result-locked', countdownLabel: null, error: null }
 
   constructor(options: PresentationControllerOptions) { this.options = options; this.result = options.result; this.policy = options.policy ?? PRESENTATION_POLICY }
   getState(): PresentationControllerState { return this.state }
   async resume(stage: PresentationStage, stageStartedAt: IsoTimestamp): Promise<void> {
-    if (this.disposed || this.state.stage !== 'result-locked') return
+    if (this.disposed || this.state.stage !== 'result-locked' || this.bootstrapStarted) return
+    this.bootstrapStarted = true
     if (stage === 'reveal' || stage === 'pending-handoff') {
       this.state = { stage, countdownLabel: null, error: null }
       this.options.onState(this.state)
@@ -50,7 +52,7 @@ export class PresentationController {
     const label = stage === 'countdown' ? (Math.max(1, 3 - Math.floor(elapsed / this.policy.countdownLabelDurationMs)) as 3 | 2 | 1) : null
     this.state = { stage, countdownLabel: label, error: null }
     this.options.onState(this.state)
-    this.schedule(Math.max(0, duration - elapsed))
+    this.schedule(Math.max(0, duration - elapsed), () => { void this.transition(stage === 'countdown' ? 'rolling' : 'reveal') })
   }
   async handoff(): Promise<void> {
     if (this.disposed || this.state.stage === 'result-locked' || this.state.stage === 'failed' || this.state.stage === 'pending-handoff') return
@@ -63,7 +65,8 @@ export class PresentationController {
   }
   async start(): Promise<void> {
     if (this.disposed && this.state.stage === 'result-locked') this.disposed = false
-    if (this.disposed || this.state.stage !== 'result-locked') return
+    if (this.disposed || this.state.stage !== 'result-locked' || this.bootstrapStarted) return
+    this.bootstrapStarted = true
     if (this.options.clock.prefersReducedMotion()) { await this.transition('reveal'); return }
     await this.transition('countdown')
     if (this.getState().stage === 'countdown') this.schedule(this.policy.countdownLabelDurationMs)
@@ -78,12 +81,13 @@ export class PresentationController {
     if (this.state.error?.code === 'pending-handoff-write-failure') { await this.transition('pending-handoff'); return }
     this.clearTimer()
     this.state = { stage: 'result-locked', countdownLabel: null, error: null }
+    this.bootstrapStarted = false
     this.options.onState(this.state)
     await this.start()
   }
   dispose(): void { this.disposed = true; this.clearTimer() }
-  private schedule(delayMs: number): void {
-    try { this.timeout = this.options.clock.setTimeout(() => { void this.tick() }, delayMs) } catch (cause: unknown) { this.fail(new PresentationError('timer-controller-failure', 'Presentation was interrupted safely.', true, true, cause)) }
+  private schedule(delayMs: number, callback?: () => void): void {
+    try { this.timeout = this.options.clock.setTimeout(() => { if (callback !== undefined) callback(); else void this.tick() }, delayMs) } catch (cause: unknown) { this.fail(new PresentationError('timer-controller-failure', 'Presentation was interrupted safely.', true, true, cause)) }
   }
   private async tick(): Promise<void> {
     if (this.disposed || this.state.stage === 'failed' || this.transitioning) return

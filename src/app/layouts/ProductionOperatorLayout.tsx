@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import type { Event } from '../../domain/events/event.types.ts'
-import { createParticipantImportProductionServices } from '../../application/participant-import/participant-import-production-services.ts'
+import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
 
 function ProductionOperatorHeader({ event, loading }: { event: Event | null; loading: boolean }) {
@@ -28,13 +28,20 @@ export function ProductionOperatorLayout() {
 
   useEffect(() => {
     let active = true
-    const services = createParticipantImportProductionServices()
+    const services = createDrawSetupProductionServices()
     void (async () => {
       try {
-        await services.database.openSupported()
-        const activeEventId = await services.preferences.get('activeEventId')
-        const activeEvent = activeEventId === null ? null : await services.events.findById(activeEventId)
-        if (active) setEvent(activeEvent)
+        await services.open()
+        const routeMatch = location.pathname.match(/^\/draw\/(?:run|pending)\/([^/]+)$/)
+        if (routeMatch?.[1] !== undefined) {
+          const session = await services.sessions.findById(routeMatch[1] as never)
+          const routedEvent = session === null ? null : await services.events.findById(session.eventId)
+          if (active) setEvent(routedEvent)
+        } else {
+          const activeEventId = await services.preferences.get('activeEventId')
+          const activeEvent = activeEventId === null ? null : await services.events.findById(activeEventId)
+          if (active) setEvent(activeEvent)
+        }
       } catch {
         if (active) setEvent(null)
       } finally {

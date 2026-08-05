@@ -33,6 +33,7 @@ export class PresentationController {
   constructor(options: PresentationControllerOptions) { this.options = options; this.result = options.result; this.policy = options.policy ?? PRESENTATION_POLICY }
   getState(): PresentationControllerState { return this.state }
   async start(): Promise<void> {
+    if (this.disposed && this.state.stage === 'result-locked') this.disposed = false
     if (this.disposed || this.state.stage !== 'result-locked') return
     if (this.options.clock.prefersReducedMotion()) { await this.transition('reveal'); return }
     await this.transition('countdown')

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { practiceResultFromWinners, readPracticeResult, savePracticeResult } from './practice-result-storage.ts'
+import { practiceResultFromWinners, readPracticeResult, readPracticeResultForPresentation, savePracticeResult } from './practice-result-storage.ts'
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
 
@@ -31,5 +31,15 @@ describe('Practice result storage', () => {
     savePracticeResult(practiceResultFromWinners(sessionId, [winner], '2026-08-05T00:00:00.000Z'))
     sessionStorage.clear()
     expect(readPracticeResult(sessionId)).toBeNull()
+  })
+
+  it('accepts a legacy Slice 4 projection for presentation bootstrap', () => {
+    sessionStorage.setItem(`raffle-os:practice-result:v1:${sessionId}`, JSON.stringify({ drawSessionId: sessionId, winners: [{ winnerId: winner.id, sequence: 1, ticketNumber: '00042' }], createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1 }))
+    expect(readPracticeResultForPresentation(sessionId)?.winners[0]?.ticketNumber).toBe('00042')
+  })
+
+  it.each(['{bad-json}', JSON.stringify({ drawSessionId: sessionId, winners: [], createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 2 })])('returns a typed error for corrupt or unsupported presentation projection: %s', (raw) => {
+    sessionStorage.setItem(`raffle-os:practice-result:v1:${sessionId}`, raw)
+    expect(() => readPracticeResultForPresentation(sessionId)).toThrow('Practice result')
   })
 })

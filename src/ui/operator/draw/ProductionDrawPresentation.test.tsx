@@ -17,4 +17,21 @@ describe('ProductionDrawPresentation', () => {
     expect(screen.getByText('00042')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Skip animation' })).not.toBeInTheDocument()
   })
+
+  it('bootstraps a Live result without a checkpoint by writing countdown first', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn() }))
+    const upsert = vi.fn(async () => undefined)
+    const findByDrawSessionId = vi.fn(async () => null)
+    render(<ProductionDrawPresentation result={result(1)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" checkpoints={{ findByDrawSessionId, upsert }} onFailure={() => undefined} />)
+    expect(await screen.findByRole('heading', { name: 'Get ready' })).toBeInTheDocument()
+    expect(findByDrawSessionId).toHaveBeenCalledWith(result(1).drawSessionId)
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ stage: 'countdown', drawSessionId: result(1).drawSessionId }))
+  })
+
+  it('shows a typed safe error when the Live countdown checkpoint write fails', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn() }))
+    render(<ProductionDrawPresentation result={result(1)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" checkpoints={{ findByDrawSessionId: async () => null, upsert: async () => { throw new Error('write rejected') } }} onFailure={() => undefined} />)
+    expect(await screen.findByText('Official result is locked, but presentation could not start.')).toBeInTheDocument()
+    expect(screen.queryByText('Preparing locked result presentation…')).not.toBeInTheDocument()
+  })
 })

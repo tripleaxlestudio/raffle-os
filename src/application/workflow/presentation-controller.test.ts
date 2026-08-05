@@ -53,4 +53,13 @@ describe('PresentationController', () => {
     expect(controller.getState().stage).toBe('failed')
     expect(controller.result).toBe(result)
   })
+
+  it('can bootstrap again after a Strict Mode-style dispose before async persistence settles', async () => {
+    const persistStage = vi.fn(async () => undefined)
+    const controller = new PresentationController({ result, mode: 'practice', clock: makeClock(), persistStage, onState: () => undefined })
+    controller.dispose()
+    await controller.start()
+    expect(controller.getState().stage).toBe('countdown')
+    expect(persistStage).toHaveBeenCalledTimes(1)
+  })
 })

@@ -6,13 +6,14 @@ import { queryDrawReadiness } from '../../application/draw/draw-readiness-query.
 import type { DrawReadinessResult } from '../../application/draw/draw-readiness.types.ts'
 import { createHoldController, type HoldController } from '../../application/draw/live-start-gate-controller.ts'
 import { LiveStartGateError, toLiveStartGateError } from '../../application/draw/live-start-gate-errors.ts'
-import { practiceResultFromWinners, readPracticeResult, savePracticeResult, type PracticeResultProjection } from '../../application/draw/practice-result-storage.ts'
+import { practiceResultFromWinners, readPracticeResultForPresentation, savePracticeResult, type PracticeResultProjection } from '../../application/draw/practice-result-storage.ts'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { Button, Card, ConfirmationDialog } from '../../shared/ui/index.ts'
 import { projectLivePresentationResult, type PresentationResultProjection } from '../../application/workflow/presentation-projection.ts'
 import { ProductionDrawPresentation } from '../../ui/operator/draw/ProductionDrawPresentation.tsx'
+import { PresentationError, safePresentationMessage } from '../../application/workflow/presentation-errors.ts'
 
 type GateState = 'loading' | 'ready' | 'holding' | 'invoking' | 'locked' | 'error'
 
@@ -35,6 +36,7 @@ export function DrawRunPage() {
   const [holding, setHolding] = useState(false)
   const [practiceProjection, setPracticeProjection] = useState<PracticeResultProjection | null>(null)
   const [presentationResult, setPresentationResult] = useState<PresentationResultProjection | null>(null)
+  const [presentationBootstrapError, setPresentationBootstrapError] = useState<PresentationError | null>(null)
   const attemptRef = useRef(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const holdRef = useRef<HoldController | null>(null)
@@ -42,6 +44,7 @@ export function DrawRunPage() {
   const load = useCallback(async () => {
     setState('loading')
     setError(null)
+    setPresentationBootstrapError(null)
     try {
       if (drawSessionId === undefined || services.checkStorage === undefined || services.checkCrypto === undefined) {
         setReadiness({ state: 'failed', retryable: false, reason: 'This DrawSession URL is invalid.' })
@@ -60,7 +63,7 @@ export function DrawRunPage() {
         }
       }
       if (next.state === 'ready' && next.data?.session.mode === 'practice') {
-        const storedPracticeResult = readPracticeResult(sessionId as DrawSessionId)
+        const storedPracticeResult = readPracticeResultForPresentation(sessionId as DrawSessionId)
         if (storedPracticeResult !== null && storedPracticeResult.winners.length === next.data.requestedWinnerCount) {
           setPresentationResult(storedPracticeResult)
           setPracticeProjection(storedPracticeResult)
@@ -70,6 +73,11 @@ export function DrawRunPage() {
       }
       setState(next.state === 'ready' ? 'ready' : 'error')
     } catch (cause: unknown) {
+      if (cause instanceof PresentationError) {
+        setPresentationBootstrapError(cause)
+        setState('error')
+        return
+      }
       setError(toLiveStartGateError(cause))
       setState('error')
     }
@@ -140,6 +148,7 @@ export function DrawRunPage() {
   const confirmStart = useCallback(() => { setConfirmOpen(false); void attemptStart() }, [attemptStart])
 
   if (state === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Production start gate" headingId="draw-run-title" title="Draw Start Gate" description="Validating the persisted DrawSession…" /></section>
+  if (presentationBootstrapError !== null) return <section aria-labelledby="draw-run-title" className="draw-setup"><PageHeader eyebrow="Presentation error" headingId="draw-run-title" title="Presentation could not start" description={safePresentationMessage(presentationBootstrapError)} /><StatusBanner badge="Safe result state" title={safePresentationMessage(presentationBootstrapError)} tone="warning">No secure selection was run and the Practice result was not changed.</StatusBanner><div className="draw-action-bar__actions"><Button onClick={() => { attemptRef.current = false; void load() }}>Retry presentation</Button><Button variant="secondary" onClick={() => navigate('/draw/setup')}>Back to Draw Setup</Button></div></section>
   if (state === 'locked' && readiness?.data !== undefined && presentationResult !== null) return <section aria-labelledby="draw-run-title" className="draw-setup"><h1 id="draw-run-title" className="sr-only">Result Locked</h1><p className="sr-only" role="region" aria-label={`${presentationResult.winners.length} winners selected`}>{presentationResult.winners.length} winners selected</p>{practiceProjection === null ? null : <p className="sr-only">Practice projection restored for this tab; ticket reveal remains deferred.</p>}<ProductionDrawPresentation result={presentationResult} mode={readiness.data.mode} eventName={readiness.data.event.name} prizeCategory={readiness.data.category.name} prizeName={readiness.data.category.prizeName} checkpoints={services.presentationCheckpoints} practiceResult={practiceProjection ?? undefined} onFailure={() => undefined} /></section>
   if (readiness?.data === undefined) return <section aria-labelledby="draw-run-title"><PageHeader eyebrow="Production start gate" headingId="draw-run-title" title="Draw Start Gate" description="The persisted session is not ready for the next workflow." /><StatusBanner badge="Blocked" title={error?.message ?? 'Cannot open this DrawSession'} tone="warning">{readiness?.reason ?? 'Verify the persisted setup and return to Draw Setup.'}</StatusBanner><div className="draw-action-bar__actions"><Button onClick={() => { attemptRef.current = false; void load() }} disabled={!readiness?.retryable && error === null}>Retry validation</Button><Button variant="secondary" onClick={() => navigate('/draw/setup')}>Back to Draw Setup</Button></div></section>
 

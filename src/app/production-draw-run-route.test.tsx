@@ -137,4 +137,12 @@ describe('production Draw Run route shell', () => {
     expect(getItem).not.toHaveBeenCalledWith(`raffle-os:practice-result:v1:${mocks.sessionId}`)
     getItem.mockRestore()
   })
+
+  it('surfaces a corrupt Practice projection as a typed bootstrap error without invoking selection', async () => {
+    sessionStorage.setItem(`raffle-os:practice-result:v1:${mocks.practiceSessionId}`, '{bad-json}')
+    renderRoute(`/draw/run/${mocks.practiceSessionId}`)
+    expect(await screen.findByRole('heading', { name: 'Presentation could not start' })).toBeInTheDocument()
+    expect(screen.getAllByText('The Practice result projection is invalid and could not start presentation.')).toHaveLength(2)
+    expect(mocks.command).not.toHaveBeenCalled()
+  })
 })

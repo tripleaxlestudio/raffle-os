@@ -5,6 +5,7 @@ import { isIsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { LiveStartGateError } from './live-start-gate-errors.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 import type { PresentationStage } from '../../domain/workflow/presentation-workflow.types.ts'
+import { PresentationError } from '../workflow/presentation-errors.ts'
 
 const PREFIX = 'raffle-os:practice-result:v1:'
 
@@ -84,6 +85,20 @@ export function readPracticeResult(drawSessionId: DrawSessionId): PracticeResult
   } catch (cause: unknown) {
     if (cause instanceof LiveStartGateError) throw cause
     throw new LiveStartGateError('practice-session-storage-unavailable', 'The Practice result could not be read safely from this tab.', 'retryable', cause)
+  }
+}
+
+export function readPracticeResultForPresentation(drawSessionId: DrawSessionId): PracticeResultProjection | null {
+  try {
+    const raw = storage().getItem(key(drawSessionId))
+    if (raw === null) return null
+    let parsed: unknown
+    try { parsed = JSON.parse(raw) as unknown } catch (cause: unknown) { throw new PresentationError('practice-projection-invalid', 'The Practice result projection is invalid and could not start presentation.', false, true, cause) }
+    if (!isValidProjection(parsed, drawSessionId)) throw new PresentationError('practice-projection-invalid', 'The Practice result projection is invalid or unsupported. No new selection was run.', false, true)
+    return parsed
+  } catch (cause: unknown) {
+    if (cause instanceof PresentationError) throw cause
+    throw new PresentationError('practice-projection-invalid', 'The Practice result could not be read safely from this tab.', true, true, cause)
   }
 }
 

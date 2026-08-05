@@ -1,5 +1,7 @@
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
+import { parseDrawSessionId, parseWinnerRecordId } from '../../domain/shared/identifiers.ts'
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
+import { isIsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { LiveStartGateError } from './live-start-gate-errors.ts'
 
 const PREFIX = 'raffle-os:practice-result:v1:'
@@ -12,6 +14,34 @@ export interface PracticeResultProjection {
 }
 
 function key(id: DrawSessionId): string { return `${PREFIX}${id}` }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  const expected = new Set(keys)
+  return Object.keys(value).every((key) => expected.has(key)) && keys.every((key) => key in value)
+}
+
+function isValidProjection(value: unknown, drawSessionId: DrawSessionId): value is PracticeResultProjection {
+  if (!isRecord(value) || !hasOnlyKeys(value, ['drawSessionId', 'winners', 'createdAt', 'policyVersion'])) return false
+  if (value.drawSessionId !== drawSessionId || value.policyVersion !== 1 || typeof value.createdAt !== 'string' || !isIsoTimestamp(value.createdAt)) return false
+  if (!parseDrawSessionId(value.drawSessionId).ok || !Array.isArray(value.winners) || value.winners.length < 1 || value.winners.length > 100) return false
+
+  const sequences = new Set<number>()
+  const winnerIds = new Set<string>()
+  const ticketNumbers = new Set<string>()
+  for (const entry of value.winners) {
+    if (!isRecord(entry) || !hasOnlyKeys(entry, ['winnerId', 'sequence', 'ticketNumber'])) return false
+    if (typeof entry.winnerId !== 'string' || !parseWinnerRecordId(entry.winnerId).ok || winnerIds.has(entry.winnerId) || typeof entry.sequence !== 'number' || !Number.isInteger(entry.sequence) || entry.sequence < 1 || sequences.has(entry.sequence) || typeof entry.ticketNumber !== 'string' || entry.ticketNumber.length === 0 || ticketNumbers.has(entry.ticketNumber)) return false
+    sequences.add(entry.sequence)
+    winnerIds.add(entry.winnerId)
+    ticketNumbers.add(entry.ticketNumber)
+  }
+
+  return [...sequences].sort((left, right) => left - right).every((sequence, index) => sequence === index + 1)
+}
 
 function storage(): Storage {
   try {
@@ -35,9 +65,13 @@ export function readPracticeResult(drawSessionId: DrawSessionId): PracticeResult
   try {
     const raw = storage().getItem(key(drawSessionId))
     if (raw === null) return null
-    const parsed: unknown = JSON.parse(raw)
-    if (typeof parsed !== 'object' || parsed === null || (parsed as { drawSessionId?: unknown }).drawSessionId !== drawSessionId) return null
-    return parsed as PracticeResultProjection
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(raw) as unknown
+    } catch {
+      return null
+    }
+    return isValidProjection(parsed, drawSessionId) ? parsed : null
   } catch (cause: unknown) {
     if (cause instanceof LiveStartGateError) throw cause
     throw new LiveStartGateError('practice-session-storage-unavailable', 'The Practice result could not be read safely from this tab.', 'retryable', cause)

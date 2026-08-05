@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { savePracticeResult } from '../application/draw/practice-result-storage.ts'
 import type { DrawReadinessResult } from '../application/draw/draw-readiness.types.ts'
 import type { DrawSession } from '../domain/draws/draw-session.types.ts'
 import type { DrawConfiguration } from '../domain/draws/draw-configuration.types.ts'
@@ -11,15 +12,18 @@ import { appRoutes } from './router.tsx'
 
 const mocks = vi.hoisted(() => {
   const sessionId = '00000000-0000-4000-8000-000000000001' as DrawSessionId
+  const practiceSessionId = '00000000-0000-4000-8000-000000000006' as DrawSessionId
   const event = { id: '00000000-0000-4000-8000-000000000002', name: 'Persisted Event', status: 'live' } as Event
   const category = { id: '00000000-0000-4000-8000-000000000003', eventId: event.id, name: 'Gold', prizeName: 'Prize' } as PrizeCategory
   const configuration = { id: '00000000-0000-4000-8000-000000000004', eventId: event.id, prizeCategoryId: category.id, requestedWinners: 1, winningRule: 'once-per-event', requireCheckIn: false, eligibleGroupFilter: null } as DrawConfiguration
   const session = { id: sessionId, eventId: event.id, configurationId: configuration.id, mode: 'live', status: 'ready', configurationSnapshot: null, candidatePoolSnapshot: null } as DrawSession
   const readiness = (id: string): DrawReadinessResult => id === sessionId
     ? { state: 'ready', retryable: false, data: { event, category, configuration, session, authoritativeEligibleCount: 1, requestedWinnerCount: 1, mode: 'live' } }
-    : { state: 'missing-session', retryable: false, reason: 'This DrawSession no longer exists.', errorCode: 'session-not-found' }
+    : id === practiceSessionId
+      ? { state: 'ready', retryable: false, data: { event, category, configuration: { ...configuration, requestedWinners: 2 }, session: { ...session, id: practiceSessionId, mode: 'practice' }, authoritativeEligibleCount: 5, requestedWinnerCount: 2, mode: 'practice' } }
+      : { state: 'missing-session', retryable: false, reason: 'This DrawSession no longer exists.', errorCode: 'session-not-found' }
   const command = vi.fn()
-  return { sessionId, readiness, command, event }
+  return { sessionId, practiceSessionId, readiness, command, event }
 })
 
 vi.mock('../application/draw/draw-readiness-query.ts', () => ({ queryDrawReadiness: vi.fn(async (id: string) => mocks.readiness(id)) }))
@@ -52,6 +56,10 @@ function renderRoute(path: string) {
 }
 
 describe('production Draw Run route shell', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+    mocks.command.mockReset()
+  })
   it('uses production chrome without prototype controls or status bars', async () => {
     renderRoute(`/draw/run/${mocks.sessionId}`)
     expect(await screen.findByRole('heading', { name: 'Review Before Start' })).toBeInTheDocument()
@@ -76,5 +84,57 @@ describe('production Draw Run route shell', () => {
     expect(await screen.findByText('Persisted Event')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hold to start official Live draw' })).toBeInTheDocument()
     await waitFor(() => expect(mocks.command).not.toHaveBeenCalled())
+  })
+
+  it('hydrates a valid Practice projection on initial mount and does not show start controls', async () => {
+    savePracticeResult({
+      drawSessionId: mocks.practiceSessionId,
+      winners: [
+        { winnerId: '00000000-0000-4000-8000-000000000010' as never, sequence: 1, ticketNumber: '00042' as never },
+        { winnerId: '00000000-0000-4000-8000-000000000011' as never, sequence: 2, ticketNumber: '42' as never },
+      ],
+      createdAt: '2026-08-05T00:00:00.000Z',
+      policyVersion: 1,
+    })
+    renderRoute(`/draw/run/${mocks.practiceSessionId}`)
+    expect(await screen.findByRole('heading', { name: 'Result Locked' })).toBeInTheDocument()
+    expect(screen.getByText('Practice projection restored for this tab; ticket reveal remains deferred.')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '2 winners selected' })).toHaveTextContent('2 winners selected')
+    expect(screen.queryByRole('button', { name: 'Hold to start Practice draw' })).not.toBeInTheDocument()
+    expect(mocks.command).not.toHaveBeenCalled()
+  })
+
+  it('uses the same projection after remount without reselection', async () => {
+    savePracticeResult({
+      drawSessionId: mocks.practiceSessionId,
+      winners: [
+        { winnerId: '00000000-0000-4000-8000-000000000010' as never, sequence: 1, ticketNumber: '00042' as never },
+        { winnerId: '00000000-0000-4000-8000-000000000011' as never, sequence: 2, ticketNumber: '42' as never },
+      ],
+      createdAt: '2026-08-05T00:00:00.000Z',
+      policyVersion: 1,
+    })
+    const first = renderRoute(`/draw/run/${mocks.practiceSessionId}`)
+    await screen.findByRole('heading', { name: 'Result Locked' })
+    first.unmount()
+    renderRoute(`/draw/run/${mocks.practiceSessionId}`)
+    expect(await screen.findByRole('heading', { name: 'Result Locked' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '2 winners selected' })).toHaveTextContent('2 winners selected')
+    expect(JSON.parse(sessionStorage.getItem(`raffle-os:practice-result:v1:${mocks.practiceSessionId}`)!).winners.map((winner: { ticketNumber: string }) => winner.ticketNumber)).toEqual(['00042', '42'])
+    expect(mocks.command).not.toHaveBeenCalled()
+  })
+
+  it('does not read Practice storage for a Live session', async () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem')
+    savePracticeResult({
+      drawSessionId: mocks.practiceSessionId,
+      winners: [{ winnerId: '00000000-0000-4000-8000-000000000010' as never, sequence: 1, ticketNumber: '00042' as never }],
+      createdAt: '2026-08-05T00:00:00.000Z',
+      policyVersion: 1,
+    })
+    renderRoute(`/draw/run/${mocks.sessionId}`)
+    expect(await screen.findByRole('heading', { name: 'Review Before Start' })).toBeInTheDocument()
+    expect(getItem).not.toHaveBeenCalledWith(`raffle-os:practice-result:v1:${mocks.sessionId}`)
+    getItem.mockRestore()
   })
 })

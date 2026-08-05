@@ -6,7 +6,7 @@ import { queryDrawReadiness } from '../../application/draw/draw-readiness-query.
 import type { DrawReadinessResult } from '../../application/draw/draw-readiness.types.ts'
 import { createHoldController, type HoldController } from '../../application/draw/live-start-gate-controller.ts'
 import { LiveStartGateError, toLiveStartGateError } from '../../application/draw/live-start-gate-errors.ts'
-import { practiceResultFromWinners, savePracticeResult } from '../../application/draw/practice-result-storage.ts'
+import { practiceResultFromWinners, readPracticeResult, savePracticeResult, type PracticeResultProjection } from '../../application/draw/practice-result-storage.ts'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
@@ -32,6 +32,7 @@ export function DrawRunPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [holding, setHolding] = useState(false)
   const [lockedCount, setLockedCount] = useState<number | null>(null)
+  const [practiceProjection, setPracticeProjection] = useState<PracticeResultProjection | null>(null)
   const attemptRef = useRef(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const holdRef = useRef<HoldController | null>(null)
@@ -52,6 +53,15 @@ export function DrawRunPage() {
         const winners = await services.winners.findByDrawSessionId(sessionId!)
         if (winners.length > 0) {
           setLockedCount(winners.length)
+          setState('locked')
+          return
+        }
+      }
+      if (next.state === 'ready' && next.data?.session.mode === 'practice') {
+        const storedPracticeResult = readPracticeResult(sessionId as DrawSessionId)
+        if (storedPracticeResult !== null && storedPracticeResult.winners.length === next.data.requestedWinnerCount) {
+          setPracticeProjection(storedPracticeResult)
+          setLockedCount(storedPracticeResult.winners.length)
           setState('locked')
           return
         }
@@ -88,8 +98,10 @@ export function DrawRunPage() {
         throw safeCommandError(result)
       }
       if (data.session.mode === 'practice') {
-        savePracticeResult(practiceResultFromWinners(sessionId, result.value.pendingWinners, result.value.auditRecord.timestamp))
-        setLockedCount(result.value.pendingWinners.length)
+        const projection = practiceResultFromWinners(sessionId, result.value.pendingWinners, result.value.auditRecord.timestamp)
+        savePracticeResult(projection)
+        setPracticeProjection(projection)
+        setLockedCount(projection.winners.length)
         setState('locked')
         return
       }
@@ -127,7 +139,7 @@ export function DrawRunPage() {
   const confirmStart = useCallback(() => { setConfirmOpen(false); void attemptStart() }, [attemptStart])
 
   if (state === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Production start gate" headingId="draw-run-title" title="Draw Start Gate" description="Validating the persisted DrawSession…" /></section>
-  if (state === 'locked' && readiness?.data !== undefined) return <section aria-labelledby="draw-run-title" className="draw-setup"><PageHeader eyebrow={readiness.data.mode === 'live' ? 'Live result locked' : 'Practice result locked'} headingId="draw-run-title" title="Result Locked" description="Selection is complete; presentation has not started in Slice 4." /><StatusBanner badge={readiness.data.mode === 'live' ? 'Official result locked' : 'Practice only'} title={`${lockedCount ?? 0} winner${lockedCount === 1 ? '' : 's'} selected`} tone="success">The ticket numbers remain hidden until the presentation workflow is implemented. DrawSession <code>{drawSessionId}</code> is safe to reopen without reselection.</StatusBanner><Button onClick={() => navigate('/draw/setup')}>Back to Draw Setup</Button></section>
+  if (state === 'locked' && readiness?.data !== undefined) return <section aria-labelledby="draw-run-title" className="draw-setup"><PageHeader eyebrow={readiness.data.mode === 'live' ? 'Live result locked' : 'Practice result locked'} headingId="draw-run-title" title="Result Locked" description="Selection is complete; presentation has not started in Slice 4." /><StatusBanner badge={readiness.data.mode === 'live' ? 'Official result locked' : 'Practice only'} title={`${lockedCount ?? 0} winner${lockedCount === 1 ? '' : 's'} selected`} tone="success">The ticket numbers remain hidden until the presentation workflow is implemented. DrawSession <code>{drawSessionId}</code> is safe to reopen without reselection.</StatusBanner>{practiceProjection === null ? null : <p data-practice-projection-count={practiceProjection.winners.length}>Practice projection restored for this tab; ticket reveal remains deferred.</p>}<Button onClick={() => navigate('/draw/setup')}>Back to Draw Setup</Button></section>
   if (readiness?.data === undefined) return <section aria-labelledby="draw-run-title"><PageHeader eyebrow="Production start gate" headingId="draw-run-title" title="Draw Start Gate" description="The persisted session is not ready for the next workflow." /><StatusBanner badge="Blocked" title={error?.message ?? 'Cannot open this DrawSession'} tone="warning">{readiness?.reason ?? 'Verify the persisted setup and return to Draw Setup.'}</StatusBanner><div className="draw-action-bar__actions"><Button onClick={() => { attemptRef.current = false; void load() }} disabled={!readiness?.retryable && error === null}>Retry validation</Button><Button variant="secondary" onClick={() => navigate('/draw/setup')}>Back to Draw Setup</Button></div></section>
 
   const data = readiness.data

@@ -8,6 +8,7 @@ import { AudienceDisplayShell } from './layouts/AudienceDisplayShell.tsx'
 import { OperatorLayout } from './layouts/OperatorLayout.tsx'
 import { ProductionOperatorLayout } from './layouts/ProductionOperatorLayout.tsx'
 import { AudienceDisplayPage } from '../pages/display/AudienceDisplayPage.tsx'
+import { AudiencePrototypePage } from '../pages/display/AudiencePrototypePage.tsx'
 import { DashboardPage } from '../pages/operator/DashboardPage.tsx'
 import { DrawSetupRoute } from '../pages/operator/DrawSetupRoute.tsx'
 import { DrawRunPage } from '../pages/operator/DrawRunPage.tsx'
@@ -90,6 +91,12 @@ export const appRoutes = [
         element: <AudienceDisplayPage />,
       },
     ],
+  },
+  {
+    path: '/display/prototype',
+    element: <AudienceDisplayShell />,
+    errorElement: <RouteErrorPage />,
+    children: [{ index: true, element: <AudiencePrototypePage /> }],
   },
   {
     path: '*',

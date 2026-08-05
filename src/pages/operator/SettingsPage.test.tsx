@@ -84,7 +84,7 @@ describe('Settings static prototype', () => {
     ).toBeChecked()
     expect(
       screen.getByRole('link', { name: 'Preview display' }),
-    ).toHaveAttribute('href', '/display?state=standby')
+    ).toHaveAttribute('href', '/display/prototype?state=standby')
   })
 
   it('falls invalid sections back to Branding', () => {

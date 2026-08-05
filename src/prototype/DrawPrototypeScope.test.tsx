@@ -38,7 +38,7 @@ describe('Draw prototype scope and separation', () => {
 
   it('keeps the Audience Display free of Operator draw controls', () => {
     const router = createMemoryRouter(appRoutes, {
-      initialEntries: ['/display'],
+      initialEntries: ['/display/prototype'],
     })
     render(<RouterProvider router={router} />)
 

@@ -1,9 +1,9 @@
-import type { PublicAudienceStandbyScenario } from '../../prototype/audience-types.ts'
+import type { PublicAudienceScenario } from './audience-view.types.ts'
 import { AudienceStage } from './AudienceStage.tsx'
 import { EventBrand } from './EventBrand.tsx'
 
 interface StandbyStageProps {
-  scenario: PublicAudienceStandbyScenario
+  scenario: PublicAudienceScenario
 }
 
 export function StandbyStage({ scenario }: StandbyStageProps) {
@@ -15,7 +15,7 @@ export function StandbyStage({ scenario }: StandbyStageProps) {
       />
       <div className="standby-stage__message">
         <p className="audience-eyebrow">Next draw</p>
-        <h1>{scenario.message}</h1>
+        <h1>{scenario.message ?? 'Draw will begin shortly'}</h1>
         <p className="audience-prize">
           <span>{scenario.prizeCategory}</span>
           <strong>{scenario.prizeLabel}</strong>

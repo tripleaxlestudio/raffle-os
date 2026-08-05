@@ -1,10 +1,10 @@
-import type { PublicAudienceRollingScenario } from '../../prototype/audience-types.ts'
+import type { PublicAudienceScenario } from './audience-view.types.ts'
 import { AudienceStage } from './AudienceStage.tsx'
 import { DisplayStateLabel } from './DisplayStateLabel.tsx'
 import { EventBrand } from './EventBrand.tsx'
 
 interface RollingStageProps {
-  scenario: PublicAudienceRollingScenario
+  scenario: PublicAudienceScenario
 }
 
 export function RollingStage({ scenario }: RollingStageProps) {
@@ -19,13 +19,13 @@ export function RollingStage({ scenario }: RollingStageProps) {
         <p className="audience-eyebrow">
           {scenario.prizeCategory} · {scenario.prizeLabel}
         </p>
-        <h1>{scenario.message}</h1>
+        <h1>{scenario.message ?? 'Drawing in progress'}</h1>
         <ul
           aria-label="Presentational ticket stream"
           className="rolling-ticket-stream"
-          data-prototype-static="true"
+          data-prototype-static={scenario.prototypeStatic ? 'true' : undefined}
         >
-          {scenario.ticketNumbers.map((ticketNumber) => (
+          {(scenario.ticketNumbers ?? []).map((ticketNumber) => (
             <li className="rolling-ticket" key={ticketNumber}>
               <span>{ticketNumber}</span>
             </li>

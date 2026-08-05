@@ -1,7 +1,4 @@
-import type {
-  PublicAudienceConfirmedScenario,
-  PublicAudienceWinnerRevealScenario,
-} from '../../prototype/audience-types.ts'
+import type { PublicAudienceScenario } from './audience-view.types.ts'
 import { AudienceStage } from './AudienceStage.tsx'
 import { DisplayStateLabel } from './DisplayStateLabel.tsx'
 import { EventBrand } from './EventBrand.tsx'
@@ -9,12 +6,12 @@ import { WinnerGrid } from './WinnerGrid.tsx'
 
 interface WinnerStageProps {
   scenario:
-    | PublicAudienceWinnerRevealScenario
-    | PublicAudienceConfirmedScenario
+    PublicAudienceScenario
 }
 
 export function WinnerStage({ scenario }: WinnerStageProps) {
   const confirmed = scenario.state === 'confirmed'
+  const count = scenario.layoutCount ?? scenario.ticketNumbers?.length ?? 1
 
   return (
     <AudienceStage className="winner-stage" state={scenario.state}>
@@ -31,13 +28,13 @@ export function WinnerStage({ scenario }: WinnerStageProps) {
       </header>
       <WinnerGrid
         confirmed={confirmed}
-        count={scenario.layoutCount}
-        ticketNumbers={scenario.ticketNumbers}
+        count={count === 6 || count === 10 || count === 20 ? count : 1}
+        ticketNumbers={scenario.ticketNumbers ?? []}
       />
       <DisplayStateLabel
         tone={confirmed ? 'confirmed' : 'verification'}
       >
-        {scenario.statusMessage}
+        {scenario.statusMessage ?? 'Public result'}
       </DisplayStateLabel>
     </AudienceStage>
   )

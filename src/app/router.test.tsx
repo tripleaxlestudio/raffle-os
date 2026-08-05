@@ -142,8 +142,8 @@ describe('application routes', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders the standby Audience Display prototype at /display', () => {
-    renderRoute('/display')
+  it('renders the standby Audience Display prototype at /display/prototype', () => {
+    renderRoute('/display/prototype')
 
     expect(
       screen.getByRole('heading', {
@@ -277,19 +277,19 @@ describe('application routes', () => {
     }
 
     const audienceLinks = [
-      ['Audience Standby', '/display?state=standby'],
-      ['Audience Countdown', '/display?state=countdown'],
-      ['Audience Rolling', '/display?state=rolling'],
-      ['Reveal 1', '/display?state=reveal&count=1'],
-      ['Reveal 6', '/display?state=reveal&count=6'],
-      ['Reveal 10', '/display?state=reveal&count=10'],
-      ['Reveal 20', '/display?state=reveal&count=20'],
-      ['Confirmed 1', '/display?state=confirmed&count=1'],
-      ['Confirmed 6', '/display?state=confirmed&count=6'],
-      ['Confirmed 10', '/display?state=confirmed&count=10'],
-      ['Confirmed 20', '/display?state=confirmed&count=20'],
-      ['Blackout', '/display?state=blackout'],
-      ['Disconnected', '/display?state=disconnected'],
+      ['Audience Standby', '/display/prototype?state=standby'],
+      ['Audience Countdown', '/display/prototype?state=countdown'],
+      ['Audience Rolling', '/display/prototype?state=rolling'],
+      ['Reveal 1', '/display/prototype?state=reveal&count=1'],
+      ['Reveal 6', '/display/prototype?state=reveal&count=6'],
+      ['Reveal 10', '/display/prototype?state=reveal&count=10'],
+      ['Reveal 20', '/display/prototype?state=reveal&count=20'],
+      ['Confirmed 1', '/display/prototype?state=confirmed&count=1'],
+      ['Confirmed 6', '/display/prototype?state=confirmed&count=6'],
+      ['Confirmed 10', '/display/prototype?state=confirmed&count=10'],
+      ['Confirmed 20', '/display/prototype?state=confirmed&count=20'],
+      ['Blackout', '/display/prototype?state=blackout'],
+      ['Disconnected', '/display/prototype?state=disconnected'],
     ] as const
 
     for (const [label, href] of audienceLinks) {

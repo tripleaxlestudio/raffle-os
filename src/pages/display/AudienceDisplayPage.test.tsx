@@ -9,8 +9,11 @@ import {
 } from '../../prototype/data/index.ts'
 
 function renderDisplay(path = '/display') {
+  const prototypePath = path === '/display'
+    ? '/display/prototype'
+    : path.replace('/display?', '/display/prototype?')
   const router = createMemoryRouter(appRoutes, {
-    initialEntries: [path],
+    initialEntries: [prototypePath],
   })
   const view = render(<RouterProvider router={router} />)
 

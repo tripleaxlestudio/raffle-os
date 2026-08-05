@@ -185,7 +185,7 @@ describe('Phase 2 deterministic happy path', () => {
     await user.click(
       screen.getByRole('link', { name: 'Preview display' }),
     )
-    expectLocation(router, '/display?state=standby')
+    expectLocation(router, '/display/prototype?state=standby')
     expect(
       screen.getByRole('heading', {
         level: 1,

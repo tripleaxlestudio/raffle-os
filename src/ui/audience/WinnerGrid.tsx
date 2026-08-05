@@ -1,4 +1,4 @@
-import type { AudienceWinnerCount } from '../../prototype/audience-types.ts'
+type AudienceWinnerCount = 1 | 6 | 10 | 20
 import { TicketTile } from './TicketTile.tsx'
 
 interface WinnerGridProps {

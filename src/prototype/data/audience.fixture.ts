@@ -15,6 +15,7 @@ const publicEvent = Object.freeze({
   eventSubtitle: 'Celebrating ideas that move Indonesia forward',
   prizeCategory: 'Grand Prize',
   prizeLabel: 'Electric Scooter',
+  prototypeStatic: true,
 } satisfies PublicAudiencePrizeContext)
 
 export const audienceTicketNumbers = Object.freeze([
@@ -98,6 +99,8 @@ const blackout = Object.freeze({
 const disconnected = Object.freeze({
   eventName: publicEvent.eventName,
   eventSubtitle: publicEvent.eventSubtitle,
+  prizeCategory: publicEvent.prizeCategory,
+  prizeLabel: publicEvent.prizeLabel,
   instruction: 'Please wait for the operator.',
   message: 'Display connection interrupted',
   state: 'disconnected',

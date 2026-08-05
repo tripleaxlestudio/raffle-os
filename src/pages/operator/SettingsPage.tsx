@@ -286,7 +286,7 @@ export function SettingsPage() {
       </div>
       <PageHeader
         actions={
-          <ButtonLink size="lg" to="/display?state=standby">
+          <ButtonLink size="lg" to="/display/prototype?state=standby">
             Preview display
           </ButtonLink>
         }

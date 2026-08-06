@@ -2697,6 +2697,11 @@
 .settings-form-grid--branding > label:nth-child(-n + 2) { grid-column: 1 / -1; }
 .settings-form-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .settings-form-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.settings-presentation-grid { gap: 1rem; }
+.settings-toggle-field { align-content: start; }
+.settings-toggle-field__control { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .75rem; align-items: center; min-height: 2.75rem; }
+.settings-toggle-field__control input { width: 1.15rem; min-height: 1.15rem; padding: 0; accent-color: var(--accent-hover); }
+.settings-toggle-field__control small { color: var(--text-muted); font-size: .7rem; font-weight: normal; line-height: 1.4; }
 .settings-form-grid label { gap: var(--space-2); }
 .settings-form-grid select, .settings-form-grid input:not([type="range"]), .settings-display-config select { min-height: 2.75rem; }
 .settings-branding-layout .settings-asset-grid { display: grid; gap: 1rem; align-self: start; }

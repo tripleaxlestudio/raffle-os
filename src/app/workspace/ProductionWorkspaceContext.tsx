@@ -155,8 +155,8 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
       accentColor: initial.accentColor,
       logo: initial.logo === undefined ? undefined : { type: initial.logo.type, blob: initial.logo.blob },
       background: initial.background === undefined ? undefined : { type: initial.background.type, blob: initial.background.blob },
-      blackoutAppearance: initial.blackoutAppearance,
-      safeAreaMargin: initial.safeAreaMargin,
+      blackoutAppearance: state.displayConfiguration?.blackoutAppearance,
+      safeAreaMargin: state.displayConfiguration?.safeAreaMargin,
     })
     queueMicrotask(() => { if (publisherRef.current === publisher) setPublisher(publisher) })
   }, [state])

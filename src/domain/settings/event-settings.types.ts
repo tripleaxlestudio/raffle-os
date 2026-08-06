@@ -1,6 +1,6 @@
 import type { EventId } from '../shared/identifiers.ts'
+import { DEFAULT_PRESENTATION_SETTINGS, type PresentationSettings } from './presentation-settings.types.ts'
 
-export type BlackoutAppearance = 'pure-black' | 'event-surface'
 export type LocalAssetKind = 'image' | 'audio'
 export type LocalAsset = Readonly<{ name: string; type: string; size: number; blob: Blob }>
 
@@ -10,8 +10,7 @@ export interface EventSettings {
   readonly subtitle: string
   readonly primaryColor: string
   readonly accentColor: string
-  readonly safeAreaMargin: number
-  readonly blackoutAppearance: BlackoutAppearance
+  readonly presentation: PresentationSettings
   readonly audioEnabled: boolean
   readonly masterVolume: number
   readonly logo?: LocalAsset
@@ -21,8 +20,8 @@ export interface EventSettings {
 }
 
 export const DEFAULT_EVENT_SETTINGS = {
-  displayName: '', subtitle: '', primaryColor: '#7567FF', accentColor: '#F2A93B', safeAreaMargin: 48,
-  blackoutAppearance: 'pure-black' as const, audioEnabled: false, masterVolume: 72,
+  displayName: '', subtitle: '', primaryColor: '#7567FF', accentColor: '#F2A93B', presentation: DEFAULT_PRESENTATION_SETTINGS,
+  audioEnabled: false, masterVolume: 72,
 }
 
 export function validateHexColor(value: string): boolean { return /^#[0-9a-f]{6}$/i.test(value) }

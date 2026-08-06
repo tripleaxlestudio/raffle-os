@@ -70,6 +70,8 @@ export const createBroadcastChannelTransport = (channelName: string, scope: Prot
   }
 };
 
+export const createAudienceTransport = createBroadcastChannelTransport;
+
 export const createInMemoryTransportPair = (channelName: string, capability: TransportCapability = { transport: 'available', broadcastChannel: 'available', fullscreen: 'unavailable' }): [Transport, Transport] => {
   const hub = hubs.get(channelName) ?? { listeners: new Set<(value: unknown) => void>() };
   hubs.set(channelName, hub);

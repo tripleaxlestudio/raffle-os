@@ -20,9 +20,26 @@ export type AudienceConnectionState =
 
 export type AudienceController = {
   readonly getState: () => AudienceControllerState
+  readonly getDiagnostics: () => AudienceRuntimeDiagnostics
   readonly getConnectionState: () => AudienceConnectionState
   readonly subscribe: (listener: () => void) => () => void
   readonly close: () => void
+}
+
+export type AudienceRuntimeDiagnostics = {
+  readonly resolvedEventId: string
+  readonly displayConfigurationId: string
+  readonly channelName: string
+  readonly scope: ProtocolScope
+  readonly lastMessageType: string
+  readonly lastEnvelopeEpoch: number | undefined
+  readonly lastEnvelopeSequence: number | undefined
+  readonly publicState: 'display-test' | 'standby' | 'draw' | undefined
+  readonly validationResult: 'not-run' | 'accepted' | 'rejected'
+  readonly rejectionReason: string | undefined
+  readonly stateBeforeReceipt: AudienceControllerState['kind'] | undefined
+  readonly stateAfterReceipt: AudienceControllerState['kind'] | undefined
+  readonly lastSnapshotApplied: { readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
 }
 
 type AudienceControllerOptions = {
@@ -52,6 +69,21 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   let closed = false
   let unsubscribe: () => void = () => undefined
   let unsubscribeClose: () => void = () => undefined
+  let diagnostics: AudienceRuntimeDiagnostics = {
+    resolvedEventId: options.scope.eventId,
+    displayConfigurationId: options.scope.displayId,
+    channelName: `raffle-os-display:${options.scope.eventId}:${options.scope.displayId}`,
+    scope: options.scope,
+    lastMessageType: 'none',
+    lastEnvelopeEpoch: undefined,
+    lastEnvelopeSequence: undefined,
+    publicState: undefined,
+    validationResult: 'not-run',
+    rejectionReason: undefined,
+    stateBeforeReceipt: undefined,
+    stateAfterReceipt: undefined,
+    lastSnapshotApplied: undefined,
+  }
   const listeners = new Set<() => void>()
   const notify = () => listeners.forEach((listener) => { try { listener() } catch { /* one display cannot break another */ } })
   const now = () => options.now?.() ?? new Date().toISOString()
@@ -71,7 +103,11 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     }))
   }
   const sendReady = () => send({ type: 'display-ready', capability: { broadcastChannel: currentTransport.capability.broadcastChannel, fullscreen: currentTransport.capability.fullscreen } }, 0)
-  const sendApplied = (envelope: ProtocolEnvelope, snapshot: PublicDisplaySnapshot) => send({ type: 'display-snapshot-applied', appliedEpoch: envelope.epoch, appliedSequence: envelope.sequence, publicState: snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw' }, nextOutboundSequence++)
+  const sendApplied = (envelope: ProtocolEnvelope, snapshot: PublicDisplaySnapshot) => {
+    const publicState = snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw'
+    diagnostics = { ...diagnostics, lastSnapshotApplied: { epoch: envelope.epoch, sequence: envelope.sequence, publicState } }
+    send({ type: 'display-snapshot-applied', appliedEpoch: envelope.epoch, appliedSequence: envelope.sequence, publicState }, nextOutboundSequence++)
+  }
   const requestRestore = () => {
     if (restoreRequested) return
     restoreRequested = true
@@ -82,17 +118,20 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   }
 
   const onEnvelope = (envelope: ProtocolEnvelope): void => {
+    diagnostics = { ...diagnostics, lastMessageType: envelope.message.type, lastEnvelopeEpoch: envelope.epoch, lastEnvelopeSequence: envelope.sequence, stateBeforeReceipt: state.kind, rejectionReason: undefined }
     if (closed || envelope.message.type !== 'display-state' || envelope.sender.kind !== 'operator') return
-    if (validateEnvelopeContext(envelope, options.scope) !== undefined) return
+    const contextError = validateEnvelopeContext(envelope, options.scope)
+    if (contextError !== undefined) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: contextError.kind }; return }
     const sender = `${envelope.sender.kind}:${envelope.sender.id}`
-    if (acceptedOperator !== undefined && sender !== acceptedOperator) return
-    if (acceptedSession !== undefined && envelope.drawSessionId !== acceptedSession) return
-    if (acceptedMessageIds.has(envelope.messageId)) return
+    if (acceptedOperator !== undefined && sender !== acceptedOperator) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'operator-mismatch' }; return }
+    if (acceptedSession !== undefined && envelope.drawSessionId !== acceptedSession) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'session-mismatch' }; return }
+    if (acceptedMessageIds.has(envelope.messageId)) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'duplicate-message' }; return }
     const message = envelope.message
     const isRestore = message.restore === true
     const orderingError = isRestore ? undefined : acceptSequence(acceptedOrdering, envelope)
     if (orderingError !== undefined) {
       if (orderingError.kind === 'sequence-gap' || orderingError.kind === 'sequence-out-of-order') requestRestore()
+      diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: orderingError.kind }
       return
     }
     try {
@@ -116,11 +155,14 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       restoreRequested = false
       connection = 'connected'
       state = { kind: 'snapshot', connection, snapshot }
-      notify()
+      const publicState = snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw'
+      diagnostics = { ...diagnostics, validationResult: 'accepted', rejectionReason: undefined, publicState, stateAfterReceipt: state.kind }
       if (!wasConnected) sendReady()
       sendApplied(envelope, snapshot)
-    } catch {
+      notify()
+    } catch (error: unknown) {
       // Invalid, private, cross-session, or otherwise malformed snapshots never replace safe state.
+      diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: error instanceof Error ? error.message : 'invalid-public-snapshot' }
     }
   }
 
@@ -153,6 +195,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
 
   return {
     getState: () => state,
+    getDiagnostics: () => diagnostics,
     getConnectionState: () => connection,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
     close() {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useSyncExternalStore, type CSSProperties } from 're
 import { createAudienceController } from '../../application/display-transport/audience-controller.ts'
 import { createFullscreenController, type FullscreenState } from '../../application/display-transport/fullscreen-controller.ts'
 import type { PublicDisplaySnapshot } from '../../application/display-transport/public-projection.ts'
-import { createBroadcastChannelTransport, type Transport } from '../../application/display-transport/transport.ts'
+import { createAudienceTransport, type Transport } from '../../application/display-transport/transport.ts'
 import type { ProtocolScope } from '../../application/display-transport/protocol.ts'
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
 import { parseEventId, parseDisplayConfigurationId } from '../../domain/shared/identifiers.ts'
@@ -42,6 +42,25 @@ function safeStatusScenario(state: 'connecting' | 'disconnected-safe'): PublicAu
   return { ...publicContext, state, message: state === 'connecting' ? 'Connecting to the operator' : 'Display connection interrupted', instruction: state === 'connecting' ? 'Waiting for a public presentation snapshot.' : 'Please wait for the operator.' }
 }
 
+function AudienceDevelopmentDiagnostics({ controller, renderedState }: { readonly controller: ReturnType<typeof createAudienceController>; readonly renderedState: string }) {
+  if (!import.meta.env.DEV) return null
+  const diagnostics = controller.getDiagnostics()
+  return <details data-testid="audience-development-diagnostics"><summary>Audience runtime diagnostics</summary><dl>
+    <div><dt>Resolved Event ID</dt><dd>{diagnostics.resolvedEventId}</dd></div>
+    <div><dt>DisplayConfiguration ID</dt><dd>{diagnostics.displayConfigurationId}</dd></div>
+    <div><dt>Channel name</dt><dd>{diagnostics.channelName}</dd></div>
+    <div><dt>Scope</dt><dd>{diagnostics.scope.eventId} / {diagnostics.scope.displayId}</dd></div>
+    <div><dt>Last message</dt><dd>{diagnostics.lastMessageType}</dd></div>
+    <div><dt>Envelope epoch / sequence</dt><dd>{diagnostics.lastEnvelopeEpoch ?? '—'} / {diagnostics.lastEnvelopeSequence ?? '—'}</dd></div>
+    <div><dt>Public state</dt><dd>{diagnostics.publicState ?? '—'}</dd></div>
+    <div><dt>Validation</dt><dd>{diagnostics.validationResult}</dd></div>
+    <div><dt>Rejection reason</dt><dd>{diagnostics.rejectionReason ?? '—'}</dd></div>
+    <div><dt>Controller before / after</dt><dd>{diagnostics.stateBeforeReceipt ?? '—'} / {diagnostics.stateAfterReceipt ?? '—'}</dd></div>
+    <div><dt>Rendered presentation</dt><dd>{renderedState}</dd></div>
+    <div><dt>Last snapshot-applied acknowledgement</dt><dd>{diagnostics.lastSnapshotApplied === undefined ? '—' : `${diagnostics.lastSnapshotApplied.publicState} @ ${diagnostics.lastSnapshotApplied.epoch}/${diagnostics.lastSnapshotApplied.sequence}`}</dd></div>
+  </dl></details>
+}
+
 function FullscreenControls({ controller, state }: { readonly controller: ReturnType<typeof createFullscreenController>; readonly state: FullscreenState }) {
   if (!controller.isSupported()) return null
   const active = state === 'fullscreen' || state === 'entering' || state === 'exiting'
@@ -54,13 +73,20 @@ function FullscreenControls({ controller, state }: { readonly controller: Return
 }
 
 export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppliedScope, expectedSession }: AudienceDisplayPageProps) {
-  const query = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search)
-  const eventId = parseEventId(query.get('eventId'))
-  const displayId = parseDisplayConfigurationId(query.get('displayConfigurationId'))
+  // Keep the production URL context stable for the lifetime of this route. The
+  // previous implementation recreated these parse results on every render;
+  // that recreated the channel and Audience controller immediately
+  // after the first snapshot notification, losing the applied snapshot.
+  const search = typeof window === 'undefined' ? '' : window.location.search
+  const query = useMemo(() => new URLSearchParams(search), [search])
+  const eventIdParam = query.get('eventId')
+  const displayIdParam = query.get('displayConfigurationId')
+  const eventId = useMemo(() => parseEventId(eventIdParam), [eventIdParam])
+  const displayId = useMemo(() => parseDisplayConfigurationId(displayIdParam), [displayIdParam])
   const scope = useMemo(() => suppliedScope ?? (eventId.ok && displayId.ok ? deriveProductionDisplayScope(eventId.value, displayId.value) : undefined), [displayId, eventId, suppliedScope])
   const hookScope = useMemo(() => scope ?? { eventId: 'invalid-event-context', displayId: 'invalid-display-context' }, [scope])
-  const transport = useMemo(() => suppliedTransport ?? createBroadcastChannelTransport('raffle-os-display', hookScope), [hookScope, suppliedTransport])
-  const transportFactory = useMemo(() => suppliedTransport === undefined ? () => createBroadcastChannelTransport('raffle-os-display', hookScope) : undefined, [hookScope, suppliedTransport])
+  const transport = useMemo(() => suppliedTransport ?? createAudienceTransport('raffle-os-display', hookScope), [hookScope, suppliedTransport])
+  const transportFactory = useMemo(() => suppliedTransport === undefined ? () => createAudienceTransport('raffle-os-display', hookScope) : undefined, [hookScope, suppliedTransport])
   const controller = useMemo(() => createAudienceController({ transport, transportFactory, scope: hookScope, expectedSession }), [expectedSession, hookScope, transport, transportFactory])
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const fullscreen = useMemo(() => createFullscreenController({ target: typeof document === 'undefined' ? undefined : document.documentElement }), [])
@@ -72,8 +98,8 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
   if (scope === undefined) return <><DisconnectedStage scenario={safeStatusScenario('disconnected-safe')} /><p role="status">Audience Display context is unavailable.</p></>
 
   const controls = <FullscreenControls controller={fullscreen} state={fullscreenState} />
-  if (state.kind === 'connecting' || state.kind === 'disconnected-safe' || state.kind === 'unavailable') return <><DisconnectedStage scenario={safeStatusScenario(state.kind === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}</>
-  if (state.connection !== 'connected') return <><DisconnectedStage scenario={safeStatusScenario(state.connection === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}</>
+  if (state.kind === 'connecting' || state.kind === 'disconnected-safe' || state.kind === 'unavailable') return <><DisconnectedStage scenario={safeStatusScenario(state.kind === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={state.kind} /></>
+  if (state.connection !== 'connected') return <><DisconnectedStage scenario={safeStatusScenario(state.connection === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={state.kind} /></>
   const audienceStyle = { '--audience-safe-inline': `${state.snapshot.safeAreaMargin ?? 0}px`, '--audience-safe-block': `${state.snapshot.safeAreaMargin ?? 0}px`, '--accent': state.snapshot.primaryColor ?? undefined, '--accent-hover': state.snapshot.accentColor ?? undefined, ...(state.snapshot.background === undefined ? {} : { '--audience-background-image': `url(${URL.createObjectURL(state.snapshot.background.blob)})` }) } as CSSProperties
   if (state.snapshot.blackoutRequested) return <div style={audienceStyle}><BlackoutStage appearance={state.snapshot.blackoutAppearance} />{controls}</div>
   const scenario = snapshotScenario(state.snapshot)
@@ -87,5 +113,5 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
     case 'confirmed': return <WinnerStage scenario={scenario} />
   }
   })()
-  return <div style={audienceStyle}>{rendered}{controls}</div>
+  return <div style={audienceStyle}>{rendered}{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={scenario.state} /></div>
 }

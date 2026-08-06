@@ -35,6 +35,17 @@ export type OperatorPublisher = {
   readonly subscribe: (listener: (status: PublisherStatus) => void) => () => void
   readonly close: () => void
   readonly getSnapshot: () => PublicDisplaySnapshot | undefined
+  readonly getDiagnostics: () => OperatorPublisherDiagnostics
+}
+
+export type OperatorPublisherDiagnostics = {
+  readonly channelName: string
+  readonly epoch: number
+  readonly sequence: number
+  readonly lastSnapshotType: 'display-test' | 'standby' | 'draw' | undefined
+  readonly lastSnapshotTimestamp: string | undefined
+  readonly expectedAcknowledgement: { readonly epoch: number; readonly sequence: number } | undefined
+  readonly lastAcknowledgement: { readonly epoch: number; readonly sequence: number } | undefined
 }
 
 type OperatorPublisherOptions = {
@@ -61,6 +72,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   let serializedSnapshot: string | undefined
   let currentTransport = options.transport
   let unsubscribe: () => void = () => undefined
+  let lastAcknowledgement: { readonly epoch: number; readonly sequence: number } | undefined
   const statuses = new Set<(status: PublisherStatus) => void>()
 
   const report = (status: PublisherStatus): void => {
@@ -116,6 +128,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     if (snapshot === undefined) return
     if (envelope.message.type === 'display-snapshot-applied') {
       if (envelope.message.appliedEpoch !== epoch || envelope.message.appliedSequence !== sequence) return
+      lastAcknowledgement = { epoch: envelope.message.appliedEpoch, sequence: envelope.message.appliedSequence }
       report({ kind: 'snapshot-applied', epoch, sequence, publicState: envelope.message.publicState })
       return
     }
@@ -172,5 +185,14 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       statuses.clear()
     },
     getSnapshot: () => snapshot,
+    getDiagnostics: () => ({
+      channelName: `raffle-os-display:${options.scope.eventId}:${options.scope.displayId}`,
+      epoch,
+      sequence,
+      lastSnapshotType: snapshot === undefined ? undefined : snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw',
+      lastSnapshotTimestamp: snapshot?.stageStartedAt,
+      expectedAcknowledgement: snapshot === undefined ? undefined : { epoch, sequence },
+      lastAcknowledgement,
+    }),
   }
 }

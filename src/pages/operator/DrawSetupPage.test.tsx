@@ -79,7 +79,13 @@ describe('Draw Setup persisted authoring', () => {
     expect(screen.getByText('Previous winners excluded')).toBeInTheDocument()
     expect(screen.getAllByText('Eligible pool')).toHaveLength(2)
     expect(screen.getByText('Requested winners')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Winner quantity' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Eligibility rules' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'How many winners?' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Who can win?' })).not.toBeInTheDocument()
+    expect(screen.getByText('Choose a preset or enter 1–100. Save to recalculate readiness.')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Draw is ready for handoff' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open Practice start gate' })).toBeInTheDocument()
   })
 
   it('does not claim authoritative readiness while dirty and blocks handoff', async () => {

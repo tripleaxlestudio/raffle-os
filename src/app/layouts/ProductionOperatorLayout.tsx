@@ -16,21 +16,16 @@ function ProductionOperatorHeader() {
       : workspace.status === 'empty'
         ? 'No active Event'
         : 'Workspace unavailable'
-  const detail = workspace.status === 'ready'
-    ? `Status: ${workspace.event.status}${workspace.unresolvedSession === null ? '' : ' · unresolved Live session'}`
-    : workspace.status === 'invalid-reference'
-      ? 'Invalid saved Event reference'
-      : workspace.status === 'error'
-        ? 'Storage failure'
-        : workspace.status === 'empty'
-          ? 'Setup required'
-          : 'Loading'
+  const eventStatus = workspace.status === 'ready'
+    ? workspace.event.status.charAt(0).toUpperCase() + workspace.event.status.slice(1)
+    : workspace.status === 'empty' ? 'Setup required' : workspace.status === 'loading' ? 'Loading' : 'Unavailable'
   const audienceState = workspace.status !== 'ready'
     ? workspace.status === 'error' ? 'Unavailable' : 'Setup required'
     : workspace.displayConfiguration === null ? 'Setup required' : 'Waiting'
   const audienceUrl = workspace.status === 'ready' && workspace.displayConfiguration !== null
     ? `/display?eventId=${encodeURIComponent(workspace.event.id)}&displayConfigurationId=${encodeURIComponent(workspace.displayConfiguration.id)}`
     : null
+  const audienceDetail = audienceUrl === null ? 'Open Settings to configure the production display.' : 'Production display scope is ready; waiting for operator publication.'
   const openAudience = () => {
     if (audienceUrl === null) return
     const popup = window.open(audienceUrl, '_blank', 'noopener,noreferrer')
@@ -59,18 +54,17 @@ function ProductionOperatorHeader() {
       <button ref={eventButtonRef} type="button" className="operator-header__event-control" aria-haspopup="menu" aria-expanded={eventMenuOpen} onClick={() => setEventMenuOpen((open) => !open)}>
         <span className="operator-header__label">Current Event</span>
         <strong title={eventLabel}>{eventLabel}</strong>
+        <span className="operator-event-status">{eventStatus}</span>
         <span aria-hidden="true">⌄</span>
       </button>
-      <span className="operator-header__schedule">{detail}</span>
       {eventMenuOpen ? <div ref={menuRef} className="operator-header__menu" role="menu" aria-label="Current Event actions">
         <Link role="menuitem" to="/events" onClick={() => setEventMenuOpen(false)}>Switch / Manage Events</Link>
         <Link role="menuitem" to="/prize-categories" onClick={() => setEventMenuOpen(false)}>Manage Prize Categories</Link>
       </div> : null}
     </div>
     <div className="operator-header__status" aria-label="Operator utilities">
-      <span className="operator-mode">{workspace.status === 'ready' && workspace.currentMode !== null ? `${workspace.currentMode === 'live' ? 'Live' : 'Practice'} Mode` : 'Mode unavailable'}</span>
-      {audienceUrl === null ? <Link className="operator-display-indicator" aria-label="Audience Display: Setup required" to="/settings">Audience Display: Setup required</Link> : <button type="button" className="operator-display-indicator" aria-label={`Audience Display: ${audienceState}`} aria-describedby="audience-display-state" onClick={openAudience}>Audience Display: {audienceState}</button>}
-      <span id="audience-display-state" className="operator-header__schedule">{audienceUrl === null ? 'Open Settings to configure the production display.' : 'Production display scope is ready; waiting for operator publication.'}</span>
+      {workspace.status === 'ready' && workspace.currentMode !== null ? <span className="mode-badge" data-mode={workspace.currentMode}>{workspace.currentMode === 'live' ? 'Live Mode' : 'Practice Mode'}</span> : null}
+      {audienceUrl === null ? <Link className="operator-display-indicator" title={audienceDetail} aria-label="Audience: Setup required" to="/settings"><span aria-hidden="true" className="operator-status-marker" />Audience: Setup required</Link> : <button type="button" className="operator-display-indicator" title={audienceDetail} aria-label={`Audience: ${audienceState}`} onClick={openAudience}><span aria-hidden="true" className="operator-status-marker" />Audience: {audienceState}</button>}
       {popupBlocked && audienceUrl !== null ? <span role="alert">Pop-up blocked. <a href={audienceUrl} target="_blank" rel="noreferrer">Open Audience Display</a></span> : null}
     </div>
   </header>

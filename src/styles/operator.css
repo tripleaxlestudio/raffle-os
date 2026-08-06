@@ -138,10 +138,9 @@
 
   .operator-header__event {
     position: relative;
-    grid-template-columns: auto minmax(0, 1fr);
-    column-gap: var(--space-3);
-    row-gap: 0;
-    align-items: baseline;
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   .operator-header__event strong {
@@ -149,12 +148,12 @@
   }
 
   .operator-header__label {
-    grid-row: 1 / span 2;
-    align-self: center;
-    padding: var(--space-1) var(--space-2);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
+    color: var(--text-muted);
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0;
+    text-transform: none;
   }
 
   .operator-header__schedule {
@@ -167,20 +166,26 @@
   }
 
   .operator-header__status {
+    flex: 0 1 auto;
+    min-width: 0;
     flex-wrap: nowrap;
+    gap: var(--space-3);
   }
 
   .operator-header__event-control {
     display: flex;
     min-width: 0;
+    min-height: var(--control-height-md);
     align-items: center;
     gap: var(--space-2);
-    grid-column: 1 / -1;
-    border: 0;
-    padding: 0;
-    background: transparent;
-    color: inherit;
+    max-width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--text-primary);
     text-align: left;
+    cursor: pointer;
   }
 
   .operator-header__event-control strong {
@@ -188,6 +193,24 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .operator-header__event-control:hover,
+  .operator-header__event-control[aria-expanded="true"] {
+    border-color: var(--border-strong);
+    background: var(--surface-raised);
+  }
+
+  .operator-event-status {
+    flex: 0 0 auto;
+    padding: 0.125rem var(--space-2);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.6875rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1.2;
+    text-transform: capitalize;
   }
 
   .operator-header__menu {
@@ -218,13 +241,70 @@
 
   .operator-display-indicator {
     display: inline-flex;
-    min-height: 1.75rem;
+    min-height: var(--control-height-md);
     align-items: center;
-    padding: 0.25rem 0.75rem;
-    border-bottom: 1px solid var(--border-default);
-    color: var(--text-muted);
-    font-family: var(--font-family-mono);
-    font-size: 0.6875rem;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .operator-display-indicator:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+  }
+
+  .operator-status-marker {
+    width: 0.5rem;
+    height: 0.5rem;
+    flex: 0 0 auto;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    background: var(--status-warning);
+  }
+
+  .operator-display-indicator[aria-label="Audience: Setup required"] .operator-status-marker,
+  .operator-display-indicator[aria-label="Audience: Unavailable"] .operator-status-marker {
+    background: transparent;
+    border-color: var(--status-warning);
+  }
+
+  .operator-display-indicator[aria-label="Audience: Connected"] .operator-status-marker {
+    background: var(--status-success);
+    border-color: var(--status-success);
+  }
+
+  .operator-display-indicator[aria-label="Audience: Reconnecting"] .operator-status-marker {
+    border-radius: 0.0625rem;
+  }
+
+  .operator-display-indicator[aria-label="Audience: Setup required"],
+  .operator-display-indicator[aria-label="Audience: Reconnecting"] {
+    color: var(--status-warning);
+  }
+
+  .operator-display-indicator[aria-label="Audience: Connected"] {
+    color: var(--status-success);
+  }
+
+  .operator-header__event > .operator-header__schedule {
+    display: none;
+  }
+
+  .operator-display-indicator:focus-visible,
+  .operator-header__event-control:focus-visible,
+  .operator-header__menu a:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
   }
 
   .operator-display-indicator[data-display-status="ready"] {

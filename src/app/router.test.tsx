@@ -84,8 +84,9 @@ describe('application routes', () => {
 
   it('links missing production Audience configuration to Settings', async () => {
     renderRoute('/dashboard')
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Audience Display: Setup required' })).toBeInTheDocument())
-    expect(screen.getByRole('link', { name: 'Audience Display: Setup required' })).toHaveAttribute('href', '/settings')
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Audience: Setup required' })).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: 'Audience: Setup required' })).toHaveAttribute('href', '/settings')
+    expect(screen.queryByText(/Production display scope is ready/i)).not.toBeInTheDocument()
   })
 
   it('keeps the deterministic prototype available only under its development namespace', () => {

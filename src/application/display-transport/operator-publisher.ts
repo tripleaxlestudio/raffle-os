@@ -39,6 +39,8 @@ export type OperatorPublisher = {
   readonly getDiagnostics: () => OperatorPublisherDiagnostics
 }
 
+export const AUDIENCE_HEARTBEAT_INTERVAL_MS = 1000
+
 export type OperatorPublisherDiagnostics = {
   readonly channelName: string
   readonly publisherInstanceId: string
@@ -61,6 +63,9 @@ type OperatorPublisherOptions = {
   readonly clock: PublisherClock
   readonly epoch?: number
   readonly expectedSession?: string
+  readonly heartbeatIntervalMs?: number
+  readonly scheduleHeartbeat?: (callback: () => void, delayMs: number) => unknown
+  readonly cancelHeartbeat?: (handle: unknown) => void
   readonly route?: () => string
 }
 
@@ -78,6 +83,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   let serializedSnapshot: string | undefined
   let currentTransport = options.transport
   let unsubscribe: () => void = () => undefined
+  let heartbeatHandle: unknown = null
   let lastEnvelopeSent: OperatorPublisherDiagnostics['lastEnvelopeSent']
   let lastAcknowledgement: OperatorPublisherDiagnostics['lastAcknowledgement']
   const statuses = new Set<(status: PublisherStatus) => void>()
@@ -135,6 +141,38 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     return publishSnapshot(next, force)
   }
 
+  const sendHeartbeat = (): void => {
+    if (closed || !started || currentTransport.capability.transport !== 'available') return
+    const nextSequence = sequence + 1
+    sequence = nextSequence
+    const result = currentTransport.publish(createProtocolEnvelope({
+      sender: { kind: 'operator', id: options.senderId },
+      scope: options.scope,
+      epoch,
+      sequence: nextSequence,
+      emittedAt: options.clock.now(),
+      message: { type: 'display-heartbeat' },
+    }))
+    if (result.ok) {
+      trace({ epoch, sequence: nextSequence, direction: 'sent', messageType: 'heartbeat', validationResult: 'accepted', orderingResult: 'accepted', acknowledgementStatus: 'not-applicable' })
+    } else {
+      sequence = nextSequence - 1
+    }
+  }
+
+  const armHeartbeat = (): void => {
+    if (heartbeatHandle !== null || options.heartbeatIntervalMs === 0) return
+    const schedule = options.scheduleHeartbeat ?? ((callback, delay) => globalThis.setInterval(callback, delay))
+    heartbeatHandle = schedule(sendHeartbeat, options.heartbeatIntervalMs ?? AUDIENCE_HEARTBEAT_INTERVAL_MS)
+  }
+
+  const clearHeartbeat = (): void => {
+    if (heartbeatHandle === null) return
+    const cancel = options.cancelHeartbeat ?? ((handle) => globalThis.clearInterval(handle as number))
+    cancel(heartbeatHandle)
+    heartbeatHandle = null
+  }
+
   const onEnvelope = (envelope: ProtocolEnvelope): void => {
     const receivedState = envelope.message.type === 'display-snapshot-applied' ? envelope.message.publicState : 'unknown'
     trace({ epoch: envelope.epoch, sequence: envelope.sequence, direction: 'received', messageType: envelope.message.type, publicState: receivedState, validationResult: 'not-run', orderingResult: 'not-run', acknowledgementStatus: envelope.message.type === 'display-snapshot-applied' ? 'received' : 'not-applicable' })
@@ -178,6 +216,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       started = true
       const result = projectAndPublish(initial, true)
       if (result.ok) {
+        armHeartbeat()
         report({ kind: 'ready' })
         if (currentTransport.capability.transport === 'available') report({ kind: 'waiting-for-display' })
         else report({ kind: 'transport-error', error: { kind: 'transport-unavailable', reason: 'Display transport is unavailable.' } })
@@ -196,6 +235,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     close() {
       if (closed) return
       closed = true
+      clearHeartbeat()
       unsubscribe()
       currentTransport.close()
       trace({ messageType: 'publisher-disposed', direction: 'local', cleanupDisposeReason: 'close-called' })

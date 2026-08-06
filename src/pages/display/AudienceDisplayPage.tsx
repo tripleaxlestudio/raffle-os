@@ -59,6 +59,13 @@ function AudienceDevelopmentDiagnostics({ controller, renderedState }: { readonl
     <div><dt>Controller before / after</dt><dd>{diagnostics.stateBeforeReceipt ?? '—'} / {diagnostics.stateAfterReceipt ?? '—'}</dd></div>
     <div><dt>Rendered presentation</dt><dd>{renderedState}</dd></div>
     <div><dt>Last snapshot-applied acknowledgement</dt><dd>{diagnostics.lastSnapshotApplied === undefined ? '—' : `${diagnostics.lastSnapshotApplied.publicState} @ ${diagnostics.lastSnapshotApplied.epoch}/${diagnostics.lastSnapshotApplied.sequence}`}</dd></div>
+    <div><dt>Controller instance</dt><dd>{diagnostics.controllerInstanceId}</dd></div>
+    <div><dt>Last publisher activity</dt><dd>{diagnostics.lastPublisherActivity ?? '-'}</dd></div>
+    <div><dt>Latest heartbeat</dt><dd>{diagnostics.latestHeartbeatReceived ?? '-'}</dd></div>
+    <div><dt>Watchdog armed at</dt><dd>{diagnostics.watchdogArmedAt ?? '-'}</dd></div>
+    <div><dt>Watchdog expiry</dt><dd>{diagnostics.watchdogExpiry ?? '-'}</dd></div>
+    <div><dt>Most recent timeout</dt><dd>{diagnostics.mostRecentTimeoutCallback ?? '-'}</dd></div>
+    <div><dt>Disconnected reason</dt><dd>{diagnostics.disconnectedReason ?? '-'}</dd></div>
   </dl>} />
 }
 
@@ -104,7 +111,6 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
 
   const controls = <FullscreenControls controller={fullscreen} state={fullscreenState} />
   if (state.kind === 'connecting' || state.kind === 'disconnected-safe' || state.kind === 'unavailable') return <><DisconnectedStage scenario={safeStatusScenario(state.kind === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={state.kind} /></>
-  if (state.connection !== 'connected') return <><DisconnectedStage scenario={safeStatusScenario(state.connection === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={state.kind} /></>
   const audienceStyle = { '--audience-safe-inline': `${state.snapshot.safeAreaMargin ?? 0}px`, '--audience-safe-block': `${state.snapshot.safeAreaMargin ?? 0}px`, '--accent': state.snapshot.primaryColor ?? undefined, '--accent-hover': state.snapshot.accentColor ?? undefined, ...(state.snapshot.background === undefined ? {} : { '--audience-background-image': `url(${URL.createObjectURL(state.snapshot.background.blob)})` }) } as CSSProperties
   if (state.snapshot.blackoutRequested) return <div style={audienceStyle}><BlackoutStage appearance={state.snapshot.blackoutAppearance} />{controls}</div>
   const scenario = snapshotScenario(state.snapshot)

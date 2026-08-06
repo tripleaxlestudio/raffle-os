@@ -63,6 +63,9 @@ export type PublicMessage =
       readonly publicState: 'display-test' | 'standby' | 'draw';
     }
   | {
+      readonly type: 'display-heartbeat';
+    }
+  | {
       readonly type: 'display-close';
     };
 
@@ -179,8 +182,9 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
   if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'ticketNumbers', 'winnerStatuses', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
   if (messageType === 'display-restore-request' && !hasOnlyKeys(message, ['type', 'requestedEpoch', 'requestedSequence'])) return invalid('message', 'Restore request contains unsupported fields.');
   if (messageType === 'display-snapshot-applied' && !hasOnlyKeys(message, ['type', 'appliedEpoch', 'appliedSequence', 'publicState'])) return invalid('message', 'Snapshot acknowledgement contains unsupported fields.');
+  if (messageType === 'display-heartbeat' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Heartbeat contains unsupported fields.');
   if (messageType === 'display-close' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Close message contains unsupported fields.');
-  if (messageType !== 'display-ready' && messageType !== 'display-state' && messageType !== 'display-restore-request' && messageType !== 'display-snapshot-applied' && messageType !== 'display-close') {
+  if (messageType !== 'display-ready' && messageType !== 'display-state' && messageType !== 'display-restore-request' && messageType !== 'display-snapshot-applied' && messageType !== 'display-heartbeat' && messageType !== 'display-close') {
     return invalid('message.type', 'Message type is unsupported.');
   }
 

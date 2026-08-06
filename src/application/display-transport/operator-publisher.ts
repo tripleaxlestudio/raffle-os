@@ -63,6 +63,12 @@ export type OperatorPublisherDiagnostics = {
   readonly subscriberCount: number
   readonly heartbeatCount: number
   readonly lastHeartbeatTimestamp: string | undefined
+  readonly heartbeatIntervalMs: number
+  readonly activeHeartbeatTimerCount: number
+  readonly heartbeatReceivedCount: number
+  readonly helloCount: number
+  readonly restoreRequestCount: number
+  readonly retainedSnapshotResendCount: number
 }
 
 type OperatorPublisherOptions = {
@@ -95,6 +101,10 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   let unsubscribe: () => void = () => undefined
   let heartbeatHandle: unknown = null
   let heartbeatCount = 0
+  let heartbeatReceivedCount = 0
+  let helloCount = 0
+  let restoreRequestCount = 0
+  let retainedSnapshotResendCount = 0
   let lastHeartbeatTimestamp: string | undefined
   let restoreCount = 0
   let lastEnvelopeSent: OperatorPublisherDiagnostics['lastEnvelopeSent']
@@ -190,11 +200,15 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   const onEnvelope = (envelope: ProtocolEnvelope): void => {
     const receivedState = envelope.message.type === 'display-snapshot-applied' ? envelope.message.publicState : 'unknown'
     trace({ epoch: envelope.epoch, sequence: envelope.sequence, direction: 'received', messageType: envelope.message.type, publicState: receivedState, validationResult: 'not-run', orderingResult: 'not-run', acknowledgementStatus: envelope.message.type === 'display-snapshot-applied' ? 'received' : 'not-applicable' })
-    if (closed || (envelope.message.type !== 'display-ready' && envelope.message.type !== 'display-restore-request' && envelope.message.type !== 'display-snapshot-applied')) return
+    if (closed || (envelope.message.type !== 'display-ready' && envelope.message.type !== 'display-restore-request' && envelope.message.type !== 'display-snapshot-applied' && envelope.message.type !== 'display-heartbeat')) return
     if (envelope.sender.kind !== 'display' || envelope.sender.id.length === 0) return
     if (validateEnvelopeContext(envelope, options.scope) !== undefined) return
     if (options.expectedSession !== undefined && envelope.drawSessionId !== undefined && envelope.drawSessionId !== options.expectedSession) return
     if (snapshot === undefined) return
+    if (envelope.message.type === 'display-heartbeat') {
+      heartbeatReceivedCount += 1
+      return
+    }
     if (envelope.message.type === 'display-snapshot-applied') {
       if (lastEnvelopeSent === undefined || envelope.message.appliedEpoch !== lastEnvelopeSent.epoch || envelope.message.appliedSequence !== lastEnvelopeSent.sequence || envelope.message.publicState !== lastEnvelopeSent.publicState) return
       lastAcknowledgement = { ...lastEnvelopeSent }
@@ -202,8 +216,10 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       report({ kind: 'snapshot-applied', epoch, sequence, publicState: lastEnvelopeSent.publicState })
       return
     }
-    if (envelope.message.type === 'display-ready') { trace({ messageType: 'hello', direction: 'received', validationResult: 'accepted' }); report({ kind: 'display-ready' }) }
+    if (envelope.message.type === 'display-ready') { helloCount += 1; trace({ messageType: 'hello', direction: 'received', validationResult: 'accepted' }); report({ kind: 'display-ready' }) }
+    if (envelope.message.type === 'display-restore-request') restoreRequestCount += 1
     // Ready and restore are explicit, idempotent requests for the current public snapshot.
+    retainedSnapshotResendCount += 1
     publishSnapshot(snapshot, true, true)
   }
 
@@ -273,6 +289,12 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       subscriberCount: statuses.size,
       heartbeatCount,
       lastHeartbeatTimestamp,
+      heartbeatIntervalMs: options.heartbeatIntervalMs ?? AUDIENCE_HEARTBEAT_INTERVAL_MS,
+      activeHeartbeatTimerCount: heartbeatHandle === null ? 0 : 1,
+      heartbeatReceivedCount,
+      helloCount,
+      restoreRequestCount,
+      retainedSnapshotResendCount,
     }),
   }
 }

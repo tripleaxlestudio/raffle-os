@@ -74,6 +74,11 @@ function AudienceDevelopmentDiagnostics({ controller, renderedState }: { readonl
     <div><dt>Acknowledgement pending</dt><dd>{diagnostics.acknowledgementPending === undefined ? 'no' : `${diagnostics.acknowledgementPending.publicState} @ ${diagnostics.acknowledgementPending.epoch}/${diagnostics.acknowledgementPending.sequence}`}</dd></div>
     <div><dt>Acknowledgement suppression</dt><dd>{diagnostics.acknowledgementSuppressionReason ?? '—'}</dd></div>
     <div><dt>Invariant failure</dt><dd>{diagnostics.invariantFailure ?? '—'}</dd></div>
+    <div><dt>Heartbeat interval</dt><dd>{diagnostics.heartbeatIntervalMs} ms</dd></div>
+    <div><dt>Active heartbeat timers</dt><dd>{diagnostics.activeHeartbeatTimerCount}</dd></div>
+    <div><dt>Heartbeat sent / received</dt><dd>{diagnostics.heartbeatSentCount} / {diagnostics.heartbeatReceivedCount}</dd></div>
+    <div><dt>Hello count</dt><dd>{diagnostics.helloCount}</dd></div>
+    <div><dt>Restore-request count</dt><dd>{diagnostics.restoreRequestCount}</dd></div>
   </dl>} />
 }
 

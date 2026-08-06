@@ -56,7 +56,7 @@ describe('Phase 7 Slice 5 synchronization', () => {
     operator.publish(stateEnvelope(1))
     operator.publish(stateEnvelope(3, { stage: 'rolling', stageStartedAt: '2026-08-05T00:00:01.000Z' }))
     expect(audience.getState()).toMatchObject({ kind: 'snapshot', snapshot: { stage: 'standby' } })
-    expect(sent.filter((envelope) => envelope.message.type === 'display-restore-request')).toHaveLength(1)
+    expect(sent.filter((envelope) => envelope.message.type === 'display-restore-request')).toHaveLength(2)
     controller.close()
     audience.close()
   })

@@ -102,6 +102,12 @@ function ProductionAudienceDiagnostics() {
     <div><dt>Last snapshot sent</dt><dd>{diagnostics?.lastEnvelopeSent === undefined ? '—' : `${diagnostics.lastEnvelopeSent.publicState} @ ${diagnostics.lastEnvelopeSent.epoch}/${diagnostics.lastEnvelopeSent.sequence}`}</dd></div>
     <div><dt>Last applied acknowledgement</dt><dd>{diagnostics?.lastAcknowledgement === undefined ? '—' : `${diagnostics.lastAcknowledgement.publicState} @ ${diagnostics.lastAcknowledgement.epoch}/${diagnostics.lastAcknowledgement.sequence}`}</dd></div>
     <div><dt>Heartbeat count</dt><dd>{diagnostics?.heartbeatCount ?? 0}</dd></div>
+    <div><dt>Heartbeat interval</dt><dd>{diagnostics?.heartbeatIntervalMs ?? 0} ms</dd></div>
+    <div><dt>Active heartbeat timers</dt><dd>{diagnostics?.activeHeartbeatTimerCount ?? 0}</dd></div>
+    <div><dt>Heartbeat received</dt><dd>{diagnostics?.heartbeatReceivedCount ?? 0}</dd></div>
+    <div><dt>Hello count</dt><dd>{diagnostics?.helloCount ?? 0}</dd></div>
+    <div><dt>Restore-request count</dt><dd>{diagnostics?.restoreRequestCount ?? 0}</dd></div>
+    <div><dt>Retained snapshot resends</dt><dd>{diagnostics?.retainedSnapshotResendCount ?? 0}</dd></div>
     <div><dt>Last heartbeat</dt><dd>{diagnostics?.lastHeartbeatTimestamp ?? '—'}</dd></div>
   </dl>} />
 }

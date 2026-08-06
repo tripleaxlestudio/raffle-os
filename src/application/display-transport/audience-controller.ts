@@ -65,6 +65,12 @@ export type AudienceRuntimeDiagnostics = {
   readonly acknowledgementPending: { readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
   readonly acknowledgementSuppressionReason: string | undefined
   readonly invariantFailure: string | undefined
+  readonly heartbeatIntervalMs: number
+  readonly activeHeartbeatTimerCount: number
+  readonly heartbeatSentCount: number
+  readonly heartbeatReceivedCount: number
+  readonly helloCount: number
+  readonly restoreRequestCount: number
 }
 
 type AudienceControllerOptions = {
@@ -136,6 +142,12 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     acknowledgementPending: undefined,
     acknowledgementSuppressionReason: undefined,
     invariantFailure: undefined,
+    heartbeatIntervalMs: 0,
+    activeHeartbeatTimerCount: 0,
+    heartbeatSentCount: 0,
+    heartbeatReceivedCount: 0,
+    helloCount: 0,
+    restoreRequestCount: 0,
   }
   const listeners = new Set<() => void>()
   const notify = () => listeners.forEach((listener) => { try { listener() } catch { /* one display cannot break another */ } })
@@ -169,7 +181,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   }
 
   const recordPublisherActivity = (heartbeat: boolean): void => {
-    diagnostics = { ...diagnostics, lastPublisherActivity: now(), ...(heartbeat ? { latestHeartbeatReceived: now() } : {}) }
+    diagnostics = { ...diagnostics, lastPublisherActivity: now(), ...(heartbeat ? { latestHeartbeatReceived: now(), heartbeatReceivedCount: diagnostics.heartbeatReceivedCount + 1 } : {}) }
     connection = 'connected'
     if (retainedSnapshot !== undefined && state.kind === 'disconnected-safe') {
       state = { kind: 'snapshot', connection, snapshot: retainedSnapshot }
@@ -191,6 +203,8 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       message,
     }))
     const publicState = message.type === 'display-snapshot-applied' ? message.publicState : 'unknown'
+    if (message.type === 'display-ready') diagnostics = { ...diagnostics, helloCount: diagnostics.helloCount + 1 }
+    if (message.type === 'display-restore-request') diagnostics = { ...diagnostics, restoreRequestCount: diagnostics.restoreRequestCount + 1 }
     trace({ epoch, sequence, direction: 'sent', messageType: message.type === 'display-ready' ? 'hello' : message.type === 'display-restore-request' ? 'restore-request' : message.type === 'display-snapshot-applied' ? 'acknowledgement' : message.type, publicState, validationResult: result.ok ? 'accepted' : 'rejected', orderingResult: 'accepted', acknowledgementStatus: message.type === 'display-snapshot-applied' ? 'sent' : 'not-applicable' })
   }
   const sendReady = () => send({ type: 'display-ready', capability: { broadcastChannel: currentTransport.capability.broadcastChannel, fullscreen: currentTransport.capability.fullscreen } }, 0)
@@ -280,7 +294,6 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         ...(message.ticketNumbers === undefined ? {} : { ticketNumbers: message.ticketNumbers }),
         ...(message.winnerStatuses === undefined ? {} : { winnerStatuses: message.winnerStatuses }),
       }, isSafeNonDrawState ? undefined : acceptedSession)
-      const wasConnected = connection === 'connected'
       acceptedMessageIds.add(envelope.messageId)
       acceptedOrdering = { epoch: envelope.epoch, sequence: envelope.sequence }
       acceptedOperator = sender
@@ -295,7 +308,6 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       diagnostics = { ...diagnostics, validationResult: 'accepted', rejectionReason: undefined, publicState, stateAfterReceipt: state.kind, acceptedPublisherInstanceId: envelope.sender.id, acceptedEpoch: envelope.epoch, acceptedSequence: envelope.sequence, acknowledgementPending: { epoch: envelope.epoch, sequence: envelope.sequence, publicState }, acknowledgementSuppressionReason: undefined, invariantFailure: undefined }
       trace({ validationResult: 'accepted', orderingResult: 'accepted', controllerStateAfter: state.kind, renderedState: publicState, acknowledgementStatus: 'pending' })
       notify()
-      if (!wasConnected) sendReady()
       // React must report the actual selected public presentation before this
       // snapshot is acknowledged. Validation/controller receipt alone is not
       // product-visible application.
@@ -322,7 +334,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         state = currentTransport.capability.transport === 'available' ? { kind: 'connecting' } : { kind: 'unavailable', connection: 'unavailable' }
         notify()
         attach()
-        if (currentTransport.capability.transport === 'available') sendReady()
+        if (currentTransport.capability.transport === 'available') { sendReady(); requestRestore() }
       }, options.reconnectDelayMs ?? 100)
     }
   }
@@ -336,6 +348,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   if (currentTransport.capability.transport === 'available') {
     armWatchdog()
     sendReady()
+    requestRestore()
   }
 
   return {

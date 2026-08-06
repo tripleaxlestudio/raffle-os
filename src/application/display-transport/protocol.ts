@@ -36,6 +36,8 @@ export type PublicMessage =
       readonly drawSessionId?: string;
       readonly stageStartedAt?: string;
       readonly blackoutRequested?: boolean;
+      readonly displayTest?: boolean;
+      readonly eventName?: string;
       readonly mode?: 'practice' | 'live';
       readonly ticketNumbers?: readonly string[];
       readonly winnerStatuses?: readonly PublicWinnerStatus[];
@@ -159,7 +161,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
   const validStage = isStage(stage) ? stage : undefined;
   if (messageType === 'display-ready' && (!hasOnlyKeys(message, ['type', 'capability']) || validCapability === undefined)) return invalid('message', 'Display-ready message contains unsupported or invalid fields.');
   if (messageType === 'display-state' && validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
-  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'blackoutRequested', 'mode', 'ticketNumbers', 'winnerStatuses', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
+  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'blackoutRequested', 'displayTest', 'eventName', 'mode', 'ticketNumbers', 'winnerStatuses', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
   if (messageType === 'display-restore-request' && !hasOnlyKeys(message, ['type', 'requestedEpoch', 'requestedSequence'])) return invalid('message', 'Restore request contains unsupported fields.');
   if (messageType === 'display-close' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Close message contains unsupported fields.');
   if (messageType !== 'display-ready' && messageType !== 'display-state' && messageType !== 'display-restore-request' && messageType !== 'display-close') {
@@ -177,6 +179,8 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
     if (message.drawSessionId !== undefined && !isNonEmptyString(message.drawSessionId)) return invalid('message.drawSessionId', 'Projection session ID must be a non-empty string.');
     if (message.stageStartedAt !== undefined && (!isNonEmptyString(message.stageStartedAt) || Number.isNaN(Date.parse(message.stageStartedAt)))) return invalid('message.stageStartedAt', 'Stage timestamp must be valid.');
     if (message.blackoutRequested !== undefined && typeof message.blackoutRequested !== 'boolean') return invalid('message.blackoutRequested', 'Blackout state must be boolean.');
+    if (message.displayTest !== undefined && typeof message.displayTest !== 'boolean') return invalid('message.displayTest', 'Display-test marker must be boolean.');
+    if (message.eventName !== undefined && !isNonEmptyString(message.eventName)) return invalid('message.eventName', 'Public Event name must be a non-empty string.');
     if (message.mode !== undefined && message.mode !== 'practice' && message.mode !== 'live') return invalid('message.mode', 'Display mode is invalid.');
     if (message.restore !== undefined && typeof message.restore !== 'boolean') return invalid('message.restore', 'Restore marker must be boolean.');
     if (ticketNumbers !== undefined && (!Array.isArray(ticketNumbers) || ticketNumbers.some((ticket) => !isNonEmptyString(ticket)))) return invalid('message.ticketNumbers', 'Ticket numbers must be non-empty strings.');
@@ -187,6 +191,8 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
       ...(message.drawSessionId === undefined ? {} : { drawSessionId: message.drawSessionId }),
       ...(message.stageStartedAt === undefined ? {} : { stageStartedAt: message.stageStartedAt }),
       ...(message.blackoutRequested === undefined ? {} : { blackoutRequested: message.blackoutRequested }),
+      ...(message.displayTest === undefined ? {} : { displayTest: message.displayTest }),
+      ...(message.eventName === undefined ? {} : { eventName: message.eventName }),
       ...(message.mode === undefined ? {} : { mode: message.mode }),
       ...(ticketNumbers === undefined ? {} : { ticketNumbers: [...ticketNumbers] }),
       ...(winnerStatuses === undefined ? {} : { winnerStatuses: [...winnerStatuses] }),

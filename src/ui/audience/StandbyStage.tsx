@@ -14,6 +14,7 @@ export function StandbyStage({ scenario }: StandbyStageProps) {
         eventSubtitle={scenario.eventSubtitle}
       />
       <div className="standby-stage__message">
+        {scenario.displayTest ? <p className="audience-test-badge" role="status">DISPLAY TEST · NOT AN OFFICIAL DRAW</p> : null}
         <p className="audience-eyebrow">Next draw</p>
         <h1>{scenario.message ?? 'Draw will begin shortly'}</h1>
         <p className="audience-prize">

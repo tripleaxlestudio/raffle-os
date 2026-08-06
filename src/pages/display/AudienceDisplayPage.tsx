@@ -24,11 +24,13 @@ function snapshotScenario(snapshot: PublicDisplaySnapshot): PublicAudienceScenar
       : snapshot.stage
   return {
     ...publicContext,
+    ...(snapshot.eventName === undefined ? {} : { eventName: snapshot.eventName }),
     state: committedState,
     message: committedState === 'standby' ? (snapshot.stage === 'pending-handoff' ? 'No active winners' : 'Draw will begin shortly') : committedState === 'countdown' ? 'Get ready' : committedState === 'rolling' ? 'Drawing in progress' : undefined,
     countdownValue: snapshot.stage === 'countdown' ? '—' : undefined,
     ticketNumbers: snapshot.ticketNumbers,
     statusMessage: committedState === 'confirmed' ? 'Confirmed result' : snapshot.stage === 'pending-handoff' ? (snapshot.winnerStatuses === undefined ? 'Public result' : 'Results under verification') : snapshot.stage === 'reveal' ? 'Results under verification' : undefined,
+    displayTest: snapshot.displayTest,
   }
 }
 

@@ -98,6 +98,8 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         stage: message.stage,
         ...(message.stageStartedAt === undefined ? {} : { stageStartedAt: message.stageStartedAt }),
         blackoutRequested: message.blackoutRequested ?? false,
+        ...(message.displayTest === undefined ? {} : { displayTest: message.displayTest }),
+        ...(message.eventName === undefined ? {} : { eventName: message.eventName }),
         ...(message.mode === undefined ? {} : { mode: message.mode }),
         ...(message.ticketNumbers === undefined ? {} : { ticketNumbers: message.ticketNumbers }),
         ...(message.winnerStatuses === undefined ? {} : { winnerStatuses: message.winnerStatuses }),

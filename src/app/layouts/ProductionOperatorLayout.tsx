@@ -1,12 +1,12 @@
 import { Link, Outlet } from 'react-router'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { getDisplayConnectionStatus, subscribeDisplayConnectionStatus, type DisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
 import { ProductionWorkspaceProvider, useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
 import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
 
 function ProductionOperatorHeader() {
   const workspace = useProductionWorkspace()
   const [eventMenuOpen, setEventMenuOpen] = useState(false)
-  const [popupBlocked, setPopupBlocked] = useState(false)
   const eventButtonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const eventLabel = workspace.status === 'loading'
@@ -19,17 +19,18 @@ function ProductionOperatorHeader() {
   const eventStatus = workspace.status === 'ready'
     ? workspace.event.status.charAt(0).toUpperCase() + workspace.event.status.slice(1)
     : workspace.status === 'empty' ? 'Setup required' : workspace.status === 'loading' ? 'Loading' : 'Unavailable'
+  const audienceStatusKey = workspace.status === 'ready' && workspace.displayConfiguration !== null ? `${workspace.event.id}:${workspace.displayConfiguration.id}` : 'unconfigured'
+  const subscribedAudienceState = useSyncExternalStore((listener) => subscribeDisplayConnectionStatus(audienceStatusKey, listener), (): DisplayConnectionStatus => getDisplayConnectionStatus(audienceStatusKey), (): DisplayConnectionStatus => 'waiting')
   const audienceState = workspace.status !== 'ready'
     ? workspace.status === 'error' ? 'Unavailable' : 'Setup required'
-    : workspace.displayConfiguration === null ? 'Setup required' : 'Waiting'
+    : workspace.displayConfiguration === null ? 'Setup required' : statusLabel(subscribedAudienceState)
   const audienceUrl = workspace.status === 'ready' && workspace.displayConfiguration !== null
     ? `/display?eventId=${encodeURIComponent(workspace.event.id)}&displayConfigurationId=${encodeURIComponent(workspace.displayConfiguration.id)}`
     : null
   const audienceDetail = audienceUrl === null ? 'Open Settings to configure the production display.' : 'Production display scope is ready; waiting for operator publication.'
   const openAudience = () => {
     if (audienceUrl === null) return
-    const popup = window.open(audienceUrl, '_blank', 'noopener,noreferrer')
-    setPopupBlocked(popup === null)
+    window.open(audienceUrl, '_blank', 'noopener,noreferrer')
   }
   useEffect(() => {
     if (!eventMenuOpen) return
@@ -65,9 +66,12 @@ function ProductionOperatorHeader() {
     <div className="operator-header__status" aria-label="Operator utilities">
       {workspace.status === 'ready' && workspace.currentMode !== null ? <span className="mode-badge" data-mode={workspace.currentMode}>{workspace.currentMode === 'live' ? 'Live Mode' : 'Practice Mode'}</span> : null}
       {audienceUrl === null ? <Link className="operator-display-indicator" title={audienceDetail} aria-label="Audience: Setup required" to="/settings"><span aria-hidden="true" className="operator-status-marker" />Audience: Setup required</Link> : <button type="button" className="operator-display-indicator" title={audienceDetail} aria-label={`Audience: ${audienceState}`} onClick={openAudience}><span aria-hidden="true" className="operator-status-marker" />Audience: {audienceState}</button>}
-      {popupBlocked && audienceUrl !== null ? <span role="alert">Pop-up blocked. <a href={audienceUrl} target="_blank" rel="noreferrer">Open Audience Display</a></span> : null}
     </div>
   </header>
+}
+
+function statusLabel(status: ReturnType<typeof getDisplayConnectionStatus>): string {
+  return status === 'setup-required' ? 'Setup required' : status === 'publication-failed' ? 'Publication failed' : status.charAt(0).toUpperCase() + status.slice(1)
 }
 
 export function ProductionOperatorLayout() {

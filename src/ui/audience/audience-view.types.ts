@@ -28,4 +28,5 @@ export type PublicAudienceScenario = PublicAudienceContext &
     readonly statusMessage?: string
     readonly instruction?: string
     readonly layoutCount?: 1 | 6 | 10 | 20
+    readonly displayTest?: boolean
   }>

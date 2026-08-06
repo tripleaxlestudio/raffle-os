@@ -57,7 +57,7 @@ describe('ProductionDrawPresentation', () => {
     render(<ProductionDrawPresentation result={result(2)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" practiceResult={{ drawSessionId: result(2).drawSessionId, winners: result(2).winners as never, createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1 }} recap={{ winnerCount: 2, eligibleCount: 40, winningRule: 'uniform', countdownSeconds: 5, rollingSeconds: 8 }} audienceStatus={{ label: 'Connected', detail: 'Audience presence is active and the latest public snapshot was acknowledged.', displayUrl: null }} onFailure={() => undefined} />)
     expect(await screen.findByRole('heading', { name: 'Get ready' })).toBeInTheDocument()
     expect(screen.getAllByText('Connected')[0]).toHaveClass('ui-badge--success')
-    expect(screen.getAllByText('Audience presence is active and the latest public snapshot was acknowledged.')).toHaveLength(2)
+    expect(screen.getAllByText('Audience presence is active and the latest public snapshot was acknowledged.')).toHaveLength(1)
     expect(screen.getByText('Winner count').nextElementSibling).toHaveTextContent('2')
     expect(screen.queryByRole('button', { name: 'Reset rehearsal' })).not.toBeInTheDocument()
   })
@@ -68,6 +68,15 @@ describe('ProductionDrawPresentation', () => {
     expect(screen.getByRole('list', { name: '1 Practice winners' })).toHaveTextContent('00042')
     expect(screen.getByTestId('production-preview')).toHaveAttribute('data-public-stage', 'reveal')
     expect(within(screen.getByTestId('production-preview')).getByText('00042')).toBeInTheDocument()
+  })
+
+  it('restores Reset rehearsal for completed Practice reveal only', async () => {
+    const onResetPractice = vi.fn()
+    render(<ProductionDrawPresentation result={result(1)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} onResetPractice={onResetPractice} />)
+    expect(await screen.findByRole('button', { name: 'Reset rehearsal' })).toBeInTheDocument()
+    screen.getByRole('button', { name: 'Reset rehearsal' }).click()
+    expect(onResetPractice).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: 'Return to Draw Sessions' })).toBeInTheDocument()
   })
 
   it('survives Strict Mode recovery hydration and continues from the persisted stage', async () => {

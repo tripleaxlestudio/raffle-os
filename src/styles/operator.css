@@ -1509,6 +1509,10 @@
 .production-preview__tickets { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .production-preview__tickets code { padding: var(--space-2); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text-primary); font-weight: 750; }
 
+.production-support-section + .production-support-section { margin-top: var(--space-5); border-top: 1px solid var(--border-subtle); padding-top: var(--space-5); }
+.production-support-section__heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); color: var(--text-primary); font-size: var(--font-size-sm); font-weight: 700; }
+.production-support-section__detail { display: block; margin-bottom: var(--space-3); color: var(--text-muted); font-size: var(--font-size-xs); }
+
 .production-recap { display: grid; gap: var(--space-4); }
 .production-recap > div { display: grid; gap: var(--space-1); }
 .production-recap > div > strong { font-size: var(--font-size-sm); }

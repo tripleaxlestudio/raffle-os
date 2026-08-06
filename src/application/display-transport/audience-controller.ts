@@ -2,6 +2,7 @@ import { acceptSequence, createProtocolEnvelope, validateEnvelopeContext, type P
 import { parsePublicDisplaySnapshot, type PublicDisplaySnapshot } from './public-projection.ts'
 import type { Transport } from './transport.ts'
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
+import { appendRuntimeTrace } from './runtime-trace.ts'
 
 export type AudienceControllerState =
   | { readonly kind: 'connecting' }
@@ -52,6 +53,7 @@ type AudienceControllerOptions = {
   readonly reconnectDelayMs?: number
   readonly scheduleReconnect?: (callback: () => void, delayMs: number) => unknown
   readonly cancelReconnect?: (handle: unknown) => void
+  readonly route?: () => string
 }
 
 export function createAudienceController(options: AudienceControllerOptions): AudienceController {
@@ -69,6 +71,10 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   let closed = false
   let unsubscribe: () => void = () => undefined
   let unsubscribeClose: () => void = () => undefined
+  const traceBase = { side: 'Audience' as const, publisherControllerInstanceId: sourceId, scope: options.scope, channelName: `raffle-os-display:${options.scope.eventId}:${options.scope.displayId}`, route: options.route }
+  const trace = (patch: Parameters<typeof appendRuntimeTrace>[1]) => appendRuntimeTrace(traceBase, patch)
+  trace({ messageType: 'listener-created', direction: 'local' })
+  trace({ messageType: 'channel-opened', direction: 'local', validationResult: currentTransport.capability.transport === 'available' ? 'accepted' : 'rejected' })
   let diagnostics: AudienceRuntimeDiagnostics = {
     resolvedEventId: options.scope.eventId,
     displayConfigurationId: options.scope.displayId,
@@ -92,7 +98,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
 
   const send = (message: ProtocolEnvelope['message'], sequence: number, epoch = acceptedOrdering?.epoch ?? 1): void => {
     if (closed || currentTransport.capability.transport !== 'available') return
-    currentTransport.publish(createProtocolEnvelope({
+    const result = currentTransport.publish(createProtocolEnvelope({
       sender: { kind: 'display', id: sourceId },
       scope: options.scope,
       ...(acceptedSession === undefined ? {} : { drawSessionId: acceptedSession }),
@@ -101,6 +107,8 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       emittedAt: now(),
       message,
     }))
+    const publicState = message.type === 'display-snapshot-applied' ? message.publicState : 'unknown'
+    trace({ epoch, sequence, direction: 'sent', messageType: message.type === 'display-ready' ? 'hello' : message.type === 'display-restore-request' ? 'restore-request' : message.type === 'display-snapshot-applied' ? 'acknowledgement' : message.type, publicState, validationResult: result.ok ? 'accepted' : 'rejected', orderingResult: 'accepted', acknowledgementStatus: message.type === 'display-snapshot-applied' ? 'sent' : 'not-applicable' })
   }
   const sendReady = () => send({ type: 'display-ready', capability: { broadcastChannel: currentTransport.capability.broadcastChannel, fullscreen: currentTransport.capability.fullscreen } }, 0)
   const sendApplied = (envelope: ProtocolEnvelope, snapshot: PublicDisplaySnapshot) => {
@@ -118,20 +126,22 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   }
 
   const onEnvelope = (envelope: ProtocolEnvelope): void => {
+    trace({ epoch: envelope.epoch, sequence: envelope.sequence, direction: 'received', messageType: envelope.message.type, publicState: envelope.message.type === 'display-state' ? envelope.message.displayTest === true ? 'display-test' : envelope.message.stage === 'standby' ? 'standby' : 'draw' : 'unknown', controllerStateBefore: state.kind })
     diagnostics = { ...diagnostics, lastMessageType: envelope.message.type, lastEnvelopeEpoch: envelope.epoch, lastEnvelopeSequence: envelope.sequence, stateBeforeReceipt: state.kind, rejectionReason: undefined }
     if (closed || envelope.message.type !== 'display-state' || envelope.sender.kind !== 'operator') return
     const contextError = validateEnvelopeContext(envelope, options.scope)
-    if (contextError !== undefined) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: contextError.kind }; return }
+    if (contextError !== undefined) { trace({ validationResult: 'rejected', rejectionReason: contextError.kind }); diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: contextError.kind }; return }
     const sender = `${envelope.sender.kind}:${envelope.sender.id}`
-    if (acceptedOperator !== undefined && sender !== acceptedOperator) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'operator-mismatch' }; return }
+    if (acceptedOperator !== undefined && sender !== acceptedOperator) { trace({ validationResult: 'rejected', rejectionReason: 'operator-mismatch' }); diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'operator-mismatch' }; return }
     const isSafeNonDrawState = envelope.message.displayTest === true || envelope.message.stage === 'standby'
-    if (!isSafeNonDrawState && acceptedSession !== undefined && envelope.drawSessionId !== acceptedSession) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'session-mismatch' }; return }
-    if (acceptedMessageIds.has(envelope.messageId)) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'duplicate-message' }; return }
+    if (!isSafeNonDrawState && acceptedSession !== undefined && envelope.drawSessionId !== acceptedSession) { trace({ validationResult: 'rejected', rejectionReason: 'session-mismatch' }); diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'session-mismatch' }; return }
+    if (acceptedMessageIds.has(envelope.messageId)) { trace({ validationResult: 'rejected', orderingResult: 'rejected', rejectionReason: 'duplicate-message' }); diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'duplicate-message' }; return }
     const message = envelope.message
     const isRestore = message.restore === true
     const orderingError = isRestore ? undefined : acceptSequence(acceptedOrdering, envelope)
     if (orderingError !== undefined) {
       if (orderingError.kind === 'sequence-gap' || orderingError.kind === 'sequence-out-of-order') requestRestore()
+      trace({ validationResult: 'rejected', orderingResult: 'rejected', rejectionReason: orderingError.kind })
       diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: orderingError.kind }
       return
     }
@@ -158,12 +168,15 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       state = { kind: 'snapshot', connection, snapshot }
       const publicState = snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw'
       diagnostics = { ...diagnostics, validationResult: 'accepted', rejectionReason: undefined, publicState, stateAfterReceipt: state.kind }
+      trace({ validationResult: 'accepted', orderingResult: 'accepted', controllerStateAfter: state.kind, renderedState: publicState, acknowledgementStatus: 'pending' })
       if (!wasConnected) sendReady()
       sendApplied(envelope, snapshot)
       notify()
     } catch (error: unknown) {
       // Invalid, private, cross-session, or otherwise malformed snapshots never replace safe state.
-      diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: error instanceof Error ? error.message : 'invalid-public-snapshot' }
+      const reason = error instanceof Error ? error.message : 'invalid-public-snapshot'
+      trace({ validationResult: 'rejected', rejectionReason: reason })
+      diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: reason }
     }
   }
 
@@ -199,13 +212,15 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     getDiagnostics: () => diagnostics,
     getConnectionState: () => connection,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
-    close() {
+  close() {
       if (closed) return
       closed = true
       if (reconnectHandle !== null) { cancel(reconnectHandle); reconnectHandle = null }
       unsubscribe()
       unsubscribeClose()
       currentTransport.close()
+      trace({ messageType: 'listener-disposed', direction: 'local', cleanupDisposeReason: 'close-called', controllerStateBefore: state.kind, controllerStateAfter: 'disconnected-safe' })
+      trace({ messageType: 'channel-closed', direction: 'local', cleanupDisposeReason: 'close-called' })
       connection = 'disconnected-safe'
       state = { kind: 'disconnected-safe', connection }
       notify()

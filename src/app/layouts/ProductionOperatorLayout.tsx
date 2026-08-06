@@ -3,6 +3,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { getDisplayConnectionStatus, subscribeDisplayConnectionStatus, type DisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
 import { ProductionWorkspaceProvider, useProductionAudiencePublisher, useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
 import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
+import { RuntimeDiagnosticsPanel } from '../../application/display-transport/RuntimeDiagnostics.tsx'
+import { appendRuntimeTrace } from '../../application/display-transport/runtime-trace.ts'
 
 function ProductionOperatorHeader() {
   const workspace = useProductionWorkspace()
@@ -73,9 +75,24 @@ function ProductionOperatorHeader() {
 function ProductionAudienceDiagnostics() {
   const audience = useProductionAudiencePublisher()
   const location = useLocation()
-  if (!import.meta.env.DEV) return null
   const diagnostics = audience.getDiagnostics()
-  return <details data-testid="operator-audience-publisher-diagnostics"><summary>Audience publisher diagnostics</summary><dl>
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    const base = diagnostics === undefined ? { side: 'Operator' as const, publisherControllerInstanceId: 'unavailable', route: () => location.pathname } : { side: 'Operator' as const, publisherControllerInstanceId: diagnostics.publisherInstanceId, scope: { eventId: diagnostics.channelName.split(':')[1] ?? 'unknown', displayId: diagnostics.channelName.split(':')[2] ?? 'unknown' }, route: () => location.pathname }
+    appendRuntimeTrace(base, { messageType: 'operator-shell-rerender', direction: 'local' })
+  }, [diagnostics, location.pathname])
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    const base = diagnostics === undefined ? { side: 'Operator' as const, publisherControllerInstanceId: 'unavailable', route: () => location.pathname } : { side: 'Operator' as const, publisherControllerInstanceId: diagnostics.publisherInstanceId, scope: { eventId: diagnostics.channelName.split(':')[1] ?? 'unknown', displayId: diagnostics.channelName.split(':')[2] ?? 'unknown' }, route: () => location.pathname }
+    appendRuntimeTrace(base, { messageType: 'route-change', direction: 'local' })
+    if (location.pathname === '/settings') appendRuntimeTrace(base, { messageType: 'settings-mounted', direction: 'local' })
+    if (location.pathname === '/dashboard') appendRuntimeTrace(base, { messageType: 'dashboard-mounted', direction: 'local' })
+    if (location.pathname === '/draw/live') appendRuntimeTrace(base, { messageType: 'live-draw-mounted', direction: 'local' })
+    if (location.pathname.includes('/draw/pending')) appendRuntimeTrace(base, { messageType: 'pending-results-mounted', direction: 'local' })
+    return () => { if (location.pathname === '/settings') appendRuntimeTrace(base, { messageType: 'settings-unmounted', direction: 'local', cleanupDisposeReason: 'route-change' }) }
+  }, [diagnostics, location.pathname])
+  if (!import.meta.env.DEV) return null
+  return <RuntimeDiagnosticsPanel side="Operator" title="Audience publisher diagnostics" summary={<dl>
     <div><dt>Publisher owner</dt><dd>Production workspace shell</dd></div>
     <div><dt>Operator route</dt><dd>{location.pathname}</dd></div>
     <div><dt>Publisher instance</dt><dd>{diagnostics?.publisherInstanceId ?? '—'}</dd></div>
@@ -84,7 +101,7 @@ function ProductionAudienceDiagnostics() {
     <div><dt>Retained public state</dt><dd>{diagnostics?.retainedPublicState ?? '—'}</dd></div>
     <div><dt>Last snapshot sent</dt><dd>{diagnostics?.lastEnvelopeSent === undefined ? '—' : `${diagnostics.lastEnvelopeSent.publicState} @ ${diagnostics.lastEnvelopeSent.epoch}/${diagnostics.lastEnvelopeSent.sequence}`}</dd></div>
     <div><dt>Last applied acknowledgement</dt><dd>{diagnostics?.lastAcknowledgement === undefined ? '—' : `${diagnostics.lastAcknowledgement.publicState} @ ${diagnostics.lastAcknowledgement.epoch}/${diagnostics.lastAcknowledgement.sequence}`}</dd></div>
-  </dl></details>
+  </dl>} />
 }
 
 function statusLabel(status: ReturnType<typeof getDisplayConnectionStatus>): string {
@@ -92,6 +109,10 @@ function statusLabel(status: ReturnType<typeof getDisplayConnectionStatus>): str
 }
 
 export function ProductionOperatorLayout() {
+  useEffect(() => {
+    appendRuntimeTrace({ side: 'Operator', publisherControllerInstanceId: 'operator-shell' }, { messageType: 'operator-shell-mount', direction: 'local' })
+    return () => { appendRuntimeTrace({ side: 'Operator', publisherControllerInstanceId: 'operator-shell' }, { messageType: 'operator-shell-unmount', direction: 'local', cleanupDisposeReason: 'operator-shell-unmounted' }) }
+  }, [])
   return <ProductionWorkspaceProvider>
     <div className="operator-layout" data-interface="operator" data-operator-shell>
       <OperatorSidebar production />

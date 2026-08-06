@@ -14,6 +14,7 @@ import {
   type PublicDisplaySnapshot,
 } from './public-projection.ts'
 import type { Transport } from './transport.ts'
+import { appendRuntimeTrace } from './runtime-trace.ts'
 
 export type PublisherClock = { readonly now: () => IsoTimestamp }
 export type PublisherStatus =
@@ -60,6 +61,7 @@ type OperatorPublisherOptions = {
   readonly clock: PublisherClock
   readonly epoch?: number
   readonly expectedSession?: string
+  readonly route?: () => string
 }
 
 const projectionError = (cause: unknown): { readonly kind: 'projection-error'; readonly message: string } => ({
@@ -79,6 +81,10 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   let lastEnvelopeSent: OperatorPublisherDiagnostics['lastEnvelopeSent']
   let lastAcknowledgement: OperatorPublisherDiagnostics['lastAcknowledgement']
   const statuses = new Set<(status: PublisherStatus) => void>()
+  const traceBase = { side: 'Operator' as const, publisherControllerInstanceId: options.senderId, scope: options.scope, channelName: `raffle-os-display:${options.scope.eventId}:${options.scope.displayId}`, route: options.route }
+  const trace = (patch: Parameters<typeof appendRuntimeTrace>[1]) => appendRuntimeTrace(traceBase, patch)
+  trace({ messageType: 'publisher-created', direction: 'local', acknowledgementStatus: 'not-applicable' })
+  trace({ messageType: 'channel-opened', direction: 'local', validationResult: currentTransport.capability.transport === 'available' ? 'accepted' : 'rejected', acknowledgementStatus: 'not-applicable' })
 
   const report = (status: PublisherStatus): void => {
     statuses.forEach((listener) => {
@@ -107,6 +113,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     const publicState = next.displayTest === true ? 'display-test' : next.stage === 'standby' ? 'standby' : 'draw'
     lastEnvelopeSent = { epoch, sequence: nextSequence, publicState }
     const result = currentTransport.publish(envelope)
+    trace({ epoch, sequence: nextSequence, direction: 'sent', messageType: restore ? 'restore-snapshot' : next.displayTest === true ? 'display-test' : next.stage === 'standby' ? 'standby' : 'display-state', publicState, validationResult: 'accepted', orderingResult: 'accepted', acknowledgementStatus: 'pending' })
     if (!result.ok) {
       snapshot = undefined
       serializedSnapshot = undefined
@@ -129,6 +136,8 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   }
 
   const onEnvelope = (envelope: ProtocolEnvelope): void => {
+    const receivedState = envelope.message.type === 'display-snapshot-applied' ? envelope.message.publicState : 'unknown'
+    trace({ epoch: envelope.epoch, sequence: envelope.sequence, direction: 'received', messageType: envelope.message.type, publicState: receivedState, validationResult: 'not-run', orderingResult: 'not-run', acknowledgementStatus: envelope.message.type === 'display-snapshot-applied' ? 'received' : 'not-applicable' })
     if (closed || (envelope.message.type !== 'display-ready' && envelope.message.type !== 'display-restore-request' && envelope.message.type !== 'display-snapshot-applied')) return
     if (envelope.sender.kind !== 'display' || envelope.sender.id.length === 0) return
     if (validateEnvelopeContext(envelope, options.scope) !== undefined) return
@@ -137,10 +146,11 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     if (envelope.message.type === 'display-snapshot-applied') {
       if (lastEnvelopeSent === undefined || envelope.message.appliedEpoch !== lastEnvelopeSent.epoch || envelope.message.appliedSequence !== lastEnvelopeSent.sequence || envelope.message.publicState !== lastEnvelopeSent.publicState) return
       lastAcknowledgement = { ...lastEnvelopeSent }
+      trace({ epoch: envelope.epoch, sequence: envelope.sequence, messageType: 'acknowledgement', direction: 'received', publicState: lastEnvelopeSent.publicState, validationResult: 'accepted', orderingResult: 'accepted', acknowledgementStatus: 'accepted' })
       report({ kind: 'snapshot-applied', epoch, sequence, publicState: lastEnvelopeSent.publicState })
       return
     }
-    if (envelope.message.type === 'display-ready') report({ kind: 'display-ready' })
+    if (envelope.message.type === 'display-ready') { trace({ messageType: 'hello', direction: 'received', validationResult: 'accepted' }); report({ kind: 'display-ready' }) }
     // Ready and restore are explicit, idempotent requests for the current public snapshot.
     publishSnapshot(snapshot, true, true)
   }
@@ -188,6 +198,8 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       closed = true
       unsubscribe()
       currentTransport.close()
+      trace({ messageType: 'publisher-disposed', direction: 'local', cleanupDisposeReason: 'close-called' })
+      trace({ messageType: 'channel-closed', direction: 'local', cleanupDisposeReason: 'close-called' })
       snapshot = undefined
       report({ kind: 'closed' })
       statuses.clear()

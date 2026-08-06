@@ -9,6 +9,8 @@ import { parseEventId, parseDisplayConfigurationId } from '../../domain/shared/i
 import { deriveProductionDisplayScope } from '../../application/display/display-configuration-service.ts'
 import { BlackoutStage, CountdownStage, DisconnectedStage, RollingStage, StandbyStage, WinnerStage } from '../../ui/audience/index.ts'
 import type { PublicAudienceScenario } from '../../ui/audience/audience-view.types.ts'
+import { RuntimeDiagnosticsPanel } from '../../application/display-transport/RuntimeDiagnostics.tsx'
+import { appendRuntimeTrace } from '../../application/display-transport/runtime-trace.ts'
 
 const publicContext = { eventName: 'Raffle OS Audience', eventSubtitle: 'Public event presentation', prizeCategory: 'Current draw', prizeLabel: 'Winner announcement' } as const
 
@@ -43,9 +45,8 @@ function safeStatusScenario(state: 'connecting' | 'disconnected-safe'): PublicAu
 }
 
 function AudienceDevelopmentDiagnostics({ controller, renderedState }: { readonly controller: ReturnType<typeof createAudienceController>; readonly renderedState: string }) {
-  if (!import.meta.env.DEV) return null
   const diagnostics = controller.getDiagnostics()
-  return <details data-testid="audience-development-diagnostics"><summary>Audience runtime diagnostics</summary><dl>
+  return <RuntimeDiagnosticsPanel side="Audience" title="Audience runtime diagnostics" renderedState={renderedState} summary={<dl>
     <div><dt>Resolved Event ID</dt><dd>{diagnostics.resolvedEventId}</dd></div>
     <div><dt>DisplayConfiguration ID</dt><dd>{diagnostics.displayConfigurationId}</dd></div>
     <div><dt>Channel name</dt><dd>{diagnostics.channelName}</dd></div>
@@ -58,7 +59,7 @@ function AudienceDevelopmentDiagnostics({ controller, renderedState }: { readonl
     <div><dt>Controller before / after</dt><dd>{diagnostics.stateBeforeReceipt ?? '—'} / {diagnostics.stateAfterReceipt ?? '—'}</dd></div>
     <div><dt>Rendered presentation</dt><dd>{renderedState}</dd></div>
     <div><dt>Last snapshot-applied acknowledgement</dt><dd>{diagnostics.lastSnapshotApplied === undefined ? '—' : `${diagnostics.lastSnapshotApplied.publicState} @ ${diagnostics.lastSnapshotApplied.epoch}/${diagnostics.lastSnapshotApplied.sequence}`}</dd></div>
-  </dl></details>
+  </dl>} />
 }
 
 function FullscreenControls({ controller, state }: { readonly controller: ReturnType<typeof createFullscreenController>; readonly state: FullscreenState }) {
@@ -91,6 +92,10 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const fullscreen = useMemo(() => createFullscreenController({ target: typeof document === 'undefined' ? undefined : document.documentElement }), [])
   const fullscreenState = useSyncExternalStore(fullscreen.subscribe, fullscreen.getState, fullscreen.getState)
+  useEffect(() => {
+    const diagnostics = controller.getDiagnostics()
+    appendRuntimeTrace({ side: 'Audience', publisherControllerInstanceId: diagnostics.scope.displayId, scope: diagnostics.scope, route: () => `${window.location.pathname}${window.location.search}` }, { messageType: 'rendered-state', direction: 'local', renderedState: state.kind, publicState: state.kind === 'snapshot' ? state.snapshot.displayTest === true ? 'display-test' : state.snapshot.stage === 'standby' ? 'standby' : 'draw' : 'unknown', controllerStateAfter: state.kind })
+  }, [controller, state])
   useEffect(() => () => controller.close(), [controller])
   useEffect(() => () => fullscreen.close(), [fullscreen])
 

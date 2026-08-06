@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { useProductionAudiencePublisher, useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
+import { appendRuntimeTrace } from '../../application/display-transport/runtime-trace.ts'
 import { createEventSettingsService } from '../../application/settings/event-settings-service.ts'
 import { createDisplayConfigurationService } from '../../application/display/display-configuration-service.ts'
 import { setDisplayConnectionStatus, type DisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
@@ -65,6 +66,8 @@ export function ProductionSettingsPage() {
   function fileChange(field: 'logo' | 'background' | 'revealCue', file: File | undefined) { if (file !== undefined) setSettings((current) => current === null ? current : { ...current, [field]: assetFromFile(file) }) }
   function openAudience() { if (displayUrl === null) return; setPopupBlocked(window.open(displayUrl, '_blank', 'noopener,noreferrer') === null) }
   function stopTest() {
+    const publisherDiagnostics = audience.getDiagnostics()
+    appendRuntimeTrace({ side: 'Operator', publisherControllerInstanceId: publisherDiagnostics?.publisherInstanceId ?? 'unavailable', scope: publisherDiagnostics === undefined ? undefined : { eventId: event.id, displayId: activeDisplay?.id ?? 'unknown' } }, { messageType: 'test-stopped', direction: 'local' })
     setTestVisibility('stopping'); setTesting(false)
     const parsed = parseDrawSessionId(event.id)
     if (!parsed.ok) { setTestVisibility('failed'); return }
@@ -75,6 +78,7 @@ export function ProductionSettingsPage() {
     if (activeDisplay === null) return
     const parsed = parseDrawSessionId(event.id); if (!parsed.ok) { setMessage('The active Event cannot safely scope a display test.'); return }
     if (audience.publisher === null) { setMessage('The production Audience publisher is not ready.'); return }
+    appendRuntimeTrace({ side: 'Operator', publisherControllerInstanceId: audience.getDiagnostics()?.publisherInstanceId ?? 'unavailable', scope: { eventId: event.id, displayId: activeDisplay.id } }, { messageType: 'test-started', direction: 'local' })
     setTesting(true); setTestVisibility('publishing'); setConnection('waiting'); setDisplayConnectionStatus(key, 'waiting')
     const result = audience.publish({ drawSessionId: parsed.value, stage: 'standby', blackoutRequested: false, displayTest: true, eventName: currentSettings.displayName, eventSubtitle: currentSettings.subtitle, primaryColor: currentSettings.primaryColor, accentColor: currentSettings.accentColor, logo: currentSettings.logo === undefined ? undefined : { type: currentSettings.logo.type, blob: currentSettings.logo.blob }, background: currentSettings.background === undefined ? undefined : { type: currentSettings.background.type, blob: currentSettings.background.blob }, blackoutAppearance: currentSettings.blackoutAppearance, safeAreaMargin: currentSettings.safeAreaMargin })
     if (!result.ok) { setTestVisibility('failed'); setConnection('publication-failed') }

@@ -13,6 +13,7 @@ import { createOperatorPublisher } from '../../application/display-transport/ope
 import { createBroadcastChannelTransport } from '../../application/display-transport/transport.ts'
 import { projectCommittedAudienceState } from '../../application/display-transport/authoritative-projection.ts'
 import type { ProtocolScope } from '../../application/display-transport/protocol.ts'
+import { deriveProductionDisplayScope } from '../../application/display/display-configuration-service.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { Badge, Button, Card, ConfirmationDialog } from '../../shared/ui/index.ts'
@@ -21,7 +22,7 @@ type Decision = 'confirm' | 'cancel' | 'redraw-pending' | 'redraw-confirmed'
 type LoadState =
   | { readonly status: 'loading' }
   | { readonly status: 'error'; readonly title: string; readonly message: string }
-  | { readonly status: 'ready'; readonly session: DrawSession; readonly event: Event; readonly category: PrizeCategory; readonly winners: readonly WinnerRecord[]; readonly redraws: readonly RedrawRecord[]; readonly blackoutRequested: boolean }
+  | { readonly status: 'ready'; readonly session: DrawSession; readonly event: Event; readonly category: PrizeCategory; readonly displayConfiguration: import('../../domain/display/display-configuration.types.ts').DisplayConfiguration; readonly winners: readonly WinnerRecord[]; readonly redraws: readonly RedrawRecord[]; readonly blackoutRequested: boolean }
 
 const reasons: readonly { value: RedrawReason; label: string }[] = [
   { value: 'absent', label: 'Absent' },
@@ -42,7 +43,6 @@ function statusLabel(status: WinnerRecord['status']): string {
 
 export function ProductionPendingResultsPage() {
   const services = useMemo(() => createDrawSetupProductionServices(), [])
-  const scope: ProtocolScope = useMemo(() => ({ eventId: 'production-event', displayId: 'public-display' }), [])
   const { drawSessionId } = useParams<{ drawSessionId: string }>()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -52,6 +52,9 @@ export function ProductionPendingResultsPage() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const commandRef = useRef<{ id: CommandId; command: PendingDecisionCommand } | null>(null)
+  const displayConfigurationId = state.status === 'ready' ? state.displayConfiguration.id : undefined
+  const scopeEventId = state.status === 'ready' ? state.event.id : (drawSessionId ?? 'unresolved-event')
+  const scope: ProtocolScope = useMemo(() => deriveProductionDisplayScope(scopeEventId, displayConfigurationId ?? 'unconfigured-display'), [displayConfigurationId, scopeEventId])
   const publisher = useMemo(() => createOperatorPublisher({
     transport: createBroadcastChannelTransport('raffle-os-display', scope),
     transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope),
@@ -83,8 +86,10 @@ export function ProductionPendingResultsPage() {
       ])
       if (event === null) { setState({ status: 'error', title: 'Event unavailable', message: 'The related Event could not be loaded safely.' }); return }
       if (category === null) { setState({ status: 'error', title: 'Prize category unavailable', message: 'The related PrizeCategory could not be loaded safely.' }); return }
+      const displayConfiguration = services.displayConfigurations === undefined ? null : await services.displayConfigurations.findByEventId(event.id)
+      if (displayConfiguration === null || displayConfiguration === undefined) { setState({ status: 'error', title: 'Display configuration unavailable', message: 'Save the active Event display configuration before presenting official results.' }); return }
       const checkpoint = services.presentationCheckpoints === undefined ? null : await services.presentationCheckpoints.findByDrawSessionId(session.id)
-      setState({ status: 'ready', session, event, category, winners: winners.sort((a, b) => a.sequenceNumber - b.sequenceNumber), redraws, blackoutRequested: checkpoint?.blackoutRequested ?? false })
+      setState({ status: 'ready', session, event, category, displayConfiguration, winners: winners.sort((a, b) => a.sequenceNumber - b.sequenceNumber), redraws, blackoutRequested: checkpoint?.blackoutRequested ?? false })
     } catch (error: unknown) {
       const text = error instanceof Error && /version/i.test(error.message) ? 'This local database is newer than the supported application version.' : 'Authoritative production results could not be read safely. Retry the local read.'
       setState({ status: 'error', title: 'Production result unavailable', message: text })

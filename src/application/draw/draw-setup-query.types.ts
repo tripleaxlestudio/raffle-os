@@ -54,6 +54,7 @@ export interface DrawSetupCommandService {
 }
 
 export interface DrawSetupProductionServices extends DrawSetupQueryRepositories {
+  readonly displayConfigurations?: import('../persistence/repositories/display-configuration-repository.interface.ts').DisplayConfigurationRepository
   readonly audits?: import('../persistence/repositories/audit-repository.interface.ts').AuditRepository
   readonly redraws?: import('../persistence/repositories/redraw-repository.interface.ts').RedrawRepository
   readonly pendingDecisions?: {

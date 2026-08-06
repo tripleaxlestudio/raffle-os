@@ -19,6 +19,7 @@ const productionNavigationItems = [
   { label: 'Live Draw', marker: 'LD', to: '/draw/live' },
   { label: 'History', marker: 'HI', to: '/history' },
   { label: 'Audience Display', marker: 'AD', to: '/display' },
+  { label: 'Settings', marker: 'ST', to: '/settings' },
 ] as const
 
 export function OperatorSidebar({ production = false }: { production?: boolean }) {

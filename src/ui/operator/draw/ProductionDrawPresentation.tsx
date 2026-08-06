@@ -12,6 +12,7 @@ import type { PresentationResultProjection } from '../../../application/workflow
 import { createOperatorPublisher } from '../../../application/display-transport/operator-publisher.ts'
 import { createBroadcastChannelTransport } from '../../../application/display-transport/transport.ts'
 import type { ProtocolScope } from '../../../application/display-transport/protocol.ts'
+import { deriveProductionDisplayScope } from '../../../application/display/display-configuration-service.ts'
 import { Button, Card } from '../../../shared/ui/index.ts'
 
 let publisherLifecycleEpoch = 0
@@ -21,6 +22,7 @@ interface ProductionDrawPresentationProps {
   readonly mode: 'live' | 'practice'
   readonly eventName: string
   readonly eventId?: string
+  readonly displayConfigurationId?: string
   readonly prizeCategory: string
   readonly prizeName: string
   readonly checkpoints?: { findByDrawSessionId(id: DrawSessionId): Promise<PresentationCheckpointRecord | null>; upsert(checkpoint: PresentationCheckpointRecord): Promise<void> }
@@ -34,10 +36,10 @@ function browserClock(): PresentationClock {
   return { now: () => new Date().toISOString() as IsoTimestamp, setTimeout: (callback, delayMs) => window.setTimeout(callback, delayMs), clearTimeout: (handle) => window.clearTimeout(handle as number), prefersReducedMotion: () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false }
 }
 
-export function ProductionDrawPresentation({ result, mode, eventName, eventId = 'production-event', prizeCategory, prizeName, checkpoints, practiceResult, onFailure, initialPresentation, onHandoff }: ProductionDrawPresentationProps) {
+export function ProductionDrawPresentation({ result, mode, eventName, eventId = 'production-event', displayConfigurationId = eventId, prizeCategory, prizeName, checkpoints, practiceResult, onFailure, initialPresentation, onHandoff }: ProductionDrawPresentationProps) {
   const [controllerState, setControllerState] = useState<PresentationControllerState>({ stage: 'result-locked', countdownLabel: null, error: null })
   const [blackoutRequested, setBlackoutRequested] = useState(initialPresentation?.blackoutRequested ?? false)
-  const scope: ProtocolScope = useMemo(() => ({ eventId: 'production-event', displayId: 'public-display' }), [])
+  const scope: ProtocolScope = useMemo(() => deriveProductionDisplayScope(eventId, displayConfigurationId), [displayConfigurationId, eventId])
   const publisher = useMemo(() => createOperatorPublisher({ transport: createBroadcastChannelTransport('raffle-os-display', scope), transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope), scope, senderId: `operator:${eventId}:${result.drawSessionId}`, expectedSession: result.drawSessionId, epoch: ++publisherLifecycleEpoch, clock: { now: () => new Date().toISOString() as IsoTimestamp } }), [eventId, result.drawSessionId, scope])
   const sourceForState = useCallback((next: PresentationControllerState) => next.stage === 'failed' || next.stage === 'result-locked'
     ? { drawSessionId: result.drawSessionId, stage: 'ready' as const, blackoutRequested: next.blackoutRequested ?? false, mode, result }
@@ -83,7 +85,7 @@ export function ProductionDrawPresentation({ result, mode, eventName, eventId = 
   useEffect(() => { if (mode === 'live' && controllerState.stage === 'pending-handoff') onHandoff?.() }, [controllerState.stage, mode, onHandoff])
   useEffect(() => { if (controllerState.error !== null) onFailure(controllerState.error) }, [controllerState.error, onFailure])
 
-  const blackoutControl = <div className="presentation-blackout-control"><p>Local preview only. Audience synchronization is available in Phase 7.</p><Button variant="secondary" onClick={() => { void controller.setBlackout(!blackoutRequested) }}>{blackoutRequested ? 'Disable blackout preview' : 'Enable blackout preview'}</Button></div>
+  const blackoutControl = <div className="presentation-blackout-control"><p>Audience publication is active for this Event display.</p><Button variant="secondary" onClick={() => { void controller.setBlackout(!blackoutRequested) }}>{blackoutRequested ? 'End blackout' : 'Blackout Audience display'}</Button></div>
   const stage = controllerState.stage
   if (stage === 'failed') return <Card className="presentation-failure" padding="lg"><p className="operator-eyebrow">Safe presentation state</p><h2>{safePresentationMessage(controllerState.error)}</h2><p>The locked result was preserved. Retry presentation from this same result or return to Draw Setup.</p><Button onClick={() => { void controller.retry() }}>Retry presentation</Button></Card>
   if (stage === 'result-locked') return <Card padding="lg"><p>Preparing locked result presentation…</p></Card>

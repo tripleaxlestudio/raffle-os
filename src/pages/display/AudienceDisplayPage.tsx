@@ -5,10 +5,11 @@ import type { PublicDisplaySnapshot } from '../../application/display-transport/
 import { createBroadcastChannelTransport, type Transport } from '../../application/display-transport/transport.ts'
 import type { ProtocolScope } from '../../application/display-transport/protocol.ts'
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
+import { parseEventId, parseDisplayConfigurationId } from '../../domain/shared/identifiers.ts'
+import { deriveProductionDisplayScope } from '../../application/display/display-configuration-service.ts'
 import { BlackoutStage, CountdownStage, DisconnectedStage, RollingStage, StandbyStage, WinnerStage } from '../../ui/audience/index.ts'
 import type { PublicAudienceScenario } from '../../ui/audience/audience-view.types.ts'
 
-const productionScope: ProtocolScope = { eventId: 'production-event', displayId: 'public-display' }
 const publicContext = { eventName: 'Raffle OS Audience', eventSubtitle: 'Public event presentation', prizeCategory: 'Current draw', prizeLabel: 'Winner announcement' } as const
 
 type AudienceDisplayPageProps = Readonly<{ transport?: Transport; scope?: ProtocolScope; expectedSession?: DrawSessionId }>
@@ -46,15 +47,23 @@ function FullscreenControls({ controller, state }: { readonly controller: Return
   </div>
 }
 
-export function AudienceDisplayPage({ transport: suppliedTransport, scope = productionScope, expectedSession }: AudienceDisplayPageProps) {
-  const transport = useMemo(() => suppliedTransport ?? createBroadcastChannelTransport('raffle-os-display', scope), [scope, suppliedTransport])
-  const transportFactory = useMemo(() => suppliedTransport === undefined ? () => createBroadcastChannelTransport('raffle-os-display', scope) : undefined, [scope, suppliedTransport])
-  const controller = useMemo(() => createAudienceController({ transport, transportFactory, scope, expectedSession }), [expectedSession, scope, transport, transportFactory])
+export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppliedScope, expectedSession }: AudienceDisplayPageProps) {
+  const query = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search)
+  const eventId = parseEventId(query.get('eventId'))
+  const displayId = parseDisplayConfigurationId(query.get('displayConfigurationId'))
+  const scope = useMemo(() => suppliedScope ?? (eventId.ok && displayId.ok ? deriveProductionDisplayScope(eventId.value, displayId.value) : undefined), [displayId, eventId, suppliedScope])
+  const hookScope = useMemo(() => scope ?? { eventId: 'invalid-event-context', displayId: 'invalid-display-context' }, [scope])
+  const transport = useMemo(() => suppliedTransport ?? createBroadcastChannelTransport('raffle-os-display', hookScope), [hookScope, suppliedTransport])
+  const transportFactory = useMemo(() => suppliedTransport === undefined ? () => createBroadcastChannelTransport('raffle-os-display', hookScope) : undefined, [hookScope, suppliedTransport])
+  const controller = useMemo(() => createAudienceController({ transport, transportFactory, scope: hookScope, expectedSession }), [expectedSession, hookScope, transport, transportFactory])
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const fullscreen = useMemo(() => createFullscreenController({ target: typeof document === 'undefined' ? undefined : document.documentElement }), [])
   const fullscreenState = useSyncExternalStore(fullscreen.subscribe, fullscreen.getState, fullscreen.getState)
   useEffect(() => () => controller.close(), [controller])
   useEffect(() => () => fullscreen.close(), [fullscreen])
+
+  if (scope === undefined && suppliedTransport === undefined) return <><DisconnectedStage scenario={safeStatusScenario('connecting')} /><p role="status">This Audience Display link is missing valid production context. Open it from Settings.</p></>
+  if (scope === undefined) return <><DisconnectedStage scenario={safeStatusScenario('disconnected-safe')} /><p role="status">Audience Display context is unavailable.</p></>
 
   const controls = <FullscreenControls controller={fullscreen} state={fullscreenState} />
   if (state.kind === 'connecting' || state.kind === 'disconnected-safe' || state.kind === 'unavailable') return <><DisconnectedStage scenario={safeStatusScenario(state.kind === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}</>

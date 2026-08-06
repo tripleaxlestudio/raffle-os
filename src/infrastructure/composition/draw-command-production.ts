@@ -20,6 +20,7 @@ import { DexieCommandReceiptRepository } from '../persistence/repositories/comma
 import { ConfirmationService } from '../../application/pending-decisions/confirmation-service.ts'
 import { CancellationService } from '../../application/pending-decisions/cancellation-service.ts'
 import { RedrawService } from '../../application/pending-decisions/redraw-service.ts'
+import { DexieDisplayConfigurationRepository } from '../persistence/repositories/display-configuration.repository.ts'
 
 export function createDrawSetupProductionServices(): DrawSetupProductionServices {
   const database = new RaffleOSDatabase()
@@ -29,6 +30,7 @@ export function createDrawSetupProductionServices(): DrawSetupProductionServices
   const sessions = new DexieDrawSessionRepository(database)
   const participants = new DexieParticipantRepository(database)
   const preferences = new DexiePreferenceRepository(database)
+  const displayConfigurations = new DexieDisplayConfigurationRepository(database)
   const winners = new DexieWinnerRepository(database)
   const authoring = new DexieDrawAuthoringUnitOfWork(database)
   const persistence = new DexieDrawPersistenceUnitOfWork(database)
@@ -37,5 +39,5 @@ export function createDrawSetupProductionServices(): DrawSetupProductionServices
   const audits = new DexieAuditRepository(database)
   const receipts = new DexieCommandReceiptRepository(database)
   const repositories = { events, configurations, categories, sessions, participants, winners, authoring }
-  return { ...repositories, audits, redraws, preferences, presentationCheckpoints, authoringService: createDrawAuthoringService(repositories), open: async () => { await database.openSupported() }, checkStorage: () => database.checkReadiness(), checkCrypto: async () => { try { createWebCryptoRandomSource(globalThis.crypto).nextUint32(); return { ok: true as const } } catch { return { ok: false as const, reason: 'Secure Web Crypto randomness is unavailable; this session cannot be handed off.' } } }, command: { execute: (input) => executeDraw(input, { ...repositories, randomSource: createWebCryptoRandomSource(globalThis.crypto), persistence, now: () => new Date().toISOString() as import('../../domain/shared/timestamps.ts').IsoTimestamp, createWinnerRecordId, createAuditRecordId }) }, pendingDecisions: { confirmation: new ConfirmationService(persistence, receipts), cancellation: new CancellationService(persistence, receipts), redraw: new RedrawService(persistence, receipts), persistence, receipts } }
+  return { ...repositories, audits, redraws, preferences, displayConfigurations, presentationCheckpoints, authoringService: createDrawAuthoringService(repositories), open: async () => { await database.openSupported() }, checkStorage: () => database.checkReadiness(), checkCrypto: async () => { try { createWebCryptoRandomSource(globalThis.crypto).nextUint32(); return { ok: true as const } } catch { return { ok: false as const, reason: 'Secure Web Crypto randomness is unavailable; this session cannot be handed off.' } } }, command: { execute: (input) => executeDraw(input, { ...repositories, randomSource: createWebCryptoRandomSource(globalThis.crypto), persistence, now: () => new Date().toISOString() as import('../../domain/shared/timestamps.ts').IsoTimestamp, createWinnerRecordId, createAuditRecordId }) }, pendingDecisions: { confirmation: new ConfirmationService(persistence, receipts), cancellation: new CancellationService(persistence, receipts), redraw: new RedrawService(persistence, receipts), persistence, receipts } }
 }

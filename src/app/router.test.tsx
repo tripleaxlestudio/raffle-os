@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { appRoutes } from './router.tsx'
@@ -22,6 +23,18 @@ describe('application routes', () => {
     await waitFor(() => expect(screen.getByRole('main')).toBeInTheDocument())
     expect(screen.queryByText('PROTO')).not.toBeInTheDocument()
     expect(screen.queryByText(/Nusantara Tech Gala 2026/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps Operator and Audience production shells separated', () => {
+    renderRoute('/dashboard')
+    expect(document.querySelector('[data-operator-shell]')).toHaveAttribute('data-interface', 'operator')
+    expect(screen.getByRole('navigation', { name: 'Operator navigation' })).toBeInTheDocument()
+
+    cleanup()
+    renderRoute('/display')
+    expect(document.querySelector('[data-audience-shell]')).toHaveAttribute('data-interface', 'audience')
+    expect(screen.queryByRole('navigation', { name: 'Operator navigation' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument()
   })
 
   it('exposes only production destinations in the production sidebar', () => {
@@ -53,5 +66,15 @@ describe('application routes', () => {
   it('keeps the prototype Audience Display namespace available', () => {
     renderRoute('/dev/prototypes/display')
     expect(screen.getByText('Draw will begin shortly')).toBeVisible()
+  })
+
+  it('keeps unknown routes recoverable through the production dashboard', async () => {
+    const user = userEvent.setup()
+    const router = renderRoute('/unknown-route')
+    const recoveryLink = screen.getByRole('link', { name: 'Return to Dashboard' })
+    expect(recoveryLink).toHaveAttribute('href', '/dashboard')
+    await user.click(recoveryLink)
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
   })
 })

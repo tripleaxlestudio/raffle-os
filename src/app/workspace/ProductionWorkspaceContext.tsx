@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
 import type { Event } from '../../domain/events/event.types.ts'
 import type { AppMode } from '../../domain/types/app-mode.ts'
@@ -21,12 +21,18 @@ export type ProductionWorkspaceState =
     }
 
 const WorkspaceContext = createContext<ProductionWorkspaceState | undefined>(undefined)
+const WORKSPACE_CHANGED = 'raffle-os:workspace-changed'
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function signalProductionWorkspaceChanged(): void {
+  window.dispatchEvent(new Event(WORKSPACE_CHANGED))
+}
 
 export function ProductionWorkspaceProvider({ children }: { readonly children: ReactNode }) {
   const services = useMemo(() => createDrawSetupProductionServices(), [])
   const [state, setState] = useState<ProductionWorkspaceState>({ status: 'loading' })
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     let active = true
     void (async () => {
       setState({ status: 'loading' })
@@ -70,6 +76,13 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
     })()
     return () => { active = false }
   }, [services])
+
+  useEffect(() => {
+    void refresh()
+    const listener = () => { void refresh() }
+    window.addEventListener(WORKSPACE_CHANGED, listener)
+    return () => window.removeEventListener(WORKSPACE_CHANGED, listener)
+  }, [refresh])
 
   return <WorkspaceContext.Provider value={state}>{children}</WorkspaceContext.Provider>
 }

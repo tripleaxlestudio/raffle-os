@@ -19,6 +19,8 @@ import { ProductionDashboardPage } from '../pages/operator/ProductionDashboardPa
 import { ProductionSettingsPage } from '../pages/operator/ProductionSettingsPage.tsx'
 import { ProductionPendingResultsPage } from '../pages/operator/ProductionPendingResultsPage.tsx'
 import { ProductionWorkspaceBlockedPage } from '../pages/operator/ProductionWorkspaceBlockedPage.tsx'
+import { EventsPage } from '../pages/operator/EventsPage.tsx'
+import { PrizeCategoriesPage } from '../pages/operator/PrizeCategoriesPage.tsx'
 import { SettingsPage as PrototypeSettingsPage } from '../pages/operator/SettingsPage.tsx'
 import { NotFoundPage } from '../pages/system/NotFoundPage.tsx'
 
@@ -30,6 +32,8 @@ const operatorRoutes = {
   children: [
     { index: true, element: <Navigate to="/dashboard" replace /> },
     { path: 'dashboard', element: <ProductionDashboardPage /> },
+    { path: 'events', element: <EventsPage /> },
+    { path: 'prize-categories', element: <PrizeCategoriesPage /> },
     { path: 'participants', element: <ParticipantsPage /> },
     { path: 'draw/setup', element: <DrawSetupPage /> },
     { path: 'draw/live', element: <ProductionWorkspaceBlockedPage title="Live Draw" description="The production DrawSession queue is not available yet." detail="Live Draw presentation begins from an authoritative DrawSession handoff. The queue and resume workflow will be added in Slice 11." /> },

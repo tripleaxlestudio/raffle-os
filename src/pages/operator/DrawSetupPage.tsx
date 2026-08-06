@@ -8,7 +8,7 @@ import { DrawAuthoringError } from '../../application/draw/draw-authoring-errors
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
-import { Button, Card, Checkbox, ConfirmationDialog, Input, Select } from '../../shared/ui/index.ts'
+import { Button, ButtonLink, Card, Checkbox, ConfirmationDialog, Input, Select } from '../../shared/ui/index.ts'
 
 type FormState = {
   eventId: string
@@ -103,7 +103,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   }
 
   if (loading) return <section className="draw-setup" aria-busy="true"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="Loading persisted Event and configuration…" /><StatusBanner badge="Loading" title="Preparing Draw Setup" tone="info">Configuration drafts are not active until they are saved.</StatusBanner></section>
-  if (eventMissing || form.eventId === '') return <section className="draw-setup"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="No persisted Event is available" /><StatusBanner badge="Event required" title="Create or select an Event first" tone="warning">Draw Setup does not create demo Events or categories automatically.</StatusBanner>{error?.retryable ? <Button onClick={() => void load()}>Retry</Button> : null}</section>
+  if (eventMissing || form.eventId === '') return <section className="draw-setup"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="No persisted Event is available" /><StatusBanner badge="Event required" title="Create or select an Event first" tone="warning">Draw Setup does not create demo Events or categories automatically.</StatusBanner><ButtonLink to="/events">Open Event management</ButtonLink>{error?.retryable ? <Button onClick={() => void load()}>Retry</Button> : null}</section>
 
   const started = record !== null && record.session.status !== 'ready'
   const readinessBlocked = readiness !== null && readiness.state !== 'ready'
@@ -116,6 +116,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
     {started ? <StatusBanner badge="Locked" title="This DrawSession is not editable" tone="warning">The persisted session is {record?.session.status.replace('-', ' ')}. It was not reset to ready and its official data remains untouched.</StatusBanner> : null}
     {readiness?.state === 'ready' ? <StatusBanner badge="Ready" title="System readiness passed" tone="success">Storage and secure Web Crypto are ready. The authoritative eligible count is {readiness.data?.authoritativeEligibleCount} for {readiness.data?.requestedWinnerCount} requested winners.</StatusBanner> : null}
     {readinessBlocked ? <StatusBanner badge="Blocked" title="Draw handoff is blocked" tone="warning">{readiness.reason}{eligibilityNotEvaluated ? ' Eligibility was not evaluated because an active or pending Live session must be resolved first.' : ''}{readiness.retryable ? ' Retry readiness after the underlying issue is corrected.' : ''}</StatusBanner> : null}
+    {categories.length === 0 ? <StatusBanner badge="Category required" title="Create a PrizeCategory before configuring a draw" tone="warning"><ButtonLink to="/prize-categories">Open PrizeCategory management</ButtonLink></StatusBanner> : null}
     <Card className="draw-panel" padding="md">
       <form onSubmit={(event) => { event.preventDefault(); void save() }}>
         <div className="draw-setup__layout">

@@ -81,6 +81,7 @@ export const appRoutes = [
     errorElement: <RouteErrorPage />,
     children: [{ index: true, element: <AudienceDisplayPage /> }],
   },
+  ...(import.meta.env.DEV ? [{ path: '/dev/setup', lazy: async () => ({ Component: (await import('../dev/Phase8SetupPage.tsx')).Phase8SetupPage }), errorElement: <RouteErrorPage /> }] : []),
   {
     path: '/dev/prototypes/display',
     element: <AudienceDisplayShell />,

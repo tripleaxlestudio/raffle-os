@@ -16,7 +16,7 @@ const productionNavigationItems = [
   { label: 'PrizeCategories', marker: 'PC', to: '/prize-categories' },
   { label: 'Participants', marker: 'PT', to: '/participants' },
   { label: 'Draw Setup', marker: 'DS', to: '/draw/setup' },
-  { label: 'Live Draw', marker: 'LD', to: '/draw/live' },
+  { label: 'Live Draw queue', marker: 'DQ', to: '/draw/live' },
   { label: 'History', marker: 'HI', to: '/history' },
   { label: 'Audience Display', marker: 'AD', to: '/display' },
   { label: 'Settings', marker: 'ST', to: '/settings' },

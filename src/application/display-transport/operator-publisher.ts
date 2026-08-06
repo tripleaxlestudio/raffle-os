@@ -98,14 +98,15 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     // in-memory/test transport can acknowledge the first state immediately.
     snapshot = next
     serializedSnapshot = serialized
+    sequence = nextSequence
     const result = currentTransport.publish(envelope)
     if (!result.ok) {
       snapshot = undefined
       serializedSnapshot = undefined
+      sequence = nextSequence - 1
       report({ kind: 'transport-error', error: result.error })
       return { ok: false, error: result.error }
     }
-    sequence = nextSequence
     return { ok: true, snapshot: next, published: true }
   }
 

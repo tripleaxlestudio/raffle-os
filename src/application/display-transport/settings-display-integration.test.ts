@@ -51,6 +51,37 @@ describe('production Settings display-test integration', () => {
     publisher.close(); second.close(); refreshed.close(); firstAudienceTransport.close(); secondAudienceTransport.close(); refreshedTransport.close()
   })
 
+  it('keeps one publisher alive across five realtime start/stop cycles', () => {
+    const [operatorTransport, audienceTransport] = createInMemoryTransportPair('settings-display-repeated-lifecycle')
+    const [, observerTransport] = createInMemoryTransportPair('settings-display-repeated-lifecycle')
+    const publisher = createOperatorPublisher({ transport: operatorTransport, scope, senderId: 'settings-test-operator', expectedSession: session, clock: { now: () => '2026-08-06T00:00:00.000Z' as never } })
+    const statuses: string[] = []
+    const stateEnvelopes: Array<{ readonly epoch: number; readonly sequence: number; readonly displayTest: boolean }> = []
+    publisher.subscribe((status) => { if (status.kind === 'snapshot-applied') statuses.push(`${status.publicState}:${status.epoch}/${status.sequence}`) })
+    observerTransport.subscribe((envelope) => {
+      if (envelope.sender.kind === 'operator' && envelope.message.type === 'display-state') stateEnvelopes.push({ epoch: envelope.epoch, sequence: envelope.sequence, displayTest: envelope.message.displayTest === true })
+    })
+
+    expect(publisher.start({ drawSessionId: session, stage: 'standby', blackoutRequested: false, displayTest: false, eventName: 'Cycle Event' })).toMatchObject({ ok: true, published: true })
+    render(createElement(AudienceDisplayPage, { transport: audienceTransport, scope }))
+    expect(screen.getByText('Draw will begin shortly')).toBeVisible()
+
+    for (let cycle = 0; cycle < 5; cycle += 1) {
+        act(() => { publisher.publish({ drawSessionId: session, stage: 'standby', blackoutRequested: false, displayTest: true, eventName: 'Cycle Event' }) })
+        expect(screen.getByText(/DISPLAY TEST/)).toBeVisible()
+        act(() => { publisher.publish({ drawSessionId: session, stage: 'standby', blackoutRequested: false, displayTest: false, eventName: 'Cycle Event' }) })
+        expect(screen.getByText('Draw will begin shortly')).toBeVisible()
+      }
+
+    expect(stateEnvelopes.map((envelope) => envelope.sequence)).toEqual(Array.from({ length: 12 }, (_, index) => index + 1))
+    expect(stateEnvelopes.every((envelope) => envelope.epoch === 1)).toBe(true)
+    expect(statuses).toHaveLength(11)
+    expect(statuses.at(-1)).toBe('standby:1/12')
+    expect(publisher.getDiagnostics()).toMatchObject({ epoch: 1, sequence: 12, lastAcknowledgement: { epoch: 1, sequence: 12 } })
+
+    publisher.close(); observerTransport.close(); operatorTransport.close(); audienceTransport.close()
+  })
+
   it('delivers the production snapshot through the BroadcastChannel adapter', () => {
     class FakeBroadcastChannel {
       static channels = new Map<string, Set<FakeBroadcastChannel>>()

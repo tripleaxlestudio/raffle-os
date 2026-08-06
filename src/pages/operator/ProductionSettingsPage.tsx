@@ -30,18 +30,44 @@ export function ProductionSettingsPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [connection, setConnection] = useState<DisplayConnectionStatus>('waiting')
   const [testing, setTesting] = useState(false)
-  const [testVisibility, setTestVisibility] = useState<'inactive' | 'publishing' | 'visible' | 'failed'>('inactive')
+  const [testVisibility, setTestVisibility] = useState<'inactive' | 'publishing' | 'visible' | 'stopping' | 'standby' | 'failed'>('inactive')
   const [popupBlocked, setPopupBlocked] = useState(false)
   const [audioMessage, setAudioMessage] = useState('')
   const publisherRef = useRef<OperatorPublisher | null>(null)
   const publisherStatusCleanupRef = useRef<(() => void) | null>(null)
+  const testVisibilityRef = useRef(testVisibility)
+  const settingsRef = useRef(settings)
+  const settingsLoaded = settings !== null
+  const displayScopeId = workspace.status === 'ready' ? workspace.displayConfiguration?.id : undefined
+  useEffect(() => { testVisibilityRef.current = testVisibility }, [testVisibility])
+  useEffect(() => { settingsRef.current = settings }, [settings])
   const load = useCallback(async () => {
     if (workspace.status !== 'ready') return
     setSettingsState('loading')
     try { await services.open(); const loaded = await settingsService.readForEvent(workspace.event); setSettings(loaded); setResolution(`${workspace.displayConfiguration?.targetResolution.width ?? 1920}x${workspace.displayConfiguration?.targetResolution.height ?? 1080}`); setSettingsState('ready') } catch (error: unknown) { setSettingsState('error'); setMessage(errorText(error)) }
   }, [services, settingsService, workspace])
   useEffect(() => { void Promise.resolve().then(load) }, [load])
-  useEffect(() => () => { publisherStatusCleanupRef.current?.(); publisherRef.current?.close(); publisherRef.current = null }, [])
+  useEffect(() => {
+    if (workspace.status !== 'ready' || settingsRef.current === null || workspace.displayConfiguration === null) return
+    const parsed = parseDrawSessionId(workspace.event.id)
+    if (!parsed.ok) return
+    const scope = { eventId: workspace.event.id, displayId: workspace.displayConfiguration.id }
+    publisherStatusCleanupRef.current?.()
+    publisherRef.current?.close()
+    const publisher = createOperatorPublisher({ transport: createBroadcastChannelTransport('raffle-os-display', scope), transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope), scope, senderId: `display-test:${workspace.event.id}`, expectedSession: parsed.value, clock: { now: () => new Date().toISOString() as never } })
+    publisherRef.current = publisher
+    const unsub = publisher.subscribe((status) => {
+      if (status.kind === 'display-ready') { setConnection('connected'); setDisplayConnectionStatus(`${scope.eventId}:${scope.displayId}`, 'connected') }
+      else if (status.kind === 'snapshot-applied') {
+        if (status.publicState === 'display-test') { setTesting(true); setTestVisibility('visible') }
+        else if (status.publicState === 'standby' && testVisibilityRef.current === 'stopping') { setTesting(false); setTestVisibility('standby'); setConnection('connected') }
+      } else if (status.kind === 'transport-error') { setTestVisibility('failed'); setConnection('publication-failed'); setDisplayConnectionStatus(`${scope.eventId}:${scope.displayId}`, 'publication-failed'); setMessage('The display-test snapshot could not be published safely.') }
+    })
+    publisherStatusCleanupRef.current = unsub
+    const initialSettings = settingsRef.current
+    if (initialSettings !== null) publisher.start({ drawSessionId: parsed.value, stage: 'standby', blackoutRequested: false, displayTest: false, eventName: initialSettings.displayName, eventSubtitle: initialSettings.subtitle, primaryColor: initialSettings.primaryColor, accentColor: initialSettings.accentColor, logo: initialSettings.logo === undefined ? undefined : { type: initialSettings.logo.type, blob: initialSettings.logo.blob }, background: initialSettings.background === undefined ? undefined : { type: initialSettings.background.type, blob: initialSettings.background.blob }, blackoutAppearance: initialSettings.blackoutAppearance, safeAreaMargin: initialSettings.safeAreaMargin })
+    return () => { unsub(); if (publisherRef.current === publisher) publisherRef.current = null; publisher.close() }
+  }, [settingsLoaded, displayScopeId, workspace])
   if (workspace.status !== 'ready') return <section aria-labelledby="settings-title"><PageHeader eyebrow="Production workspace" headingId="settings-title" title="Settings" description="An active Event is required." /><StatusBanner badge="Event required" title="Display configuration not configured" tone="warning">No editable controls are shown without authoritative Event context. Select an active Event to configure production settings.</StatusBanner><Link className="ui-button ui-button--secondary" to="/events">Open Event management</Link></section>
   if (settings === null) return <section aria-busy="true"><PageHeader eyebrow="Production workspace" headingId="settings-title" title="Settings" description="Reading authoritative Event settings…" />{settingsState === 'error' ? <StatusBanner badge="Storage error" title="Settings unavailable" tone="warning">{message}</StatusBanner> : null}</section>
   const event = workspace.event
@@ -58,20 +84,23 @@ export function ProductionSettingsPage() {
   function openAudience() { if (displayUrl === null) return; setPopupBlocked(window.open(displayUrl, '_blank', 'noopener,noreferrer') === null) }
   function stopTest() {
     const publisher = publisherRef.current
+    setTestVisibility('stopping')
     if (publisher !== null) {
       const parsed = parseDrawSessionId(event.id)
-      if (parsed.ok) publisher.publish({ drawSessionId: parsed.value, stage: 'standby', blackoutRequested: false, displayTest: false, eventName: currentSettings.displayName, eventSubtitle: currentSettings.subtitle, primaryColor: currentSettings.primaryColor, accentColor: currentSettings.accentColor, logo: currentSettings.logo === undefined ? undefined : { type: currentSettings.logo.type, blob: currentSettings.logo.blob }, background: currentSettings.background === undefined ? undefined : { type: currentSettings.background.type, blob: currentSettings.background.blob }, blackoutAppearance: currentSettings.blackoutAppearance, safeAreaMargin: currentSettings.safeAreaMargin })
+      if (parsed.ok) {
+        const result = publisher.publish({ drawSessionId: parsed.value, stage: 'standby', blackoutRequested: false, displayTest: false, eventName: currentSettings.displayName, eventSubtitle: currentSettings.subtitle, primaryColor: currentSettings.primaryColor, accentColor: currentSettings.accentColor, logo: currentSettings.logo === undefined ? undefined : { type: currentSettings.logo.type, blob: currentSettings.logo.blob }, background: currentSettings.background === undefined ? undefined : { type: currentSettings.background.type, blob: currentSettings.background.blob }, blackoutAppearance: currentSettings.blackoutAppearance, safeAreaMargin: currentSettings.safeAreaMargin })
+        if (!result.ok) setTestVisibility('failed')
+      }
     }
-    publisherStatusCleanupRef.current?.(); publisherStatusCleanupRef.current = null
-    publisher?.close(); publisherRef.current = null; setTesting(false); setTestVisibility('inactive'); setConnection('waiting'); setDisplayConnectionStatus(key, 'waiting')
+    if (publisher === null) { setTesting(false); setTestVisibility('inactive'); setConnection('waiting'); setDisplayConnectionStatus(key, 'waiting') }
   }
   function testConnection() {
     if (activeDisplay === null) return
     const parsed = parseDrawSessionId(event.id); if (!parsed.ok) { setMessage('The active Event cannot safely scope a display test.'); return }
-    publisherStatusCleanupRef.current?.(); publisherStatusCleanupRef.current = null; publisherRef.current?.close(); const scope = { eventId: event.id, displayId: activeDisplay.id }; const publisher = createOperatorPublisher({ transport: createBroadcastChannelTransport('raffle-os-display', scope), transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope), scope, senderId: `display-test:${event.id}`, expectedSession: parsed.value, clock: { now: () => new Date().toISOString() as never } }); publisherRef.current = publisher; setTesting(true); setTestVisibility('publishing'); setConnection('waiting'); setDisplayConnectionStatus(key, 'waiting')
-    const unsub = publisher.subscribe((status) => { if (status.kind === 'display-ready') { setConnection('connected'); setDisplayConnectionStatus(key, 'connected') } else if (status.kind === 'snapshot-applied') setTestVisibility('visible'); else if (status.kind === 'transport-error') { setTestVisibility('failed'); setConnection('publication-failed'); setDisplayConnectionStatus(key, 'publication-failed'); setMessage('The display-test snapshot could not be published safely.') } })
-    const result = publisher.start({ drawSessionId: parsed.value, stage: 'standby', blackoutRequested: false, displayTest: true, eventName: currentSettings.displayName, eventSubtitle: currentSettings.subtitle, primaryColor: currentSettings.primaryColor, accentColor: currentSettings.accentColor, logo: currentSettings.logo === undefined ? undefined : { type: currentSettings.logo.type, blob: currentSettings.logo.blob }, background: currentSettings.background === undefined ? undefined : { type: currentSettings.background.type, blob: currentSettings.background.blob }, blackoutAppearance: currentSettings.blackoutAppearance, safeAreaMargin: currentSettings.safeAreaMargin })
-    publisherStatusCleanupRef.current = unsub
+    const publisher = publisherRef.current
+    if (publisher === null) { setMessage('The display-test publisher is not ready.'); return }
+    setTesting(true); setTestVisibility('publishing'); setConnection('waiting'); setDisplayConnectionStatus(key, 'waiting')
+    const result = publisher.publish({ drawSessionId: parsed.value, stage: 'standby', blackoutRequested: false, displayTest: true, eventName: currentSettings.displayName, eventSubtitle: currentSettings.subtitle, primaryColor: currentSettings.primaryColor, accentColor: currentSettings.accentColor, logo: currentSettings.logo === undefined ? undefined : { type: currentSettings.logo.type, blob: currentSettings.logo.blob }, background: currentSettings.background === undefined ? undefined : { type: currentSettings.background.type, blob: currentSettings.background.blob }, blackoutAppearance: currentSettings.blackoutAppearance, safeAreaMargin: currentSettings.safeAreaMargin })
     if (!result.ok) { setTestVisibility('failed'); setConnection('publication-failed') }
   }
   async function testAudio() { if (!currentSettings.revealCue) { setAudioMessage('Choose a local reveal cue first.'); return } try { const audio = new Audio(URL.createObjectURL(currentSettings.revealCue.blob)); audio.volume = currentSettings.masterVolume / 100; await audio.play(); setAudioMessage('Cue played after your action.'); audio.onended = () => URL.revokeObjectURL(audio.src) } catch { setAudioMessage('Browser audio permission is required; press Test Audio again after allowing playback.') } }

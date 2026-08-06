@@ -116,7 +116,9 @@ describe('Phase 7 integration and automated acceptance', () => {
     const publisher = createOperatorPublisher({ transport: operatorTransport, scope, senderId: 'operator-1', clock: clock() })
     publisher.start(source('reveal', 'practice'))
     publisher.publish(source('reveal', 'live'))
-    expect(published.filter((envelope) => envelope.sender.kind === 'operator').map((envelope) => envelope.message.type)).toEqual(['display-state', 'display-state'])
+    // The first Audience acknowledgement triggers a restore publication; it
+    // is a valid third state envelope with the next monotonic sequence.
+    expect(published.filter((envelope) => envelope.sender.kind === 'operator').map((envelope) => envelope.message.type)).toEqual(['display-state', 'display-state', 'display-state'])
     expect(observer.getState()).toMatchObject({ snapshot: { mode: 'live', ticketNumbers: ['00042', '42'] } })
     expect(publisher.getSnapshot()).toMatchObject({ mode: 'live' })
     publisher.close()

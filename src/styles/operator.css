@@ -1464,6 +1464,152 @@
   .production-winner-list--100 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* Production DrawSession queue */
+.draw-session-queue {
+  display: grid;
+  gap: var(--space-7);
+}
+
+.draw-session-queue__group {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.draw-session-queue__group--historical {
+  opacity: 0.86;
+}
+
+.draw-session-queue__group-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-inline: var(--space-1);
+}
+
+.draw-session-queue__group-heading h2,
+.draw-session-queue__group-heading p {
+  margin: 0;
+}
+
+.draw-session-queue__group-heading h2 {
+  font-size: var(--font-size-md);
+}
+
+.draw-session-queue__group-heading > div > p:last-child {
+  margin-top: var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.draw-session-queue__items {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.draw-session-queue__item {
+  display: grid;
+  gap: var(--space-4);
+  border-left: 0.25rem solid var(--border-strong);
+}
+
+.draw-session-queue__group--action-required .draw-session-queue__item {
+  border-left-color: var(--status-warning);
+}
+
+.draw-session-queue__group--ready .draw-session-queue__item {
+  border-left-color: var(--status-info);
+}
+
+.draw-session-queue__item--historical {
+  border-left-color: var(--border-default);
+}
+
+.draw-session-queue__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.draw-session-queue__heading h3,
+.draw-session-queue__heading p {
+  margin: 0;
+}
+
+.draw-session-queue__heading h3 {
+  font-size: var(--font-size-md);
+}
+
+.draw-session-queue__prize {
+  margin-top: var(--space-1) !important;
+  color: var(--text-secondary);
+}
+
+.draw-session-queue__badges,
+.draw-session-queue__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.draw-session-queue__badges {
+  justify-content: flex-end;
+}
+
+.draw-session-queue__metadata {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.draw-session-queue__metadata > div {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-default);
+}
+
+.draw-session-queue__metadata dt,
+.draw-session-queue__checkpoint span {
+  color: var(--text-muted);
+  font-family: var(--font-family-mono);
+  font-size: 0.625rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.draw-session-queue__metadata dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.draw-session-queue__checkpoint {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.draw-session-queue__checkpoint strong {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.draw-session-queue__actions {
+  justify-content: flex-end;
+}
+
 /* Production participant import integration */
 .production-import-preview {
   display: grid;
@@ -4014,6 +4160,25 @@
 }
 
 @media (max-width: 62rem) {
+  .draw-session-queue__heading,
+  .draw-session-queue__group-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .draw-session-queue__badges {
+    justify-content: flex-start;
+  }
+
+  .draw-session-queue__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .draw-session-queue__actions .ui-button {
+    width: 100%;
+  }
+
   .draw-field-grid,
   .eligibility-control-grid,
   .presentation-grid,

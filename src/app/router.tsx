@@ -19,6 +19,7 @@ import { ProductionDashboardPage } from '../pages/operator/ProductionDashboardPa
 import { ProductionSettingsPage } from '../pages/operator/ProductionSettingsPage.tsx'
 import { ProductionPendingResultsPage } from '../pages/operator/ProductionPendingResultsPage.tsx'
 import { DrawSessionQueuePage } from '../pages/operator/DrawSessionQueuePage.tsx'
+import { ProductionPendingResultsLandingPage } from '../pages/operator/ProductionPendingResultsLandingPage.tsx'
 import { EventsPage } from '../pages/operator/EventsPage.tsx'
 import { PrizeCategoriesPage } from '../pages/operator/PrizeCategoriesPage.tsx'
 import { SettingsPage as PrototypeSettingsPage } from '../pages/operator/SettingsPage.tsx'
@@ -37,7 +38,7 @@ const operatorRoutes = {
     { path: 'participants', element: <ParticipantsPage /> },
     { path: 'draw/setup', element: <DrawSetupPage /> },
     { path: 'draw/live', element: <DrawSessionQueuePage /> },
-    { path: 'draw/results', element: <DrawSessionQueuePage /> },
+    { path: 'draw/pending', element: <ProductionPendingResultsLandingPage /> },
     { path: 'history', element: <ProductionHistoryPage /> },
     { path: 'history/:drawSessionId', element: <ProductionHistoryPage /> },
     { path: 'settings', element: <ProductionSettingsPage /> },

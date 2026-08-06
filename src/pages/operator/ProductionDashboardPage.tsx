@@ -26,7 +26,7 @@ export function ProductionDashboardPage() {
       <MetricCard label="Ready sessions" value={String(workspace.sessionCounts.ready)} detail="Available to start" tone="info" />
       <MetricCard label="Pending decisions" value={String(workspace.sessionCounts['pending-confirmation'])} detail="Require operator review" tone="warning" />
     </section>
-    <p><ButtonLink variant="secondary" to="/draw/live">Open Draw Sessions</ButtonLink> <ButtonLink variant="secondary" to="/events">Manage Events</ButtonLink> <ButtonLink variant="secondary" to="/prize-categories">Manage PrizeCategories</ButtonLink> <ButtonLink variant="secondary" to="/participants">Import Participants</ButtonLink></p>
+    <p><ButtonLink variant="secondary" to="/draw/live">Open Draw Sessions</ButtonLink> <ButtonLink variant="secondary" to="/participants">Import Participants</ButtonLink></p>
     <Card aria-labelledby="workspace-state-title" className="dashboard-panel" padding="none"><div className="dashboard-panel__header"><div><p className="dashboard-panel__eyebrow">Authoritative context</p><h2 id="workspace-state-title">Current workspace</h2></div></div><div className="dashboard-panel__body"><SummaryList items={[{ label: 'Event', value: workspace.event.name }, { label: 'Status', value: workspace.event.status }, { label: 'Active sessions', value: String(workspace.sessionCounts.drawing) }, { label: 'Completed / cancelled', value: `${workspace.sessionCounts.completed} / ${workspace.sessionCounts.cancelled}` }]} /></div></Card>
   </section>
 }

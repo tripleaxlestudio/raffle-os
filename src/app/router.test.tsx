@@ -43,19 +43,49 @@ describe('application routes', () => {
     expect(navigation).toHaveTextContent('Dashboard')
     expect(navigation).toHaveTextContent('Participants')
     expect(navigation).toHaveTextContent('Draw Setup')
-    expect(navigation).toHaveTextContent('History')
-    expect(navigation).toHaveTextContent('Audience Display')
     expect(navigation).toHaveTextContent('Live Draw')
-    expect(navigation).not.toHaveTextContent('Pending Results')
+    expect(navigation).toHaveTextContent('Pending Results')
+    expect(navigation).toHaveTextContent('History')
     expect(navigation).toHaveTextContent('Settings')
+    expect(navigation.textContent).toBe('DBDashboardPTParticipantsDSDraw SetupLDLive DrawPRPending ResultsHIHistorySTSettings')
+    expect(navigation).not.toHaveTextContent('Events')
+    expect(navigation).not.toHaveTextContent('Prize Categories')
+    expect(navigation).not.toHaveTextContent('Audience Display')
+    expect(navigation).not.toHaveTextContent('Live Draw Queue')
+    expect(Array.from(navigation.querySelectorAll('a')).map((link) => link.getAttribute('href'))).not.toContain('/dev/prototypes')
   })
 
-  it.each(['/draw/live', '/draw/results', '/settings'])('keeps production route %s honest', async (path) => {
+  it.each(['/draw/live', '/draw/pending', '/settings'])('keeps production route %s honest', async (path) => {
     renderRoute(path)
     await waitFor(() => expect(screen.getByRole('main')).toBeInTheDocument())
     if (path === '/settings') expect(screen.getAllByText(/not configured/i).length).toBeGreaterThan(0)
-    else expect(screen.getByRole('heading', { name: 'Draw Sessions' })).toBeInTheDocument()
+    else expect(screen.getByRole('heading', { name: path === '/draw/pending' ? 'Pending Results' : 'Draw Sessions' })).toBeInTheDocument()
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+  })
+
+  it('does not expose the prototype pending route as production navigation', () => {
+    renderRoute('/draw/results')
+    expect(screen.getByRole('heading', { name: 'Not Found' })).toBeInTheDocument()
+  })
+
+  it('keeps the current Event header control safe when no Event is active', async () => {
+    const user = userEvent.setup()
+    renderRoute('/dashboard')
+    await waitFor(() => expect(screen.getByRole('button', { name: /Current Event/i })).toBeInTheDocument())
+    const control = screen.getByRole('button', { name: /Current Event/i })
+    await user.click(control)
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Switch / Manage Events' })).toHaveAttribute('href', '/events')
+    expect(screen.getByRole('menuitem', { name: 'Manage Prize Categories' })).toHaveAttribute('href', '/prize-categories')
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(control).toHaveFocus()
+  })
+
+  it('links missing production Audience configuration to Settings', async () => {
+    renderRoute('/dashboard')
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Audience Display: Setup required' })).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: 'Audience Display: Setup required' })).toHaveAttribute('href', '/settings')
   })
 
   it('keeps the deterministic prototype available only under its development namespace', () => {

@@ -11,6 +11,7 @@ export type PublicDisplaySnapshot = Readonly<{
   readonly drawSessionId: DrawSessionId
   readonly stage: PublicProjectionStage
   readonly stageStartedAt?: IsoTimestamp
+  readonly countdownValue?: 3 | 2 | 1
   readonly blackoutRequested: boolean
   readonly displayTest?: boolean
   readonly eventName?: string
@@ -30,6 +31,7 @@ export type PresentationProjectionSource = Readonly<{
   readonly drawSessionId: DrawSessionId
   readonly stage: 'ready' | PublicProjectionStage
   readonly stageStartedAt?: IsoTimestamp
+  readonly countdownValue?: 3 | 2 | 1
   readonly blackoutRequested: boolean
   readonly displayTest?: boolean
   readonly eventName?: string
@@ -116,7 +118,7 @@ function projectTickets(source: Record<string, unknown>, drawSessionId: string):
 
 export function projectPublicDisplaySnapshot(source: PresentationProjectionSource): PublicDisplaySnapshot {
   const value: unknown = source
-  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || typeof value.blackoutRequested !== 'boolean' || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) invalidSource('Presentation source is malformed.')
+  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || typeof value.blackoutRequested !== 'boolean' || (value.countdownValue !== undefined && value.countdownValue !== 1 && value.countdownValue !== 2 && value.countdownValue !== 3) || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) invalidSource('Presentation source is malformed.')
   const parsedSession = parseDrawSessionId(value.drawSessionId)
   if (!parsedSession.ok) invalidSource('Presentation source session is malformed.')
   if (value.stage !== 'ready' && value.stage !== 'standby' && (value.stageStartedAt === undefined || !isIsoTimestamp(value.stageStartedAt))) invalidSource('A non-standby presentation stage requires a valid timestamp.')
@@ -126,6 +128,7 @@ export function projectPublicDisplaySnapshot(source: PresentationProjectionSourc
     drawSessionId: parsedSession.value,
     stage,
     ...(value.stageStartedAt === undefined ? {} : { stageStartedAt: value.stageStartedAt as IsoTimestamp }),
+    ...(value.countdownValue === undefined ? {} : { countdownValue: value.countdownValue as 3 | 2 | 1 }),
     blackoutRequested: value.blackoutRequested,
     ...(value.displayTest === undefined ? {} : { displayTest: value.displayTest }),
     ...(value.eventName === undefined ? {} : { eventName: value.eventName }),
@@ -141,6 +144,7 @@ export function serializePublicDisplaySnapshot(snapshot: PublicDisplaySnapshot):
     drawSessionId: snapshot.drawSessionId,
     stage: snapshot.stage,
     ...(snapshot.stageStartedAt === undefined ? {} : { stageStartedAt: snapshot.stageStartedAt }),
+    ...(snapshot.countdownValue === undefined ? {} : { countdownValue: snapshot.countdownValue }),
     blackoutRequested: snapshot.blackoutRequested,
     ...(snapshot.displayTest === undefined ? {} : { displayTest: snapshot.displayTest }),
     ...(snapshot.eventName === undefined ? {} : { eventName: snapshot.eventName }),
@@ -158,8 +162,8 @@ export function serializePublicDisplaySnapshot(snapshot: PublicDisplaySnapshot):
 }
 
 export function parsePublicDisplaySnapshot(value: unknown, expectedSession?: DrawSessionId): PublicDisplaySnapshot {
-  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || value.stage === 'ready' || typeof value.blackoutRequested !== 'boolean' || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot is malformed.')
-  if (!hasOnlyKeys(value, ['drawSessionId', 'stage', 'stageStartedAt', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'ticketNumbers', 'winnerStatuses'])) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot contains unsupported fields.')
+  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || value.stage === 'ready' || typeof value.blackoutRequested !== 'boolean' || (value.countdownValue !== undefined && value.countdownValue !== 1 && value.countdownValue !== 2 && value.countdownValue !== 3) || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot is malformed.')
+  if (!hasOnlyKeys(value, ['drawSessionId', 'stage', 'stageStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'ticketNumbers', 'winnerStatuses'])) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot contains unsupported fields.')
   const parsedSession = parseDrawSessionId(value.drawSessionId)
   if (!parsedSession.ok) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot session is malformed.')
   if (expectedSession !== undefined && value.drawSessionId !== expectedSession) sessionMismatch(expectedSession, value.drawSessionId)
@@ -174,6 +178,7 @@ export function parsePublicDisplaySnapshot(value: unknown, expectedSession?: Dra
     drawSessionId: parsedSession.value,
     stage: value.stage,
     ...(value.stageStartedAt === undefined ? {} : { stageStartedAt: value.stageStartedAt as IsoTimestamp }),
+    ...(value.countdownValue === undefined ? {} : { countdownValue: value.countdownValue as 3 | 2 | 1 }),
     blackoutRequested: value.blackoutRequested,
     ...(value.displayTest === undefined ? {} : { displayTest: value.displayTest }),
     ...(value.eventName === undefined ? {} : { eventName: value.eventName }),
@@ -189,6 +194,7 @@ export const publicSnapshotToProtocolState = (snapshot: PublicDisplaySnapshot) =
   stage: snapshot.stage as PublicDisplayStage,
   drawSessionId: snapshot.drawSessionId,
   ...(snapshot.stageStartedAt === undefined ? {} : { stageStartedAt: snapshot.stageStartedAt }),
+  ...(snapshot.countdownValue === undefined ? {} : { countdownValue: snapshot.countdownValue }),
   blackoutRequested: snapshot.blackoutRequested,
   ...(snapshot.displayTest === undefined ? {} : { displayTest: snapshot.displayTest }),
   ...(snapshot.eventName === undefined ? {} : { eventName: snapshot.eventName }),

@@ -27,6 +27,17 @@ describe('PresentationController', () => {
     expect(states.filter((stage) => stage === 'reveal')).toHaveLength(1)
   })
 
+  it('publishes each visible countdown value once before rolling', async () => {
+    const states: Array<{ stage: string; countdownLabel: number | null }> = []
+    const controller = new PresentationController({ result, mode: 'practice', clock: makeClock(), persistStage: async () => undefined, onState: (state) => states.push({ stage: state.stage, countdownLabel: state.countdownLabel }) })
+    await controller.start()
+    await vi.advanceTimersByTimeAsync(1000)
+    await vi.advanceTimersByTimeAsync(1000)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(states.filter((state) => state.stage === 'countdown').map((state) => state.countdownLabel)).toEqual([3, 2, 1, null])
+    expect(states.filter((state) => state.stage === 'rolling')).toHaveLength(1)
+  })
+
   it('skips once and never starts a second transition', async () => {
     const persistStage = vi.fn(async () => undefined)
     const controller = new PresentationController({ result, mode: 'practice', clock: makeClock(), persistStage, onState: () => undefined })

@@ -35,8 +35,8 @@ describe('public display projection privacy boundary', () => {
   })
 
   it('projects minimum countdown metadata and orthogonal blackout state', () => {
-    const projection = projectPublicDisplaySnapshot(source({ stage: 'countdown', stageStartedAt: timestamp, blackoutRequested: true, result }))
-    expect(projection).toEqual({ drawSessionId: session, stage: 'countdown', stageStartedAt: timestamp, blackoutRequested: true, mode: 'live' })
+    const projection = projectPublicDisplaySnapshot(source({ stage: 'countdown', stageStartedAt: timestamp, countdownValue: 2, blackoutRequested: true, result }))
+    expect(projection).toEqual({ drawSessionId: session, stage: 'countdown', stageStartedAt: timestamp, countdownValue: 2, blackoutRequested: true, mode: 'live' })
   })
 
   it('projects rolling without candidate or participant data', () => {

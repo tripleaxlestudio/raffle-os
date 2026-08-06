@@ -4,9 +4,9 @@ export const PRESENTATION_POLICY_VERSION = 1 as const
 
 export interface PresentationPolicy {
   readonly version: typeof PRESENTATION_POLICY_VERSION
-  readonly countdownDurationMs: 3000
-  readonly countdownLabelDurationMs: 1000
-  readonly rollingDurationMs: 2500
+  readonly countdownDurationMs: number
+  readonly countdownLabelDurationMs: number
+  readonly rollingDurationMs: number
   readonly countdownLabels: readonly [3, 2, 1]
 }
 
@@ -16,6 +16,10 @@ export const PRESENTATION_POLICY: PresentationPolicy = {
   countdownLabelDurationMs: 1000,
   rollingDurationMs: 2500,
   countdownLabels: [3, 2, 1],
+}
+
+export function presentationPolicyFromSettings(countdownDurationSeconds: number, rollingDurationSeconds: number): PresentationPolicy {
+  return { version: PRESENTATION_POLICY_VERSION, countdownDurationMs: countdownDurationSeconds * 1000, countdownLabelDurationMs: (countdownDurationSeconds * 1000) / 3, rollingDurationMs: rollingDurationSeconds * 1000, countdownLabels: [3, 2, 1] }
 }
 
 export function stageDurationMs(stage: PresentationStage, policy = PRESENTATION_POLICY): number {

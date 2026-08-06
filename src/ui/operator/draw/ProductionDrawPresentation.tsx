@@ -6,14 +6,14 @@ import type { PresentationCheckpointRecord } from '../../../domain/workflow/pres
 import { checkpointFromState } from '../../../domain/workflow/presentation-checkpoint.types.ts'
 import { savePracticeBlackout, savePracticePresentationStage, type PracticeResultProjection } from '../../../application/draw/practice-result-storage.ts'
 import { PresentationController, type PresentationClock, type PresentationControllerState } from '../../../application/workflow/presentation-controller.ts'
-import { PRESENTATION_POLICY } from '../../../application/workflow/presentation-policy.ts'
+import { PRESENTATION_POLICY, type PresentationPolicy } from '../../../application/workflow/presentation-policy.ts'
 import { PresentationError, safePresentationMessage } from '../../../application/workflow/presentation-errors.ts'
 import type { PresentationResultProjection } from '../../../application/workflow/presentation-projection.ts'
 import { createOperatorPublisher, createPublisherRuntimeIdentity, type OperatorPublisher } from '../../../application/display-transport/operator-publisher.ts'
 import { createBroadcastChannelTransport } from '../../../application/display-transport/transport.ts'
 import type { ProtocolScope } from '../../../application/display-transport/protocol.ts'
 import { deriveProductionDisplayScope } from '../../../application/display/display-configuration-service.ts'
-import { Button, Card } from '../../../shared/ui/index.ts'
+import { Button, ButtonLink, Card } from '../../../shared/ui/index.ts'
 
 interface ProductionDrawPresentationProps {
   readonly result: PresentationResultProjection
@@ -31,13 +31,15 @@ interface ProductionDrawPresentationProps {
   readonly sharedPublisher?: OperatorPublisher | null
   readonly onResetPractice?: () => void
   readonly resetPending?: boolean
+  readonly presentationPolicy?: PresentationPolicy
+  readonly audienceStatus?: { readonly label: string; readonly detail: string; readonly displayUrl: string | null }
 }
 
 function browserClock(): PresentationClock {
   return { now: () => new Date().toISOString() as IsoTimestamp, setTimeout: (callback, delayMs) => window.setTimeout(callback, delayMs), clearTimeout: (handle) => window.clearTimeout(handle as number), prefersReducedMotion: () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false }
 }
 
-export function ProductionDrawPresentation({ result, mode, eventName, eventId = 'production-event', displayConfigurationId = eventId, prizeCategory, prizeName, checkpoints, practiceResult, onFailure, initialPresentation, onHandoff, sharedPublisher, onResetPractice, resetPending = false }: ProductionDrawPresentationProps) {
+export function ProductionDrawPresentation({ result, mode, eventName, eventId = 'production-event', displayConfigurationId = eventId, prizeCategory, prizeName, checkpoints, practiceResult, onFailure, initialPresentation, onHandoff, sharedPublisher, onResetPractice, resetPending = false, presentationPolicy = PRESENTATION_POLICY, audienceStatus }: ProductionDrawPresentationProps) {
   const [controllerState, setControllerState] = useState<PresentationControllerState>({ stage: 'result-locked', countdownLabel: null, error: null })
   const [blackoutRequested, setBlackoutRequested] = useState(initialPresentation?.blackoutRequested ?? false)
   const scope: ProtocolScope = useMemo(() => deriveProductionDisplayScope(eventId, displayConfigurationId), [displayConfigurationId, eventId])
@@ -45,7 +47,7 @@ export function ProductionDrawPresentation({ result, mode, eventName, eventId = 
   const publisher = sharedPublisher ?? localPublisher
   const sourceForState = useCallback((next: PresentationControllerState) => next.stage === 'failed' || next.stage === 'result-locked'
     ? { drawSessionId: result.drawSessionId, stage: 'ready' as const, blackoutRequested: next.blackoutRequested ?? false, mode, result }
-    : { drawSessionId: result.drawSessionId, stage: next.stage, stageStartedAt: next.stageStartedAt, blackoutRequested: next.blackoutRequested ?? false, mode, result }, [mode, result])
+    : { drawSessionId: result.drawSessionId, stage: next.stage, stageStartedAt: next.stageStartedAt, countdownValue: next.stage === 'countdown' ? next.countdownLabel ?? 3 : undefined, blackoutRequested: next.blackoutRequested ?? false, mode, result }, [mode, result])
   const controller = useMemo(() => new PresentationController({
     result, mode, clock: browserClock(),
     persistStage: async (stage, stageStartedAt) => {
@@ -69,8 +71,8 @@ export function ProductionDrawPresentation({ result, mode, eventName, eventId = 
       }
       setBlackoutRequested(requested)
     },
-    onState: (next) => { setControllerState(next); if (next.blackoutRequested !== undefined) setBlackoutRequested(next.blackoutRequested); if (next.stage !== 'failed' && next.stage !== 'result-locked') void publisher.publish(sourceForState(next)) }, policy: PRESENTATION_POLICY,
-  }), [checkpoints, mode, practiceResult, publisher, result, sourceForState])
+    onState: (next) => { setControllerState(next); if (next.blackoutRequested !== undefined) setBlackoutRequested(next.blackoutRequested); if (next.stage !== 'failed' && next.stage !== 'result-locked') void publisher.publish(sourceForState(next)) }, policy: presentationPolicy,
+  }), [checkpoints, mode, practiceResult, presentationPolicy, publisher, result, sourceForState])
 
   useEffect(() => {
     if (sharedPublisher !== undefined) return
@@ -78,20 +80,21 @@ export function ProductionDrawPresentation({ result, mode, eventName, eventId = 
     return () => publisher.close()
   }, [initialPresentation?.blackoutRequested, mode, publisher, result, sharedPublisher])
   useEffect(() => { void (initialPresentation === undefined ? controller.start() : controller.resume(initialPresentation.stage, initialPresentation.stageStartedAt, initialPresentation.blackoutRequested)); return () => controller.dispose() }, [controller, initialPresentation])
+  useEffect(() => { if (resetPending) controller.dispose() }, [controller, resetPending])
   useEffect(() => { if (mode === 'live' && controllerState.stage === 'pending-handoff') onHandoff?.() }, [controllerState.stage, mode, onHandoff])
   useEffect(() => { if (controllerState.error !== null) onFailure(controllerState.error) }, [controllerState.error, onFailure])
 
   const blackoutControl = blackoutRequested ? <div className="presentation-blackout-control"><p>Audience publication is currently blacked out.</p><Button variant="secondary" onClick={() => { void controller.setBlackout(false) }}>End blackout</Button></div> : null
-  const resetControl = mode === 'practice' && onResetPractice !== undefined ? <Button variant="primary" disabled={resetPending} onClick={onResetPractice}>{resetPending ? 'Resetting rehearsal…' : 'Reset rehearsal'}</Button> : null
+  const resetControl = mode === 'practice' && onResetPractice !== undefined && (controllerState.stage === 'pending-handoff' || controllerState.stage === 'failed' || controllerState.stage === 'result-locked') ? <Button variant="primary" disabled={resetPending} onClick={onResetPractice}>{resetPending ? 'Resetting rehearsal…' : 'Reset rehearsal'}</Button> : null
   const stage = controllerState.stage
   if (stage === 'failed') return <Card className="presentation-failure" padding="lg"><p className="operator-eyebrow">Safe presentation state</p><h2>{safePresentationMessage(controllerState.error)}</h2><p>The locked result was preserved. Retry presentation from this same result or return to Draw Setup.</p><Button onClick={() => { void controller.retry() }}>Retry presentation</Button></Card>
   if (stage === 'result-locked') return <Card padding="lg"><p>Preparing locked result presentation…</p></Card>
-  if (stage === 'countdown') return <PresentationFrame blackoutRequested={blackoutRequested} blackoutControl={blackoutControl} operatorControl={resetControl} mode={mode} eventName={eventName} prizeCategory={prizeCategory} prizeName={prizeName} heading="Get ready" announcement={`Countdown ${controllerState.countdownLabel ?? 3}`}><div className="production-countdown" aria-hidden="true">{controllerState.countdownLabel}</div><Button onClick={() => { void controller.skip() }}>Skip animation</Button></PresentationFrame>
-  if (stage === 'rolling') return <PresentationFrame blackoutRequested={blackoutRequested} blackoutControl={blackoutControl} operatorControl={resetControl} mode={mode} eventName={eventName} prizeCategory={prizeCategory} prizeName={prizeName} heading="Selecting winners" announcement="Selecting winners"><div className="production-rolling" aria-hidden="true"><span>• • • • •</span><span>SELECTING</span><span>— — — — —</span></div><Button onClick={() => { void controller.skip() }}>Skip animation</Button></PresentationFrame>
+  if (stage === 'countdown') return <PresentationFrame audienceStatus={audienceStatus} blackoutRequested={blackoutRequested} blackoutControl={blackoutControl} operatorControl={resetControl} mode={mode} eventName={eventName} prizeCategory={prizeCategory} prizeName={prizeName} heading="Get ready" announcement={`Countdown ${controllerState.countdownLabel ?? 3}`}><div className="production-countdown" aria-label={`Countdown ${controllerState.countdownLabel ?? 3}`}>{controllerState.countdownLabel}</div><Button onClick={() => { void controller.skip() }}>Skip animation</Button></PresentationFrame>
+  if (stage === 'rolling') return <PresentationFrame audienceStatus={audienceStatus} blackoutRequested={blackoutRequested} blackoutControl={blackoutControl} operatorControl={resetControl} mode={mode} eventName={eventName} prizeCategory={prizeCategory} prizeName={prizeName} heading="Selecting winners" announcement="Selecting winners"><div className="production-rolling" aria-label="Selecting winners"><span>• • • • •</span><span>SELECTING</span><span>— — — — —</span></div><Button onClick={() => { void controller.skip() }}>Skip animation</Button></PresentationFrame>
   if (stage === 'pending-handoff') return <Card className="practice-complete-panel" padding="lg"><p className="operator-eyebrow">Practice · rehearsal only</p><h2>Practice presentation complete</h2><p>The Practice result remains available only in this browser tab. No official record was created.</p><p className="practice-complete-panel__context">{eventName} · {prizeCategory} · {prizeName}</p><ol>{result.winners.map((winner) => <li key={winner.winnerId}><span>#{winner.sequence}</span><code>{winner.ticketNumber}</code></li>)}</ol><div className="practice-complete-panel__actions">{resetControl}<Button variant="quiet" onClick={() => { void controller.handoff() }}>Return to Draw Sessions</Button></div></Card>
-  return <PresentationFrame blackoutRequested={blackoutRequested} blackoutControl={blackoutControl} operatorControl={blackoutRequested ? resetControl : null} mode={mode} eventName={eventName} prizeCategory={prizeCategory} prizeName={prizeName} heading="Winner reveal" announcement="Winner reveal"><ol className={`production-winner-list production-winner-list--${result.winners.length}`} aria-label={`${result.winners.length} ${mode === 'live' ? 'official' : 'Practice'} winners`}>{result.winners.map((winner) => <li key={winner.winnerId}><span>#{winner.sequence}</span><strong>{winner.ticketNumber}</strong></li>)}</ol><p className="presentation-completion">{mode === 'live' ? 'Presentation complete. Continue safely to Pending Results when ready.' : 'Practice presentation complete. Reset the rehearsal to run it again, or return to the DrawSession queue.'}</p><div className="presentation-action-row">{mode === 'practice' ? resetControl : null}<Button onClick={() => { void controller.handoff() }}>{mode === 'live' ? 'Continue safely to Pending' : 'Return to Draw Sessions'}</Button></div></PresentationFrame>
+  return <PresentationFrame audienceStatus={audienceStatus} blackoutRequested={blackoutRequested} blackoutControl={blackoutControl} operatorControl={blackoutRequested ? resetControl : null} mode={mode} eventName={eventName} prizeCategory={prizeCategory} prizeName={prizeName} heading="Winner reveal" announcement="Winner reveal"><ol className={`production-winner-list production-winner-list--${result.winners.length}`} aria-label={`${result.winners.length} ${mode === 'live' ? 'official' : 'Practice'} winners`}>{result.winners.map((winner) => <li key={winner.winnerId}><span>#{winner.sequence}</span><strong>{winner.ticketNumber}</strong></li>)}</ol><p className="presentation-completion">{mode === 'live' ? 'Presentation complete. Continue safely to Pending Results when ready.' : 'Practice presentation complete. Reset the rehearsal to run it again, or return to the DrawSession queue.'}</p><div className="presentation-action-row">{mode === 'practice' ? resetControl : null}<Button onClick={() => { void controller.handoff() }}>{mode === 'live' ? 'Continue safely to Pending' : 'Return to Draw Sessions'}</Button></div></PresentationFrame>
 }
 
-function PresentationFrame({ children, blackoutControl, operatorControl, blackoutRequested, mode, eventName, prizeCategory, prizeName, heading, announcement }: { children: ReactNode; blackoutControl: ReactNode; operatorControl: ReactNode; blackoutRequested: boolean; mode: 'live' | 'practice'; eventName: string; prizeCategory: string; prizeName: string; heading: string; announcement: string }) {
-  return <section className={`production-presentation${blackoutRequested ? ' production-presentation--blackout' : ''}`} aria-labelledby="presentation-heading"><header><p className="operator-eyebrow">{mode === 'live' ? 'Live · official result locked' : 'Practice · rehearsal only'}</p><h1 id="presentation-heading">{heading}</h1><p>{eventName} · {prizeCategory} · {prizeName}</p><div className="presentation-header-actions">{blackoutControl}{operatorControl}</div></header><p className="sr-only" role="status" aria-live="polite">{announcement}</p><div className="production-presentation__content">{children}</div></section>
+function PresentationFrame({ children, blackoutControl, operatorControl, blackoutRequested, mode, eventName, prizeCategory, prizeName, heading, announcement, audienceStatus }: { children: ReactNode; blackoutControl: ReactNode; operatorControl: ReactNode; blackoutRequested: boolean; mode: 'live' | 'practice'; eventName: string; prizeCategory: string; prizeName: string; heading: string; announcement: string; audienceStatus?: { readonly label: string; readonly detail: string; readonly displayUrl: string | null } }) {
+  return <section className={`production-presentation${blackoutRequested ? ' production-presentation--blackout' : ''}`} aria-labelledby="presentation-heading"><header><div className="presentation-header-main"><p className="operator-eyebrow">{mode === 'live' ? 'Live · official result locked' : 'Practice · rehearsal only'}</p><h1 id="presentation-heading">{heading}</h1><p>{eventName} · {prizeCategory} · {prizeName}</p></div><div className="presentation-header-status"><span className="operator-eyebrow">Audience</span><strong>{audienceStatus?.label ?? 'Unavailable'}</strong><small>{audienceStatus?.detail ?? 'No production publisher status.'}</small>{audienceStatus?.displayUrl === null || audienceStatus === undefined ? null : <ButtonLink to={audienceStatus.displayUrl} target="_blank" rel="noreferrer" variant="quiet">Open Audience Display</ButtonLink>}</div><div className="presentation-header-actions">{blackoutControl}{operatorControl}</div></header><p className="sr-only" role="status" aria-live="polite">{announcement}</p><div className="production-presentation__content">{children}</div></section>
 }

@@ -356,6 +356,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         drawSessionId: message.drawSessionId,
         stage: message.stage,
         ...(message.stageStartedAt === undefined ? {} : { stageStartedAt: message.stageStartedAt }),
+        ...(message.countdownValue === undefined ? {} : { countdownValue: message.countdownValue }),
         blackoutRequested: message.blackoutRequested ?? false,
         ...(message.displayTest === undefined ? {} : { displayTest: message.displayTest }),
         ...(message.eventName === undefined ? {} : { eventName: message.eventName }),

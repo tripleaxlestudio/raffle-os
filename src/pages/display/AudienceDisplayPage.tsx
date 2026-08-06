@@ -33,7 +33,7 @@ function snapshotScenario(snapshot: PublicDisplaySnapshot): PublicAudienceScenar
     ...(snapshot.accentColor === undefined ? {} : { accentColor: snapshot.accentColor }),
     state: committedState,
     message: committedState === 'standby' ? (snapshot.displayTest === false ? 'Waiting for the next presentation' : snapshot.stage === 'pending-handoff' ? 'No active winners' : 'Draw will begin shortly') : committedState === 'countdown' ? 'Get ready' : committedState === 'rolling' ? 'Drawing in progress' : undefined,
-    countdownValue: snapshot.stage === 'countdown' ? '—' : undefined,
+    countdownValue: snapshot.stage === 'countdown' ? String(snapshot.countdownValue ?? '—') : undefined,
     ticketNumbers: snapshot.ticketNumbers,
     statusMessage: committedState === 'confirmed' ? 'Confirmed result' : snapshot.stage === 'pending-handoff' ? (snapshot.winnerStatuses === undefined ? 'Public result' : 'Results under verification') : snapshot.stage === 'reveal' ? 'Results under verification' : undefined,
     displayTest: snapshot.displayTest,

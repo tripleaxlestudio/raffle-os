@@ -62,7 +62,7 @@ describe('production Draw Run route shell', () => {
   })
   it('uses production chrome without prototype controls or status bars', async () => {
     renderRoute(`/draw/run/${mocks.sessionId}`)
-    expect(await screen.findByRole('heading', { name: 'Review Before Start' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Ready to start' })).toBeInTheDocument()
     expect(screen.getByText('Production workspace')).toBeInTheDocument()
     expect(screen.queryByText('Prototype navigation')).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Prototype scenario' })).not.toBeInTheDocument()
@@ -133,7 +133,7 @@ describe('production Draw Run route shell', () => {
       policyVersion: 1,
     })
     renderRoute(`/draw/run/${mocks.sessionId}`)
-    expect(await screen.findByRole('heading', { name: 'Review Before Start' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Ready to start' })).toBeInTheDocument()
     expect(getItem).not.toHaveBeenCalledWith(`raffle-os:practice-result:v1:${mocks.sessionId}`)
     getItem.mockRestore()
   })
@@ -141,8 +141,8 @@ describe('production Draw Run route shell', () => {
   it('surfaces a corrupt Practice projection as a typed bootstrap error without invoking selection', async () => {
     sessionStorage.setItem(`raffle-os:practice-result:v1:${mocks.practiceSessionId}`, '{bad-json}')
     renderRoute(`/draw/run/${mocks.practiceSessionId}`)
-    expect(await screen.findByRole('heading', { name: 'Presentation could not start' })).toBeInTheDocument()
-    expect(screen.getAllByText('The Practice result projection is invalid and could not start presentation.')).toHaveLength(2)
+    expect(await screen.findByRole('heading', { name: 'Presentation paused safely' })).toBeInTheDocument()
+    expect(screen.getByText('The Practice result projection is invalid and could not start presentation.')).toBeInTheDocument()
     expect(mocks.command).not.toHaveBeenCalled()
   })
 })

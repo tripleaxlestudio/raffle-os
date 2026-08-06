@@ -1427,17 +1427,44 @@
   max-width: 32rem;
 }
 
-.production-presentation > header {
+.production-draw-run-shell {
+  display: grid;
+  gap: var(--space-5);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  padding: var(--space-5);
+}
+
+.production-draw-run-header {
   border-bottom: 1px solid var(--border-default);
   padding-bottom: var(--space-4);
 }
 
-.production-presentation > header {
+.production-draw-run-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: var(--space-4);
 }
+
+.production-draw-run-header__identity { display: grid; gap: var(--space-4); min-width: 0; }
+.production-draw-run-header__title { display: flex; align-items: start; gap: var(--space-3); }
+.production-draw-run-header__title h1,
+.production-draw-run-header__title p { margin: 0; }
+.production-draw-run-header__title h1 { color: var(--text-primary); font-size: clamp(1.25rem, 2vw, 1.8rem); }
+.production-draw-run-header__title p:last-child { margin-top: var(--space-1); color: var(--text-secondary); }
+.production-draw-run-header__metrics { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: 0; }
+.production-draw-run-header__metrics div { display: grid; gap: 0.15rem; border-left: 1px solid var(--border-subtle); padding-left: var(--space-3); }
+.production-draw-run-header__metrics dt { color: var(--text-muted); font-size: var(--font-size-xs); }
+.production-draw-run-header__metrics dd { margin: 0; color: var(--text-primary); font-size: var(--font-size-sm); font-weight: 700; }
+.production-draw-run-header__audience { display: grid; justify-items: end; align-content: start; gap: var(--space-1); min-width: 13rem; text-align: right; }
+.production-draw-run-header__audience small { max-width: 18rem; color: var(--text-muted); font-size: var(--font-size-xs); }
+.production-draw-run-ready-grid { display: grid; gap: var(--space-5); }
+.production-recovery-card { max-width: 52rem; border-left: 0.25rem solid var(--status-warning); }
+.production-recovery-card h2,
+.production-recovery-card p { margin: 0; }
+.production-recovery-card { display: grid; gap: var(--space-3); }
 
 .presentation-header-status {
   display: grid;
@@ -1462,6 +1489,15 @@
 
 .production-presentation__content {
   min-width: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  min-height: 24rem;
+  gap: var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  padding: clamp(var(--space-5), 5vw, var(--space-8));
 }
 
 .production-presentation-support {

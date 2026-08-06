@@ -9,6 +9,7 @@ import { createDrawSetupProductionServices } from '../../infrastructure/composit
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { Button, ButtonLink, Card, Checkbox, ConfirmationDialog, Input, Select } from '../../shared/ui/index.ts'
+import { signalProductionWorkspaceChanged } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 
 type FormState = {
   eventId: string
@@ -83,7 +84,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
     const draft: DrawAuthoringDraft = { ...form, eligibleGroupFilter: form.eligibleGroupFilter === '' ? null : form.eligibleGroupFilter }
     if (services.authoringService === undefined) { setError(new DrawAuthoringError('persistence-unavailable', 'Draw authoring services are unavailable.', { retryable: true })); setSaving(false); return }
     const result = await services.authoringService.save(draft)
-    if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setDirty(false); setSaved(true); if (services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })) }
+    if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setDirty(false); setSaved(true); signalProductionWorkspaceChanged(); if (services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })) }
     else setError(result.error)
     setSaving(false)
   }
@@ -144,6 +145,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
             <p>{form.mode === 'live' ? 'Live handoff leads to the official start gate. It does not start a draw here.' : 'Practice is rehearsal only and does not create official results.'} Mode is stored on the ready DrawSession; URL parameters cannot override it.</p>
             {record !== null ? <dl className="draw-readiness-summary" aria-label="Draw readiness summary" aria-live="polite"><div><dt>Eligible participants</dt><dd>{staleReadiness ? 'Save changes to evaluate' : readiness?.data?.authoritativeEligibleCount ?? (eligibilityNotEvaluated ? 'Not evaluated' : 'Checking…')}</dd></div><div><dt>Requested winners</dt><dd>{readiness?.data?.requestedWinnerCount ?? record.configuration.requestedWinners}</dd></div><div><dt>Storage</dt><dd>{readiness === null ? 'Checking…' : readiness.state === 'storage-unavailable' ? 'Blocked' : 'Ready'}</dd></div><div><dt>Secure Web Crypto</dt><dd>{readiness?.state === 'crypto-unavailable' ? 'Blocked' : readiness === null ? 'Checking…' : 'Ready'}</dd></div></dl> : null}
             <Button type="submit" size="lg" isLoading={saving} disabled={started || form.prizeCategoryId === ''}>{record === null ? 'Save ready configuration' : 'Save changes'}</Button>
+            {saved ? <ButtonLink size="lg" variant="secondary" to="/draw/live">Open Draw Sessions</ButtonLink> : null}
             {record !== null ? <Button ref={handoffTriggerRef} type="button" size="lg" variant="secondary" disabled={saving || handoffBusy || dirty || readinessBlocked || readiness === null} isLoading={handoffBusy} onClick={() => { if (form.mode === 'live') setConfirmLive(true); else void handoff() }}>{form.mode === 'live' ? 'Continue to Live start gate' : 'Open Practice start gate'}</Button> : null}
             {readiness?.retryable ? <Button type="button" variant="secondary" onClick={() => void refreshReadiness()}>Retry readiness</Button> : null}
           </div>

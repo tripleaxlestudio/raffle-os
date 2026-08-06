@@ -16,6 +16,7 @@ export type ProductionWorkspaceState =
       readonly checkedInParticipantCount: number
       readonly prizeCategoryCount: number
       readonly liveSessionCount: number
+      readonly sessionCounts: Readonly<Record<DrawSession['status'], number>>
       readonly unresolvedSession: DrawSession | null
       readonly currentMode: AppMode | null
     }
@@ -59,6 +60,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
           .filter((session) => session.mode === 'live' && (session.status === 'drawing' || session.status === 'pending-confirmation'))
           .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] ?? null
         if (active) {
+          const sessionCounts = sessions.reduce((counts, session) => ({ ...counts, [session.status]: counts[session.status] + 1 }), { draft: 0, ready: 0, drawing: 0, 'pending-confirmation': 0, completed: 0, cancelled: 0 } as Record<DrawSession['status'], number>)
           setState({
             status: 'ready',
             event,
@@ -66,6 +68,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
             checkedInParticipantCount: participants.filter((participant) => participant.isCheckedIn).length,
             prizeCategoryCount: categories.length,
             liveSessionCount: sessions.filter((session) => session.mode === 'live').length,
+            sessionCounts,
             unresolvedSession,
             currentMode,
           })

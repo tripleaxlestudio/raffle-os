@@ -18,7 +18,7 @@ import { PendingResultsPage } from '../pages/operator/PendingResultsPage.tsx'
 import { ProductionDashboardPage } from '../pages/operator/ProductionDashboardPage.tsx'
 import { ProductionSettingsPage } from '../pages/operator/ProductionSettingsPage.tsx'
 import { ProductionPendingResultsPage } from '../pages/operator/ProductionPendingResultsPage.tsx'
-import { ProductionWorkspaceBlockedPage } from '../pages/operator/ProductionWorkspaceBlockedPage.tsx'
+import { DrawSessionQueuePage } from '../pages/operator/DrawSessionQueuePage.tsx'
 import { EventsPage } from '../pages/operator/EventsPage.tsx'
 import { PrizeCategoriesPage } from '../pages/operator/PrizeCategoriesPage.tsx'
 import { SettingsPage as PrototypeSettingsPage } from '../pages/operator/SettingsPage.tsx'
@@ -36,8 +36,8 @@ const operatorRoutes = {
     { path: 'prize-categories', element: <PrizeCategoriesPage /> },
     { path: 'participants', element: <ParticipantsPage /> },
     { path: 'draw/setup', element: <DrawSetupPage /> },
-    { path: 'draw/live', element: <ProductionWorkspaceBlockedPage title="Live Draw" description="The production DrawSession queue is not available yet." detail="Live Draw presentation begins from an authoritative DrawSession handoff. The queue and resume workflow will be added in Slice 11." /> },
-    { path: 'draw/results', element: <ProductionWorkspaceBlockedPage title="Pending Results" description="The production pending-result queue is not available yet." detail="Only generated production pending routes may open official decisions. No fixture results are shown here." /> },
+    { path: 'draw/live', element: <DrawSessionQueuePage /> },
+    { path: 'draw/results', element: <DrawSessionQueuePage /> },
     { path: 'history', element: <ProductionHistoryPage /> },
     { path: 'settings', element: <ProductionSettingsPage /> },
   ],

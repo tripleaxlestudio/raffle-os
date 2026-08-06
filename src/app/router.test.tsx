@@ -45,15 +45,16 @@ describe('application routes', () => {
     expect(navigation).toHaveTextContent('Draw Setup')
     expect(navigation).toHaveTextContent('History')
     expect(navigation).toHaveTextContent('Audience Display')
-    expect(navigation).not.toHaveTextContent('Live Draw')
+    expect(navigation).toHaveTextContent('Live Draw')
     expect(navigation).not.toHaveTextContent('Pending Results')
     expect(navigation).not.toHaveTextContent('Settings')
   })
 
-  it.each(['/draw/live', '/draw/results', '/settings'])('keeps incomplete production route %s honest', async (path) => {
+  it.each(['/draw/live', '/draw/results', '/settings'])('keeps production route %s honest', async (path) => {
     renderRoute(path)
     await waitFor(() => expect(screen.getByRole('main')).toBeInTheDocument())
-    expect(screen.getAllByText(/not available yet|not configured/i).length).toBeGreaterThan(0)
+    if (path === '/settings') expect(screen.getAllByText(/not available yet|not configured/i).length).toBeGreaterThan(0)
+    else expect(screen.getByRole('heading', { name: 'Draw Sessions' })).toBeInTheDocument()
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })
 

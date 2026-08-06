@@ -2724,6 +2724,26 @@
 .settings-safe-area-preview strong { color: var(--text-primary); font-family: var(--font-family-mono); font-size: var(--font-size-sm); }
 .settings-volume-control { padding: 0 var(--space-2); }
 .settings-audio-layout { display: grid; gap: var(--space-5); }
+.settings-audio-columns { display: grid; grid-template-columns: minmax(0, .82fr) minmax(22rem, 1.18fr); gap: var(--space-5); align-items: stretch; }
+.settings-audio-controls { display: grid; align-content: start; gap: var(--space-5); padding: var(--space-4); border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-muted); }
+.settings-audio-controls label { display: grid; gap: var(--space-2); color: var(--text-secondary); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
+.settings-audio-controls label > span { color: var(--text-muted); font-size: .7rem; font-weight: normal; line-height: 1.4; }
+.settings-audio-controls label.is-disabled { opacity: .72; }
+.settings-audio-controls select { min-height: 2.75rem; padding: 0 var(--space-3); border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface); color: var(--text-primary); font: inherit; }
+.settings-audio-asset { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: var(--space-4); align-items: center; min-width: 0; padding: var(--space-4); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface-muted); }
+.settings-audio-asset__visual { display: flex; align-items: center; justify-content: center; gap: .25rem; min-height: 7.5rem; border: 1px dashed var(--border-strong); border-radius: var(--radius-md); background: var(--surface); color: var(--accent-hover); }
+.settings-audio-asset__visual span { margin-right: .15rem; font-size: 1.6rem; }
+.settings-audio-asset__visual i { width: .18rem; height: 1.1rem; border-radius: 999px; background: currentColor; opacity: .75; }
+.settings-audio-asset__visual i:nth-of-type(2), .settings-audio-asset__visual i:nth-of-type(4) { height: 2rem; }
+.settings-audio-asset__visual i:nth-of-type(3) { height: 2.6rem; }
+.settings-audio-asset__body { display: grid; gap: var(--space-4); min-width: 0; }
+.settings-audio-asset__body > div:first-child { display: grid; gap: var(--space-2); min-width: 0; }
+.settings-audio-asset__body strong { color: var(--text-primary); font-size: var(--font-size-sm); }
+.settings-audio-asset__body small { overflow-wrap: anywhere; color: var(--text-muted); font-size: .72rem; line-height: 1.4; }
+.settings-audio-asset__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.settings-audio-asset__actions label { display: inline-flex; position: relative; cursor: pointer; }
+.settings-audio-asset__actions .ui-button { width: fit-content; min-height: 1.875rem; padding: .375rem .6875rem; border-radius: var(--radius-sm); font-size: .75rem; font-weight: 600; line-height: 1rem; white-space: nowrap; }
+.settings-audio-asset__actions input[type=file] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .settings-audio-test { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding-top: var(--space-1); }
 .settings-audio-test span, .settings-action-row [role=status] { color: var(--text-muted); font-size: var(--font-size-xs); }
 .settings-display-grid { grid-template-columns: minmax(12rem, .55fr) minmax(0, 1.45fr); align-items: start; }
@@ -2752,7 +2772,7 @@
 .settings-back-link { margin: 0; }
 
 @media (max-width: 66rem) {
-  .settings-branding-layout, .settings-display-grid { grid-template-columns: minmax(0, 1fr); }
+  .settings-branding-layout, .settings-display-grid, .settings-audio-columns { grid-template-columns: minmax(0, 1fr); }
   .settings-display-meta { grid-column: auto; }
 }
 @media (max-width: 44rem) {
@@ -2766,6 +2786,8 @@
   .settings-branding-layout .settings-asset-field, .settings-branding-layout .settings-asset-field--wide { grid-template-columns: minmax(0, 1fr); height: auto; }
   .settings-branding-layout .settings-asset-field__preview, .settings-branding-layout .settings-asset-field--wide .settings-asset-field__preview { width: 100%; max-width: none; }
   .settings-branding-layout .settings-asset-field--logo .settings-asset-field__preview { width: min(100%, 10rem); margin-inline: auto; }
+  .settings-audio-asset { grid-template-columns: 5.5rem minmax(0, 1fr); }
+  .settings-audio-asset__visual { min-height: 5.5rem; }
 }
 
 @media (max-width: 78rem) {

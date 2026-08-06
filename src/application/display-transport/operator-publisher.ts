@@ -41,6 +41,14 @@ export type OperatorPublisher = {
 
 export const AUDIENCE_HEARTBEAT_INTERVAL_MS = 1000
 
+export type PublisherRuntimeIdentity = { readonly publisherInstanceId: string; readonly epoch: number }
+
+export function createPublisherRuntimeIdentity(): PublisherRuntimeIdentity {
+  const random = new Uint32Array(1)
+  globalThis.crypto.getRandomValues(random)
+  return { publisherInstanceId: globalThis.crypto.randomUUID(), epoch: random[0] === 0 ? 1 : random[0] }
+}
+
 export type OperatorPublisherDiagnostics = {
   readonly channelName: string
   readonly publisherInstanceId: string
@@ -53,6 +61,8 @@ export type OperatorPublisherDiagnostics = {
   readonly expectedAcknowledgement: { readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
   readonly lastAcknowledgement: { readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
   readonly subscriberCount: number
+  readonly heartbeatCount: number
+  readonly lastHeartbeatTimestamp: string | undefined
 }
 
 type OperatorPublisherOptions = {
@@ -84,6 +94,9 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   let currentTransport = options.transport
   let unsubscribe: () => void = () => undefined
   let heartbeatHandle: unknown = null
+  let heartbeatCount = 0
+  let lastHeartbeatTimestamp: string | undefined
+  let restoreCount = 0
   let lastEnvelopeSent: OperatorPublisherDiagnostics['lastEnvelopeSent']
   let lastAcknowledgement: OperatorPublisherDiagnostics['lastAcknowledgement']
   const statuses = new Set<(status: PublisherStatus) => void>()
@@ -101,7 +114,8 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   const publishSnapshot = (next: PublicDisplaySnapshot, force: boolean, restore = false): PublisherResult => {
     const serialized = serializePublicDisplaySnapshot(next)
     if (!force && serialized === serializedSnapshot) return { ok: true, snapshot: next, published: false }
-    const nextSequence = sequence + 1
+    const nextSequence = restore ? sequence : sequence + 1
+    if (restore) restoreCount += 1
     const envelope = createProtocolEnvelope({
       sender: { kind: 'operator', id: options.senderId },
       scope: options.scope,
@@ -110,6 +124,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       sequence: nextSequence,
       emittedAt: options.clock.now(),
       message: { ...publicSnapshotToProtocolState(next), ...(restore ? { restore: true } : {}) },
+      ...(restore ? { messageId: `${options.senderId}:${epoch}:restore:${restoreCount}` } : {}),
     })
     // Publishers must expose the current snapshot before posting so a synchronous
     // in-memory/test transport can acknowledge the first state immediately.
@@ -123,7 +138,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     if (!result.ok) {
       snapshot = undefined
       serializedSnapshot = undefined
-      sequence = nextSequence - 1
+      if (!restore) sequence = nextSequence - 1
       report({ kind: 'transport-error', error: result.error })
       return { ok: false, error: result.error }
     }
@@ -143,20 +158,19 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
 
   const sendHeartbeat = (): void => {
     if (closed || !started || currentTransport.capability.transport !== 'available') return
-    const nextSequence = sequence + 1
-    sequence = nextSequence
+    heartbeatCount += 1
+    lastHeartbeatTimestamp = options.clock.now()
     const result = currentTransport.publish(createProtocolEnvelope({
       sender: { kind: 'operator', id: options.senderId },
       scope: options.scope,
       epoch,
-      sequence: nextSequence,
-      emittedAt: options.clock.now(),
+      sequence,
+      emittedAt: lastHeartbeatTimestamp,
       message: { type: 'display-heartbeat' },
+      messageId: `${options.senderId}:${epoch}:heartbeat:${heartbeatCount}`,
     }))
     if (result.ok) {
-      trace({ epoch, sequence: nextSequence, direction: 'sent', messageType: 'heartbeat', validationResult: 'accepted', orderingResult: 'accepted', acknowledgementStatus: 'not-applicable' })
-    } else {
-      sequence = nextSequence - 1
+      trace({ epoch, sequence, direction: 'sent', messageType: 'heartbeat', validationResult: 'accepted', orderingResult: 'not-run', acknowledgementStatus: 'not-applicable' })
     }
   }
 
@@ -257,6 +271,8 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       expectedAcknowledgement: lastEnvelopeSent,
       lastAcknowledgement,
       subscriberCount: statuses.size,
+      heartbeatCount,
+      lastHeartbeatTimestamp,
     }),
   }
 }

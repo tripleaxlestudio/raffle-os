@@ -42,6 +42,9 @@ export type AudienceRuntimeDiagnostics = {
   readonly stateAfterReceipt: AudienceControllerState['kind'] | undefined
   readonly lastSnapshotApplied: { readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
   readonly controllerInstanceId: string
+  readonly acceptedPublisherInstanceId: string | undefined
+  readonly acceptedEpoch: number | undefined
+  readonly acceptedSequence: number | undefined
   readonly lastPublisherActivity: string | undefined
   readonly latestHeartbeatReceived: string | undefined
   readonly watchdogArmedAt: string | undefined
@@ -75,6 +78,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   let acceptedSession = options.expectedSession
   let acceptedOrdering: SequenceTracker | undefined
   let acceptedOperator: string | undefined
+  const retiredOperators = new Set<string>()
   const sourceId = options.sourceId ?? `${options.scope.displayId}:${globalThis.crypto.randomUUID()}`
   const acceptedMessageIds = new Set<string>()
   let restoreRequested = false
@@ -83,6 +87,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   let watchdogHandle: unknown = null
   let watchdogGeneration = 0
   let closed = false
+  let retainedSnapshot: PublicDisplaySnapshot | undefined
   let unsubscribe: () => void = () => undefined
   let unsubscribeClose: () => void = () => undefined
   const traceBase = { side: 'Audience' as const, publisherControllerInstanceId: sourceId, scope: options.scope, channelName: `raffle-os-display:${options.scope.eventId}:${options.scope.displayId}`, route: options.route }
@@ -104,6 +109,9 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     stateAfterReceipt: undefined,
     lastSnapshotApplied: undefined,
     controllerInstanceId: sourceId,
+    acceptedPublisherInstanceId: undefined,
+    acceptedEpoch: undefined,
+    acceptedSequence: undefined,
     lastPublisherActivity: undefined,
     latestHeartbeatReceived: undefined,
     watchdogArmedAt: undefined,
@@ -144,6 +152,12 @@ export function createAudienceController(options: AudienceControllerOptions): Au
 
   const recordPublisherActivity = (heartbeat: boolean): void => {
     diagnostics = { ...diagnostics, lastPublisherActivity: now(), ...(heartbeat ? { latestHeartbeatReceived: now() } : {}) }
+    connection = 'connected'
+    if (retainedSnapshot !== undefined && state.kind === 'disconnected-safe') {
+      state = { kind: 'snapshot', connection, snapshot: retainedSnapshot }
+      diagnostics = { ...diagnostics, stateAfterReceipt: state.kind, disconnectedReason: undefined }
+      notify()
+    }
     armWatchdog()
   }
 
@@ -183,14 +197,19 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     const contextError = validateEnvelopeContext(envelope, options.scope)
     if (contextError !== undefined) { trace({ validationResult: 'rejected', rejectionReason: contextError.kind }); diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: contextError.kind }; return }
     const sender = `${envelope.sender.kind}:${envelope.sender.id}`
-    if (acceptedOperator !== undefined && sender !== acceptedOperator) { trace({ validationResult: 'rejected', rejectionReason: 'operator-mismatch' }); diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'operator-mismatch' }; return }
+    if (retiredOperators.has(sender)) { trace({ validationResult: 'rejected', rejectionReason: 'retired-publisher' }); diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'retired-publisher' }; return }
+    if (acceptedOperator !== undefined && sender !== acceptedOperator) {
+      if (envelope.message.type !== 'display-state') { trace({ validationResult: 'rejected', rejectionReason: 'operator-mismatch' }); diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'operator-mismatch' }; return }
+      retiredOperators.add(acceptedOperator)
+      acceptedOperator = undefined
+      acceptedOrdering = undefined
+      acceptedMessageIds.clear()
+      acceptedSession = options.expectedSession
+      restoreRequested = false
+    }
     if (envelope.message.type === 'display-heartbeat') {
-      const orderingError = acceptSequence(acceptedOrdering, envelope)
-      if (orderingError !== undefined) { trace({ validationResult: 'rejected', orderingResult: 'rejected', rejectionReason: orderingError.kind }); diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: orderingError.kind }; return }
       acceptedOperator = sender
-      acceptedMessageIds.add(envelope.messageId)
-      acceptedOrdering = { epoch: envelope.epoch, sequence: envelope.sequence }
-      diagnostics = { ...diagnostics, validationResult: 'accepted', rejectionReason: undefined }
+      diagnostics = { ...diagnostics, validationResult: 'accepted', rejectionReason: undefined, acceptedPublisherInstanceId: envelope.sender.id, acceptedEpoch: acceptedOrdering?.epoch, acceptedSequence: acceptedOrdering?.sequence }
       recordPublisherActivity(true)
       trace({ validationResult: 'accepted', orderingResult: 'accepted', controllerStateAfter: state.kind, messageType: 'heartbeat' })
       if (state.kind === 'disconnected-safe') requestRestore()
@@ -230,14 +249,18 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       if (!isSafeNonDrawState) acceptedSession ??= snapshot.drawSessionId
       restoreRequested = false
       connection = 'connected'
+      retainedSnapshot = snapshot
       state = { kind: 'snapshot', connection, snapshot }
       recordPublisherActivity(false)
       const publicState = snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw'
-      diagnostics = { ...diagnostics, validationResult: 'accepted', rejectionReason: undefined, publicState, stateAfterReceipt: state.kind }
+      diagnostics = { ...diagnostics, validationResult: 'accepted', rejectionReason: undefined, publicState, stateAfterReceipt: state.kind, acceptedPublisherInstanceId: envelope.sender.id, acceptedEpoch: envelope.epoch, acceptedSequence: envelope.sequence }
       trace({ validationResult: 'accepted', orderingResult: 'accepted', controllerStateAfter: state.kind, renderedState: publicState, acknowledgementStatus: 'pending' })
-      if (!wasConnected) sendReady()
-      sendApplied(envelope, snapshot)
       notify()
+      if (!wasConnected) sendReady()
+      // Commit and notify the controller before acknowledging. The route's
+      // subscription is therefore selected from the accepted public state;
+      // acknowledgement is never emitted for a state that remains safe-only.
+      sendApplied(envelope, snapshot)
     } catch (error: unknown) {
       // Invalid, private, cross-session, or otherwise malformed snapshots never replace safe state.
       const reason = error instanceof Error ? error.message : 'invalid-public-snapshot'

@@ -9,7 +9,7 @@ import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
 import type { CommandId } from '../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { calculateReplacementCapacity, LOCAL_OPERATOR, type PendingDecisionCommand } from '../../application/pending-decisions/index.ts'
-import { createOperatorPublisher } from '../../application/display-transport/operator-publisher.ts'
+import { createOperatorPublisher, createPublisherRuntimeIdentity } from '../../application/display-transport/operator-publisher.ts'
 import { createBroadcastChannelTransport } from '../../application/display-transport/transport.ts'
 import { projectCommittedAudienceState } from '../../application/display-transport/authoritative-projection.ts'
 import type { ProtocolScope } from '../../application/display-transport/protocol.ts'
@@ -55,14 +55,15 @@ export function ProductionPendingResultsPage() {
   const displayConfigurationId = state.status === 'ready' ? state.displayConfiguration.id : undefined
   const scopeEventId = state.status === 'ready' ? state.event.id : (drawSessionId ?? 'unresolved-event')
   const scope: ProtocolScope = useMemo(() => deriveProductionDisplayScope(scopeEventId, displayConfigurationId ?? 'unconfigured-display'), [displayConfigurationId, scopeEventId])
-  const publisher = useMemo(() => createOperatorPublisher({
+  const publisher = useMemo(() => { const runtime = createPublisherRuntimeIdentity(); return createOperatorPublisher({
     transport: createBroadcastChannelTransport('raffle-os-display', scope),
     transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope),
     scope,
-    senderId: `operator:pending:${drawSessionId ?? 'unknown'}`,
+    senderId: runtime.publisherInstanceId,
+    epoch: runtime.epoch,
     expectedSession: drawSessionId,
     clock: { now: () => new Date().toISOString() as IsoTimestamp },
-  }), [drawSessionId, scope])
+  }) }, [drawSessionId, scope])
 
   const load = useCallback(async () => {
     setState({ status: 'loading' })

@@ -75,11 +75,11 @@ describe('production Settings display-test integration', () => {
         expect(screen.getByText('Waiting for the next presentation')).toBeVisible()
       }
 
-    expect(stateEnvelopes.map((envelope) => envelope.sequence)).toEqual(Array.from({ length: 12 }, (_, index) => index + 1))
+    expect(stateEnvelopes.map((envelope) => envelope.sequence)).toEqual([1, 1, ...Array.from({ length: 10 }, (_, index) => index + 2)])
     expect(stateEnvelopes.every((envelope) => envelope.epoch === 1)).toBe(true)
     expect(statuses).toHaveLength(11)
-    expect(statuses.at(-1)).toBe('standby:1/12')
-    expect(publisher.getDiagnostics()).toMatchObject({ epoch: 1, sequence: 12, lastAcknowledgement: { epoch: 1, sequence: 12 } })
+    expect(statuses.at(-1)).toBe('standby:1/11')
+    expect(publisher.getDiagnostics()).toMatchObject({ epoch: 1, sequence: 11, lastAcknowledgement: { epoch: 1, sequence: 11 } })
 
     publisher.close(); observerTransport.close(); operatorTransport.close(); audienceTransport.close()
   })

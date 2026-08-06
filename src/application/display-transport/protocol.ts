@@ -82,6 +82,7 @@ export type ProtocolEnvelope = {
 };
 
 export type ProtocolEnvelopeFactory = (input: {
+  readonly messageId?: string;
   readonly sender: ProtocolSender;
   readonly scope: ProtocolScope;
   readonly drawSessionId?: string;
@@ -93,7 +94,7 @@ export type ProtocolEnvelopeFactory = (input: {
 
 export const createProtocolEnvelope: ProtocolEnvelopeFactory = (input) => ({
   protocolVersion: PROTOCOL_VERSION,
-  messageId: `${input.sender.kind}:${input.sender.id}:${input.epoch}:${input.sequence}`,
+  messageId: input.messageId ?? `${input.sender.kind}:${input.sender.id}:${input.epoch}:${input.sequence}`,
   sender: { ...input.sender },
   scope: { ...input.scope },
   ...(input.drawSessionId === undefined ? {} : { drawSessionId: input.drawSessionId }),

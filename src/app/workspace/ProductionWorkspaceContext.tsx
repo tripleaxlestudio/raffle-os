@@ -5,7 +5,7 @@ import type { AppMode } from '../../domain/types/app-mode.ts'
 import type { DisplayConfiguration } from '../../domain/display/display-configuration.types.ts'
 import { DEFAULT_EVENT_SETTINGS, type EventSettings } from '../../domain/settings/event-settings.types.ts'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
-import { createOperatorPublisher, type OperatorPublisher, type PublisherResult, type PublisherStatus } from '../../application/display-transport/operator-publisher.ts'
+import { createOperatorPublisher, createPublisherRuntimeIdentity, type OperatorPublisher, type PublisherResult, type PublisherStatus } from '../../application/display-transport/operator-publisher.ts'
 import { createBroadcastChannelTransport } from '../../application/display-transport/transport.ts'
 import type { PresentationProjectionSource, PublicDisplaySnapshot } from '../../application/display-transport/public-projection.ts'
 import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
@@ -125,11 +125,13 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
     const parsed = parseDrawSessionId(state.event.id)
     if (!parsed.ok) return
     const scope = { eventId: state.event.id, displayId: state.displayConfiguration.id }
+    const runtime = createPublisherRuntimeIdentity()
     const publisher = createOperatorPublisher({
       transport: createBroadcastChannelTransport('raffle-os-display', scope),
       transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope),
       scope,
-      senderId: `operator:${state.event.id}:${state.displayConfiguration.id}`,
+      senderId: runtime.publisherInstanceId,
+      epoch: runtime.epoch,
       clock: { now: () => new Date().toISOString() as IsoTimestamp },
     })
     publisherRef.current = publisher

@@ -84,12 +84,14 @@ export const createInMemoryTransportPair = (channelName: string, capability: Tra
       const parsed = parseEnvelope(value);
       if (!parsed.ok) return;
       const senderKey = `${parsed.envelope.sender.kind}:${parsed.envelope.sender.id}`;
-      const orderingError = acceptSequence(lastBySender.get(senderKey), parsed.envelope);
-      if (orderingError !== undefined) {
-        if (orderingError.kind === 'sequence-out-of-order') return;
-        return;
+      if (parsed.envelope.message.type !== 'display-heartbeat' && !(parsed.envelope.message.type === 'display-state' && parsed.envelope.message.restore === true)) {
+        const orderingError = acceptSequence(lastBySender.get(senderKey), parsed.envelope);
+        if (orderingError !== undefined) {
+          if (orderingError.kind === 'sequence-out-of-order') return;
+          return;
+        }
+        lastBySender.set(senderKey, parsed.envelope);
       }
-      lastBySender.set(senderKey, parsed.envelope);
       subscriptions.forEach((listener) => {
         try {
           listener(parsed.envelope);

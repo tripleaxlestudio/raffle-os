@@ -9,13 +9,11 @@ import { PresentationController, type PresentationClock, type PresentationContro
 import { PRESENTATION_POLICY } from '../../../application/workflow/presentation-policy.ts'
 import { PresentationError, safePresentationMessage } from '../../../application/workflow/presentation-errors.ts'
 import type { PresentationResultProjection } from '../../../application/workflow/presentation-projection.ts'
-import { createOperatorPublisher, type OperatorPublisher } from '../../../application/display-transport/operator-publisher.ts'
+import { createOperatorPublisher, createPublisherRuntimeIdentity, type OperatorPublisher } from '../../../application/display-transport/operator-publisher.ts'
 import { createBroadcastChannelTransport } from '../../../application/display-transport/transport.ts'
 import type { ProtocolScope } from '../../../application/display-transport/protocol.ts'
 import { deriveProductionDisplayScope } from '../../../application/display/display-configuration-service.ts'
 import { Button, Card } from '../../../shared/ui/index.ts'
-
-let publisherLifecycleEpoch = 0
 
 interface ProductionDrawPresentationProps {
   readonly result: PresentationResultProjection
@@ -41,7 +39,7 @@ export function ProductionDrawPresentation({ result, mode, eventName, eventId = 
   const [controllerState, setControllerState] = useState<PresentationControllerState>({ stage: 'result-locked', countdownLabel: null, error: null })
   const [blackoutRequested, setBlackoutRequested] = useState(initialPresentation?.blackoutRequested ?? false)
   const scope: ProtocolScope = useMemo(() => deriveProductionDisplayScope(eventId, displayConfigurationId), [displayConfigurationId, eventId])
-  const localPublisher = useMemo(() => createOperatorPublisher({ transport: createBroadcastChannelTransport('raffle-os-display', scope), transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope), scope, senderId: `operator:${eventId}:${result.drawSessionId}`, expectedSession: result.drawSessionId, epoch: ++publisherLifecycleEpoch, clock: { now: () => new Date().toISOString() as IsoTimestamp } }), [eventId, result.drawSessionId, scope])
+  const localPublisher = useMemo(() => { const runtime = createPublisherRuntimeIdentity(); return createOperatorPublisher({ transport: createBroadcastChannelTransport('raffle-os-display', scope), transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope), scope, senderId: runtime.publisherInstanceId, expectedSession: result.drawSessionId, epoch: runtime.epoch, clock: { now: () => new Date().toISOString() as IsoTimestamp } }) }, [result.drawSessionId, scope])
   const publisher = sharedPublisher ?? localPublisher
   const sourceForState = useCallback((next: PresentationControllerState) => next.stage === 'failed' || next.stage === 'result-locked'
     ? { drawSessionId: result.drawSessionId, stage: 'ready' as const, blackoutRequested: next.blackoutRequested ?? false, mode, result }

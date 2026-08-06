@@ -60,6 +60,8 @@ function AudienceDevelopmentDiagnostics({ controller, renderedState }: { readonl
     <div><dt>Rendered presentation</dt><dd>{renderedState}</dd></div>
     <div><dt>Last snapshot-applied acknowledgement</dt><dd>{diagnostics.lastSnapshotApplied === undefined ? '—' : `${diagnostics.lastSnapshotApplied.publicState} @ ${diagnostics.lastSnapshotApplied.epoch}/${diagnostics.lastSnapshotApplied.sequence}`}</dd></div>
     <div><dt>Controller instance</dt><dd>{diagnostics.controllerInstanceId}</dd></div>
+    <div><dt>Accepted publisher runtime</dt><dd>{diagnostics.acceptedPublisherInstanceId ?? '—'}</dd></div>
+    <div><dt>Accepted epoch / presentation sequence</dt><dd>{diagnostics.acceptedEpoch ?? '—'} / {diagnostics.acceptedSequence ?? '—'}</dd></div>
     <div><dt>Last publisher activity</dt><dd>{diagnostics.lastPublisherActivity ?? '-'}</dd></div>
     <div><dt>Latest heartbeat</dt><dd>{diagnostics.latestHeartbeatReceived ?? '-'}</dd></div>
     <div><dt>Watchdog armed at</dt><dd>{diagnostics.watchdogArmedAt ?? '-'}</dd></div>

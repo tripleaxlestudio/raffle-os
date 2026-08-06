@@ -32,7 +32,7 @@ describe('draw authoring service', () => {
     expect((result as { ok: true; record: { session: { status: string; mode: string } } }).record.session).toMatchObject({ status: 'ready', mode: 'practice' })
   })
 
-  it.each([0, 101, 1.5, 'not-a-number'])('rejects invalid winner count %s', async (requestedWinners) => {
+  it.each(['', 0, 101, 1.5, 'not-a-number'])('rejects invalid winner count %s', async (requestedWinners) => {
     const result = await createDrawAuthoringService(makeRepositories()).save({ ...validDraft, requestedWinners })
     expect(result).toMatchObject({ ok: false, error: { code: 'invalid-winner-count' } })
   })

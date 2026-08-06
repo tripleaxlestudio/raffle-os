@@ -9,99 +9,107 @@ import { DrawSetupPage } from './DrawSetupPage.tsx'
 
 const event = { id: 'event-1', name: 'Persisted Gala', status: 'draft', createdAt: '2026-07-31T08:00:00.000Z', updatedAt: '2026-07-31T08:00:00.000Z' } as const
 const category = { id: 'category-1', eventId: event.id, name: 'Grand Prize', prizeName: 'Electric Vehicle', displayOrder: 1, createdAt: event.createdAt } as const
+const alternateCategory = { ...category, id: 'category-2', name: 'Second Prize', prizeName: 'Travel Voucher' } as const
 const configuration = { id: 'configuration-1', eventId: event.id, prizeCategoryId: category.id, requestedWinners: 1, winningRule: 'once-per-event', requireCheckIn: true, eligibleGroupFilter: null, createdAt: event.createdAt, updatedAt: event.updatedAt } as const
 const session = { id: 'session-1', eventId: event.id, configurationId: configuration.id, mode: 'practice', status: 'ready', configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: event.createdAt, updatedAt: event.updatedAt } as const
-const record = { event, category, configuration, session, eligibleCount: 4 } as unknown as DrawAuthoringRecord
+const record = { event, category, configuration, session, eligibleCount: 1 } as unknown as DrawAuthoringRecord
+const participants = [
+  { id: 'participant-1', eventId: event.id, ticketNumber: '00042', isCheckedIn: true, group: 'VIP', createdAt: event.createdAt, updatedAt: event.updatedAt },
+  { id: 'participant-2', eventId: event.id, ticketNumber: '00043', isCheckedIn: false, group: 'VIP', createdAt: event.createdAt, updatedAt: event.updatedAt },
+] as const
 
-function services(overrides: { record?: DrawAuthoringRecord | null; event?: typeof event | null; save?: DrawSetupProductionServices['authoringService'] extends infer S ? S extends { save: (...args: never[]) => unknown } ? S['save'] : never : never; conflict?: 'drawing' | 'pending-confirmation'; conflictAfterSave?: 'drawing' | 'pending-confirmation' } = {}) {
+function services(overrides: { record?: DrawAuthoringRecord | null; event?: typeof event | null; categories?: readonly (typeof category | typeof alternateCategory)[]; participants?: readonly typeof participants[number][]; save?: DrawSetupProductionServices['authoringService'] extends infer S ? S extends { save: (...args: never[]) => unknown } ? S['save'] : never : never; conflict?: 'drawing' | 'pending-confirmation'; conflictAfterSave?: 'drawing' | 'pending-confirmation' } = {}) {
   const current = overrides.record === undefined ? record : overrides.record
-  const load = vi.fn(async () => ({ ok: true as const, event: overrides.event === undefined ? event : overrides.event, categories: [category], record: current }))
+  const load = vi.fn(async () => ({ ok: true as const, event: overrides.event === undefined ? event : overrides.event, categories: overrides.categories ?? [category], record: current }))
   let activeConflict = overrides.conflict
   const save = overrides.save ?? vi.fn(async () => { activeConflict = overrides.conflictAfterSave; return { ok: true as const, record: current ?? record } })
-  const participant = { id: 'participant-1', eventId: event.id, ticketNumber: '00042', isCheckedIn: true, createdAt: event.createdAt, updatedAt: event.updatedAt }
-  return { open: vi.fn(async () => undefined), checkStorage: vi.fn(async () => ({ ok: true as const })), checkCrypto: vi.fn(async () => ({ ok: true as const })), preferences: { get: vi.fn(async () => event.id) }, events: { findById: vi.fn(async () => event) }, configurations: { findById: vi.fn(async () => configuration) }, categories: { findById: vi.fn(async () => category) }, sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => activeConflict === undefined ? [session] : [session, { ...session, id: 'live-conflict', mode: 'live' as const, status: activeConflict }]) }, participants: { countByEventId: vi.fn(async () => 1), findByEventId: vi.fn(async () => [participant]) }, winners: { findByEventId: vi.fn(async () => []) }, authoringService: { load, save }, } as unknown as DrawSetupProductionServices
+  const selectedParticipants = overrides.participants ?? participants
+  return { open: vi.fn(async () => undefined), checkStorage: vi.fn(async () => ({ ok: true as const })), checkCrypto: vi.fn(async () => ({ ok: true as const })), preferences: { get: vi.fn(async () => event.id) }, events: { findById: vi.fn(async () => event) }, configurations: { findById: vi.fn(async () => configuration) }, categories: { findById: vi.fn(async () => category) }, sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => activeConflict === undefined ? [session] : [session, { ...session, id: 'live-conflict', mode: 'live' as const, status: activeConflict }]) }, participants: { countByEventId: vi.fn(async () => selectedParticipants.length), findByEventId: vi.fn(async () => selectedParticipants) }, winners: { findByEventId: vi.fn(async () => []) }, authoringService: { load, save }, } as unknown as DrawSetupProductionServices
 }
 
 function renderPage(value: DrawSetupProductionServices) { return render(<MemoryRouter><DrawSetupPage services={value} /></MemoryRouter>) }
 
 describe('Draw Setup persisted authoring', () => {
-  it('shows a safe empty Event state', async () => {
-    renderPage(services({ event: null, record: null }))
-    expect(await screen.findByText('Create or select an Event first')).toBeInTheDocument()
-    expect(screen.queryByText('Electric Vehicle')).not.toBeInTheDocument()
+  it('keeps Event read-only and follows the selected persisted category prize', async () => {
+    const user = userEvent.setup()
+    renderPage(services({ categories: [category, alternateCategory] }))
+    expect(await screen.findByDisplayValue('Persisted Gala')).toBeDisabled()
+    const categorySelect = screen.getByLabelText('Prize category')
+    await user.selectOptions(categorySelect, alternateCategory.id)
+    expect(screen.getByDisplayValue('Travel Voucher')).toHaveAttribute('readonly')
   })
 
-  it('loads persisted values and saves without duplicate submission', async () => {
+  it('shows quick counts with pressed semantics and updates the same winner field', async () => {
+    const user = userEvent.setup()
+    renderPage(services())
+    await screen.findByRole('button', { name: '6' })
+    await user.click(screen.getByRole('button', { name: '6' }))
+    expect(screen.getByRole('button', { name: '6' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Custom winner count')).toHaveValue(6)
+    expect(screen.getByText('Save changes to evaluate eligibility and readiness.')).toBeInTheDocument()
+  })
+
+  it('saves requestedWinners through the existing authoring service', async () => {
     const user = userEvent.setup()
     const save = vi.fn(async () => ({ ok: true as const, record }))
     renderPage(services({ save }))
-    expect(await screen.findByDisplayValue('1')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Electric Vehicle')).toHaveAttribute('readonly')
-    await user.clear(screen.getByLabelText('Winner count'))
-    await user.type(screen.getByLabelText('Winner count'), '6')
+    await screen.findByDisplayValue('1')
+    await user.click(screen.getByRole('button', { name: '20' }))
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect(save).toHaveBeenCalledTimes(1)
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ requestedWinners: '20' }))
   })
 
-  it('distinguishes Practice and Live textually and preserves validation errors', async () => {
+  it('preserves the custom 1–100 input and validation errors', async () => {
     const user = userEvent.setup()
     const save = vi.fn(async () => ({ ok: false as const, error: new DrawAuthoringError('invalid-winner-count', 'Winner count must be an integer from 1 through 100.') }))
     renderPage(services({ save }))
-    await screen.findByText('Prize name')
-    await user.click(screen.getByRole('radio', { name: 'Live' }))
-    expect(screen.getByText(/Mode is stored on the ready DrawSession/i)).toBeInTheDocument()
+    const input = await screen.findByLabelText('Custom winner count')
+    expect(input).toHaveAttribute('min', '1')
+    expect(input).toHaveAttribute('max', '100')
+    await user.clear(input)
+    await user.type(input, '6')
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect(await screen.findByText(/Winner count must be an integer/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Winner count must be an integer from 1 through 100/i)).toBeInTheDocument()
   })
 
-  it('renders mode options and readiness as separate accessible items', async () => {
+  it('shows authoritative capacity diagnostics and readiness', async () => {
     renderPage(services())
-    expect(await screen.findByRole('radio', { name: 'Practice' })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Live' })).toBeInTheDocument()
-    expect(screen.getByText('Rehearsal only. No official result is created.')).toBeInTheDocument()
-    expect(screen.getByText('Official session. Result becomes pending after the start gate.')).toBeInTheDocument()
-    expect(screen.getByText('Eligible participants')).toBeInTheDocument()
+    expect(await screen.findByText('Total participants')).toBeInTheDocument()
+    expect(screen.getByText('Checked-in participants')).toBeInTheDocument()
+    expect(screen.getByText('Previous winners excluded')).toBeInTheDocument()
+    expect(screen.getAllByText('Eligible pool')).toHaveLength(2)
     expect(screen.getByText('Requested winners')).toBeInTheDocument()
-    expect(screen.getByText('Storage')).toBeInTheDocument()
-    expect(screen.getByText('Secure Web Crypto')).toBeInTheDocument()
-    expect(screen.getAllByText('1', { selector: 'dd' })).toHaveLength(2)
-    expect(screen.getAllByText('Ready', { selector: 'dd' })).toHaveLength(2)
+    expect(screen.getByRole('heading', { name: 'Draw is ready for handoff' })).toBeInTheDocument()
   })
 
-  it('marks a dirty form as needing save without evaluating draft state', async () => {
+  it('does not claim authoritative readiness while dirty and blocks handoff', async () => {
     const user = userEvent.setup()
     renderPage(services())
-    await screen.findByRole('radio', { name: 'Practice' })
-    await user.clear(screen.getByLabelText('Winner count'))
-    await user.type(screen.getByLabelText('Winner count'), '2')
-    expect(screen.getByText('Save changes to evaluate', { selector: 'dd' })).toBeInTheDocument()
-    expect(screen.queryByText('Checking…')).not.toBeInTheDocument()
+    await screen.findByLabelText('Custom winner count')
+    await user.clear(screen.getByLabelText('Custom winner count'))
+    await user.type(screen.getByLabelText('Custom winner count'), '2')
+    expect(screen.getByText('Save changes to evaluate eligibility and readiness.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Open Practice start gate' })).toBeDisabled()
+    expect(screen.getAllByText('—')).toHaveLength(5)
   })
 
-  it('refreshes readiness after one successful save and reflects a conflict', async () => {
+  it('refreshes readiness after save and preserves Live conflict blocking', async () => {
     const user = userEvent.setup()
     const value = services({ conflictAfterSave: 'pending-confirmation' })
     renderPage(value)
-    await screen.findByRole('radio', { name: 'Practice' })
-    await user.clear(screen.getByLabelText('Winner count'))
-    await user.type(screen.getByLabelText('Winner count'), '2')
+    await screen.findByLabelText('Custom winner count')
+    await user.click(screen.getByRole('button', { name: '6' }))
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect(await screen.findByText('Not evaluated', { selector: 'dd' })).toBeInTheDocument()
-    expect(screen.queryByText('Save changes to evaluate')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Draw handoff is blocked' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Another Live session must be resolved' })).toBeInTheDocument()
+    expect(screen.getByText(/Eligibility was not evaluated because an active or pending Live session/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Open Practice start gate' })).toBeDisabled()
-    expect((value as unknown as { checkStorage: { mock: { calls: unknown[][] } } }).checkStorage.mock.calls.length).toBeGreaterThanOrEqual(2)
   })
 
-  it.each(['pending-confirmation', 'drawing'] as const)('%s conflict resolves every readiness row', async (conflict) => {
-    renderPage(services({ conflict }))
-    expect(await screen.findByRole('heading', { name: 'Draw handoff is blocked' })).toBeInTheDocument()
-    expect(screen.getByText(/Eligibility was not evaluated because an active or pending Live session/i)).toBeInTheDocument()
-    expect(screen.queryByText('Checking…')).not.toBeInTheDocument()
-    expect(screen.getByText('Not evaluated', { selector: 'dd' })).toBeInTheDocument()
-    expect(screen.getByText('Storage', { selector: 'dt' })).toBeInTheDocument()
-    expect(screen.getAllByText('Ready', { selector: 'dd' })).toHaveLength(2)
-    expect(screen.getByRole('button', { name: 'Open Practice start gate' })).toBeDisabled()
+  it('keeps started sessions immutable and preserves Live distinction', async () => {
+    const startedRecord = { ...record, session: { ...session, status: 'drawing' as const } } as unknown as DrawAuthoringRecord
+    renderPage(services({ record: startedRecord }))
+    expect(await screen.findByRole('heading', { name: 'This DrawSession is not editable' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Custom winner count')).toBeDisabled()
+    expect(screen.getByRole('radio', { name: 'Live' })).toBeDisabled()
   })
 })

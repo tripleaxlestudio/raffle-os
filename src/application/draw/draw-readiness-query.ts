@@ -42,7 +42,18 @@ export async function queryDrawReadiness(
     const officialSessions = sessions.filter((candidate) => candidate.mode === 'live').map((candidate) => ({ id: candidate.id, eventId: candidate.eventId, configurationId: candidate.configurationId, prizeCategoryId: configuration.prizeCategoryId, mode: candidate.mode, status: candidate.status }))
     const eligibility = evaluateEligibility({ activeEvent: event, drawConfiguration: configuration, prizeCategory: category, mode: session.mode, participants, winnerRecords: winners, ruleContext: { officialSessions } })
     if (!eligibility.ok) return blocked('failed', 'Authoritative eligibility could not be evaluated from persisted data.', true, 'eligibility-failed')
-    const data: DrawReadinessData = { event, category, configuration, session, authoritativeEligibleCount: eligibility.value.eligibleCount, requestedWinnerCount: configuration.requestedWinners, mode: session.mode }
+    const data: DrawReadinessData = {
+      event,
+      category,
+      configuration,
+      session,
+      authoritativeEligibleCount: eligibility.value.eligibleCount,
+      totalParticipantCount: participants.length,
+      checkedInParticipantCount: participants.filter((participant) => participant.isCheckedIn).length,
+      previousWinnerExcludedCount: eligibility.value.decisions.filter((decision) => decision.exclusionReasons.includes('previously-confirmed-winner')).length,
+      requestedWinnerCount: configuration.requestedWinners,
+      mode: session.mode,
+    }
     if (session.status !== 'ready') return { state: 'session-not-ready', data, reason: `This DrawSession is ${session.status.replace('-', ' ')} and is not a startable session.`, retryable: false, errorCode: 'session-not-ready' }
     if (eligibility.value.eligibleCount < configuration.requestedWinners) return { state: 'insufficient-capacity', data, reason: `There are ${eligibility.value.eligibleCount} eligible participants for ${configuration.requestedWinners} requested winners. Reduce the winner count or correct participant eligibility.`, retryable: false, errorCode: 'insufficient-capacity' }
     return { state: 'ready', data, retryable: false }

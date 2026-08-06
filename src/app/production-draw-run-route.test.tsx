@@ -18,9 +18,9 @@ const mocks = vi.hoisted(() => {
   const configuration = { id: '00000000-0000-4000-8000-000000000004', eventId: event.id, prizeCategoryId: category.id, requestedWinners: 1, winningRule: 'once-per-event', requireCheckIn: false, eligibleGroupFilter: null } as DrawConfiguration
   const session = { id: sessionId, eventId: event.id, configurationId: configuration.id, mode: 'live', status: 'ready', configurationSnapshot: null, candidatePoolSnapshot: null } as DrawSession
   const readiness = (id: string): DrawReadinessResult => id === sessionId
-    ? { state: 'ready', retryable: false, data: { event, category, configuration, session, authoritativeEligibleCount: 1, requestedWinnerCount: 1, mode: 'live' } }
+    ? { state: 'ready', retryable: false, data: { event, category, configuration, session, authoritativeEligibleCount: 1, totalParticipantCount: 2, checkedInParticipantCount: 1, previousWinnerExcludedCount: 0, requestedWinnerCount: 1, mode: 'live' } }
     : id === practiceSessionId
-      ? { state: 'ready', retryable: false, data: { event, category, configuration: { ...configuration, requestedWinners: 2 }, session: { ...session, id: practiceSessionId, mode: 'practice' }, authoritativeEligibleCount: 5, requestedWinnerCount: 2, mode: 'practice' } }
+      ? { state: 'ready', retryable: false, data: { event, category, configuration: { ...configuration, requestedWinners: 2 }, session: { ...session, id: practiceSessionId, mode: 'practice' }, authoritativeEligibleCount: 5, totalParticipantCount: 6, checkedInParticipantCount: 5, previousWinnerExcludedCount: 0, requestedWinnerCount: 2, mode: 'practice' } }
       : { state: 'missing-session', retryable: false, reason: 'This DrawSession no longer exists.', errorCode: 'session-not-found' }
   const command = vi.fn()
   return { sessionId, practiceSessionId, readiness, command, event }

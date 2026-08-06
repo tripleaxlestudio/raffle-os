@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { queryDrawReadiness } from './draw-readiness-query.ts'
 import { ACCEPTANCE_SEED_IDS, getAcceptanceSeedDrawConfigurations, getAcceptanceSeedDrawSessions, getAcceptanceSeedEvents, getAcceptanceSeedParticipants, getAcceptanceSeedPrizeCategories } from '../../infrastructure/persistence/seed/dev-seed-fixtures.ts'
+import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
 
 function dependencies(overrides: Record<string, unknown> = {}) {
   const event = getAcceptanceSeedEvents()[0]
@@ -26,8 +27,36 @@ describe('queryDrawReadiness', () => {
     const result = await queryDrawReadiness(ACCEPTANCE_SEED_IDS.practiceSession, dependencies())
     expect(result.state).toBe('ready')
     expect(result.data?.authoritativeEligibleCount).toBe(4)
+    expect(result.data?.totalParticipantCount).toBe(6)
+    expect(result.data?.checkedInParticipantCount).toBe(4)
+    expect(result.data?.previousWinnerExcludedCount).toBe(0)
     expect(result.data?.requestedWinnerCount).toBe(2)
     expect(result.data).not.toHaveProperty('participants')
+  })
+
+  it('reports authoritative group and previous-winner exclusions', async () => {
+    const event = getAcceptanceSeedEvents()[0]
+    const category = getAcceptanceSeedPrizeCategories()[0]
+    const configuration = { ...getAcceptanceSeedDrawConfigurations()[0], eligibleGroupFilter: 'VIP', requireCheckIn: false }
+    const participants = getAcceptanceSeedParticipants()
+    const previousWinner = {
+      id: 'aaaaaaa5-0000-4000-8000-000000000090',
+      eventId: event.id,
+      prizeCategoryId: category.id,
+      drawSessionId: ACCEPTANCE_SEED_IDS.liveSession,
+      participantId: participants[0].id,
+      ticketNumber: participants[0].ticketNumber,
+      sequenceNumber: 1,
+      status: 'confirmed',
+      confirmedAt: '2026-07-31T08:45:00.000Z',
+      createdAt: '2026-07-31T08:30:00.000Z',
+      updatedAt: '2026-07-31T08:45:00.000Z',
+    } as unknown as WinnerRecord
+    const result = await queryDrawReadiness(ACCEPTANCE_SEED_IDS.liveSession, dependencies({ configurations: { findById: vi.fn(async () => configuration) }, categories: { findById: vi.fn(async () => category) }, events: { findById: vi.fn(async () => event) }, participants: { countByEventId: vi.fn(async () => participants.length), findByEventId: vi.fn(async () => participants) }, winners: { findByEventId: vi.fn(async () => [previousWinner]) } }))
+    expect(result.state).toBe('ready')
+    expect(result.data?.checkedInParticipantCount).toBe(4)
+    expect(result.data?.previousWinnerExcludedCount).toBe(1)
+    expect(result.data?.authoritativeEligibleCount).toBe(2)
   })
 
   it('blocks insufficient capacity without invoking a draw command', async () => {

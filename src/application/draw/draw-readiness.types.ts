@@ -16,6 +16,9 @@ export interface DrawReadinessData {
   readonly configuration: DrawConfiguration
   readonly session: DrawSession
   readonly authoritativeEligibleCount: number
+  readonly totalParticipantCount: number
+  readonly checkedInParticipantCount: number
+  readonly previousWinnerExcludedCount: number
   readonly requestedWinnerCount: number
   readonly mode: AppMode
 }

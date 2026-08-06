@@ -2710,6 +2710,7 @@
 .settings-display-config { display: grid; gap: var(--space-2); }
 .settings-display-config label { display: grid; gap: var(--space-2); color: var(--text-secondary); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
 .settings-display-preview { position: relative; overflow: hidden; align-content: center; min-height: 18rem; background: linear-gradient(135deg, color-mix(in srgb, var(--preview-primary) 30%, #10141d), color-mix(in srgb, var(--preview-accent) 22%, #07090d)); }
+.settings-display-preview, .audience-preview-surface { background-image: var(--audience-background-image, linear-gradient(180deg, #100720 0%, var(--app-bg) 100%)); background-size: cover; background-position: center; background-repeat: no-repeat; }
 .settings-display-preview__label { color: #d7dce6; font: var(--font-weight-semibold) .65rem var(--font-family-mono); letter-spacing: .12em; }
 .settings-display-preview__safe-area { position: absolute; inset: 10%; border: 1px dashed rgba(255,255,255,.62); border-radius: var(--radius-sm); }
 .settings-display-meta { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-muted); }

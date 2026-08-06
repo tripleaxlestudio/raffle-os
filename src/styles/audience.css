@@ -74,6 +74,53 @@
     color: var(--text-primary);
   }
 
+  .audience-presentation-surface {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .audience-presentation-surface::after {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(7 9 13 / 0.18), rgb(7 9 13 / 0.66));
+    content: "";
+  }
+
+  .audience-preview-surface {
+    aspect-ratio: 16 / 9;
+    height: auto;
+    min-height: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+  }
+
+  .audience-preview-surface__message {
+    align-self: center;
+    max-width: min(70rem, 86vw);
+    padding-block: 2vh 8vh;
+  }
+
+  .audience-preview-surface__message h1 {
+    max-width: 15ch;
+    margin: 1rem 0 0;
+    color: var(--text-primary);
+    font-size: clamp(1.5rem, 4.5vw, 4rem);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: -0.055em;
+    line-height: 0.95;
+  }
+
+  .audience-preview-surface__label {
+    position: absolute;
+    right: var(--audience-safe-inline);
+    bottom: var(--audience-safe-block);
+    color: rgb(255 255 255 / 0.72);
+    font: var(--font-weight-semibold) 0.62rem var(--font-family-mono);
+    letter-spacing: 0.12em;
+  }
+
   .audience-stage::before {
     position: absolute;
     z-index: -1;

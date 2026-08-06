@@ -12,7 +12,7 @@ export function AudienceStage({
   className,
   state,
 }: AudienceStageProps) {
-  const classes = ['audience-stage', `audience-stage--${state}`, className]
+  const classes = ['audience-stage', 'audience-presentation-surface', `audience-stage--${state}`, className]
     .filter(Boolean)
     .join(' ')
 

@@ -1,9 +1,17 @@
 import { useId } from 'react'
-import type { PrototypeAudiencePreview } from '../../../prototype/operator-types.ts'
 import { Badge } from '../../../shared/ui/index.ts'
 
+interface AudiencePreviewData {
+  readonly eventName: string
+  readonly prizeName: string
+  readonly resolution: string
+  readonly stateLabel: string
+  readonly tickets: readonly string[]
+  readonly winnerCount: number
+}
+
 interface AudiencePreviewProps {
-  preview: PrototypeAudiencePreview
+  preview: AudiencePreviewData
 }
 
 export function AudiencePreview({ preview }: AudiencePreviewProps) {

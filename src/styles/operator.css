@@ -3184,7 +3184,7 @@
   .winner-count-controls {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(12rem, 15rem);
-    align-items: end;
+    align-items: start;
     gap: var(--space-3);
   }
 
@@ -3213,6 +3213,10 @@
 
   .winner-count-controls .ui-field {
     margin: 0;
+  }
+
+  .winner-count-controls > .ui-field .ui-input {
+    min-height: 3rem;
   }
 
   .eligibility-control-grid > .ui-check {

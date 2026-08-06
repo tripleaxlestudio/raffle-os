@@ -44,6 +44,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   let acceptedSession = options.expectedSession
   let acceptedOrdering: SequenceTracker | undefined
   let acceptedOperator: string | undefined
+  const sourceId = options.sourceId ?? `${options.scope.displayId}:${globalThis.crypto.randomUUID()}`
   const acceptedMessageIds = new Set<string>()
   let restoreRequested = false
   let reconnectHandle: unknown = null
@@ -59,7 +60,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   const send = (message: ProtocolEnvelope['message'], sequence: number): void => {
     if (closed || currentTransport.capability.transport !== 'available') return
     currentTransport.publish(createProtocolEnvelope({
-      sender: { kind: 'display', id: options.sourceId ?? options.scope.displayId },
+      sender: { kind: 'display', id: sourceId },
       scope: options.scope,
       ...(acceptedSession === undefined ? {} : { drawSessionId: acceptedSession }),
       epoch: 1,

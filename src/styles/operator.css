@@ -2625,6 +2625,20 @@
 .settings-form-grid--branding { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .settings-form-grid label { display: grid; gap: var(--space-2); color: var(--text-secondary); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
 .settings-form-grid select, .settings-form-grid input { min-height: var(--control-height-md); padding: 0 var(--space-3); border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-muted); color: var(--text-primary); font: inherit; }
+.settings-color-field > span { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); gap: var(--space-2); }
+.settings-color-field input[type=color] { width: 3.5rem; padding: .25rem; }
+.settings-color-field input[type=text], .settings-color-field input:not([type]) { min-width: 0; }
+.settings-presentation-grid, .settings-display-grid { display: grid; gap: var(--space-5); }
+.settings-safe-area-preview { position: relative; aspect-ratio: 16 / 9; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: #07090d; color: var(--text-muted); font-size: var(--font-size-xs); }
+.settings-safe-area-preview::before { content: ''; position: absolute; inset: 12%; border: 1px dashed var(--accent-hover); border-radius: var(--radius-sm); }
+.settings-volume-control { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-3); min-height: var(--control-height-md); }
+.settings-volume-control input { min-height: auto !important; padding: 0 !important; border: 0 !important; background: transparent !important; }
+.settings-volume-control output { color: var(--text-primary); font-family: var(--font-family-mono); }
+.settings-display-preview { aspect-ratio: 16 / 9; display: grid; align-content: center; justify-items: center; gap: var(--space-2); padding: var(--space-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: linear-gradient(135deg, color-mix(in srgb, var(--preview-primary) 25%, #10141d), color-mix(in srgb, var(--preview-accent) 18%, #07090d)); text-align: center; }
+.settings-display-preview strong { font-size: var(--font-size-lg); color: #fff; }
+.settings-display-preview span, .settings-display-preview small { color: #d7dce6; }
+.settings-display-actions details { max-width: 24rem; color: var(--text-secondary); font-size: var(--font-size-xs); }
+.settings-display-actions summary { cursor: pointer; color: var(--text-primary); font-weight: var(--font-weight-semibold); }
 .settings-form-grid span { color: var(--text-muted); font-size: .7rem; font-weight: normal; }
 .settings-action-row { justify-content: flex-start; padding-top: var(--space-4); border-top: 1px solid var(--border-default); }
 .settings-action-row [role=status] { color: var(--text-muted); font-size: var(--font-size-xs); }

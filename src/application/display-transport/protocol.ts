@@ -57,6 +57,12 @@ export type PublicMessage =
       readonly requestedSequence?: number;
     }
   | {
+      readonly type: 'display-snapshot-applied';
+      readonly appliedEpoch: number;
+      readonly appliedSequence: number;
+      readonly publicState: 'display-test' | 'standby' | 'draw';
+    }
+  | {
       readonly type: 'display-close';
     };
 
@@ -172,8 +178,9 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
   if (messageType === 'display-state' && validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
   if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'ticketNumbers', 'winnerStatuses', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
   if (messageType === 'display-restore-request' && !hasOnlyKeys(message, ['type', 'requestedEpoch', 'requestedSequence'])) return invalid('message', 'Restore request contains unsupported fields.');
+  if (messageType === 'display-snapshot-applied' && !hasOnlyKeys(message, ['type', 'appliedEpoch', 'appliedSequence', 'publicState'])) return invalid('message', 'Snapshot acknowledgement contains unsupported fields.');
   if (messageType === 'display-close' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Close message contains unsupported fields.');
-  if (messageType !== 'display-ready' && messageType !== 'display-state' && messageType !== 'display-restore-request' && messageType !== 'display-close') {
+  if (messageType !== 'display-ready' && messageType !== 'display-state' && messageType !== 'display-restore-request' && messageType !== 'display-snapshot-applied' && messageType !== 'display-close') {
     return invalid('message.type', 'Message type is unsupported.');
   }
 
@@ -229,6 +236,12 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
       ...(typeof message.requestedEpoch !== 'number' ? {} : { requestedEpoch: message.requestedEpoch }),
       ...(typeof message.requestedSequence !== 'number' ? {} : { requestedSequence: message.requestedSequence }),
     };
+  } else if (messageType === 'display-snapshot-applied') {
+    const appliedEpoch = message.appliedEpoch;
+    const appliedSequence = message.appliedSequence;
+    if (typeof appliedEpoch !== 'number' || !Number.isSafeInteger(appliedEpoch) || appliedEpoch < 0 || typeof appliedSequence !== 'number' || !Number.isSafeInteger(appliedSequence) || appliedSequence < 0) return invalid('message', 'Snapshot acknowledgement ordering is invalid.');
+    if (message.publicState !== 'display-test' && message.publicState !== 'standby' && message.publicState !== 'draw') return invalid('message.publicState', 'Snapshot acknowledgement state is invalid.');
+    parsedMessage = { type: messageType, appliedEpoch, appliedSequence, publicState: message.publicState };
   } else {
     parsedMessage = { type: messageType };
   }

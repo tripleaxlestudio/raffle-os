@@ -21,6 +21,7 @@ describe('production Settings display-test integration', () => {
     expect(result).toMatchObject({ ok: true, snapshot: { displayTest: true, eventName: 'Updated Event', safeAreaMargin: 64 } })
     expect(audience.getState()).toMatchObject({ kind: 'snapshot', connection: 'connected', snapshot: { displayTest: true, eventName: 'Updated Event', eventSubtitle: 'Public subtitle', safeAreaMargin: 64 } })
     expect(statuses).toContain('display-ready')
+    expect(statuses).toContain('snapshot-applied')
     publisher.close(); audience.close()
   })
 

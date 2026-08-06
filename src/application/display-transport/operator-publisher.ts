@@ -20,6 +20,7 @@ export type PublisherStatus =
   | { readonly kind: 'ready' }
   | { readonly kind: 'waiting-for-display' }
   | { readonly kind: 'display-ready' }
+  | { readonly kind: 'snapshot-applied'; readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' }
   | { readonly kind: 'transport-error'; readonly error: ProtocolError }
   | { readonly kind: 'projection-error'; readonly message: string }
   | { readonly kind: 'closed' }
@@ -108,11 +109,16 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   }
 
   const onEnvelope = (envelope: ProtocolEnvelope): void => {
-    if (closed || (envelope.message.type !== 'display-ready' && envelope.message.type !== 'display-restore-request')) return
+    if (closed || (envelope.message.type !== 'display-ready' && envelope.message.type !== 'display-restore-request' && envelope.message.type !== 'display-snapshot-applied')) return
     if (envelope.sender.kind !== 'display' || envelope.sender.id.length === 0) return
     if (validateEnvelopeContext(envelope, options.scope) !== undefined) return
     if (options.expectedSession !== undefined && envelope.drawSessionId !== undefined && envelope.drawSessionId !== options.expectedSession) return
     if (snapshot === undefined) return
+    if (envelope.message.type === 'display-snapshot-applied') {
+      if (envelope.message.appliedEpoch !== epoch || envelope.message.appliedSequence !== sequence) return
+      report({ kind: 'snapshot-applied', epoch, sequence, publicState: envelope.message.publicState })
+      return
+    }
     if (envelope.message.type === 'display-ready') report({ kind: 'display-ready' })
     // Ready and restore are explicit, idempotent requests for the current public snapshot.
     publishSnapshot(snapshot, true, true)

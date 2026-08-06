@@ -47,6 +47,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   const sourceId = options.sourceId ?? `${options.scope.displayId}:${globalThis.crypto.randomUUID()}`
   const acceptedMessageIds = new Set<string>()
   let restoreRequested = false
+  let nextOutboundSequence = 1
   let reconnectHandle: unknown = null
   let closed = false
   let unsubscribe: () => void = () => undefined
@@ -70,13 +71,14 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     }))
   }
   const sendReady = () => send({ type: 'display-ready', capability: { broadcastChannel: currentTransport.capability.broadcastChannel, fullscreen: currentTransport.capability.fullscreen } }, 0)
+  const sendApplied = (envelope: ProtocolEnvelope, snapshot: PublicDisplaySnapshot) => send({ type: 'display-snapshot-applied', appliedEpoch: envelope.epoch, appliedSequence: envelope.sequence, publicState: snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw' }, nextOutboundSequence++)
   const requestRestore = () => {
     if (restoreRequested) return
     restoreRequested = true
     connection = 'restore-pending'
     if (state.kind === 'snapshot') state = { ...state, connection }
     notify()
-    send({ type: 'display-restore-request', ...(acceptedOrdering === undefined ? {} : { requestedEpoch: acceptedOrdering.epoch, requestedSequence: acceptedOrdering.sequence }) }, 1)
+    send({ type: 'display-restore-request', ...(acceptedOrdering === undefined ? {} : { requestedEpoch: acceptedOrdering.epoch, requestedSequence: acceptedOrdering.sequence }) }, nextOutboundSequence++)
   }
 
   const onEnvelope = (envelope: ProtocolEnvelope): void => {
@@ -116,6 +118,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       state = { kind: 'snapshot', connection, snapshot }
       notify()
       if (!wasConnected) sendReady()
+      sendApplied(envelope, snapshot)
     } catch {
       // Invalid, private, cross-session, or otherwise malformed snapshots never replace safe state.
     }

@@ -90,13 +90,13 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   const schedule = options.scheduleReconnect ?? ((callback, delay) => globalThis.setTimeout(callback, delay))
   const cancel = options.cancelReconnect ?? ((handle) => globalThis.clearTimeout(handle as number))
 
-  const send = (message: ProtocolEnvelope['message'], sequence: number): void => {
+  const send = (message: ProtocolEnvelope['message'], sequence: number, epoch = acceptedOrdering?.epoch ?? 1): void => {
     if (closed || currentTransport.capability.transport !== 'available') return
     currentTransport.publish(createProtocolEnvelope({
       sender: { kind: 'display', id: sourceId },
       scope: options.scope,
       ...(acceptedSession === undefined ? {} : { drawSessionId: acceptedSession }),
-      epoch: 1,
+      epoch,
       sequence,
       emittedAt: now(),
       message,

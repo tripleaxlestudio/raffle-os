@@ -40,12 +40,16 @@ export type OperatorPublisher = {
 
 export type OperatorPublisherDiagnostics = {
   readonly channelName: string
+  readonly publisherInstanceId: string
   readonly epoch: number
   readonly sequence: number
   readonly lastSnapshotType: 'display-test' | 'standby' | 'draw' | undefined
   readonly lastSnapshotTimestamp: string | undefined
-  readonly expectedAcknowledgement: { readonly epoch: number; readonly sequence: number } | undefined
-  readonly lastAcknowledgement: { readonly epoch: number; readonly sequence: number } | undefined
+  readonly retainedPublicState: 'display-test' | 'standby' | 'draw' | undefined
+  readonly lastEnvelopeSent: { readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
+  readonly expectedAcknowledgement: { readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
+  readonly lastAcknowledgement: { readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
+  readonly subscriberCount: number
 }
 
 type OperatorPublisherOptions = {
@@ -72,7 +76,8 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   let serializedSnapshot: string | undefined
   let currentTransport = options.transport
   let unsubscribe: () => void = () => undefined
-  let lastAcknowledgement: { readonly epoch: number; readonly sequence: number } | undefined
+  let lastEnvelopeSent: OperatorPublisherDiagnostics['lastEnvelopeSent']
+  let lastAcknowledgement: OperatorPublisherDiagnostics['lastAcknowledgement']
   const statuses = new Set<(status: PublisherStatus) => void>()
 
   const report = (status: PublisherStatus): void => {
@@ -99,6 +104,8 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     snapshot = next
     serializedSnapshot = serialized
     sequence = nextSequence
+    const publicState = next.displayTest === true ? 'display-test' : next.stage === 'standby' ? 'standby' : 'draw'
+    lastEnvelopeSent = { epoch, sequence: nextSequence, publicState }
     const result = currentTransport.publish(envelope)
     if (!result.ok) {
       snapshot = undefined
@@ -128,9 +135,9 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     if (options.expectedSession !== undefined && envelope.drawSessionId !== undefined && envelope.drawSessionId !== options.expectedSession) return
     if (snapshot === undefined) return
     if (envelope.message.type === 'display-snapshot-applied') {
-      if (envelope.message.appliedEpoch !== epoch || envelope.message.appliedSequence !== sequence) return
-      lastAcknowledgement = { epoch: envelope.message.appliedEpoch, sequence: envelope.message.appliedSequence }
-      report({ kind: 'snapshot-applied', epoch, sequence, publicState: envelope.message.publicState })
+      if (lastEnvelopeSent === undefined || envelope.message.appliedEpoch !== lastEnvelopeSent.epoch || envelope.message.appliedSequence !== lastEnvelopeSent.sequence || envelope.message.publicState !== lastEnvelopeSent.publicState) return
+      lastAcknowledgement = { ...lastEnvelopeSent }
+      report({ kind: 'snapshot-applied', epoch, sequence, publicState: lastEnvelopeSent.publicState })
       return
     }
     if (envelope.message.type === 'display-ready') report({ kind: 'display-ready' })
@@ -188,12 +195,16 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     getSnapshot: () => snapshot,
     getDiagnostics: () => ({
       channelName: `raffle-os-display:${options.scope.eventId}:${options.scope.displayId}`,
+      publisherInstanceId: options.senderId,
       epoch,
       sequence,
       lastSnapshotType: snapshot === undefined ? undefined : snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw',
       lastSnapshotTimestamp: snapshot?.stageStartedAt,
-      expectedAcknowledgement: snapshot === undefined ? undefined : { epoch, sequence },
+      retainedPublicState: snapshot === undefined ? undefined : snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw',
+      lastEnvelopeSent,
+      expectedAcknowledgement: lastEnvelopeSent,
       lastAcknowledgement,
+      subscriberCount: statuses.size,
     }),
   }
 }

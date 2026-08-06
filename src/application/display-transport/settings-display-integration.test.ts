@@ -64,13 +64,15 @@ describe('production Settings display-test integration', () => {
 
     expect(publisher.start({ drawSessionId: session, stage: 'standby', blackoutRequested: false, displayTest: false, eventName: 'Cycle Event' })).toMatchObject({ ok: true, published: true })
     render(createElement(AudienceDisplayPage, { transport: audienceTransport, scope }))
-    expect(screen.getByText('Draw will begin shortly')).toBeVisible()
+    expect(screen.getByText('Display ready')).toBeVisible()
+    expect(screen.getByText('Waiting for the next presentation')).toBeVisible()
 
     for (let cycle = 0; cycle < 5; cycle += 1) {
         act(() => { publisher.publish({ drawSessionId: session, stage: 'standby', blackoutRequested: false, displayTest: true, eventName: 'Cycle Event' }) })
         expect(screen.getByText(/DISPLAY TEST/)).toBeVisible()
         act(() => { publisher.publish({ drawSessionId: session, stage: 'standby', blackoutRequested: false, displayTest: false, eventName: 'Cycle Event' }) })
-        expect(screen.getByText('Draw will begin shortly')).toBeVisible()
+        expect(screen.getByText('Display ready')).toBeVisible()
+        expect(screen.getByText('Waiting for the next presentation')).toBeVisible()
       }
 
     expect(stateEnvelopes.map((envelope) => envelope.sequence)).toEqual(Array.from({ length: 12 }, (_, index) => index + 1))

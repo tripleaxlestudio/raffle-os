@@ -37,10 +37,13 @@ export function ProductionSettingsPage() {
   const publisherStatusCleanupRef = useRef<(() => void) | null>(null)
   const testVisibilityRef = useRef(testVisibility)
   const settingsRef = useRef(settings)
+  const workspaceRef = useRef(workspace)
   const settingsLoaded = settings !== null
   const displayScopeId = workspace.status === 'ready' ? workspace.displayConfiguration?.id : undefined
+  const displayEventId = workspace.status === 'ready' ? workspace.event.id : undefined
   useEffect(() => { testVisibilityRef.current = testVisibility }, [testVisibility])
   useEffect(() => { settingsRef.current = settings }, [settings])
+  useEffect(() => { workspaceRef.current = workspace }, [workspace])
   const load = useCallback(async () => {
     if (workspace.status !== 'ready') return
     setSettingsState('loading')
@@ -48,13 +51,14 @@ export function ProductionSettingsPage() {
   }, [services, settingsService, workspace])
   useEffect(() => { void Promise.resolve().then(load) }, [load])
   useEffect(() => {
-    if (workspace.status !== 'ready' || settingsRef.current === null || workspace.displayConfiguration === null) return
-    const parsed = parseDrawSessionId(workspace.event.id)
+    const currentWorkspace = workspaceRef.current
+    if (currentWorkspace.status !== 'ready' || currentWorkspace.displayConfiguration === null || settingsRef.current === null) return
+    const parsed = parseDrawSessionId(currentWorkspace.event.id)
     if (!parsed.ok) return
-    const scope = { eventId: workspace.event.id, displayId: workspace.displayConfiguration.id }
+    const scope = { eventId: currentWorkspace.event.id, displayId: currentWorkspace.displayConfiguration.id }
     publisherStatusCleanupRef.current?.()
     publisherRef.current?.close()
-    const publisher = createOperatorPublisher({ transport: createBroadcastChannelTransport('raffle-os-display', scope), transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope), scope, senderId: `display-test:${workspace.event.id}`, expectedSession: parsed.value, clock: { now: () => new Date().toISOString() as never } })
+    const publisher = createOperatorPublisher({ transport: createBroadcastChannelTransport('raffle-os-display', scope), transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope), scope, senderId: `display-test:${currentWorkspace.event.id}`, expectedSession: parsed.value, clock: { now: () => new Date().toISOString() as never } })
     publisherRef.current = publisher
     const unsub = publisher.subscribe((status) => {
       if (status.kind === 'display-ready') { setConnection('connected'); setDisplayConnectionStatus(`${scope.eventId}:${scope.displayId}`, 'connected') }
@@ -67,7 +71,7 @@ export function ProductionSettingsPage() {
     const initialSettings = settingsRef.current
     if (initialSettings !== null) publisher.start({ drawSessionId: parsed.value, stage: 'standby', blackoutRequested: false, displayTest: false, eventName: initialSettings.displayName, eventSubtitle: initialSettings.subtitle, primaryColor: initialSettings.primaryColor, accentColor: initialSettings.accentColor, logo: initialSettings.logo === undefined ? undefined : { type: initialSettings.logo.type, blob: initialSettings.logo.blob }, background: initialSettings.background === undefined ? undefined : { type: initialSettings.background.type, blob: initialSettings.background.blob }, blackoutAppearance: initialSettings.blackoutAppearance, safeAreaMargin: initialSettings.safeAreaMargin })
     return () => { unsub(); if (publisherRef.current === publisher) publisherRef.current = null; publisher.close() }
-  }, [settingsLoaded, displayScopeId, workspace])
+  }, [displayEventId, displayScopeId, settingsLoaded])
   if (workspace.status !== 'ready') return <section aria-labelledby="settings-title"><PageHeader eyebrow="Production workspace" headingId="settings-title" title="Settings" description="An active Event is required." /><StatusBanner badge="Event required" title="Display configuration not configured" tone="warning">No editable controls are shown without authoritative Event context. Select an active Event to configure production settings.</StatusBanner><Link className="ui-button ui-button--secondary" to="/events">Open Event management</Link></section>
   if (settings === null) return <section aria-busy="true"><PageHeader eyebrow="Production workspace" headingId="settings-title" title="Settings" description="Reading authoritative Event settings…" />{settingsState === 'error' ? <StatusBanner badge="Storage error" title="Settings unavailable" tone="warning">{message}</StatusBanner> : null}</section>
   const event = workspace.event

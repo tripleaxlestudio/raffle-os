@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore, type CSSProperties } from 'react'
-import { createAudienceController } from '../../application/display-transport/audience-controller.ts'
+import { createAudienceController, type AudienceController, type AudienceRenderedState } from '../../application/display-transport/audience-controller.ts'
 import { createFullscreenController, type FullscreenState } from '../../application/display-transport/fullscreen-controller.ts'
 import type { PublicDisplaySnapshot } from '../../application/display-transport/public-projection.ts'
 import { createAudienceTransport, type Transport } from '../../application/display-transport/transport.ts'
@@ -14,7 +14,7 @@ import { appendRuntimeTrace } from '../../application/display-transport/runtime-
 
 const publicContext = { eventName: 'Raffle OS Audience', eventSubtitle: 'Public event presentation', prizeCategory: 'Current draw', prizeLabel: 'Winner announcement' } as const
 
-type AudienceDisplayPageProps = Readonly<{ transport?: Transport; scope?: ProtocolScope; expectedSession?: DrawSessionId }>
+type AudienceDisplayPageProps = Readonly<{ transport?: Transport; scope?: ProtocolScope; expectedSession?: DrawSessionId; controller?: AudienceController }>
 
 function snapshotScenario(snapshot: PublicDisplaySnapshot): PublicAudienceScenario {
   const statuses = snapshot.winnerStatuses ?? []
@@ -58,6 +58,9 @@ function AudienceDevelopmentDiagnostics({ controller, renderedState }: { readonl
     <div><dt>Rejection reason</dt><dd>{diagnostics.rejectionReason ?? '—'}</dd></div>
     <div><dt>Controller before / after</dt><dd>{diagnostics.stateBeforeReceipt ?? '—'} / {diagnostics.stateAfterReceipt ?? '—'}</dd></div>
     <div><dt>Rendered presentation</dt><dd>{renderedState}</dd></div>
+    <div><dt>Transport status</dt><dd>{controller.getConnectionState()}</dd></div>
+    <div><dt>Accepted public state</dt><dd>{diagnostics.publicState ?? '—'}</dd></div>
+    <div><dt>Selected rendered state</dt><dd>{diagnostics.selectedRenderedState}</dd></div>
     <div><dt>Last snapshot-applied acknowledgement</dt><dd>{diagnostics.lastSnapshotApplied === undefined ? '—' : `${diagnostics.lastSnapshotApplied.publicState} @ ${diagnostics.lastSnapshotApplied.epoch}/${diagnostics.lastSnapshotApplied.sequence}`}</dd></div>
     <div><dt>Controller instance</dt><dd>{diagnostics.controllerInstanceId}</dd></div>
     <div><dt>Accepted publisher runtime</dt><dd>{diagnostics.acceptedPublisherInstanceId ?? '—'}</dd></div>
@@ -68,6 +71,9 @@ function AudienceDevelopmentDiagnostics({ controller, renderedState }: { readonl
     <div><dt>Watchdog expiry</dt><dd>{diagnostics.watchdogExpiry ?? '-'}</dd></div>
     <div><dt>Most recent timeout</dt><dd>{diagnostics.mostRecentTimeoutCallback ?? '-'}</dd></div>
     <div><dt>Disconnected reason</dt><dd>{diagnostics.disconnectedReason ?? '-'}</dd></div>
+    <div><dt>Acknowledgement pending</dt><dd>{diagnostics.acknowledgementPending === undefined ? 'no' : `${diagnostics.acknowledgementPending.publicState} @ ${diagnostics.acknowledgementPending.epoch}/${diagnostics.acknowledgementPending.sequence}`}</dd></div>
+    <div><dt>Acknowledgement suppression</dt><dd>{diagnostics.acknowledgementSuppressionReason ?? '—'}</dd></div>
+    <div><dt>Invariant failure</dt><dd>{diagnostics.invariantFailure ?? '—'}</dd></div>
   </dl>} />
 }
 
@@ -82,7 +88,7 @@ function FullscreenControls({ controller, state }: { readonly controller: Return
   </div>
 }
 
-export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppliedScope, expectedSession }: AudienceDisplayPageProps) {
+export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppliedScope, expectedSession, controller: suppliedController }: AudienceDisplayPageProps) {
   // Keep the production URL context stable for the lifetime of this route. The
   // previous implementation recreated these parse results on every render;
   // that recreated the channel and Audience controller immediately
@@ -97,7 +103,7 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
   const hookScope = useMemo(() => scope ?? { eventId: 'invalid-event-context', displayId: 'invalid-display-context' }, [scope])
   const transport = useMemo(() => suppliedTransport ?? createAudienceTransport('raffle-os-display', hookScope), [hookScope, suppliedTransport])
   const transportFactory = useMemo(() => suppliedTransport === undefined ? () => createAudienceTransport('raffle-os-display', hookScope) : undefined, [hookScope, suppliedTransport])
-  const controller = useMemo(() => createAudienceController({ transport, transportFactory, scope: hookScope, expectedSession }), [expectedSession, hookScope, transport, transportFactory])
+  const controller = useMemo(() => suppliedController ?? createAudienceController({ transport, transportFactory, scope: hookScope, expectedSession }), [expectedSession, hookScope, suppliedController, transport, transportFactory])
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const fullscreen = useMemo(() => createFullscreenController({ target: typeof document === 'undefined' ? undefined : document.documentElement }), [])
   const fullscreenState = useSyncExternalStore(fullscreen.subscribe, fullscreen.getState, fullscreen.getState)
@@ -105,6 +111,15 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
     const diagnostics = controller.getDiagnostics()
     appendRuntimeTrace({ side: 'Audience', publisherControllerInstanceId: diagnostics.scope.displayId, scope: diagnostics.scope, route: () => `${window.location.pathname}${window.location.search}` }, { messageType: 'rendered-state', direction: 'local', renderedState: state.kind, publicState: state.kind === 'snapshot' ? state.snapshot.displayTest === true ? 'display-test' : state.snapshot.stage === 'standby' ? 'standby' : 'draw' : 'unknown', controllerStateAfter: state.kind })
   }, [controller, state])
+  const selectedRenderedState: AudienceRenderedState = state.kind !== 'snapshot'
+    ? state.kind === 'unavailable' ? 'unavailable' : state.kind
+    : state.snapshot.blackoutRequested ? 'blackout' : state.snapshot.displayTest === true ? 'display-test' : state.snapshot.stage === 'standby' ? 'standby' : 'draw'
+  useEffect(() => {
+    if (state.kind !== 'snapshot') return
+    const diagnostics = controller.getDiagnostics()
+    if (diagnostics.acceptedEpoch === undefined || diagnostics.acceptedSequence === undefined || diagnostics.publicState === undefined) return
+    controller.commitRenderedState({ epoch: diagnostics.acceptedEpoch, sequence: diagnostics.acceptedSequence, publicState: diagnostics.publicState, selectedRenderedState })
+  }, [controller, selectedRenderedState, state])
   useEffect(() => () => controller.close(), [controller])
   useEffect(() => () => fullscreen.close(), [fullscreen])
 
@@ -114,7 +129,7 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
   const controls = <FullscreenControls controller={fullscreen} state={fullscreenState} />
   if (state.kind === 'connecting' || state.kind === 'disconnected-safe' || state.kind === 'unavailable') return <><DisconnectedStage scenario={safeStatusScenario(state.kind === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={state.kind} /></>
   const audienceStyle = { '--audience-safe-inline': `${state.snapshot.safeAreaMargin ?? 0}px`, '--audience-safe-block': `${state.snapshot.safeAreaMargin ?? 0}px`, '--accent': state.snapshot.primaryColor ?? undefined, '--accent-hover': state.snapshot.accentColor ?? undefined, ...(state.snapshot.background === undefined ? {} : { '--audience-background-image': `url(${URL.createObjectURL(state.snapshot.background.blob)})` }) } as CSSProperties
-  if (state.snapshot.blackoutRequested) return <div style={audienceStyle}><BlackoutStage appearance={state.snapshot.blackoutAppearance} />{controls}</div>
+  if (state.snapshot.blackoutRequested) return <div style={audienceStyle}><BlackoutStage appearance={state.snapshot.blackoutAppearance} />{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={selectedRenderedState} /></div>
   const scenario = snapshotScenario(state.snapshot)
   const rendered = (() => {
   switch (scenario.state) {
@@ -126,5 +141,5 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
     case 'confirmed': return <WinnerStage scenario={scenario} />
   }
   })()
-  return <div style={audienceStyle}>{rendered}{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={scenario.state} /></div>
+  return <div style={audienceStyle}>{rendered}{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={selectedRenderedState} /></div>
 }

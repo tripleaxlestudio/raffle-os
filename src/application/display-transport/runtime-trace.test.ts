@@ -1,9 +1,12 @@
+import { render } from '@testing-library/react'
+import { createElement } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { appendRuntimeTrace, clearRuntimeTrace, getRuntimeTrace, getRuntimeTraceLimit, serializeRuntimeTrace } from './runtime-trace.ts'
 import { createAudienceController } from './audience-controller.ts'
 import { createOperatorPublisher } from './operator-publisher.ts'
 import { createInMemoryTransportPair } from './transport.ts'
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
+import { AudienceDisplayPage } from '../../pages/display/AudienceDisplayPage.tsx'
 
 const base = { side: 'Operator' as const, publisherControllerInstanceId: 'operator:test', scope: { eventId: 'event-1', displayId: 'display-1' } }
 const session = '00000000-0000-4000-8000-000000000001' as DrawSessionId
@@ -38,11 +41,13 @@ describe('runtime diagnostics trace', () => {
     const publisher = createOperatorPublisher({ transport: operatorTransport, scope: base.scope, senderId: 'operator:trace', expectedSession: session, clock: { now: () => '2026-08-06T00:00:00.000Z' as never } })
     publisher.start({ drawSessionId: session, stage: 'standby', blackoutRequested: false, mode: 'live', result: { drawSessionId: session, winners: [] } })
     const audience = createAudienceController({ transport: audienceTransport, scope: base.scope, expectedSession: session, sourceId: 'audience:trace' })
+    const view = render(createElement(AudienceDisplayPage, { transport: audienceTransport, scope: base.scope, expectedSession: session, controller: audience }))
     const operatorEvents = getRuntimeTrace().filter((entry) => entry.side === 'Operator')
     const audienceEvents = getRuntimeTrace().filter((entry) => entry.side === 'Audience')
     expect(operatorEvents.map((entry) => entry.messageType)).toEqual(expect.arrayContaining(['publisher-created', 'channel-opened', 'display-state', 'hello', 'acknowledgement']))
     expect(audienceEvents.map((entry) => entry.messageType)).toEqual(expect.arrayContaining(['listener-created', 'channel-opened', 'hello', 'display-state', 'display-snapshot-applied', 'acknowledgement']))
     expect(audienceEvents.some((entry) => entry.validationResult === 'accepted' && entry.orderingResult === 'accepted' && entry.renderedState === 'standby')).toBe(true)
+    view.unmount()
     audience.close()
     publisher.close()
     expect(getRuntimeTrace().map((entry) => entry.messageType)).toEqual(expect.arrayContaining(['listener-disposed', 'publisher-disposed', 'channel-closed']))

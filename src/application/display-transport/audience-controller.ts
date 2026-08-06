@@ -10,6 +10,15 @@ export type AudienceControllerState =
   | { readonly kind: 'disconnected-safe'; readonly connection: AudienceConnectionState }
   | { readonly kind: 'snapshot'; readonly connection: AudienceConnectionState; readonly snapshot: PublicDisplaySnapshot }
 
+export type AudienceRenderedState = 'connecting' | 'reconnecting' | 'disconnected-safe' | 'unavailable' | 'blackout' | 'display-test' | 'standby' | 'draw'
+
+export type AudienceRenderCommit = Readonly<{
+  readonly epoch: number
+  readonly sequence: number
+  readonly publicState: 'display-test' | 'standby' | 'draw'
+  readonly selectedRenderedState: AudienceRenderedState
+}>
+
 export type AudienceConnectionState =
   | 'connecting'
   | 'connected'
@@ -25,6 +34,7 @@ export type AudienceController = {
   readonly getConnectionState: () => AudienceConnectionState
   readonly subscribe: (listener: () => void) => () => void
   readonly close: () => void
+  readonly commitRenderedState: (commit: AudienceRenderCommit) => void
 }
 
 export type AudienceRuntimeDiagnostics = {
@@ -51,6 +61,10 @@ export type AudienceRuntimeDiagnostics = {
   readonly watchdogExpiry: string | undefined
   readonly mostRecentTimeoutCallback: string | undefined
   readonly disconnectedReason: string | undefined
+  readonly selectedRenderedState: AudienceRenderedState
+  readonly acknowledgementPending: { readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
+  readonly acknowledgementSuppressionReason: string | undefined
+  readonly invariantFailure: string | undefined
 }
 
 type AudienceControllerOptions = {
@@ -118,6 +132,10 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     watchdogExpiry: undefined,
     mostRecentTimeoutCallback: undefined,
     disconnectedReason: undefined,
+    selectedRenderedState: connection === 'connecting' ? 'connecting' : 'unavailable',
+    acknowledgementPending: undefined,
+    acknowledgementSuppressionReason: undefined,
+    invariantFailure: undefined,
   }
   const listeners = new Set<() => void>()
   const notify = () => listeners.forEach((listener) => { try { listener() } catch { /* one display cannot break another */ } })
@@ -180,6 +198,26 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     const publicState = snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw'
     diagnostics = { ...diagnostics, lastSnapshotApplied: { epoch: envelope.epoch, sequence: envelope.sequence, publicState } }
     send({ type: 'display-snapshot-applied', appliedEpoch: envelope.epoch, appliedSequence: envelope.sequence, publicState }, nextOutboundSequence++)
+  }
+  let pendingAcknowledgement: { readonly envelope: ProtocolEnvelope; readonly snapshot: PublicDisplaySnapshot; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
+  const commitRenderedState = (commit: AudienceRenderCommit): void => {
+    diagnostics = { ...diagnostics, selectedRenderedState: commit.selectedRenderedState, acknowledgementSuppressionReason: undefined }
+    const pending = pendingAcknowledgement
+    if (pending === undefined) return
+    if (pending.envelope.epoch !== commit.epoch || pending.envelope.sequence !== commit.sequence || pending.publicState !== commit.publicState) {
+      diagnostics = { ...diagnostics, acknowledgementSuppressionReason: 'render-commit-does-not-match-pending-snapshot' }
+      return
+    }
+    if (commit.selectedRenderedState !== commit.publicState) {
+      const reason = `rendered-state-mismatch:${commit.selectedRenderedState}!=${commit.publicState}`
+      diagnostics = { ...diagnostics, acknowledgementSuppressionReason: reason, invariantFailure: reason, acknowledgementPending: { epoch: pending.envelope.epoch, sequence: pending.envelope.sequence, publicState: pending.publicState } }
+      trace({ messageType: 'acknowledgement-suppressed', direction: 'local', publicState: pending.publicState, epoch: pending.envelope.epoch, sequence: pending.envelope.sequence, renderedState: commit.selectedRenderedState, acknowledgementStatus: 'suppressed', rejectionReason: reason })
+      return
+    }
+    pendingAcknowledgement = undefined
+    diagnostics = { ...diagnostics, acknowledgementPending: undefined, acknowledgementSuppressionReason: undefined, invariantFailure: undefined, selectedRenderedState: commit.selectedRenderedState }
+    sendApplied(pending.envelope, pending.snapshot)
+    notify()
   }
   const requestRestore = () => {
     if (restoreRequested) return
@@ -253,14 +291,14 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       state = { kind: 'snapshot', connection, snapshot }
       recordPublisherActivity(false)
       const publicState = snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw'
-      diagnostics = { ...diagnostics, validationResult: 'accepted', rejectionReason: undefined, publicState, stateAfterReceipt: state.kind, acceptedPublisherInstanceId: envelope.sender.id, acceptedEpoch: envelope.epoch, acceptedSequence: envelope.sequence }
+      pendingAcknowledgement = { envelope, snapshot, publicState }
+      diagnostics = { ...diagnostics, validationResult: 'accepted', rejectionReason: undefined, publicState, stateAfterReceipt: state.kind, acceptedPublisherInstanceId: envelope.sender.id, acceptedEpoch: envelope.epoch, acceptedSequence: envelope.sequence, acknowledgementPending: { epoch: envelope.epoch, sequence: envelope.sequence, publicState }, acknowledgementSuppressionReason: undefined, invariantFailure: undefined }
       trace({ validationResult: 'accepted', orderingResult: 'accepted', controllerStateAfter: state.kind, renderedState: publicState, acknowledgementStatus: 'pending' })
       notify()
       if (!wasConnected) sendReady()
-      // Commit and notify the controller before acknowledging. The route's
-      // subscription is therefore selected from the accepted public state;
-      // acknowledgement is never emitted for a state that remains safe-only.
-      sendApplied(envelope, snapshot)
+      // React must report the actual selected public presentation before this
+      // snapshot is acknowledged. Validation/controller receipt alone is not
+      // product-visible application.
     } catch (error: unknown) {
       // Invalid, private, cross-session, or otherwise malformed snapshots never replace safe state.
       const reason = error instanceof Error ? error.message : 'invalid-public-snapshot'
@@ -273,6 +311,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     if (closed) return
     connection = options.transportFactory === undefined ? 'disconnected-safe' : 'reconnect-pending'
     state = { kind: 'disconnected-safe', connection }
+    diagnostics = { ...diagnostics, selectedRenderedState: 'disconnected-safe' }
     notify()
     if (options.transportFactory !== undefined && reconnectHandle === null) {
       reconnectHandle = schedule(() => {
@@ -303,6 +342,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     getState: () => state,
     getDiagnostics: () => diagnostics,
     getConnectionState: () => connection,
+    commitRenderedState,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
   close() {
       if (closed) return

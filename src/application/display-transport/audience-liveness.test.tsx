@@ -14,15 +14,15 @@ describe('Audience liveness watchdog', () => {
   it('keeps heartbeat out of presentation ordering and acknowledgements', () => {
     const [operatorTransport, audienceTransport] = createInMemoryTransportPair('audience-heartbeat-ordering')
     const audience = createAudienceController({ transport: audienceTransport, scope })
+    const view = render(<AudienceDisplayPage transport={audienceTransport} scope={scope} controller={audience} />)
     // A scheduled callback is the public heartbeat seam; invoke it through a
     // captured scheduler so this test does not depend on wall-clock timing.
     let scheduled: (() => void) | undefined
     const scheduledPublisher = createOperatorPublisher({ transport: operatorTransport, scope, senderId: 'operator-heartbeat-ordering-2', heartbeatIntervalMs: 100, scheduleHeartbeat: (callback) => { scheduled = callback; return 1 }, cancelHeartbeat: () => undefined, clock: { now: () => '2026-08-06T00:00:00.000Z' as never } })
-    scheduledPublisher.start(source)
-    scheduled?.()
+    act(() => { scheduledPublisher.start(source); scheduled?.() })
     expect(scheduledPublisher.getDiagnostics()).toMatchObject({ sequence: 1, heartbeatCount: 1, lastAcknowledgement: { sequence: 1 } })
     expect(audience.getDiagnostics().lastSnapshotApplied).toBeDefined()
-    audience.close(); scheduledPublisher.close(); audienceTransport.close(); operatorTransport.close()
+    view.unmount(); audience.close(); scheduledPublisher.close(); audienceTransport.close(); operatorTransport.close()
   })
 
   it('accepts a fresh publisher runtime after the previous runtime stops', () => {

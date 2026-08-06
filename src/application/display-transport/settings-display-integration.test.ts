@@ -14,11 +14,14 @@ describe('production Settings display-test integration', () => {
   it('moves the real Audience controller from connecting to display test after acknowledgement', () => {
     const [operatorTransport, audienceTransport] = createInMemoryTransportPair('settings-display-test')
     const audience = createAudienceController({ transport: audienceTransport, scope })
+    render(createElement(AudienceDisplayPage, { transport: audienceTransport, scope, controller: audience }))
     const publisher = createOperatorPublisher({ transport: operatorTransport, scope, senderId: 'settings-test-operator', expectedSession: session, clock: { now: () => '2026-08-06T00:00:00.000Z' as never } })
     const statuses: string[] = []
     publisher.subscribe((status) => { statuses.push(status.kind) })
-    const result = publisher.start({ drawSessionId: session, stage: 'standby', blackoutRequested: false, displayTest: true, eventName: 'Updated Event', eventSubtitle: 'Public subtitle', primaryColor: '#112233', accentColor: '#DDAA44', safeAreaMargin: 64 })
+    let result!: ReturnType<typeof publisher.start>
+    act(() => { result = publisher.start({ drawSessionId: session, stage: 'standby', blackoutRequested: false, displayTest: true, eventName: 'Updated Event', eventSubtitle: 'Public subtitle', primaryColor: '#112233', accentColor: '#DDAA44', safeAreaMargin: 64 }) })
     expect(result).toMatchObject({ ok: true, snapshot: { displayTest: true, eventName: 'Updated Event', safeAreaMargin: 64 } })
+    expect(screen.getByText(/DISPLAY TEST/)).toBeVisible()
     expect(audience.getState()).toMatchObject({ kind: 'snapshot', connection: 'connected', snapshot: { displayTest: true, eventName: 'Updated Event', eventSubtitle: 'Public subtitle', safeAreaMargin: 64 } })
     expect(statuses).toContain('display-ready')
     expect(statuses).toContain('snapshot-applied')
@@ -62,8 +65,10 @@ describe('production Settings display-test integration', () => {
       if (envelope.sender.kind === 'operator' && envelope.message.type === 'display-state') stateEnvelopes.push({ epoch: envelope.epoch, sequence: envelope.sequence, displayTest: envelope.message.displayTest === true })
     })
 
-    expect(publisher.start({ drawSessionId: session, stage: 'standby', blackoutRequested: false, displayTest: false, eventName: 'Cycle Event' })).toMatchObject({ ok: true, published: true })
     render(createElement(AudienceDisplayPage, { transport: audienceTransport, scope }))
+    let startResult!: ReturnType<typeof publisher.start>
+    act(() => { startResult = publisher.start({ drawSessionId: session, stage: 'standby', blackoutRequested: false, displayTest: false, eventName: 'Cycle Event' }) })
+    expect(startResult).toMatchObject({ ok: true, published: true })
     expect(screen.getByText('Display ready')).toBeVisible()
     expect(screen.getByText('Waiting for the next presentation')).toBeVisible()
 

@@ -1,38 +1,97 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useParams, useSearchParams } from 'react-router'
 import { buildOfficialHistorySession, type OfficialHistorySession } from '../../application/history/history-read-model.ts'
+import { useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
-import { Badge, Card, Table } from '../../shared/ui/index.ts'
+import { Badge, Button, ButtonLink, Card, Table } from '../../shared/ui/index.ts'
+
+type LoadState = { readonly status: 'loading' } | { readonly status: 'ready'; readonly sessions: readonly OfficialHistorySession[] } | { readonly status: 'error'; readonly message: string }
+type SessionStatus = OfficialHistorySession['session']['status']
+
+function label(value: string): string { return value.replaceAll('-', ' ').replace(/\b\w/g, (part) => part.toUpperCase()) }
+function statusVariant(status: SessionStatus): 'pending' | 'confirmed' | 'danger' | 'neutral' { return status === 'pending-confirmation' || status === 'drawing' ? 'pending' : status === 'completed' ? 'confirmed' : status === 'cancelled' ? 'danger' : 'neutral' }
+function winnerVariant(status: 'pending' | 'confirmed' | 'cancelled'): 'pending' | 'confirmed' | 'danger' { return status === 'pending' ? 'pending' : status === 'confirmed' ? 'confirmed' : 'danger' }
+function timestamp(value: string | undefined): string { return value === undefined ? '—' : new Date(value).toLocaleString() }
 
 export function ProductionHistoryPage() {
+  const workspace = useProductionWorkspace()
   const services = useMemo(() => createDrawSetupProductionServices(), [])
-  const [state, setState] = useState<{ status: 'loading' } | { status: 'ready'; sessions: readonly OfficialHistorySession[] } | { status: 'error'; message: string }>({ status: 'loading' })
-  useEffect(() => {
-    void Promise.resolve().then(async () => {
-      try {
-        await services.open()
-        const sessions: OfficialHistorySession[] = []
-        for (const event of await services.events.findAll()) {
-          for (const session of (await services.sessions.findByEventId(event.id)).filter((item) => item.mode === 'live')) {
-            const [winners, category, redraws] = await Promise.all([
-              services.winners.findByDrawSessionId(session.id),
-              session.configurationSnapshot === null ? Promise.resolve(null) : services.categories.findById(session.configurationSnapshot.prizeCategoryId),
-              services.redraws?.findByDrawSessionId(session.id) ?? Promise.resolve([]),
-            ])
-            sessions.push(buildOfficialHistorySession(session, event, category, winners, redraws))
-          }
-        }
-        sessions.sort((left, right) => right.session.createdAt.localeCompare(left.session.createdAt))
-        setState({ status: 'ready', sessions })
-      } catch { setState({ status: 'error', message: 'Official history could not be read safely. Retry the local read.' }) }
-    })
-  }, [services])
-  if (state.status === 'loading') return <section aria-busy="true" aria-live="polite"><PageHeader eyebrow="Official records" headingId="history-title" title="History" description="Reading persisted Live history…" /></section>
-  if (state.status === 'error') return <section aria-live="polite"><PageHeader eyebrow="Official records" headingId="history-title" title="History unavailable" description={state.message} /><StatusBanner badge="Read-only recovery" title="Official history was not changed" tone="warning">Retry the local read. No export or mutation was attempted.</StatusBanner></section>
-  return <section aria-labelledby="history-title" className="history-page"><PageHeader description="Persisted Live sessions and append-only winner evidence." eyebrow="Official records" headingId="history-title" title="History" /><Card className="history-panel" padding="none"><Table caption="Official Live draw history"><thead><tr><th>Session</th><th>Event</th><th>Ticket</th><th>Status</th><th>Confirmed at</th><th>Cancelled at</th><th>Reason / lineage</th><th>Actor</th></tr></thead><tbody>{state.sessions.flatMap((item) => item.records.map((record) => <tr key={record.winner.id}><td>{item.session.id}<br /><Badge variant={item.session.status === 'completed' ? 'confirmed' : item.session.status === 'cancelled' ? 'danger' : 'pending'}>{item.session.status}</Badge></td><td>{record.event.name}</td><td><code className="result-ticket">{record.winner.ticketNumber}</code></td><td>{statusLabel(record.winner.status)}</td><td>{record.winner.confirmedAt ?? '—'}</td><td>{record.winner.cancelledAt ?? '—'}</td><td>{record.redraw === null ? 'Original record' : <>{record.redraw.reason}{record.redraw.reasonNote ? ` · ${record.redraw.reasonNote}` : ''} · original → <code>{record.replacement?.ticketNumber ?? 'missing'}</code> ({record.replacement?.status ?? 'missing'})</>}</td><td>{record.actor}</td></tr>))}</tbody></Table></Card></section>
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { drawSessionId } = useParams<{ drawSessionId: string }>()
+  const [state, setState] = useState<LoadState>({ status: 'loading' })
+  const [status, setStatus] = useState<string>(searchParams.get('status') ?? 'all')
+  const [mode, setMode] = useState<string>(searchParams.get('mode') ?? 'all')
+
+  const load = useCallback(async () => {
+    if (workspace.status !== 'ready') return
+    setState({ status: 'loading' })
+    try {
+      await services.open()
+      const sessions: OfficialHistorySession[] = []
+      for (const session of await services.sessions.findByEventId(workspace.event.id)) {
+        if (session.mode !== 'live') continue
+        const configuration = await services.configurations.findById(session.configurationId)
+        const categoryId = session.configurationSnapshot?.prizeCategoryId ?? configuration?.prizeCategoryId
+        const category = categoryId === undefined ? null : await services.categories.findById(categoryId)
+        const [winners, redraws, audits] = await Promise.all([
+          services.winners.findByDrawSessionId(session.id),
+          services.redraws?.findByDrawSessionId(session.id) ?? Promise.resolve([]),
+          services.audits?.findByEventId(workspace.event.id) ?? Promise.resolve([]),
+        ])
+        const relation = category === null ? 'missing-category' as const : 'valid' as const
+        sessions.push(buildOfficialHistorySession(session, workspace.event, category, winners, redraws, relation, audits.filter((audit) => audit.detail !== null && typeof audit.detail === 'object' && 'drawSessionId' in audit.detail && audit.detail.drawSessionId === session.id)))
+      }
+      sessions.sort((left, right) => {
+        const unresolved = (item: OfficialHistorySession) => item.session.status === 'drawing' || item.session.status === 'pending-confirmation' ? 0 : 1
+        return unresolved(left) - unresolved(right) || right.session.updatedAt.localeCompare(left.session.updatedAt) || left.session.id.localeCompare(right.session.id)
+      })
+      setState({ status: 'ready', sessions })
+    } catch (cause: unknown) {
+      setState({ status: 'error', message: cause instanceof Error && /version/i.test(cause.message) ? 'This local database is newer than the supported application version.' : 'Official history could not be read safely. Retry the local read.' })
+    }
+  }, [services, workspace])
+
+  useEffect(() => { void Promise.resolve().then(load) }, [load])
+
+  if (workspace.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Official records" headingId="history-title" title="History" description="Reading the selected Event…" /></section>
+  if (workspace.status === 'empty' || workspace.status === 'invalid-reference') return <section aria-labelledby="history-title"><PageHeader eyebrow="Official records" headingId="history-title" title="History" description="An active Event is required to read official history." /><StatusBanner badge="Setup required" title={workspace.status === 'empty' ? 'No active Event selected' : 'The saved Event reference is stale'} tone="warning">No history is fabricated or combined across Events.</StatusBanner><ButtonLink to="/events">Open Event management</ButtonLink></section>
+  if (workspace.status === 'error') return <section aria-labelledby="history-title"><PageHeader eyebrow="Official records" headingId="history-title" title="History unavailable" description="The selected Event could not be read." /><StatusBanner badge="Storage error" title="Official history was not changed" tone="warning">{workspace.message}</StatusBanner></section>
+  if (state.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Official records" headingId="history-title" title="History" description={`Reading official history for ${workspace.event.name}…`} /></section>
+  if (state.status === 'error') return <section aria-labelledby="history-title"><PageHeader eyebrow="Official records" headingId="history-title" title="History unavailable" description={state.message} /><StatusBanner badge="Read-only recovery" title="No decision or mutation was run" tone="warning">Retry the local read.</StatusBanner><Button onClick={() => void load()}>Retry read</Button></section>
+
+  const filtered = state.sessions.filter((item) => (status === 'all' || item.session.status === status) && (mode === 'all' || item.session.mode === mode))
+  const selected = drawSessionId === undefined ? null : state.sessions.find((item) => item.session.id === drawSessionId) ?? null
+  const updateFilter = (kind: 'status' | 'mode', value: string) => { if (kind === 'status') setStatus(value); else setMode(value); setSearchParams((current) => { current.set(kind, value); return current }, { replace: true }) }
+
+  return <section aria-labelledby="history-title" className="history-page">
+    <PageHeader eyebrow="Official records" headingId="history-title" title="History" description={`Authoritative Live DrawSessions for ${workspace.event.name}.`} actions={<ButtonLink variant="secondary" to="/draw/live">Open Draw Sessions</ButtonLink>} />
+    <StatusBanner badge="Selected Event" title={workspace.event.name} tone="info">Only sessions owned by this Event are shown. History is read-only; decisions remain in Pending Results.</StatusBanner>
+    <div className="button-row" aria-label="History filters"><label> Status <select aria-label="Filter by status" value={status} onChange={(event) => updateFilter('status', event.target.value)}><option value="all">All statuses</option>{(['draft', 'ready', 'drawing', 'pending-confirmation', 'completed', 'cancelled'] as const).map((item) => <option key={item} value={item}>{label(item)}</option>)}</select></label><label> Mode <select aria-label="Filter by mode" value={mode} onChange={(event) => updateFilter('mode', event.target.value)}><option value="all">All modes</option><option value="live">Live</option></select></label></div>
+    {filtered.length === 0 ? <Card padding="md"><h2>No official sessions</h2><p>{state.sessions.length === 0 ? 'This Event has no persisted Live DrawSessions yet.' : 'No sessions match the selected filters.'}</p><ButtonLink to="/draw/setup">Open Draw Setup</ButtonLink></Card> : <div className="draw-session-queue" aria-label="Official history sessions">{filtered.map((item) => <HistorySessionCard item={item} key={item.session.id} />)}</div>}
+    {selected === null && drawSessionId !== undefined ? <StatusBanner badge="Not found" title="DrawSession unavailable" tone="warning">This session does not belong to the selected Event or no longer exists.</StatusBanner> : null}
+    {selected === null ? null : <HistoryDetail item={selected} />}
+  </section>
 }
 
-function statusLabel(status: 'pending' | 'confirmed' | 'cancelled'): string {
-  return status === 'pending' ? 'Pending' : status === 'confirmed' ? 'Confirmed' : 'Cancelled'
+function HistorySessionCard({ item }: { readonly item: OfficialHistorySession }) {
+  const { session, category, records } = item
+  const pending = records.filter((record) => record.winner.status === 'pending').length
+  const confirmed = records.filter((record) => record.winner.status === 'confirmed').length
+  const cancelled = records.filter((record) => record.winner.status === 'cancelled').length
+  const action = session.status === 'pending-confirmation' ? <ButtonLink to={`/draw/pending/${session.id}`}>Review Pending Results</ButtonLink> : session.status === 'completed' || session.status === 'cancelled' ? <ButtonLink to={`/history/${session.id}`} variant="secondary">Open official details</ButtonLink> : <ButtonLink to="/draw/live" variant="secondary">Open Draw Sessions</ButtonLink>
+  return <Card className="draw-session-queue__item" padding="md"><div className="draw-session-queue__heading"><div><p className="operator-eyebrow">{item.event.name}</p><h2>{category?.name ?? session.configurationSnapshot?.categoryName ?? 'Prize category unavailable'}</h2><p>{category?.prizeName ?? session.configurationSnapshot?.prizeName ?? 'Related prize unavailable'}</p></div><div className="draw-session-queue__badges"><Badge variant={session.mode === 'live' ? 'live' : 'practice'}>{label(session.mode)}</Badge><Badge variant={statusVariant(session.status)}>{label(session.status)}</Badge></div></div><dl className="summary-list"><div className="summary-list__item"><dt>Requested winners</dt><dd>{session.configurationSnapshot?.requestedWinners ?? records.length}</dd></div><div className="summary-list__item"><dt>Created / updated</dt><dd>{timestamp(session.createdAt)} / {timestamp(session.updatedAt)}</dd></div><div className="summary-list__item"><dt>Pending / confirmed / cancelled</dt><dd>{pending} / {confirmed} / {cancelled}</dd></div></dl>{item.relation !== 'valid' ? <StatusBanner badge="Unavailable relation" title="Prize category could not be loaded" tone="warning">This persisted session remains visible, but its related setup is unavailable.</StatusBanner> : null}<div className="button-row">{action}<ButtonLink to={`/history/${session.id}`} variant="quiet">View details</ButtonLink></div></Card>
+}
+
+function HistoryDetail({ item }: { readonly item: OfficialHistorySession }) {
+  return <Card className="history-detail" padding="none"><div className="results-panel-heading"><div><p>Append-only production evidence</p><h2>{item.category?.prizeName ?? item.session.configurationSnapshot?.prizeName ?? 'Prize category unavailable'}</h2></div><ButtonLink to="/history" variant="quiet">Close details</ButtonLink></div><div className="history-detail__summary-grid"><span>Event <strong>{item.event.name}</strong></span><span>Mode <strong>{label(item.session.mode)}</strong></span><span>Status <strong>{label(item.session.status)}</strong></span><span>Completed <strong>{timestamp(item.session.completedAt)}</strong></span></div><Table caption="Official WinnerRecords"><thead><tr><th>Ticket</th><th>Status</th><th>Confirmed</th><th>Cancelled</th><th>Audit / lineage</th><th>Actor</th></tr></thead><tbody>{item.records.length === 0 ? <tr><td colSpan={6}>No WinnerRecords are associated with this session.</td></tr> : item.records.map((record) => <tr key={record.winner.id}><td><code className="result-ticket">{record.winner.ticketNumber}</code></td><td><Badge variant={winnerVariant(record.winner.status)}>{label(record.winner.status)}</Badge></td><td>{timestamp(record.winner.confirmedAt)}</td><td>{timestamp(record.winner.cancelledAt)}</td><td>{auditSummary(record)}</td><td>{record.actor}</td></tr>)}</tbody></Table><p className="history-detail__note">Original WinnerRecords remain visible even when cancelled. Exact ticket strings are displayed without numeric conversion.</p>{item.session.status === 'pending-confirmation' ? <p><ButtonLink to={`/draw/pending/${item.session.id}`}>Review Pending Results</ButtonLink></p> : null}</Card>
+}
+
+function auditSummary(record: OfficialHistorySession['records'][number]): ReactNode {
+  const detail = record.cancellation?.detail
+  const reason = detail !== null && detail !== undefined && typeof detail === 'object' && 'reason' in detail ? String(detail.reason) : null
+  const note = detail !== null && detail !== undefined && typeof detail === 'object' && 'normalizedNote' in detail ? String(detail.normalizedNote) : null
+  if (record.redraw === null && reason === null) return <>Original selection retained</>
+  return <>{reason === null ? null : <>Cancellation: {reason}{note === null ? '' : ` — ${note}`}. </>}{record.redraw === null ? null : <>Redraw: {record.redraw.reason}{record.redraw.reasonNote ? ` — ${record.redraw.reasonNote}` : ''} · original <code>{record.winner.ticketNumber}</code> → replacement <code>{record.replacement?.ticketNumber ?? 'missing'}</code> ({record.replacement?.status ?? 'missing'})</>}</>
 }

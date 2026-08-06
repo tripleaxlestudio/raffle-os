@@ -39,6 +39,7 @@ const operatorRoutes = {
     { path: 'draw/live', element: <DrawSessionQueuePage /> },
     { path: 'draw/results', element: <DrawSessionQueuePage /> },
     { path: 'history', element: <ProductionHistoryPage /> },
+    { path: 'history/:drawSessionId', element: <ProductionHistoryPage /> },
     { path: 'settings', element: <ProductionSettingsPage /> },
   ],
 } satisfies RouteObject

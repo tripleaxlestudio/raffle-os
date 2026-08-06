@@ -2697,7 +2697,7 @@
 .settings-branding-layout .settings-asset-field small { overflow: hidden; color: var(--text-muted); text-overflow: ellipsis; white-space: nowrap; }
 .settings-branding-layout .settings-asset-field__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .settings-branding-layout .settings-asset-field__actions label { display: inline-flex; position: relative; cursor: pointer; }
-.settings-branding-layout .settings-asset-field__actions .ui-button { min-height: 2.5rem; }
+.settings-branding-layout .settings-asset-field__actions .ui-button { width: fit-content; min-height: 1.875rem; padding: .375rem .6875rem; border-radius: var(--radius-sm); font-size: .75rem; font-weight: 600; line-height: 1rem; white-space: nowrap; }
 .settings-branding-layout .settings-asset-field__actions input[type=file] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .settings-safe-area-preview { display: grid; place-items: center; align-content: center; gap: var(--space-2); min-height: 15rem; background: #07090d; }
 .settings-safe-area-preview::before { inset: 10%; }

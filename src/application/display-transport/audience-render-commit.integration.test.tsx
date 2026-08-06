@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { describe, expect, it } from 'vitest'
 import { AudienceDisplayPage } from '../../pages/display/AudienceDisplayPage.tsx'
 import { createAudienceController } from './audience-controller.ts'
@@ -14,9 +15,28 @@ function source(displayTest: boolean) {
 }
 
 describe('Phase 8 Audience render-source acknowledgement boundary', () => {
+  it('attaches the receive listener before handshake and stops restore retry after application', () => {
+    const [operatorTransport, audienceTransport] = createInMemoryTransportPair('phase8-listener-order')
+    const retryCallbacks: Array<() => void> = []
+    const audience = createAudienceController({ transport: audienceTransport, scope, scheduleRestoreRetry: (callback) => { retryCallbacks.push(callback); return retryCallbacks.length }, cancelRestoreRetry: () => undefined })
+    expect(audience.getDiagnostics()).toMatchObject({ listenerAttached: true, channelOpen: true, helloCount: 1, restoreRequestCount: 1 })
+    retryCallbacks[0]?.()
+    expect(audience.getDiagnostics().restoreRequestCount).toBe(2)
+    const publisher = createOperatorPublisher({ transport: operatorTransport, scope, senderId: 'phase8-listener-order-operator', expectedSession: session, heartbeatIntervalMs: 0, clock: { now: () => '2026-08-06T00:00:00.000Z' as never } })
+    publisher.start(source(false))
+    expect(audience.getState()).toMatchObject({ kind: 'snapshot', snapshot: { displayTest: false } })
+    const restoreCountAfterApplication = audience.getDiagnostics().restoreRequestCount
+    retryCallbacks.at(-1)?.()
+    expect(audience.getDiagnostics().restoreRequestCount).toBe(restoreCountAfterApplication)
+    expect(audience.getDiagnostics().firstSnapshotApplied).toMatchObject({ publicState: 'standby', sequence: 1 })
+    audience.close(); publisher.close(); audienceTransport.close(); operatorTransport.close()
+  })
+
   it('restores retained standby for a late Audience without a sequence or heartbeat storm', () => {
     const [operatorTransport, audienceTransport] = createInMemoryTransportPair('phase8-late-join-restore')
     const operatorEnvelopes: Array<{ readonly epoch: number; readonly sequence: number; readonly type: string; readonly restore?: boolean }> = []
+    const audienceMessages: string[] = []
+    operatorTransport.subscribe((envelope) => { if (envelope.sender.kind === 'display') audienceMessages.push(envelope.message.type) })
     audienceTransport.subscribe((envelope) => {
       if (envelope.sender.kind === 'operator') operatorEnvelopes.push({ epoch: envelope.epoch, sequence: envelope.sequence, type: envelope.message.type, restore: envelope.message.type === 'display-state' ? envelope.message.restore : undefined })
     })
@@ -27,11 +47,13 @@ describe('Phase 8 Audience render-source acknowledgement boundary', () => {
     act(() => { publisher.start(source(false)) })
     expect(publisher.getDiagnostics()).toMatchObject({ sequence: 1, retainedPublicState: 'standby', activeHeartbeatTimerCount: 1, heartbeatIntervalMs: 1000 })
 
-    render(<AudienceDisplayPage transport={audienceTransport} scope={scope} />)
+    render(<StrictMode><AudienceDisplayPage transport={audienceTransport} scope={scope} /></StrictMode>)
     expect(screen.getByText('Display ready')).toBeVisible()
     expect(screen.getByText('Waiting for the next presentation')).toBeVisible()
     expect(screen.queryByText('Display connection interrupted')).not.toBeInTheDocument()
     expect(statuses.at(-1)).toBe('standby:3671760148/1')
+    expect(audienceMessages.filter((type) => type === 'display-ready')).toHaveLength(1)
+    expect(audienceMessages.filter((type) => type === 'display-restore-request')).toHaveLength(1)
     const stateEnvelopes = operatorEnvelopes.filter((envelope) => envelope.type === 'display-state')
     expect(stateEnvelopes.map((envelope) => envelope.sequence)).toEqual([1, 1, 1])
     expect(stateEnvelopes.slice(1).every((envelope) => envelope.epoch === 3671760148 && envelope.restore === true)).toBe(true)

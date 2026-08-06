@@ -35,6 +35,7 @@ export type AudienceController = {
   readonly subscribe: (listener: () => void) => () => void
   readonly close: () => void
   readonly commitRenderedState: (commit: AudienceRenderCommit) => void
+  readonly startHandshake: () => void
 }
 
 export type AudienceRuntimeDiagnostics = {
@@ -71,6 +72,14 @@ export type AudienceRuntimeDiagnostics = {
   readonly heartbeatReceivedCount: number
   readonly helloCount: number
   readonly restoreRequestCount: number
+  readonly listenerAttached: boolean
+  readonly channelOpen: boolean
+  readonly listenerAttachedAt: string | undefined
+  readonly helloSentAt: string | undefined
+  readonly restoreRequestTimestamps: readonly string[]
+  readonly firstSnapshotApplied: { readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
+  readonly acknowledgementSentAt: string | undefined
+  readonly transportCleanupReason: string | undefined
 }
 
 type AudienceControllerOptions = {
@@ -87,6 +96,10 @@ type AudienceControllerOptions = {
   readonly scheduleWatchdog?: (callback: () => void, delayMs: number) => unknown
   readonly cancelWatchdog?: (handle: unknown) => void
   readonly route?: () => string
+  readonly autoStartHandshake?: boolean
+  readonly restoreRetryMs?: number
+  readonly scheduleRestoreRetry?: (callback: () => void, delayMs: number) => unknown
+  readonly cancelRestoreRetry?: (handle: unknown) => void
 }
 
 export const AUDIENCE_LIVENESS_TIMEOUT_MS = 5000
@@ -104,6 +117,8 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   let restoreRequested = false
   let nextOutboundSequence = 1
   let reconnectHandle: unknown = null
+  let restoreRetryHandle: unknown = null
+  let restoreRetryGeneration = 0
   let watchdogHandle: unknown = null
   let watchdogGeneration = 0
   let closed = false
@@ -148,6 +163,14 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     heartbeatReceivedCount: 0,
     helloCount: 0,
     restoreRequestCount: 0,
+    listenerAttached: false,
+    channelOpen: currentTransport.capability.transport === 'available',
+    listenerAttachedAt: undefined,
+    helloSentAt: undefined,
+    restoreRequestTimestamps: [],
+    firstSnapshotApplied: undefined,
+    acknowledgementSentAt: undefined,
+    transportCleanupReason: undefined,
   }
   const listeners = new Set<() => void>()
   const notify = () => listeners.forEach((listener) => { try { listener() } catch { /* one display cannot break another */ } })
@@ -156,6 +179,13 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   const cancel = options.cancelReconnect ?? ((handle) => globalThis.clearTimeout(handle as number))
   const scheduleWatchdog = options.scheduleWatchdog ?? ((callback, delay) => globalThis.setTimeout(callback, delay))
   const cancelWatchdog = options.cancelWatchdog ?? ((handle) => globalThis.clearTimeout(handle as number))
+  const scheduleRestoreRetry = options.scheduleRestoreRetry ?? ((callback, delay) => globalThis.setTimeout(callback, delay))
+  const cancelRestoreRetry = options.cancelRestoreRetry ?? ((handle) => globalThis.clearTimeout(handle as number))
+
+  const clearRestoreRetry = (): void => {
+    restoreRetryGeneration += 1
+    if (restoreRetryHandle !== null) { cancelRestoreRetry(restoreRetryHandle); restoreRetryHandle = null }
+  }
 
   const clearWatchdog = (): void => {
     watchdogGeneration += 1
@@ -203,7 +233,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       message,
     }))
     const publicState = message.type === 'display-snapshot-applied' ? message.publicState : 'unknown'
-    if (message.type === 'display-ready') diagnostics = { ...diagnostics, helloCount: diagnostics.helloCount + 1 }
+    if (message.type === 'display-ready') diagnostics = { ...diagnostics, helloCount: diagnostics.helloCount + 1, helloSentAt: now() }
     if (message.type === 'display-restore-request') diagnostics = { ...diagnostics, restoreRequestCount: diagnostics.restoreRequestCount + 1 }
     trace({ epoch, sequence, direction: 'sent', messageType: message.type === 'display-ready' ? 'hello' : message.type === 'display-restore-request' ? 'restore-request' : message.type === 'display-snapshot-applied' ? 'acknowledgement' : message.type, publicState, validationResult: result.ok ? 'accepted' : 'rejected', orderingResult: 'accepted', acknowledgementStatus: message.type === 'display-snapshot-applied' ? 'sent' : 'not-applicable' })
   }
@@ -211,6 +241,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   const sendApplied = (envelope: ProtocolEnvelope, snapshot: PublicDisplaySnapshot) => {
     const publicState = snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw'
     diagnostics = { ...diagnostics, lastSnapshotApplied: { epoch: envelope.epoch, sequence: envelope.sequence, publicState } }
+    diagnostics = { ...diagnostics, acknowledgementSentAt: now() }
     send({ type: 'display-snapshot-applied', appliedEpoch: envelope.epoch, appliedSequence: envelope.sequence, publicState }, nextOutboundSequence++)
   }
   let pendingAcknowledgement: { readonly envelope: ProtocolEnvelope; readonly snapshot: PublicDisplaySnapshot; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
@@ -239,7 +270,29 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     connection = 'restore-pending'
     if (state.kind === 'snapshot') state = { ...state, connection }
     notify()
+    const requestedAt = now()
+    diagnostics = { ...diagnostics, restoreRequestTimestamps: [...diagnostics.restoreRequestTimestamps, requestedAt] }
     send({ type: 'display-restore-request', ...(acceptedOrdering === undefined ? {} : { requestedEpoch: acceptedOrdering.epoch, requestedSequence: acceptedOrdering.sequence }) }, nextOutboundSequence++)
+  }
+  const scheduleRestore = (): void => {
+    clearRestoreRetry()
+    if (closed || retainedSnapshot !== undefined) return
+    const generation = restoreRetryGeneration
+    restoreRetryHandle = scheduleRestoreRetry(() => {
+      if (closed || generation !== restoreRetryGeneration || retainedSnapshot !== undefined) return
+      restoreRetryHandle = null
+      restoreRequested = false
+      requestRestore()
+      scheduleRestore()
+    }, options.restoreRetryMs ?? 1000)
+  }
+  const startHandshake = (): void => {
+    if (closed || currentTransport.capability.transport !== 'available' || diagnostics.listenerAttached) return
+    diagnostics = { ...diagnostics, listenerAttached: true, listenerAttachedAt: now(), channelOpen: true }
+    armWatchdog()
+    sendReady()
+    requestRestore()
+    if (retainedSnapshot === undefined) scheduleRestore()
   }
 
   const onEnvelope = (envelope: ProtocolEnvelope): void => {
@@ -304,8 +357,9 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       state = { kind: 'snapshot', connection, snapshot }
       recordPublisherActivity(false)
       const publicState = snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw'
+      clearRestoreRetry()
       pendingAcknowledgement = { envelope, snapshot, publicState }
-      diagnostics = { ...diagnostics, validationResult: 'accepted', rejectionReason: undefined, publicState, stateAfterReceipt: state.kind, acceptedPublisherInstanceId: envelope.sender.id, acceptedEpoch: envelope.epoch, acceptedSequence: envelope.sequence, acknowledgementPending: { epoch: envelope.epoch, sequence: envelope.sequence, publicState }, acknowledgementSuppressionReason: undefined, invariantFailure: undefined }
+      diagnostics = { ...diagnostics, validationResult: 'accepted', rejectionReason: undefined, publicState, stateAfterReceipt: state.kind, acceptedPublisherInstanceId: envelope.sender.id, acceptedEpoch: envelope.epoch, acceptedSequence: envelope.sequence, firstSnapshotApplied: diagnostics.firstSnapshotApplied ?? { epoch: envelope.epoch, sequence: envelope.sequence, publicState }, acknowledgementPending: { epoch: envelope.epoch, sequence: envelope.sequence, publicState }, acknowledgementSuppressionReason: undefined, invariantFailure: undefined }
       trace({ validationResult: 'accepted', orderingResult: 'accepted', controllerStateAfter: state.kind, renderedState: publicState, acknowledgementStatus: 'pending' })
       notify()
       // React must report the actual selected public presentation before this
@@ -321,6 +375,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
 
   const enterDisconnected = () => {
     if (closed) return
+    diagnostics = { ...diagnostics, channelOpen: false }
     connection = options.transportFactory === undefined ? 'disconnected-safe' : 'reconnect-pending'
     state = { kind: 'disconnected-safe', connection }
     diagnostics = { ...diagnostics, selectedRenderedState: 'disconnected-safe' }
@@ -334,7 +389,8 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         state = currentTransport.capability.transport === 'available' ? { kind: 'connecting' } : { kind: 'unavailable', connection: 'unavailable' }
         notify()
         attach()
-        if (currentTransport.capability.transport === 'available') { sendReady(); requestRestore() }
+        diagnostics = { ...diagnostics, listenerAttached: false, channelOpen: currentTransport.capability.transport === 'available' }
+        if (currentTransport.capability.transport === 'available') startHandshake()
       }, options.reconnectDelayMs ?? 100)
     }
   }
@@ -345,22 +401,20 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     unsubscribeClose = currentTransport.onClose?.(enterDisconnected) ?? (() => undefined)
   }
   attach()
-  if (currentTransport.capability.transport === 'available') {
-    armWatchdog()
-    sendReady()
-    requestRestore()
-  }
+  if (options.autoStartHandshake !== false) startHandshake()
 
   return {
     getState: () => state,
     getDiagnostics: () => diagnostics,
     getConnectionState: () => connection,
     commitRenderedState,
+    startHandshake,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
   close() {
       if (closed) return
       closed = true
       clearWatchdog()
+      clearRestoreRetry()
       if (reconnectHandle !== null) { cancel(reconnectHandle); reconnectHandle = null }
       unsubscribe()
       unsubscribeClose()
@@ -368,6 +422,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       trace({ messageType: 'listener-disposed', direction: 'local', cleanupDisposeReason: 'close-called', controllerStateBefore: state.kind, controllerStateAfter: 'disconnected-safe' })
       trace({ messageType: 'channel-closed', direction: 'local', cleanupDisposeReason: 'close-called' })
       connection = 'disconnected-safe'
+      diagnostics = { ...diagnostics, channelOpen: false, listenerAttached: false, transportCleanupReason: 'close-called' }
       state = { kind: 'disconnected-safe', connection }
       notify()
       listeners.clear()

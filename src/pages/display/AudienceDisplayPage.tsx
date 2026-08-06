@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useSyncExternalStore, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useSyncExternalStore, type CSSProperties } from 'react'
 import { createAudienceController, type AudienceController, type AudienceRenderedState } from '../../application/display-transport/audience-controller.ts'
 import { createFullscreenController, type FullscreenState } from '../../application/display-transport/fullscreen-controller.ts'
 import type { PublicDisplaySnapshot } from '../../application/display-transport/public-projection.ts'
@@ -79,6 +79,14 @@ function AudienceDevelopmentDiagnostics({ controller, renderedState }: { readonl
     <div><dt>Heartbeat sent / received</dt><dd>{diagnostics.heartbeatSentCount} / {diagnostics.heartbeatReceivedCount}</dd></div>
     <div><dt>Hello count</dt><dd>{diagnostics.helloCount}</dd></div>
     <div><dt>Restore-request count</dt><dd>{diagnostics.restoreRequestCount}</dd></div>
+    <div><dt>Listener attached</dt><dd>{diagnostics.listenerAttached ? 'yes' : 'no'}</dd></div>
+    <div><dt>Channel open</dt><dd>{diagnostics.channelOpen ? 'yes' : 'no'}</dd></div>
+    <div><dt>Listener attached at</dt><dd>{diagnostics.listenerAttachedAt ?? '—'}</dd></div>
+    <div><dt>Hello sent at</dt><dd>{diagnostics.helloSentAt ?? '—'}</dd></div>
+    <div><dt>Restore requests sent</dt><dd>{diagnostics.restoreRequestTimestamps.length}</dd></div>
+    <div><dt>First snapshot applied</dt><dd>{diagnostics.firstSnapshotApplied === undefined ? '—' : `${diagnostics.firstSnapshotApplied.publicState} @ ${diagnostics.firstSnapshotApplied.epoch}/${diagnostics.firstSnapshotApplied.sequence}`}</dd></div>
+    <div><dt>Acknowledgement sent at</dt><dd>{diagnostics.acknowledgementSentAt ?? '—'}</dd></div>
+    <div><dt>Transport cleanup</dt><dd>{diagnostics.transportCleanupReason ?? '—'}</dd></div>
   </dl>} />
 }
 
@@ -108,10 +116,11 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
   const hookScope = useMemo(() => scope ?? { eventId: 'invalid-event-context', displayId: 'invalid-display-context' }, [scope])
   const transport = useMemo(() => suppliedTransport ?? createAudienceTransport('raffle-os-display', hookScope), [hookScope, suppliedTransport])
   const transportFactory = useMemo(() => suppliedTransport === undefined ? () => createAudienceTransport('raffle-os-display', hookScope) : undefined, [hookScope, suppliedTransport])
-  const controller = useMemo(() => suppliedController ?? createAudienceController({ transport, transportFactory, scope: hookScope, expectedSession }), [expectedSession, hookScope, suppliedController, transport, transportFactory])
+  const controller = useMemo(() => suppliedController ?? createAudienceController({ transport, transportFactory, scope: hookScope, expectedSession, autoStartHandshake: suppliedController === undefined ? false : undefined }), [expectedSession, hookScope, suppliedController, transport, transportFactory])
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const fullscreen = useMemo(() => createFullscreenController({ target: typeof document === 'undefined' ? undefined : document.documentElement }), [])
   const fullscreenState = useSyncExternalStore(fullscreen.subscribe, fullscreen.getState, fullscreen.getState)
+  const controllerLifecycleGeneration = useRef(0)
   useEffect(() => {
     const diagnostics = controller.getDiagnostics()
     appendRuntimeTrace({ side: 'Audience', publisherControllerInstanceId: diagnostics.scope.displayId, scope: diagnostics.scope, route: () => `${window.location.pathname}${window.location.search}` }, { messageType: 'rendered-state', direction: 'local', renderedState: state.kind, publicState: state.kind === 'snapshot' ? state.snapshot.displayTest === true ? 'display-test' : state.snapshot.stage === 'standby' ? 'standby' : 'draw' : 'unknown', controllerStateAfter: state.kind })
@@ -125,7 +134,12 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
     if (diagnostics.acceptedEpoch === undefined || diagnostics.acceptedSequence === undefined || diagnostics.publicState === undefined) return
     controller.commitRenderedState({ epoch: diagnostics.acceptedEpoch, sequence: diagnostics.acceptedSequence, publicState: diagnostics.publicState, selectedRenderedState })
   }, [controller, selectedRenderedState, state])
-  useEffect(() => () => controller.close(), [controller])
+  useEffect(() => {
+    const generation = controllerLifecycleGeneration.current + 1
+    controllerLifecycleGeneration.current = generation
+    controller.startHandshake()
+    return () => { queueMicrotask(() => { if (controllerLifecycleGeneration.current === generation) controller.close() }) }
+  }, [controller])
   useEffect(() => () => fullscreen.close(), [fullscreen])
 
   if (scope === undefined && suppliedTransport === undefined) return <><DisconnectedStage scenario={safeStatusScenario('connecting')} /><p role="status">This Audience Display link is missing valid production context. Open it from Settings.</p></>

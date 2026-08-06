@@ -1,4 +1,5 @@
 import type { DrawSessionQueueItem } from '../../../application/draw/draw-session-queue.ts'
+import type { AppMode } from '../../../domain/types/app-mode.ts'
 import type { BadgeVariant } from '../../../shared/ui/Badge.tsx'
 
 export type DrawSessionQueuePriority = 'action-required' | 'ready' | 'historical'
@@ -15,6 +16,16 @@ export interface DrawSessionQueuePresentation {
   readonly actionLabel: string | null
   readonly relationLabel: string | null
   readonly historical: boolean
+}
+
+export interface DrawSessionQueueDeck {
+  readonly key: string
+  readonly eventName: string
+  readonly categoryName: string
+  readonly prizeName: string
+  readonly winnerCount: number
+  readonly sessions: Readonly<Partial<Record<AppMode, DrawSessionQueueItem>>>
+  readonly defaultMode: AppMode
 }
 
 const lifecycleLabels: Record<DrawSessionQueueItem['session']['status'], string> = {
@@ -44,6 +55,14 @@ function priorityFor(item: DrawSessionQueueItem): DrawSessionQueuePriority {
   if (item.session.status === 'drawing' || item.session.status === 'pending-confirmation') return 'action-required'
   if (item.session.status === 'completed' || item.session.status === 'cancelled') return 'historical'
   return 'ready'
+}
+
+const sessionPriority: Record<DrawSessionQueueItem['session']['status'], number> = {
+  drawing: 0, 'pending-confirmation': 1, ready: 2, draft: 3, completed: 4, cancelled: 5,
+}
+
+function preferredMode(items: readonly DrawSessionQueueItem[]): AppMode {
+  return [...items].sort((left, right) => sessionPriority[left.session.status] - sessionPriority[right.session.status] || (left.session.mode === 'live' ? -1 : 1))[0]?.session.mode ?? 'practice'
 }
 
 function priorityLabel(priority: DrawSessionQueuePriority): string {
@@ -76,4 +95,19 @@ export function presentDrawSessionQueueItem(item: DrawSessionQueueItem): DrawSes
 
 export function groupDrawSessionQueueItems(items: readonly DrawSessionQueueItem[]): Readonly<Record<DrawSessionQueuePriority, readonly DrawSessionQueueItem[]>> {
   return { 'action-required': items.filter((item) => priorityFor(item) === 'action-required'), ready: items.filter((item) => priorityFor(item) === 'ready'), historical: items.filter((item) => priorityFor(item) === 'historical') }
+}
+
+export function groupDrawSessionQueueDecks(items: readonly DrawSessionQueueItem[]): readonly DrawSessionQueueDeck[] {
+  const decks = new Map<string, DrawSessionQueueItem[]>()
+  for (const item of items) {
+    const key = `${item.session.eventId}:${item.session.configurationId}:${item.category?.id ?? 'missing-category'}:${item.winnerCount}`
+    const current = decks.get(key)
+    if (current === undefined) decks.set(key, [item])
+    else current.push(item)
+  }
+  return [...decks].map(([key, deckItems]) => {
+    const first = deckItems[0]
+    const sessions = Object.fromEntries(deckItems.map((item) => [item.session.mode, item])) as Partial<Record<AppMode, DrawSessionQueueItem>>
+    return { key, eventName: first?.event?.name ?? 'Event unavailable', categoryName: first?.category?.name ?? 'Prize category unavailable', prizeName: first?.category?.prizeName ?? 'Related prize unavailable', winnerCount: first?.winnerCount ?? 0, sessions, defaultMode: preferredMode(deckItems) }
+  })
 }

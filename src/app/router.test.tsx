@@ -59,7 +59,7 @@ describe('application routes', () => {
     renderRoute(path)
     await waitFor(() => expect(screen.getByRole('main')).toBeInTheDocument())
     if (path === '/settings') expect(screen.getAllByText(/not configured/i).length).toBeGreaterThan(0)
-    else expect(screen.getByRole('heading', { name: path === '/draw/pending' ? 'Pending Results' : 'Draw Sessions' })).toBeInTheDocument()
+    else expect(screen.getByRole('heading', { name: path === '/draw/pending' ? 'Pending Results' : 'Live Draw' })).toBeInTheDocument()
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })
 

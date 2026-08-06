@@ -4,7 +4,9 @@ import type { DrawSession } from '../../../domain/draws/draw-session.types.ts'
 import type { Event } from '../../../domain/events/event.types.ts'
 import type { PrizeCategory } from '../../../domain/prizes/prize.types.ts'
 import type { IsoTimestamp } from '../../../domain/shared/timestamps.ts'
-import { formatQueueTimestamp, groupDrawSessionQueueItems, presentDrawSessionQueueItem } from './draw-session-queue-view-model.ts'
+import type { OperatorPublisherDiagnostics } from '../../../application/display-transport/operator-publisher.ts'
+import { formatQueueTimestamp, groupDrawSessionQueueDecks, groupDrawSessionQueueItems, presentDrawSessionQueueItem } from './draw-session-queue-view-model.ts'
+import { presentAudienceConnection } from './audience-connection-view-model.ts'
 
 const event = { id: 'event', name: 'Event' } as Event
 const category = { id: 'category', eventId: event.id, name: 'Gold', prizeName: 'Laptop' } as PrizeCategory
@@ -33,5 +35,16 @@ describe('production DrawSession queue view model', () => {
   })
   it('keeps relationship failures visible and non-actionable', () => {
     expect(presentDrawSessionQueueItem(item('ready', 'live', 'missing-category'))).toMatchObject({ relationLabel: 'Prize category unavailable', actionLabel: null })
+  })
+  it('groups matching Practice and Live sessions into one draw deck', () => {
+    const decks = groupDrawSessionQueueDecks([item('ready', 'practice'), item('ready', 'live')])
+    expect(decks).toHaveLength(1)
+    expect(decks[0]?.sessions.practice?.session.id).toBe('session-ready-practice')
+    expect(decks[0]?.sessions.live?.session.id).toBe('session-ready-live')
+    expect(decks[0]?.defaultMode).toBe('live')
+  })
+  it('distinguishes Audience presence from acknowledged publication', () => {
+    expect(presentAudienceConnection({ kind: 'audience-presence', status: 'connected', subscriberCount: 1 }, undefined)).toMatchObject({ label: 'Waiting', acknowledged: false })
+    expect(presentAudienceConnection({ kind: 'snapshot-applied', epoch: 1, sequence: 2, publicState: 'standby' }, { lastAcknowledgement: { epoch: 1, sequence: 2, publicState: 'standby' } } as unknown as OperatorPublisherDiagnostics)).toMatchObject({ label: 'Connected', acknowledged: true })
   })
 })

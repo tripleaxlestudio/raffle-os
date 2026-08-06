@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { useProductionAudiencePublisher, useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 import { appendRuntimeTrace } from '../../application/display-transport/runtime-trace.ts'
 import { createEventSettingsService } from '../../application/settings/event-settings-service.ts'
 import { createDisplayConfigurationService } from '../../application/display/display-configuration-service.ts'
-import { setDisplayConnectionStatus, type DisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
+import { getDisplayConnectionStatus, subscribeDisplayConnectionStatus, type DisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
 import type { EventSettings, LocalAsset } from '../../domain/settings/event-settings.types.ts'
 import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
@@ -28,7 +28,8 @@ export function ProductionSettingsPage() {
   const [resolution, setResolution] = useState('1920x1080')
   const [settingsState, setSettingsState] = useState<'loading' | 'ready' | 'saving' | 'error'>('loading')
   const [message, setMessage] = useState<string | null>(null)
-  const [connection, setConnection] = useState<DisplayConnectionStatus>('waiting')
+  const displayStatusKey = workspace.status === 'ready' && workspace.displayConfiguration !== null ? `${workspace.event.id}:${workspace.displayConfiguration.id}` : 'unconfigured'
+  const connection = useSyncExternalStore((listener) => subscribeDisplayConnectionStatus(displayStatusKey, listener), (): DisplayConnectionStatus => getDisplayConnectionStatus(displayStatusKey), (): DisplayConnectionStatus => 'waiting')
   const initiallyTestActive = audience.getDiagnostics()?.retainedPublicState === 'display-test'
   const [testing, setTesting] = useState(initiallyTestActive)
   const [testVisibility, setTestVisibility] = useState<'inactive' | 'publishing' | 'visible' | 'stopping' | 'standby' | 'failed'>(initiallyTestActive ? 'visible' : 'inactive')
@@ -48,12 +49,9 @@ export function ProductionSettingsPage() {
     const retainedState = audience.getDiagnostics()?.retainedPublicState
     if (retainedState === 'display-test') { setTesting(true); setTestVisibility('visible') }
     if (retainedState === 'standby' && testVisibilityRef.current !== 'publishing') { setTesting(false); setTestVisibility('standby') }
-    if (status.kind === 'display-ready' || status.kind === 'snapshot-applied') {
-      setConnection('connected')
-      if (status.kind === 'snapshot-applied' && status.publicState === 'display-test') { setTesting(true); setTestVisibility('visible') }
-      if (status.kind === 'snapshot-applied' && status.publicState === 'standby' && testVisibilityRef.current === 'stopping') { setTesting(false); setTestVisibility('standby') }
-    }
-    if (status.kind === 'transport-error') { setConnection('publication-failed'); setTestVisibility('failed'); setMessage('The display snapshot could not be published safely.') }
+    if (status.kind === 'snapshot-applied' && status.publicState === 'display-test') { setTesting(true); setTestVisibility('visible') }
+    if (status.kind === 'snapshot-applied' && status.publicState === 'standby' && testVisibilityRef.current === 'stopping') { setTesting(false); setTestVisibility('standby') }
+    if (status.kind === 'transport-error') { setTestVisibility('failed'); setMessage('The display snapshot could not be published safely.') }
   }), [audience])
   if (workspace.status !== 'ready') return <section aria-labelledby="settings-title"><PageHeader eyebrow="Production workspace" headingId="settings-title" title="Settings" description="An active Event is required." /><StatusBanner badge="Event required" title="Display configuration not configured" tone="warning">No editable controls are shown without authoritative Event context. Select an active Event to configure production settings.</StatusBanner><Link className="ui-button ui-button--secondary" to="/events">Open Event management</Link></section>
   if (settings === null) return <section aria-busy="true"><PageHeader eyebrow="Production workspace" headingId="settings-title" title="Settings" description="Reading authoritative Event settings…" />{settingsState === 'error' ? <StatusBanner badge="Storage error" title="Settings unavailable" tone="warning">{message}</StatusBanner> : null}</section>
@@ -61,11 +59,10 @@ export function ProductionSettingsPage() {
   const activeDisplay = workspace.displayConfiguration
   const currentSettings = settings
   const displayUrl = activeDisplay === null ? null : `/display?eventId=${encodeURIComponent(event.id)}&displayConfigurationId=${encodeURIComponent(activeDisplay.id)}`
-  const key = activeDisplay === null ? `${event.id}:unconfigured` : `${event.id}:${activeDisplay.id}`
   const selected = resolutions.find((item) => `${item.width}x${item.height}` === resolution) ?? resolutions[0]
   async function save(eventSubmit: FormEvent<HTMLFormElement>) {
     eventSubmit.preventDefault(); setSettingsState('saving'); setMessage(null)
-    try { const saved = await settingsService.saveForEvent(event, { ...currentSettings, safeAreaMargin: currentSettings.safeAreaMargin }); if (activeDisplay !== null) await displayService.saveForEvent(event, { targetResolution: { width: selected.width, height: selected.height }, safeAreaMargin: saved.safeAreaMargin, blackoutAppearance: saved.blackoutAppearance === 'event-surface' ? 'pure-black' : saved.blackoutAppearance }, activeDisplay); setSettings(saved); setSettingsState('ready'); setDisplayConnectionStatus(key, 'waiting') } catch (error: unknown) { setSettingsState('error'); setMessage(errorText(error)) }
+    try { const saved = await settingsService.saveForEvent(event, { ...currentSettings, safeAreaMargin: currentSettings.safeAreaMargin }); if (activeDisplay !== null) await displayService.saveForEvent(event, { targetResolution: { width: selected.width, height: selected.height }, safeAreaMargin: saved.safeAreaMargin, blackoutAppearance: saved.blackoutAppearance === 'event-surface' ? 'pure-black' : saved.blackoutAppearance }, activeDisplay); setSettings(saved); setSettingsState('ready') } catch (error: unknown) { setSettingsState('error'); setMessage(errorText(error)) }
   }
   function fileChange(field: 'logo' | 'background' | 'revealCue', file: File | undefined) { if (file !== undefined) setSettings((current) => current === null ? current : { ...current, [field]: assetFromFile(file) }) }
   function openAudience() { if (displayUrl === null) return; setPopupBlocked(window.open(displayUrl, '_blank', 'noopener,noreferrer') === null) }
@@ -83,9 +80,9 @@ export function ProductionSettingsPage() {
     const parsed = parseDrawSessionId(event.id); if (!parsed.ok) { setMessage('The active Event cannot safely scope a display test.'); return }
     if (audience.publisher === null) { setMessage('The production Audience publisher is not ready.'); return }
     appendRuntimeTrace({ side: 'Operator', publisherControllerInstanceId: audience.getDiagnostics()?.publisherInstanceId ?? 'unavailable', scope: { eventId: event.id, displayId: activeDisplay.id } }, { messageType: 'test-started', direction: 'local' })
-    setTesting(true); setTestVisibility('publishing'); setConnection('waiting'); setDisplayConnectionStatus(key, 'waiting')
+    setTesting(true); setTestVisibility('publishing')
     const result = audience.publish({ drawSessionId: parsed.value, stage: 'standby', blackoutRequested: false, displayTest: true, eventName: currentSettings.displayName, eventSubtitle: currentSettings.subtitle, primaryColor: currentSettings.primaryColor, accentColor: currentSettings.accentColor, logo: currentSettings.logo === undefined ? undefined : { type: currentSettings.logo.type, blob: currentSettings.logo.blob }, background: currentSettings.background === undefined ? undefined : { type: currentSettings.background.type, blob: currentSettings.background.blob }, blackoutAppearance: currentSettings.blackoutAppearance, safeAreaMargin: currentSettings.safeAreaMargin })
-    if (!result.ok) { setTestVisibility('failed'); setConnection('publication-failed') }
+    if (!result.ok) setTestVisibility('failed')
   }
   async function testAudio() { if (!currentSettings.revealCue) { setAudioMessage('Choose a local reveal cue first.'); return } try { const audio = new Audio(URL.createObjectURL(currentSettings.revealCue.blob)); audio.volume = currentSettings.masterVolume / 100; await audio.play(); setAudioMessage('Cue played after your action.'); audio.onended = () => URL.revokeObjectURL(audio.src) } catch { setAudioMessage('Browser audio permission is required; press Test Audio again after allowing playback.') } }
   return <section aria-labelledby="settings-title" className="production-settings"><PageHeader eyebrow="Production workspace" headingId="settings-title" title="Settings" description={`${event.name} · authoritative Event presentation`} />{message ? <StatusBanner badge="Settings" title="Action needs attention" tone="warning">{message}</StatusBanner> : null}<div className="settings-workspace"><nav aria-label="Settings sections" className="settings-section-nav"><p>Settings</p>{(['branding', 'presentation', 'audio', 'display'] as const).map((item) => <button type="button" key={item} className={section === item ? 'is-active' : ''} aria-current={section === item ? 'page' : undefined} onClick={() => setSection(item)}>{item[0].toUpperCase() + item.slice(1)}</button>)}</nav><div className="settings-content"><article className="settings-card"><div className="settings-card__heading"><div><p className="settings-card__eyebrow">{section}</p><h2>{section === 'branding' ? 'Event identity' : section === 'presentation' ? 'Presentation behavior' : section === 'audio' ? 'Audio cues' : 'Audience Display'}</h2></div><span className="settings-authority">Persisted</span></div><form onSubmit={save} aria-label={`${section} settings`}>

@@ -12,6 +12,10 @@ export function setDisplayConnectionStatus(key: string, status: DisplayConnectio
   listeners.get(key)?.forEach((listener) => listener())
 }
 
+export function syncAudiencePresenceConnectionStatus(key: string, status: 'connected' | 'waiting'): void {
+  setDisplayConnectionStatus(key, status)
+}
+
 export function subscribeDisplayConnectionStatus(key: string, listener: () => void): () => void {
   const keyListeners = listeners.get(key) ?? new Set<() => void>()
   keyListeners.add(listener)

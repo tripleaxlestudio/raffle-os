@@ -10,7 +10,7 @@ import { createBroadcastChannelTransport } from '../../application/display-trans
 import type { PresentationProjectionSource, PublicDisplaySnapshot } from '../../application/display-transport/public-projection.ts'
 import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
-import { setDisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
+import { setDisplayConnectionStatus, syncAudiencePresenceConnectionStatus } from '../../application/display-transport/connection-status.ts'
 
 export type ProductionWorkspaceState =
   | { readonly status: 'loading' }
@@ -119,6 +119,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
     if (state.status !== 'ready' || state.displayConfiguration === null) return
     const scopeKey = `${state.event.id}:${state.displayConfiguration.id}`
     if (publisherScopeRef.current === scopeKey && publisherRef.current !== null) return
+    if (publisherScopeRef.current !== undefined) setDisplayConnectionStatus(publisherScopeRef.current, 'waiting')
     publisherStatusCleanupRef.current?.()
     publisherRef.current?.close()
     publisherStatusCleanupRef.current = null
@@ -136,11 +137,10 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
     })
     publisherRef.current = publisher
     publisherScopeRef.current = scopeKey
+    setDisplayConnectionStatus(scopeKey, 'waiting')
     const unsubscribe = publisher.subscribe((status) => {
       setPublisherStatus(status)
-      if (status.kind === 'display-ready' || status.kind === 'snapshot-applied') setDisplayConnectionStatus(scopeKey, 'connected')
-      if (status.kind === 'audience-presence') setDisplayConnectionStatus(scopeKey, status.status === 'connected' ? 'connected' : 'waiting')
-      if (status.kind === 'transport-error') setDisplayConnectionStatus(scopeKey, 'publication-failed')
+      if (status.kind === 'audience-presence') syncAudiencePresenceConnectionStatus(scopeKey, status.status)
     })
     publisherStatusCleanupRef.current = unsubscribe
     const initial = state.eventSettings
@@ -162,6 +162,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
   }, [state])
 
   useEffect(() => () => {
+    if (publisherScopeRef.current !== undefined) setDisplayConnectionStatus(publisherScopeRef.current, 'waiting')
     publisherStatusCleanupRef.current?.()
     publisherRef.current?.close()
     publisherRef.current = null

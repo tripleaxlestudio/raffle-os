@@ -3118,7 +3118,7 @@
   .draw-setup__layout,
   .live-ready__layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.85fr) minmax(19rem, 0.85fr);
+    grid-template-columns: minmax(0, 2.75fr) minmax(19rem, 1fr);
     align-items: start;
     gap: var(--space-5);
   }
@@ -3139,6 +3139,7 @@
   }
 
   .draw-setup-section,
+  .draw-setup-capacity-section,
   .draw-setup-support-card {
     display: grid;
     gap: var(--space-3);
@@ -3146,6 +3147,13 @@
   }
 
   .draw-setup-section {
+    padding: var(--space-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-raised);
+  }
+
+  .draw-setup-capacity-section {
     padding: var(--space-3);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-md);
@@ -3235,15 +3243,8 @@
   }
 
   .draw-setup-capacity-metrics {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: var(--space-2);
-  }
-
-  .draw-setup-capacity-neutral-metrics {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .draw-setup-capacity-highlight-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .draw-setup-capacity-metrics > div {
@@ -3252,6 +3253,10 @@
   }
 
   .draw-setup-support-card .status-banner {
+    margin: 0;
+  }
+
+  .draw-setup-capacity-readiness .status-banner {
     margin: 0;
   }
 
@@ -3472,6 +3477,7 @@
   .eligible-pool-metrics dt {
     color: var(--text-muted);
     font-size: 0.6875rem;
+    white-space: nowrap;
   }
 
   .eligible-pool-metrics dd {
@@ -3486,6 +3492,11 @@
     border-style: double !important;
     border-width: 0.1875rem !important;
     border-color: var(--status-success) !important;
+  }
+
+  .eligible-pool-metrics__highlight--secondary {
+    border-color: var(--accent) !important;
+    background: var(--accent-soft) !important;
   }
 
   .pool-warning,
@@ -4018,6 +4029,10 @@
 
   .eligible-pool-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .eligible-pool-metrics dt {
+    white-space: normal;
   }
 
   .draw-action-bar {

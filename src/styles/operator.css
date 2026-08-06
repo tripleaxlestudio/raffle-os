@@ -2676,7 +2676,7 @@
 .settings-authority { white-space: nowrap; }
 .settings-authority--saving { color: var(--status-warning); border-color: var(--status-warning); }
 .settings-authority--needs-attention { color: var(--status-danger); border-color: var(--status-danger); }
-.settings-branding-layout { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: clamp(var(--space-6), 3vw, var(--space-8)); align-items: start; }
+.settings-branding-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .95fr); gap: var(--space-6); align-items: start; }
 .settings-form-grid { gap: var(--space-5) var(--space-4); }
 .settings-form-grid--branding { grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; }
 .settings-form-grid--branding > label:nth-child(-n + 2) { grid-column: 1 / -1; }
@@ -2684,21 +2684,21 @@
 .settings-form-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .settings-form-grid label { gap: var(--space-2); }
 .settings-form-grid select, .settings-form-grid input:not([type="range"]), .settings-display-config select { min-height: 2.75rem; }
-.settings-asset-grid { display: grid; gap: var(--space-5); }
-.settings-asset-field { display: grid; gap: var(--space-4); min-width: 0; padding: var(--space-5); border-color: var(--border-strong); background: var(--surface-muted); }
-.settings-asset-field__preview { display: grid; place-items: center; min-height: 10rem; aspect-ratio: 1; overflow: hidden; border: 1px dashed var(--border-strong); border-radius: var(--radius-md); background: var(--surface); color: var(--accent-hover); font: var(--font-weight-semibold) .72rem var(--font-family-mono); }
-.settings-asset-field--logo .settings-asset-field__preview { width: min(100%, 13rem); margin-inline: auto; }
-.settings-asset-field--wide .settings-asset-field__preview { aspect-ratio: 16 / 9; }
-.settings-asset-field--wide .settings-asset-field__preview { min-height: 12rem; width: 100%; }
-.settings-asset-field__preview img { width: 100%; height: 100%; object-fit: contain; }
-.settings-asset-field--wide .settings-asset-field__preview img { object-fit: cover; }
-.settings-asset-field__copy { display: grid; gap: var(--space-3); min-width: 0; }
-.settings-asset-field__copy strong { color: var(--text-primary); font-size: var(--font-size-sm); }
-.settings-asset-field small { overflow: hidden; color: var(--text-muted); text-overflow: ellipsis; white-space: nowrap; }
-.settings-asset-field__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
-.settings-asset-field__actions label { display: inline-flex; position: relative; cursor: pointer; }
-.settings-asset-field__actions .ui-button { min-height: 2.5rem; }
-.settings-asset-field__actions input[type=file] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.settings-branding-layout .settings-asset-grid { display: grid; gap: 1rem; align-self: start; }
+.settings-branding-layout .settings-asset-field { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: var(--space-4); align-items: center; min-width: 0; min-height: 0; padding: var(--space-4); border-color: var(--border-strong); background: var(--surface-muted); }
+.settings-branding-layout .settings-asset-field--logo { min-height: 10.5rem; }
+.settings-branding-layout .settings-asset-field__preview { display: grid; place-items: center; width: 9.5rem; height: 8rem; min-height: 0; aspect-ratio: auto; flex-shrink: 0; overflow: hidden; border: 1px dashed var(--border-strong); border-radius: var(--radius-md); background: var(--surface); color: var(--accent-hover); font: var(--font-weight-semibold) .72rem var(--font-family-mono); }
+.settings-branding-layout .settings-asset-field--wide { grid-template-columns: minmax(0, 1fr) 10rem; min-height: 14.5rem; }
+.settings-branding-layout .settings-asset-field--wide .settings-asset-field__preview { width: min(100%, 26rem); height: auto; aspect-ratio: 16 / 9; }
+.settings-branding-layout .settings-asset-field__preview img { width: 100%; height: 100%; object-fit: contain; }
+.settings-branding-layout .settings-asset-field--wide .settings-asset-field__preview img { object-fit: cover; }
+.settings-branding-layout .settings-asset-field__copy { display: grid; gap: var(--space-3); min-width: 0; }
+.settings-branding-layout .settings-asset-field__copy strong { color: var(--text-primary); font-size: var(--font-size-sm); }
+.settings-branding-layout .settings-asset-field small { overflow: hidden; color: var(--text-muted); text-overflow: ellipsis; white-space: nowrap; }
+.settings-branding-layout .settings-asset-field__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.settings-branding-layout .settings-asset-field__actions label { display: inline-flex; position: relative; cursor: pointer; }
+.settings-branding-layout .settings-asset-field__actions .ui-button { min-height: 2.5rem; }
+.settings-branding-layout .settings-asset-field__actions input[type=file] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .settings-safe-area-preview { display: grid; place-items: center; align-content: center; gap: var(--space-2); min-height: 15rem; background: #07090d; }
 .settings-safe-area-preview::before { inset: 10%; }
 .settings-safe-area-preview strong { color: var(--text-primary); font-family: var(--font-family-mono); font-size: var(--font-size-sm); }
@@ -2741,6 +2741,9 @@
   .settings-display-meta div:last-child { border-bottom: 0; }
   .settings-display-actions, .settings-popup-fallback { align-items: stretch; flex-direction: column; }
   .settings-diagnostics { max-width: none; }
+  .settings-branding-layout .settings-asset-field, .settings-branding-layout .settings-asset-field--wide { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .settings-branding-layout .settings-asset-field__preview, .settings-branding-layout .settings-asset-field--wide .settings-asset-field__preview { width: 100%; max-width: none; }
+  .settings-branding-layout .settings-asset-field--logo .settings-asset-field__preview { width: min(100%, 10rem); margin-inline: auto; }
 }
 
 @media (max-width: 78rem) {

@@ -32,6 +32,11 @@ describe('display protocol envelope', () => {
     }
   });
 
+  it('retains the authoritative countdown value in the parsed display message', () => {
+    const parsed = parseEnvelope(envelope({ message: { type: 'display-state', stage: 'countdown', countdownValue: 2 } }));
+    expect(parsed).toEqual(expect.objectContaining({ ok: true, envelope: expect.objectContaining({ message: expect.objectContaining({ countdownValue: 2 }) }) }));
+  });
+
   it('rejects malformed envelopes and unsupported protocol versions', () => {
     expect(parseEnvelope({})).toMatchObject({ ok: false, error: { kind: 'invalid-envelope' } });
     expect(parseEnvelope({ ...envelope(), protocolVersion: 999 })).toMatchObject({ ok: false, error: { kind: 'unsupported-version', received: 999 } });

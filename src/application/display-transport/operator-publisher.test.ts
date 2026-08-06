@@ -8,11 +8,12 @@ import type { PresentationProjectionSource } from './public-projection.ts'
 const session = '00000000-0000-4000-8000-000000000001' as DrawSessionId
 const scope = { eventId: 'production-event', displayId: 'public-display' } as const
 const result = { drawSessionId: session, winners: [{ sequence: 1, ticketNumber: '00042' }, { sequence: 2, ticketNumber: '42' }] } as const
-const source = (stage: 'ready' | 'standby' | 'countdown' | 'rolling' | 'reveal' | 'pending-handoff', blackoutRequested = false): PresentationProjectionSource => ({
+const source = (stage: 'ready' | 'standby' | 'countdown' | 'rolling' | 'reveal' | 'pending-handoff', blackoutRequested = false, countdownValue?: 3 | 2 | 1): PresentationProjectionSource => ({
   drawSessionId: session,
   stage,
   ...(stage === 'ready' || stage === 'standby' ? {} : { stageStartedAt: '2026-08-05T00:00:00.000Z' as never }),
   blackoutRequested,
+  ...(countdownValue === undefined ? {} : { countdownValue }),
   mode: 'live' as const,
   result,
 })
@@ -68,6 +69,14 @@ describe('operator presentation publisher', () => {
     const before = harness.messages.length
     expect(publisher.publish(source(to))).toMatchObject({ ok: true, published: true })
     expect(harness.messages).toHaveLength(before + 1)
+  })
+
+  it('publishes the authoritative countdown value for Audience rendering', () => {
+    const harness = transportHarness()
+    const publisher = createOperatorPublisher({ transport: harness.transport, scope, senderId: 'operator-1', clock: { now: () => '2026-08-05T00:00:00.000Z' as never } })
+    publisher.start(source('standby'))
+    publisher.publish(source('countdown', false, 2))
+    expect(harness.messages.at(-1)?.message).toMatchObject({ stage: 'countdown', countdownValue: 2 })
   })
 
   it('deduplicates repeated public state and keeps ticket strings distinct', () => {

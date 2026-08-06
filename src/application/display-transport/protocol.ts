@@ -220,6 +220,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
       stage: validStage,
       ...(message.drawSessionId === undefined ? {} : { drawSessionId: message.drawSessionId }),
       ...(message.stageStartedAt === undefined ? {} : { stageStartedAt: message.stageStartedAt }),
+      ...(message.countdownValue === undefined ? {} : { countdownValue: message.countdownValue }),
       ...(message.blackoutRequested === undefined ? {} : { blackoutRequested: message.blackoutRequested }),
       ...(message.displayTest === undefined ? {} : { displayTest: message.displayTest }),
       ...(message.eventName === undefined ? {} : { eventName: message.eventName }),

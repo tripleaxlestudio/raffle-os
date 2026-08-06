@@ -37,6 +37,20 @@ describe('ProductionDrawPresentation', () => {
     expect(screen.queryByText('Preparing locked result presentation…')).not.toBeInTheDocument()
   })
 
+  it('exposes rehearsal reset only for completed Practice presentation', async () => {
+    const onResetPractice = vi.fn()
+    render(<ProductionDrawPresentation result={result(1)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" practiceResult={{ drawSessionId: result(1).drawSessionId, winners: result(1).winners as never, createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1, presentation: { storageFormatVersion: 1, stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, presentationPolicyVersion: 1, blackoutRequested: false } }} onFailure={() => undefined} onResetPractice={onResetPractice} />)
+    expect(await screen.findByRole('heading', { name: 'Winner reveal' })).toBeInTheDocument()
+    await screen.findByRole('button', { name: 'Reset rehearsal' }).then((button) => button.click())
+    expect(onResetPractice).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not expose rehearsal reset for Live presentation', async () => {
+    render(<ProductionDrawPresentation result={result(1)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} onResetPractice={vi.fn()} />)
+    expect(await screen.findByRole('heading', { name: 'Winner reveal' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reset rehearsal' })).not.toBeInTheDocument()
+  })
+
   it('survives Strict Mode recovery hydration and continues from the persisted stage', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-05T00:00:00.000Z'))

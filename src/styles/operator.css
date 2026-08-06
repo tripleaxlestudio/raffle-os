@@ -1432,6 +1432,93 @@
   padding-bottom: var(--space-4);
 }
 
+.presentation-header-actions,
+.presentation-action-row,
+.practice-complete-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.presentation-header-actions {
+  margin-top: var(--space-3);
+}
+
+.practice-complete-panel {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 54rem;
+}
+
+.practice-complete-panel h2,
+.practice-complete-panel p {
+  margin: 0;
+}
+
+.practice-complete-panel__context {
+  color: var(--text-secondary);
+}
+
+.practice-complete-panel ol {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.practice-complete-panel li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.practice-complete-panel li span {
+  color: var(--text-muted);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+.draw-run-audience-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-left: 0.25rem solid var(--status-success);
+}
+
+.draw-run-audience-card h2,
+.draw-run-audience-card p,
+.draw-run-audience-card small {
+  margin: 0;
+}
+
+.draw-run-audience-card h2 {
+  font-size: var(--font-size-md);
+}
+
+.draw-run-audience-card p {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.draw-run-audience-card small {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.draw-run-audience-card__actions {
+  flex: 0 0 auto;
+}
+
 .production-presentation h1,
 .production-presentation p { margin: 0; }
 .production-presentation__content { display: grid; gap: var(--space-5); justify-items: center; }
@@ -1458,6 +1545,21 @@
 }
 
 @media (max-width: 40rem) {
+  .draw-run-audience-card,
+  .presentation-header-actions,
+  .presentation-action-row,
+  .practice-complete-panel__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .draw-run-audience-card__actions,
+  .presentation-header-actions .ui-button,
+  .presentation-action-row .ui-button,
+  .practice-complete-panel__actions .ui-button {
+    width: 100%;
+  }
+
   .production-winner-list,
   .production-winner-list--20,
   .production-winner-list--50,

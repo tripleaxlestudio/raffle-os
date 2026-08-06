@@ -90,6 +90,15 @@ export function readPracticeResult(drawSessionId: DrawSessionId): PracticeResult
   }
 }
 
+export function clearPracticeResult(drawSessionId: DrawSessionId): void {
+  try {
+    storage().removeItem(key(drawSessionId))
+  } catch (cause: unknown) {
+    if (cause instanceof LiveStartGateError) throw cause
+    throw new LiveStartGateError('practice-session-storage-write-failure', 'Practice rehearsal state could not be cleared safely. No official result was changed.', 'retryable', cause)
+  }
+}
+
 export function readPracticeResultForPresentation(drawSessionId: DrawSessionId): PracticeResultProjection | null {
   try {
     const raw = storage().getItem(key(drawSessionId))

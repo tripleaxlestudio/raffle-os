@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { practiceResultFromWinners, readPracticeResult, readPracticeResultForPresentation, savePracticeResult } from './practice-result-storage.ts'
+import { clearPracticeResult, practiceResultFromWinners, readPracticeResult, readPracticeResultForPresentation, savePracticeResult } from './practice-result-storage.ts'
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
 
@@ -15,6 +15,12 @@ describe('Practice result storage', () => {
     expect(result?.winners).toEqual([{ winnerId: winner.id, sequence: 1, ticketNumber: '00042' }])
     expect(JSON.stringify(result)).not.toContain('participantId')
     expect(readPracticeResult('00000000-0000-4000-8000-000000000006' as DrawSessionId)).toBeNull()
+  })
+
+  it('clears only the selected Practice projection', () => {
+    savePracticeResult(practiceResultFromWinners(sessionId, [winner], '2026-08-05T00:00:00.000Z'))
+    clearPracticeResult(sessionId)
+    expect(readPracticeResult(sessionId)).toBeNull()
   })
 
   it.each([

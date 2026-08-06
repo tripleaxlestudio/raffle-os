@@ -123,6 +123,19 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
     {categories.length === 0 ? <StatusBanner badge="Category required" title="Create a PrizeCategory before configuring a draw" tone="warning"><ButtonLink to="/prize-categories">Open PrizeCategory management</ButtonLink></StatusBanner> : null}
     <Card className="draw-panel" padding="md">
       <form onSubmit={(event) => { event.preventDefault(); void save() }}>
+        <section className="draw-setup-capacity-section" aria-labelledby="capacity-summary-title">
+          <div className="draw-setup-section__heading"><div><p className="operator-eyebrow">Capacity</p><h2 id="capacity-summary-title">Eligible pool summary</h2></div></div>
+          <dl aria-label="Eligible pool metrics" className="eligible-pool-metrics draw-setup-capacity-metrics">
+            <div><dt>Total participants</dt><dd>{capacity?.totalParticipantCount ?? '—'}</dd></div>
+            <div><dt>Checked-in participants</dt><dd>{capacity?.checkedInParticipantCount ?? '—'}</dd></div>
+            <div><dt>Previous winners excluded</dt><dd>{capacity?.previousWinnerExcludedCount ?? '—'}</dd></div>
+            <div className="eligible-pool-metrics__highlight"><dt>Eligible pool</dt><dd>{capacity?.authoritativeEligibleCount ?? '—'}</dd></div>
+            <div className="eligible-pool-metrics__highlight eligible-pool-metrics__highlight--secondary"><dt>Requested winners</dt><dd>{capacity?.requestedWinnerCount ?? '—'}</dd></div>
+          </dl>
+          <div className="draw-setup-capacity-readiness">
+            <StatusBanner badge={readinessBadge} title={readinessTitle} tone={readinessTone}>{dirty ? 'Save changes to evaluate eligibility and readiness.' : readiness?.state === 'ready' ? `Storage and secure Web Crypto are ready. ${readiness.data?.authoritativeEligibleCount} eligible participants are available for ${readiness.data?.requestedWinnerCount} requested winners.` : readiness?.reason ?? 'Readiness is being checked.'}{eligibilityNotEvaluated ? ' Eligibility was not evaluated because an active or pending Live session must be resolved first.' : null}{!dirty && readiness?.retryable ? ' Retry readiness after the underlying issue is corrected.' : null}</StatusBanner>
+          </div>
+        </section>
         <div className="draw-setup__layout">
           <div className="draw-setup__main">
             <section className="draw-setup-section" aria-labelledby="draw-identity-title">
@@ -143,19 +156,6 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
                 <Select label="Winning rule" value={form.winningRule} onChange={(event) => update('winningRule', event.target.value)} disabled={started}><option value="once-per-event">Once per event</option><option value="once-per-category">Once per category</option><option value="allow-repeat">Allow repeat</option></Select>
                 <Input label="Eligible group filter" value={form.eligibleGroupFilter} onChange={(event) => update('eligibleGroupFilter', event.target.value)} disabled={started} description="Leave empty to include all groups." />
                 <Checkbox label="Require participant check-in" checked={form.requireCheckIn} onChange={(event) => update('requireCheckIn', event.target.checked)} disabled={started} description="Only checked-in participants are eligible." />
-              </div>
-            </section>
-            <section className="draw-setup-capacity-section" aria-labelledby="capacity-summary-title">
-              <div className="draw-setup-section__heading"><div><p className="operator-eyebrow">Capacity</p><h2 id="capacity-summary-title">Eligible pool summary</h2></div></div>
-              <dl aria-label="Eligible pool metrics" className="eligible-pool-metrics draw-setup-capacity-metrics">
-                <div><dt>Total participants</dt><dd>{capacity?.totalParticipantCount ?? '—'}</dd></div>
-                <div><dt>Checked-in participants</dt><dd>{capacity?.checkedInParticipantCount ?? '—'}</dd></div>
-                <div><dt>Previous winners excluded</dt><dd>{capacity?.previousWinnerExcludedCount ?? '—'}</dd></div>
-                <div className="eligible-pool-metrics__highlight"><dt>Eligible pool</dt><dd>{capacity?.authoritativeEligibleCount ?? '—'}</dd></div>
-                <div className="eligible-pool-metrics__highlight eligible-pool-metrics__highlight--secondary"><dt>Requested winners</dt><dd>{capacity?.requestedWinnerCount ?? '—'}</dd></div>
-              </dl>
-              <div className="draw-setup-capacity-readiness">
-                <StatusBanner badge={readinessBadge} title={readinessTitle} tone={readinessTone}>{dirty ? 'Save changes to evaluate eligibility and readiness.' : readiness?.state === 'ready' ? `Storage and secure Web Crypto are ready. ${readiness.data?.authoritativeEligibleCount} eligible participants are available for ${readiness.data?.requestedWinnerCount} requested winners.` : readiness?.reason ?? 'Readiness is being checked.'}{eligibilityNotEvaluated ? ' Eligibility was not evaluated because an active or pending Live session must be resolved first.' : null}{!dirty && readiness?.retryable ? ' Retry readiness after the underlying issue is corrected.' : null}</StatusBanner>
               </div>
             </section>
           </div>

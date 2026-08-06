@@ -42,10 +42,20 @@ describe('Draw Setup persisted authoring', () => {
   it('shows quick counts with pressed semantics and updates the same winner field', async () => {
     const user = userEvent.setup()
     renderPage(services())
-    await screen.findByRole('button', { name: '6' })
+    for (const count of ['1', '3', '6', '10', '20', '50']) {
+      expect(await screen.findByRole('button', { name: count })).toHaveAttribute('aria-pressed', count === '1' ? 'true' : 'false')
+    }
     await user.click(screen.getByRole('button', { name: '6' }))
     expect(screen.getByRole('button', { name: '6' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByLabelText('Custom winner count')).toHaveValue(6)
+    await user.clear(screen.getByLabelText('Custom winner count'))
+    await user.type(screen.getByLabelText('Custom winner count'), '10')
+    expect(screen.getByRole('button', { name: '10' })).toHaveAttribute('aria-pressed', 'true')
+    await user.clear(screen.getByLabelText('Custom winner count'))
+    await user.type(screen.getByLabelText('Custom winner count'), '7')
+    for (const count of ['1', '3', '6', '10', '20', '50']) {
+      expect(screen.getByRole('button', { name: count })).toHaveAttribute('aria-pressed', 'false')
+    }
     expect(screen.getByText('Save changes to evaluate eligibility and readiness.')).toBeInTheDocument()
   })
 
@@ -76,6 +86,10 @@ describe('Draw Setup persisted authoring', () => {
     renderPage(services())
     const capacityHeading = await screen.findByRole('heading', { name: 'Eligible pool summary' })
     const capacitySection = capacityHeading.closest('section')
+    const identityHeading = screen.getByRole('heading', { name: 'Event and prize' })
+    const headingOrder = Array.from(document.querySelectorAll('h2')).map((heading) => heading.textContent)
+    expect(headingOrder.indexOf(capacityHeading.textContent)).toBeLessThan(headingOrder.indexOf(identityHeading.textContent))
+    expect(screen.getAllByRole('heading', { name: 'Eligible pool summary' })).toHaveLength(1)
     const primaryMetrics = screen.getByLabelText('Eligible pool metrics')
     expect(capacitySection).toContainElement(screen.getByText('Total participants'))
     expect(capacitySection).toContainElement(screen.getByText('Checked-in participants'))
@@ -83,6 +97,7 @@ describe('Draw Setup persisted authoring', () => {
     expect(primaryMetrics).toContainElement(screen.getByText('Eligible pool'))
     expect(primaryMetrics).toContainElement(screen.getByText('Requested winners'))
     expect(primaryMetrics.querySelectorAll('dt')).toHaveLength(5)
+    expect(primaryMetrics.nextElementSibling).toHaveClass('draw-setup-capacity-readiness')
     expect(screen.getByText('Eligible pool').closest('div')).toHaveClass('eligible-pool-metrics__highlight')
     expect(screen.getByText('Requested winners').closest('div')).toHaveClass('eligible-pool-metrics__highlight')
     const supportCard = document.querySelector('.draw-setup-support-card')

@@ -3195,9 +3195,20 @@
   }
 
   .winner-count-choices {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(4rem, 1fr));
     gap: var(--space-2);
+  }
+
+  .winner-count-choices .ui-button {
+    min-height: 3rem;
+    padding-inline: var(--space-3);
+    font-size: var(--font-size-md);
+  }
+
+  .draw-panel form {
+    display: grid;
+    gap: var(--space-4);
   }
 
   .winner-count-controls .ui-field {
@@ -3992,6 +4003,10 @@
   .draw-setup-capacity-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .winner-count-choices {
+    grid-template-columns: repeat(3, minmax(4rem, 1fr));
+  }
 }
 
 @media (max-width: 62rem) {
@@ -4007,6 +4022,10 @@
 
   .draw-setup-support-card .draw-mode-options__list {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .winner-count-choices {
+    grid-template-columns: repeat(2, minmax(4rem, 1fr));
   }
 
   .draw-setup-production__summary {

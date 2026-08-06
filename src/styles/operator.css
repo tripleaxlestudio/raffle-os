@@ -2729,14 +2729,9 @@
 .settings-audio-controls label { display: grid; gap: var(--space-2); color: var(--text-secondary); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
 .settings-audio-controls label > span { color: var(--text-muted); font-size: .7rem; font-weight: normal; line-height: 1.4; }
 .settings-audio-controls label.is-disabled { opacity: .72; }
-.settings-audio-enabled { min-width: 0; margin: 0; padding: 0; border: 0; }
-.settings-audio-enabled legend { padding: 0; color: var(--text-secondary); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
-.settings-audio-enabled > span { display: block; margin-top: var(--space-2); color: var(--text-muted); font-size: .7rem; font-weight: normal; line-height: 1.4; }
-.settings-audio-enabled__options { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
-.settings-audio-enabled__options label { display: inline-flex; grid-template-columns: auto 1fr; align-items: center; gap: var(--space-2); min-height: 2.25rem; padding: .375rem .625rem; border: 1px solid var(--border-default); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-secondary); cursor: pointer; font-size: .75rem; font-weight: var(--font-weight-semibold); }
-.settings-audio-enabled__options label:has(input:checked) { border-color: var(--accent-hover); background: var(--accent-soft); color: var(--text-primary); }
-.settings-audio-enabled__options label:has(input:focus-visible) { outline: 2px solid var(--accent-hover); outline-offset: 2px; }
-.settings-audio-enabled__options input { width: .95rem; height: .95rem; margin: 0; accent-color: var(--accent-hover); }
+.settings-audio-enabled-toggle { min-width: 0; min-height: 2.75rem; gap: var(--space-3); }
+.settings-audio-enabled-toggle__state { margin-left: auto; color: var(--text-muted); font: var(--font-weight-semibold) .65rem var(--font-family-mono); text-transform: uppercase; }
+.settings-audio-enabled-toggle:has(input:checked) .settings-audio-enabled-toggle__state { color: var(--accent-hover); }
 .settings-audio-controls select { min-height: 2.75rem; padding: 0 var(--space-3); border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface); color: var(--text-primary); font: inherit; }
 .settings-audio-asset { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: var(--space-4); align-items: center; min-width: 0; padding: var(--space-4); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface-muted); }
 .settings-audio-asset__visual { display: flex; align-items: center; justify-content: center; gap: .25rem; min-height: 7.5rem; border: 1px dashed var(--border-strong); border-radius: var(--radius-md); background: var(--surface); color: var(--accent-hover); }

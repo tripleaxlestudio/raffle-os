@@ -3211,7 +3211,7 @@
   }
 
   .draw-setup-support-card .draw-mode-options__list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-2);
   }
 
@@ -3235,16 +3235,15 @@
   }
 
   .draw-setup-capacity-metrics {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: var(--space-2);
   }
 
-  .draw-setup-capacity-metrics > div:nth-child(-n + 3) {
-    grid-column: span 2;
+  .draw-setup-capacity-neutral-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .draw-setup-capacity-metrics > div:nth-child(n + 4) {
-    grid-column: span 3;
+  .draw-setup-capacity-highlight-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .draw-setup-capacity-metrics > div {

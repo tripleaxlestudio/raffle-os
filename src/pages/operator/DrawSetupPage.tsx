@@ -149,17 +149,19 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
           <div className="draw-setup__aside">
             <Card className="draw-setup-support-card" padding="md">
               <div className="draw-setup-section__heading"><div><p className="operator-eyebrow">Capacity</p><h2 id="capacity-summary-title">Eligible pool</h2></div></div>
-              <dl aria-labelledby="capacity-summary-title" className="eligible-pool-metrics draw-setup-capacity-metrics">
+              <dl aria-labelledby="capacity-summary-title" className="eligible-pool-metrics draw-setup-capacity-metrics draw-setup-capacity-neutral-metrics">
                 <div><dt>Total participants</dt><dd>{capacity?.totalParticipantCount ?? '—'}</dd></div>
                 <div><dt>Checked-in participants</dt><dd>{capacity?.checkedInParticipantCount ?? '—'}</dd></div>
                 <div><dt>Previous winners excluded</dt><dd>{capacity?.previousWinnerExcludedCount ?? '—'}</dd></div>
+              </dl>
+              <dl aria-label="Primary capacity metrics" className="eligible-pool-metrics draw-setup-capacity-metrics draw-setup-capacity-highlight-metrics">
                 <div className="eligible-pool-metrics__highlight"><dt>Eligible pool</dt><dd>{capacity?.authoritativeEligibleCount ?? '—'}</dd></div>
                 <div className="eligible-pool-metrics__highlight"><dt>Requested winners</dt><dd>{capacity?.requestedWinnerCount ?? '—'}</dd></div>
               </dl>
               <StatusBanner badge={readinessBadge} title={readinessTitle} tone={readinessTone}>{dirty ? 'Save changes to evaluate eligibility and readiness.' : readiness?.state === 'ready' ? `Storage and secure Web Crypto are ready. ${readiness.data?.authoritativeEligibleCount} eligible participants are available for ${readiness.data?.requestedWinnerCount} requested winners.` : readiness?.reason ?? 'Readiness is being checked.'}{eligibilityNotEvaluated ? ' Eligibility was not evaluated because an active or pending Live session must be resolved first.' : null}{!dirty && readiness?.retryable ? ' Retry readiness after the underlying issue is corrected.' : null}</StatusBanner>
             <fieldset className="draw-mode-options"><legend>Authoring mode</legend><div className="draw-mode-options__list">
               <label className="draw-mode-option"><input id="draw-mode-practice" type="radio" name="draw-mode" value="practice" aria-labelledby="draw-mode-practice-label" aria-describedby="draw-mode-practice-description" checked={form.mode === 'practice'} onChange={() => update('mode', 'practice')} disabled={started} /><span className="draw-mode-option__copy"><strong id="draw-mode-practice-label">Practice</strong><small id="draw-mode-practice-description">Rehearsal only. No official result is created.</small></span></label>
-              <label className="draw-mode-option"><input id="draw-mode-live" type="radio" name="draw-mode" value="live" aria-labelledby="draw-mode-live-label" aria-describedby="draw-mode-live-description" checked={form.mode === 'live'} onChange={() => update('mode', 'live')} disabled={started} /><span className="draw-mode-option__copy"><strong id="draw-mode-live-label">Live</strong><small id="draw-mode-live-description">Official session. Result becomes pending after the start gate.</small></span></label>
+              <label className="draw-mode-option"><input id="draw-mode-live" type="radio" name="draw-mode" value="live" aria-labelledby="draw-mode-live-label" aria-describedby="draw-mode-live-description" checked={form.mode === 'live'} onChange={() => update('mode', 'live')} disabled={started} /><span className="draw-mode-option__copy"><strong id="draw-mode-live-label">Live</strong><small id="draw-mode-live-description">Official session. Confirmation is required before starting.</small></span></label>
             </div></fieldset>
             <p>{form.mode === 'live' ? 'Live handoff leads to the official start gate. It does not start a draw here.' : 'Practice is rehearsal only and does not create official results.'} Mode is stored on the ready DrawSession; URL parameters cannot override it.</p>
             <div className="draw-setup-actions">

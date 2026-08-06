@@ -70,6 +70,7 @@
         rgb(138 92 255 / 0.11) 100%
       ),
       linear-gradient(180deg, #100720 0%, var(--app-bg) 100%);
+    background-image: var(--audience-background-image, linear-gradient(180deg, #100720 0%, var(--app-bg) 100%));
     color: var(--text-primary);
   }
 
@@ -94,6 +95,8 @@
   .event-brand p {
     margin: 0;
   }
+
+  .event-brand__logo { display: block; max-width: min(14rem, 28vw); max-height: 4rem; margin-bottom: 0.75rem; object-fit: contain; object-position: left center; }
 
   .event-brand__name {
     color: var(--text-primary);
@@ -490,6 +493,10 @@
     min-height: 0;
     overflow: hidden;
     background: #000000;
+  }
+
+  .audience-blackout-stage[data-blackout-appearance="event-surface"] {
+    background: var(--app-bg);
   }
 
   .disconnected-stage {

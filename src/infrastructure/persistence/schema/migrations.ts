@@ -10,6 +10,8 @@ import {
   SCHEMA_VERSION_2,
   SCHEMA_V3,
   SCHEMA_VERSION_3,
+  SCHEMA_V4,
+  SCHEMA_VERSION_4,
 } from './schema-v1.ts'
 
 export interface PersistenceMigration {
@@ -20,7 +22,7 @@ export interface PersistenceMigration {
   ) => PromiseLike<void> | void
 }
 
-export const CURRENT_SUPPORTED_SCHEMA_VERSION = SCHEMA_VERSION_3
+export const CURRENT_SUPPORTED_SCHEMA_VERSION = SCHEMA_VERSION_4
 
 export const PERSISTENCE_MIGRATIONS:
   readonly PersistenceMigration[] = [
@@ -36,6 +38,7 @@ export const PERSISTENCE_MIGRATIONS:
       stores: SCHEMA_V3,
       version: SCHEMA_VERSION_3,
     },
+    { stores: SCHEMA_V4, version: SCHEMA_VERSION_4 },
   ]
 
 /*

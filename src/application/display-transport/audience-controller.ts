@@ -100,10 +100,12 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         blackoutRequested: message.blackoutRequested ?? false,
         ...(message.displayTest === undefined ? {} : { displayTest: message.displayTest }),
         ...(message.eventName === undefined ? {} : { eventName: message.eventName }),
+        ...(message.eventSubtitle === undefined ? {} : { eventSubtitle: message.eventSubtitle }), ...(message.primaryColor === undefined ? {} : { primaryColor: message.primaryColor }), ...(message.accentColor === undefined ? {} : { accentColor: message.accentColor }), ...(message.logo === undefined ? {} : { logo: message.logo }), ...(message.background === undefined ? {} : { background: message.background }), ...(message.blackoutAppearance === undefined ? {} : { blackoutAppearance: message.blackoutAppearance }), ...(message.safeAreaMargin === undefined ? {} : { safeAreaMargin: message.safeAreaMargin }),
         ...(message.mode === undefined ? {} : { mode: message.mode }),
         ...(message.ticketNumbers === undefined ? {} : { ticketNumbers: message.ticketNumbers }),
         ...(message.winnerStatuses === undefined ? {} : { winnerStatuses: message.winnerStatuses }),
       }, acceptedSession)
+      const wasConnected = connection === 'connected'
       acceptedMessageIds.add(envelope.messageId)
       acceptedOrdering = { epoch: envelope.epoch, sequence: envelope.sequence }
       acceptedOperator = sender
@@ -112,6 +114,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       connection = 'connected'
       state = { kind: 'snapshot', connection, snapshot }
       notify()
+      if (!wasConnected) sendReady()
     } catch {
       // Invalid, private, cross-session, or otherwise malformed snapshots never replace safe state.
     }

@@ -41,7 +41,7 @@ describe('schema v3 command receipts', () => {
     const database = open()
     await database.openSupported()
     const schema = database.command_receipts.schema
-    expect(database.verno).toBe(3)
+    expect(database.verno).toBe(4)
     expect(schema.primKey.name).toBe('commandId')
     expect(schema.primKey.unique).toBe(true)
     expect(schema.indexes.map((index) => [index.name, index.unique])).toEqual([

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useSyncExternalStore, type CSSProperties } from 'react'
 import { createAudienceController } from '../../application/display-transport/audience-controller.ts'
 import { createFullscreenController, type FullscreenState } from '../../application/display-transport/fullscreen-controller.ts'
 import type { PublicDisplaySnapshot } from '../../application/display-transport/public-projection.ts'
@@ -25,6 +25,10 @@ function snapshotScenario(snapshot: PublicDisplaySnapshot): PublicAudienceScenar
   return {
     ...publicContext,
     ...(snapshot.eventName === undefined ? {} : { eventName: snapshot.eventName }),
+    ...(snapshot.eventSubtitle === undefined ? {} : { eventSubtitle: snapshot.eventSubtitle }),
+    ...(snapshot.logo === undefined ? {} : { logo: snapshot.logo.blob }),
+    ...(snapshot.primaryColor === undefined ? {} : { primaryColor: snapshot.primaryColor }),
+    ...(snapshot.accentColor === undefined ? {} : { accentColor: snapshot.accentColor }),
     state: committedState,
     message: committedState === 'standby' ? (snapshot.stage === 'pending-handoff' ? 'No active winners' : 'Draw will begin shortly') : committedState === 'countdown' ? 'Get ready' : committedState === 'rolling' ? 'Drawing in progress' : undefined,
     countdownValue: snapshot.stage === 'countdown' ? '—' : undefined,
@@ -70,7 +74,8 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
   const controls = <FullscreenControls controller={fullscreen} state={fullscreenState} />
   if (state.kind === 'connecting' || state.kind === 'disconnected-safe' || state.kind === 'unavailable') return <><DisconnectedStage scenario={safeStatusScenario(state.kind === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}</>
   if (state.connection !== 'connected') return <><DisconnectedStage scenario={safeStatusScenario(state.connection === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}</>
-  if (state.snapshot.blackoutRequested) return <><BlackoutStage />{controls}</>
+  const audienceStyle = { '--audience-safe-inline': `${state.snapshot.safeAreaMargin ?? 0}px`, '--audience-safe-block': `${state.snapshot.safeAreaMargin ?? 0}px`, '--accent': state.snapshot.primaryColor ?? undefined, '--accent-hover': state.snapshot.accentColor ?? undefined, ...(state.snapshot.background === undefined ? {} : { '--audience-background-image': `url(${URL.createObjectURL(state.snapshot.background.blob)})` }) } as CSSProperties
+  if (state.snapshot.blackoutRequested) return <div style={audienceStyle}><BlackoutStage appearance={state.snapshot.blackoutAppearance} />{controls}</div>
   const scenario = snapshotScenario(state.snapshot)
   const rendered = (() => {
   switch (scenario.state) {
@@ -82,5 +87,5 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
     case 'confirmed': return <WinnerStage scenario={scenario} />
   }
   })()
-  return <>{rendered}{controls}</>
+  return <div style={audienceStyle}>{rendered}{controls}</div>
 }

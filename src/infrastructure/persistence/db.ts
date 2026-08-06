@@ -4,6 +4,7 @@ import Dexie, {
 } from 'dexie'
 import type { AuditRecord } from '../../domain/audit/audit.types.ts'
 import type { DisplayConfiguration } from '../../domain/display/display-configuration.types.ts'
+import type { EventSettings } from '../../domain/settings/event-settings.types.ts'
 import type { DrawConfiguration } from '../../domain/draws/draw-configuration.types.ts'
 import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
 import type { Event } from '../../domain/events/event.types.ts'
@@ -86,6 +87,7 @@ export class RaffleOSDatabase extends Dexie {
     DisplayConfiguration,
     DisplayConfigurationId
   >
+  declare readonly event_settings: Table<EventSettings, EventId>
   declare readonly draw_sessions: Table<DrawSession, DrawSessionId>
   declare readonly winner_records: Table<
     WinnerRecord,
@@ -161,7 +163,7 @@ export class RaffleOSDatabase extends Dexie {
     try {
       await this.openSupported()
       const required = ['events', 'participants', 'prize_categories', 'draw_configurations', 'display_configurations', 'draw_sessions', 'winner_records', 'redraw_records', 'audit_records', 'preferences', 'presentation_checkpoints', 'command_receipts'] as const
-      for (const name of required) {
+      for (const name of [...required, 'event_settings'] as const) {
         if (!this.tables.some((table) => table.name === name)) return { ok: false, code: 'unsupported-schema', reason: 'The local database schema is missing a required store.' }
         await this.table(name).count()
       }

@@ -12,6 +12,7 @@ export function StandbyStage({ scenario }: StandbyStageProps) {
       <EventBrand
         eventName={scenario.eventName}
         eventSubtitle={scenario.eventSubtitle}
+        logo={scenario.logo}
       />
       <div className="standby-stage__message">
         {scenario.displayTest ? <p className="audience-test-badge" role="status">DISPLAY TEST · NOT AN OFFICIAL DRAW</p> : null}

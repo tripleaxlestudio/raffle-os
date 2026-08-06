@@ -14,6 +14,7 @@ export type AudienceViewState =
 export type PublicAudienceContext = Readonly<{
   readonly eventName: string
   readonly eventSubtitle: string
+  readonly logo?: Blob
   readonly prizeCategory: string
   readonly prizeLabel: string
   readonly prototypeStatic?: boolean
@@ -29,4 +30,6 @@ export type PublicAudienceScenario = PublicAudienceContext &
     readonly instruction?: string
     readonly layoutCount?: 1 | 6 | 10 | 20
     readonly displayTest?: boolean
+    readonly primaryColor?: string
+    readonly accentColor?: string
   }>

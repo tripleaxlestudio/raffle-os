@@ -14,6 +14,7 @@ export type DisplayCapability = {
   readonly broadcastChannel: 'available' | 'unavailable';
   readonly fullscreen: 'available' | 'unavailable';
 };
+export type PublicAsset = { readonly type: string; readonly blob: Blob };
 
 export type PublicDisplayStage =
   | 'standby'
@@ -38,6 +39,13 @@ export type PublicMessage =
       readonly blackoutRequested?: boolean;
       readonly displayTest?: boolean;
       readonly eventName?: string;
+      readonly eventSubtitle?: string;
+      readonly primaryColor?: string;
+      readonly accentColor?: string;
+      readonly logo?: PublicAsset;
+      readonly background?: PublicAsset;
+      readonly blackoutAppearance?: 'pure-black' | 'event-surface';
+      readonly safeAreaMargin?: number;
       readonly mode?: 'practice' | 'live';
       readonly ticketNumbers?: readonly string[];
       readonly winnerStatuses?: readonly PublicWinnerStatus[];
@@ -114,6 +122,7 @@ const isCapability = (value: unknown): value is DisplayCapability =>
   isRecord(value) &&
   (value.broadcastChannel === 'available' || value.broadcastChannel === 'unavailable') &&
   (value.fullscreen === 'available' || value.fullscreen === 'unavailable');
+const isPublicAsset = (value: unknown): value is PublicAsset => isRecord(value) && typeof value.type === 'string' && value.blob instanceof Blob;
 
 const isStage = (value: unknown): value is PublicDisplayStage =>
   value === 'standby' ||
@@ -161,7 +170,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
   const validStage = isStage(stage) ? stage : undefined;
   if (messageType === 'display-ready' && (!hasOnlyKeys(message, ['type', 'capability']) || validCapability === undefined)) return invalid('message', 'Display-ready message contains unsupported or invalid fields.');
   if (messageType === 'display-state' && validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
-  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'blackoutRequested', 'displayTest', 'eventName', 'mode', 'ticketNumbers', 'winnerStatuses', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
+  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'ticketNumbers', 'winnerStatuses', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
   if (messageType === 'display-restore-request' && !hasOnlyKeys(message, ['type', 'requestedEpoch', 'requestedSequence'])) return invalid('message', 'Restore request contains unsupported fields.');
   if (messageType === 'display-close' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Close message contains unsupported fields.');
   if (messageType !== 'display-ready' && messageType !== 'display-state' && messageType !== 'display-restore-request' && messageType !== 'display-close') {
@@ -181,6 +190,13 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
     if (message.blackoutRequested !== undefined && typeof message.blackoutRequested !== 'boolean') return invalid('message.blackoutRequested', 'Blackout state must be boolean.');
     if (message.displayTest !== undefined && typeof message.displayTest !== 'boolean') return invalid('message.displayTest', 'Display-test marker must be boolean.');
     if (message.eventName !== undefined && !isNonEmptyString(message.eventName)) return invalid('message.eventName', 'Public Event name must be a non-empty string.');
+    if (message.eventSubtitle !== undefined && typeof message.eventSubtitle !== 'string') return invalid('message.eventSubtitle', 'Public subtitle is invalid.');
+    if (message.primaryColor !== undefined && !isNonEmptyString(message.primaryColor)) return invalid('message.primaryColor', 'Primary color is invalid.');
+    if (message.accentColor !== undefined && !isNonEmptyString(message.accentColor)) return invalid('message.accentColor', 'Accent color is invalid.');
+    if (message.blackoutAppearance !== undefined && message.blackoutAppearance !== 'pure-black' && message.blackoutAppearance !== 'event-surface') return invalid('message.blackoutAppearance', 'Blackout appearance is invalid.');
+    if (message.safeAreaMargin !== undefined && (typeof message.safeAreaMargin !== 'number' || !Number.isFinite(message.safeAreaMargin) || message.safeAreaMargin < 0)) return invalid('message.safeAreaMargin', 'Safe-area margin is invalid.');
+    if (message.logo !== undefined && !isPublicAsset(message.logo)) return invalid('message.logo', 'Public logo is invalid.');
+    if (message.background !== undefined && !isPublicAsset(message.background)) return invalid('message.background', 'Public background is invalid.');
     if (message.mode !== undefined && message.mode !== 'practice' && message.mode !== 'live') return invalid('message.mode', 'Display mode is invalid.');
     if (message.restore !== undefined && typeof message.restore !== 'boolean') return invalid('message.restore', 'Restore marker must be boolean.');
     if (ticketNumbers !== undefined && (!Array.isArray(ticketNumbers) || ticketNumbers.some((ticket) => !isNonEmptyString(ticket)))) return invalid('message.ticketNumbers', 'Ticket numbers must be non-empty strings.');
@@ -193,6 +209,13 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
       ...(message.blackoutRequested === undefined ? {} : { blackoutRequested: message.blackoutRequested }),
       ...(message.displayTest === undefined ? {} : { displayTest: message.displayTest }),
       ...(message.eventName === undefined ? {} : { eventName: message.eventName }),
+      ...(message.eventSubtitle === undefined ? {} : { eventSubtitle: message.eventSubtitle }),
+      ...(message.primaryColor === undefined ? {} : { primaryColor: message.primaryColor }),
+      ...(message.accentColor === undefined ? {} : { accentColor: message.accentColor }),
+      ...(message.logo === undefined ? {} : { logo: message.logo as PublicAsset }),
+      ...(message.background === undefined ? {} : { background: message.background as PublicAsset }),
+      ...(message.blackoutAppearance === undefined ? {} : { blackoutAppearance: message.blackoutAppearance }),
+      ...(message.safeAreaMargin === undefined ? {} : { safeAreaMargin: message.safeAreaMargin }),
       ...(message.mode === undefined ? {} : { mode: message.mode }),
       ...(ticketNumbers === undefined ? {} : { ticketNumbers: [...ticketNumbers] }),
       ...(winnerStatuses === undefined ? {} : { winnerStatuses: [...winnerStatuses] }),

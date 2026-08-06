@@ -42,5 +42,8 @@ export const SCHEMA_V3 = {
     '&commandId, drawSessionId, operation, [drawSessionId+operation], status, createdAt, committedAt',
 } as const
 
+export const SCHEMA_VERSION_4 = 4 as const
+export const SCHEMA_V4 = { event_settings: '&eventId, updatedAt' } as const
+
 export type SchemaV1StoreName =
   (typeof SCHEMA_V1_STORE_NAMES)[number]

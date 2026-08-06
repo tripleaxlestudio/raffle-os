@@ -3,6 +3,7 @@ import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
 import type { Event } from '../../domain/events/event.types.ts'
 import type { AppMode } from '../../domain/types/app-mode.ts'
 import type { DisplayConfiguration } from '../../domain/display/display-configuration.types.ts'
+import { DEFAULT_EVENT_SETTINGS, type EventSettings } from '../../domain/settings/event-settings.types.ts'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 
 export type ProductionWorkspaceState =
@@ -21,6 +22,7 @@ export type ProductionWorkspaceState =
       readonly unresolvedSession: DrawSession | null
       readonly currentMode: AppMode | null
       readonly displayConfiguration: DisplayConfiguration | null
+      readonly eventSettings: EventSettings
     }
 
 const WorkspaceContext = createContext<ProductionWorkspaceState | undefined>(undefined)
@@ -51,13 +53,14 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
           if (active) setState({ status: 'invalid-reference', eventId: activeEventId })
           return
         }
-        const [participantCount, participants, categories, sessions, currentMode, displayConfiguration] = await Promise.all([
+        const [participantCount, participants, categories, sessions, currentMode, displayConfiguration, eventSettings] = await Promise.all([
           services.participants.countByEventId(event.id),
           services.participants.findByEventId(event.id, { limit: 100_000, offset: 0 }),
           services.categories.findByEventId(event.id),
           services.sessions.findByEventId(event.id),
           services.preferences.get('lastOperatorMode'),
           services.displayConfigurations?.findByEventId(event.id) ?? Promise.resolve(null),
+          services.eventSettings.findByEventId(event.id),
         ])
         const unresolvedSession = sessions
           .filter((session) => session.mode === 'live' && (session.status === 'drawing' || session.status === 'pending-confirmation'))
@@ -75,6 +78,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
             unresolvedSession,
             currentMode,
             displayConfiguration,
+            eventSettings: eventSettings ?? { eventId: event.id, ...DEFAULT_EVENT_SETTINGS, displayName: event.name, updatedAt: new Date().toISOString() },
           })
         }
       } catch (cause: unknown) {

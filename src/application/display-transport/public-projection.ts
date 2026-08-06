@@ -2,7 +2,7 @@ import { parseTicketNumber } from '../../domain/participants/participant.invaria
 import type { TicketNumber } from '../../domain/participants/participant.types.ts'
 import { parseDrawSessionId, type DrawSessionId } from '../../domain/shared/identifiers.ts'
 import { isIsoTimestamp, type IsoTimestamp } from '../../domain/shared/timestamps.ts'
-import type { PublicDisplayStage, PublicWinnerStatus } from './protocol.ts'
+import type { PublicAsset, PublicDisplayStage, PublicWinnerStatus } from './protocol.ts'
 
 export type PublicProjectionStage = 'standby' | 'countdown' | 'rolling' | 'reveal' | 'pending-handoff'
 export type PublicProjectionMode = 'practice' | 'live'
@@ -14,6 +14,13 @@ export type PublicDisplaySnapshot = Readonly<{
   readonly blackoutRequested: boolean
   readonly displayTest?: boolean
   readonly eventName?: string
+  readonly eventSubtitle?: string
+  readonly primaryColor?: string
+  readonly accentColor?: string
+  readonly logo?: PublicAsset
+  readonly background?: PublicAsset
+  readonly blackoutAppearance?: 'pure-black' | 'event-surface'
+  readonly safeAreaMargin?: number
   readonly mode?: PublicProjectionMode
   readonly ticketNumbers?: readonly TicketNumber[]
   readonly winnerStatuses?: readonly PublicWinnerStatus[]
@@ -26,6 +33,13 @@ export type PresentationProjectionSource = Readonly<{
   readonly blackoutRequested: boolean
   readonly displayTest?: boolean
   readonly eventName?: string
+  readonly eventSubtitle?: string
+  readonly primaryColor?: string
+  readonly accentColor?: string
+  readonly logo?: PublicAsset
+  readonly background?: PublicAsset
+  readonly blackoutAppearance?: 'pure-black' | 'event-surface'
+  readonly safeAreaMargin?: number
   readonly mode?: PublicProjectionMode
   readonly result?: Readonly<{
     readonly drawSessionId: DrawSessionId
@@ -58,6 +72,7 @@ const isNonEmptyString = (value: unknown): value is string => typeof value === '
 const isStage = (value: unknown): value is PresentationProjectionSource['stage'] => value === 'ready' || value === 'standby' || value === 'countdown' || value === 'rolling' || value === 'reveal' || value === 'pending-handoff'
 const isMode = (value: unknown): value is PublicProjectionMode => value === 'practice' || value === 'live'
 const hasOnlyKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean => Object.keys(value).every((key) => keys.includes(key))
+const isPublicAsset = (value: unknown): value is PublicAsset => isRecord(value) && typeof value.type === 'string' && value.blob instanceof Blob
 
 function freezeSnapshot(snapshot: PublicDisplaySnapshot): PublicDisplaySnapshot {
   if (snapshot.ticketNumbers !== undefined) Object.freeze(snapshot.ticketNumbers)
@@ -101,7 +116,7 @@ function projectTickets(source: Record<string, unknown>, drawSessionId: string):
 
 export function projectPublicDisplaySnapshot(source: PresentationProjectionSource): PublicDisplaySnapshot {
   const value: unknown = source
-  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || typeof value.blackoutRequested !== 'boolean' || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName))) invalidSource('Presentation source is malformed.')
+  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || typeof value.blackoutRequested !== 'boolean' || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) invalidSource('Presentation source is malformed.')
   const parsedSession = parseDrawSessionId(value.drawSessionId)
   if (!parsedSession.ok) invalidSource('Presentation source session is malformed.')
   if (value.stage !== 'ready' && value.stage !== 'standby' && (value.stageStartedAt === undefined || !isIsoTimestamp(value.stageStartedAt))) invalidSource('A non-standby presentation stage requires a valid timestamp.')
@@ -114,6 +129,7 @@ export function projectPublicDisplaySnapshot(source: PresentationProjectionSourc
     blackoutRequested: value.blackoutRequested,
     ...(value.displayTest === undefined ? {} : { displayTest: value.displayTest }),
     ...(value.eventName === undefined ? {} : { eventName: value.eventName }),
+    ...(value.eventSubtitle === undefined ? {} : { eventSubtitle: value.eventSubtitle as string }), ...(value.primaryColor === undefined ? {} : { primaryColor: value.primaryColor as string }), ...(value.accentColor === undefined ? {} : { accentColor: value.accentColor as string }), ...(value.logo === undefined ? {} : { logo: value.logo as PublicAsset }), ...(value.background === undefined ? {} : { background: value.background as PublicAsset }), ...(value.blackoutAppearance === undefined ? {} : { blackoutAppearance: value.blackoutAppearance as 'pure-black' | 'event-surface' }), ...(value.safeAreaMargin === undefined ? {} : { safeAreaMargin: value.safeAreaMargin as number }),
     ...(value.mode === undefined ? {} : { mode: value.mode }),
     ...(projected === undefined ? {} : { ticketNumbers: projected.tickets, winnerStatuses: projected.statuses }),
   }
@@ -135,8 +151,8 @@ export function serializePublicDisplaySnapshot(snapshot: PublicDisplaySnapshot):
 }
 
 export function parsePublicDisplaySnapshot(value: unknown, expectedSession?: DrawSessionId): PublicDisplaySnapshot {
-  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || value.stage === 'ready' || typeof value.blackoutRequested !== 'boolean' || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot is malformed.')
-  if (!hasOnlyKeys(value, ['drawSessionId', 'stage', 'stageStartedAt', 'blackoutRequested', 'displayTest', 'eventName', 'mode', 'ticketNumbers', 'winnerStatuses'])) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot contains unsupported fields.')
+  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || value.stage === 'ready' || typeof value.blackoutRequested !== 'boolean' || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot is malformed.')
+  if (!hasOnlyKeys(value, ['drawSessionId', 'stage', 'stageStartedAt', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'ticketNumbers', 'winnerStatuses'])) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot contains unsupported fields.')
   const parsedSession = parseDrawSessionId(value.drawSessionId)
   if (!parsedSession.ok) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot session is malformed.')
   if (expectedSession !== undefined && value.drawSessionId !== expectedSession) sessionMismatch(expectedSession, value.drawSessionId)
@@ -154,6 +170,7 @@ export function parsePublicDisplaySnapshot(value: unknown, expectedSession?: Dra
     blackoutRequested: value.blackoutRequested,
     ...(value.displayTest === undefined ? {} : { displayTest: value.displayTest }),
     ...(value.eventName === undefined ? {} : { eventName: value.eventName }),
+    ...(value.eventSubtitle === undefined ? {} : { eventSubtitle: value.eventSubtitle as string }), ...(value.primaryColor === undefined ? {} : { primaryColor: value.primaryColor as string }), ...(value.accentColor === undefined ? {} : { accentColor: value.accentColor as string }), ...(value.logo === undefined ? {} : { logo: value.logo as PublicAsset }), ...(value.background === undefined ? {} : { background: value.background as PublicAsset }), ...(value.blackoutAppearance === undefined ? {} : { blackoutAppearance: value.blackoutAppearance as 'pure-black' | 'event-surface' }), ...(value.safeAreaMargin === undefined ? {} : { safeAreaMargin: value.safeAreaMargin as number }),
     ...(value.mode === undefined ? {} : { mode: value.mode }),
     ...(tickets === undefined ? {} : { ticketNumbers: tickets }),
     ...(value.winnerStatuses === undefined ? {} : { winnerStatuses: Object.freeze([...value.winnerStatuses] as PublicWinnerStatus[]) }),
@@ -168,6 +185,7 @@ export const publicSnapshotToProtocolState = (snapshot: PublicDisplaySnapshot) =
   blackoutRequested: snapshot.blackoutRequested,
   ...(snapshot.displayTest === undefined ? {} : { displayTest: snapshot.displayTest }),
   ...(snapshot.eventName === undefined ? {} : { eventName: snapshot.eventName }),
+  ...(snapshot.eventSubtitle === undefined ? {} : { eventSubtitle: snapshot.eventSubtitle }), ...(snapshot.primaryColor === undefined ? {} : { primaryColor: snapshot.primaryColor }), ...(snapshot.accentColor === undefined ? {} : { accentColor: snapshot.accentColor }), ...(snapshot.logo === undefined ? {} : { logo: snapshot.logo }), ...(snapshot.background === undefined ? {} : { background: snapshot.background }), ...(snapshot.blackoutAppearance === undefined ? {} : { blackoutAppearance: snapshot.blackoutAppearance }), ...(snapshot.safeAreaMargin === undefined ? {} : { safeAreaMargin: snapshot.safeAreaMargin }),
   ...(snapshot.mode === undefined ? {} : { mode: snapshot.mode }),
   ...(snapshot.ticketNumbers === undefined ? {} : { ticketNumbers: [...snapshot.ticketNumbers] }),
   ...(snapshot.winnerStatuses === undefined ? {} : { winnerStatuses: [...snapshot.winnerStatuses] }),

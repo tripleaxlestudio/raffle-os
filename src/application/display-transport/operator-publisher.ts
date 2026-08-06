@@ -81,14 +81,18 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       emittedAt: options.clock.now(),
       message: { ...publicSnapshotToProtocolState(next), ...(restore ? { restore: true } : {}) },
     })
+    // Publishers must expose the current snapshot before posting so a synchronous
+    // in-memory/test transport can acknowledge the first state immediately.
+    snapshot = next
+    serializedSnapshot = serialized
     const result = currentTransport.publish(envelope)
     if (!result.ok) {
+      snapshot = undefined
+      serializedSnapshot = undefined
       report({ kind: 'transport-error', error: result.error })
       return { ok: false, error: result.error }
     }
     sequence = nextSequence
-    snapshot = next
-    serializedSnapshot = serialized
     return { ok: true, snapshot: next, published: true }
   }
 

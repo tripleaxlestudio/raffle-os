@@ -47,13 +47,14 @@ describe('schema v3 additive migration', () => {
     const name = await makeLegacyDatabase(version)
     const database = new RaffleOSDatabase(name, { IDBKeyRange, indexedDB })
     await database.openSupported()
-    expect(database.verno).toBe(3)
+    expect(database.verno).toBe(4)
     for (const [store, value] of Object.entries(legacy)) {
       const key = 'id' in value ? value.id : value.key
       expect(await database.table(store).get(key)).toEqual(value)
     }
     expect(await database.participants.get('participant-1' as ParticipantId)).toMatchObject({ ticketNumber: '00042' })
     expect(await database.command_receipts.count()).toBe(0)
+    expect(await database.event_settings.count()).toBe(0)
     if (version === 2) expect(await database.presentation_checkpoints.get('session-1' as DrawSessionId)).toEqual({ drawSessionId: 'session-1', stage: 'rolling', persistedAt: '2026-08-05T01:00:00.000Z' })
     database.close()
   })

@@ -1,7 +1,8 @@
 import { StrictMode } from 'react'
 import { act, render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ProductionDrawPresentation } from './ProductionDrawPresentation.tsx'
+import { ProductionDrawPresentation, ProductionDrawRunHeader } from './ProductionDrawPresentation.tsx'
 import type { PresentationResultProjection } from '../../../application/workflow/presentation-projection.ts'
 
 function result(count: number): PresentationResultProjection {
@@ -91,5 +92,40 @@ describe('ProductionDrawPresentation', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(3000) })
     expect(screen.getByRole('heading', { name: 'Selecting winners' })).toBeInTheDocument()
     expect(screen.queryByText('The presentation stage transition is invalid.')).not.toBeInTheDocument()
+  })
+})
+
+describe('ProductionDrawRunHeader', () => {
+  it('keeps critical metrics and production actions explicit', () => {
+    render(
+      <MemoryRouter>
+        <ProductionDrawRunHeader
+          backTo="/draw/live"
+          audienceStatus={{ detail: 'Last public snapshot acknowledged.', displayUrl: '/display?eventId=event-1', label: 'Connected' }}
+          eventName="Spring Event"
+          mode="live"
+          prizeCategory="Grand Prize"
+          prizeName="Travel voucher"
+          recap={{ countdownSeconds: 5, eligibleCount: 4, rollingSeconds: 8, winnerCount: 1, winningRule: 'Once per category' }}
+          stage="Ready to start"
+        />
+      </MemoryRouter>,
+    )
+
+    const header = screen.getByRole('banner')
+    const metrics = header.querySelector('dl')
+    if (metrics === null) throw new Error('Expected the draw metrics definition list.')
+    expect(within(metrics).getAllByText('Winners')).toHaveLength(1)
+    expect(within(metrics).getAllByText('Eligible')).toHaveLength(1)
+    expect(within(metrics).getAllByText('Presentation')).toHaveLength(1)
+    expect(within(metrics).getByText('1')).toBeVisible()
+    expect(within(metrics).getByText('4')).toBeVisible()
+    expect(within(metrics).getByText('5s countdown')).toBeVisible()
+    expect(within(metrics).getByText('8s rolling')).toBeVisible()
+    expect(within(header).getByRole('link', { name: 'Back to Live Draw' })).toHaveAttribute('href', '/draw/live')
+    expect(within(header).getByRole('link', { name: 'Open Audience Display' })).toHaveAttribute('href', '/display?eventId=event-1')
+    expect(within(header).getByText('Audience Display')).toBeVisible()
+    expect(within(header).getByText('Connected')).toBeVisible()
+    expect(within(header).getByText('Last public snapshot acknowledged.')).toBeVisible()
   })
 })

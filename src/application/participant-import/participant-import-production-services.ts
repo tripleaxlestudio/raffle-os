@@ -6,6 +6,7 @@ import type { ParticipantImportUnitOfWork } from '../persistence/participant-imp
 import type { AuditRecordId, ParticipantId } from '../../domain/shared/identifiers.ts'
 import type { PersistedParticipantPreview } from './participant-import-verification.ts'
 import { getPersistedParticipantsForEvent } from './participant-import-verification.ts'
+import type { DrawSessionRepository } from '../persistence/repositories/draw-session-repository.interface.ts'
 
 export interface ParticipantImportProductionServices {
   readonly database: { openSupported(): Promise<unknown> }
@@ -13,6 +14,7 @@ export interface ParticipantImportProductionServices {
   readonly participants: Pick<ParticipantRepository, 'findByEventId' | 'countByEventId'>
   readonly getPersistedParticipantsForEvent: (eventId: Parameters<ParticipantRepository['findByEventId']>[0], limit: number) => Promise<PersistedParticipantPreview>
   readonly preferences: Pick<PreferenceRepository, 'get'>
+  readonly sessions?: Pick<DrawSessionRepository, 'findByEventId'>
   readonly unitOfWork: ParticipantImportUnitOfWork
   readonly createParticipantId: () => ParticipantId
   readonly createAuditRecordId: () => AuditRecordId

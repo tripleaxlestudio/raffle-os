@@ -13,6 +13,7 @@ import { createParticipantImportProductionServices } from '../../../application/
 import type { ParticipantImportProductionServices } from '../../../application/participant-import/participant-import-production-services.ts'
 import type { PersistedParticipantPreview } from '../../../application/participant-import/participant-import-verification.ts'
 import type { EventId } from '../../../domain/shared/identifiers.ts'
+import { signalProductionWorkspaceChanged } from '../../../app/workspace/ProductionWorkspaceContext.tsx'
 
 export const MAX_PREVIEW_ROWS = 20
 export const MAX_ISSUE_ROWS_SHOWN = 20
@@ -69,6 +70,7 @@ export function ProductionParticipantImportPreview({ services: providedServices 
   const [state, setState] = useState<ProductionState>({ status: 'idle' })
   const [event, setEvent] = useState<Event | null>(null)
   const [eventError, setEventError] = useState<string | null>(null)
+  const [mutationLockReason, setMutationLockReason] = useState<string | null>(null)
   const [eventLoading, setEventLoading] = useState(true)
   const [currentParticipantCount, setCurrentParticipantCount] = useState<number | null>(null)
   const [fileInfo, setFileInfo] = useState<{ name: string; type: string; size: number } | null>(null)
@@ -79,6 +81,18 @@ export function ProductionParticipantImportPreview({ services: providedServices 
   const xlsxSource = useRef<Parameters<typeof parseParticipantImportAsync>[1] | null>(null)
   const commitInFlight = useRef(false)
   const eventReadVersion = useRef(0)
+  const eventRef = useRef<Event | null>(null)
+
+  const resetStagedImport = useCallback(() => {
+    ++readVersion.current
+    setState({ status: 'idle' })
+    setFileInfo(null)
+    xlsxBuffer.current = null
+    xlsxSource.current = null
+    setConfirmOpen(false)
+    setReplaceAcknowledged(false)
+    if (inputRef.current) inputRef.current.value = ''
+  }, [])
 
   const loadPersistedVerification = useCallback(async (eventId: EventId) => {
     const version = ++eventReadVersion.current
@@ -99,9 +113,13 @@ export function ProductionParticipantImportPreview({ services: providedServices 
       try {
         await services.database.openSupported()
         const activeId = await services.preferences.get('activeEventId')
+        const previousEventId = eventRef.current?.id ?? null
+        if (activeId !== previousEventId) resetStagedImport()
         if (activeId === null) {
           if (active) {
+            eventRef.current = null
             setEvent(null)
+            setMutationLockReason(null)
             setCurrentParticipantCount(null)
             setVerification({ status: 'empty' })
             setEventError('No current Event is selected. Select a real Event before importing participants.')
@@ -109,9 +127,16 @@ export function ProductionParticipantImportPreview({ services: providedServices 
           return
         }
         const current = await services.events.findById(activeId)
+        if (current?.id !== previousEventId) resetStagedImport()
         if (active) {
+          eventRef.current = current
           setEvent(current)
           setEventError(current === null ? 'The current Event could not be found. No import target is available.' : null)
+          if (current !== null && services.sessions !== undefined) {
+            const sessions = await services.sessions.findByEventId(current.id)
+            const lockedSession = sessions.find((session) => session.mode === 'live' && (session.status === 'drawing' || session.status === 'pending-confirmation'))
+            setMutationLockReason(lockedSession === undefined ? null : `Participant import is unavailable while Live DrawSession ${lockedSession.id} is ${lockedSession.status}. Resolve or complete that session before importing.`)
+          } else setMutationLockReason(null)
         }
         if (current !== null) await loadPersistedVerification(current.id)
         else if (active) {
@@ -121,15 +146,18 @@ export function ProductionParticipantImportPreview({ services: providedServices 
       } catch {
         if (active) {
           setEventError('Local persistence is unavailable. Participant import is blocked until an Event can be resolved.')
+          setMutationLockReason(null)
           setVerification({ status: 'failure', message: 'Persisted Participants could not be read safely. Reload this page to retry.' })
         }
       } finally { if (active) setEventLoading(false) }
     }
     void loadActiveEvent()
     const onFocus = () => { void loadActiveEvent() }
+    const onWorkspaceChanged = () => { void loadActiveEvent() }
     window.addEventListener('focus', onFocus)
-    return () => { active = false; window.removeEventListener('focus', onFocus) }
-  }, [loadPersistedVerification, services])
+    window.addEventListener('raffle-os:workspace-changed', onWorkspaceChanged)
+    return () => { active = false; window.removeEventListener('focus', onFocus); window.removeEventListener('raffle-os:workspace-changed', onWorkspaceChanged) }
+  }, [loadPersistedVerification, resetStagedImport, services])
 
   async function selectFile(file: File | undefined) {
     if (!file) return
@@ -183,15 +211,16 @@ export function ProductionParticipantImportPreview({ services: providedServices 
     const eventId = event.id
     const result = await commitParticipantImport({ eventId, strategy, source: { ...staged.source, sheetName: staged.worksheet }, mapping: staged.mappings, drafts: staged.validation.rows.flatMap((row) => row.participantDraft === null ? [] : [row.participantDraft]), summary: { ...staged.validation.summary, strategy } }, services)
     if (!result.ok) { commitInFlight.current = false; setState({ status: 'commit-failure', staged, strategy, message: FRIENDLY_ERRORS[result.code] ?? 'The import failed safely. No records were changed.' }); return }
+    await loadPersistedVerification(eventId)
     setState({ status: 'commit-success', staged, strategy, result })
-    void loadPersistedVerification(eventId)
+    signalProductionWorkspaceChanged()
     commitInFlight.current = false
   }
 
   const staged = 'staged' in state ? state.staged : null
   const strategy = 'strategy' in state ? state.strategy : null
   const mutable = event?.status === 'draft'
-  const blocked = eventLoading || eventError !== null || event === null || !mutable
+  const blocked = eventLoading || eventError !== null || mutationLockReason !== null || event === null || !mutable
   const hasBlockingParserDiagnostics = staged?.parsed.format === 'xlsx' && staged.parsed.diagnostics.length > 0
   const hasBlockingCellDiagnostics = staged?.validation.rows.some((row) => row.issues.some((issue) => issue.code === 'formula-cell' || issue.code === 'numeric-ticket-ambiguous' || issue.code === 'date-cell' || issue.code === 'boolean-cell' || issue.code === 'error-cell' || issue.code === 'rich-text-cell' || issue.code === 'unsupported-cell' || issue.code === 'merged-cell')) ?? false
   const hasBlockingDiagnostics = hasBlockingParserDiagnostics || hasBlockingCellDiagnostics
@@ -206,7 +235,7 @@ export function ProductionParticipantImportPreview({ services: providedServices 
   return <section className="participant-import production-import-preview" aria-label="Participant file import" data-workflow-state={state.status}>
     <header className="page-header production-import-preview__header"><div className="page-header__copy"><p className="page-header__eyebrow">Participant Operations</p><div className="production-import-preview__title-row"><h1 id="production-import-title">Participant Import</h1></div><p className="page-header__description">Stage, validate, and atomically import Participants into the current Event.</p></div></header>
     <ProgressStepper currentStep={progressStep} steps={productionImportProgressSteps} />
-    <div className="production-import-preview__summary-grid"><EventPanel event={event} loading={eventLoading} error={eventError} /><PersistedParticipantSection event={event} verification={verification} /></div>
+    <div className="production-import-preview__summary-grid"><EventPanel event={event} loading={eventLoading} error={eventError ?? mutationLockReason} /><PersistedParticipantSection event={event} verification={verification} /></div>
     <div className="production-import-preview__workspace">
       <div className="production-import-preview__main">
         <UploadPanel inputRef={inputRef} fileInfo={fileInfo} committing={state.status === 'committing'} onFile={(file) => { if (inputRef.current) inputRef.current.value = ''; void selectFile(file) }} onRemove={clearFile} />
@@ -235,6 +264,9 @@ function Metric({ label, value }: { label: string; value: number }) { return <di
 function StrategyPanel({ strategy, disabled, onChoose }: { strategy: ImportStrategy | null; disabled: boolean; onChoose: (strategy: ImportStrategy) => void }) { return <Card className="production-import-preview__strategy" aria-labelledby="strategy-title"><fieldset disabled={disabled}><legend id="strategy-title">Step 4 · Import strategy</legend><p className="production-import-preview__hint">Choose one strategy. Nothing is selected automatically.</p><label className={`production-import-preview__strategy-option production-import-preview__strategy-option--replace${strategy === 'replace' ? ' is-selected' : ''}`}><input aria-label="Replace" type="radio" name="import-strategy" checked={strategy === 'replace'} onChange={() => onChoose('replace')} /><span><strong>Replace</strong><small>Remove current Participants for this Event, then insert the validated batch.</small><small>Atomic rollback on failure; existing records are replaced.</small></span></label><label className={`production-import-preview__strategy-option production-import-preview__strategy-option--merge${strategy === 'merge' ? ' is-selected' : ''}`}><input aria-label="Merge" type="radio" name="import-strategy" checked={strategy === 'merge'} onChange={() => onChoose('merge')} /><span><strong>Merge</strong><small>Preserve existing Participants and insert the non-conflicting batch.</small><small>Exact ticket conflicts reject the complete operation atomically.</small></span></label></fieldset></Card> }
 function ConfirmationContents({ event, staged, strategy, currentParticipantCount }: { event: Event | null; staged: StagedImport | null; strategy: ImportStrategy; currentParticipantCount: number | null }) { const summary = staged?.validation.summary; return <div><p>Event: <strong>{event?.name ?? 'Unavailable'}</strong> · status: {event?.status ?? 'unknown'}</p><p>Source: {staged?.fileName} · {staged?.parsed.format.toUpperCase()}{staged?.worksheet ? ` · worksheet ${staged.worksheet}` : ''}</p><p>Strategy: {strategy} · valid drafts: {summary?.validRows ?? 0} · invalid rows: {summary?.invalidRows ?? 0} · duplicates: {summary?.duplicateRows ?? 0}</p><p>Current Participants: {currentParticipantCount === null ? 'unavailable' : currentParticipantCount} · expected inserted: {summary?.validRows ?? 0}</p>{strategy === 'replace' ? <p><strong>Replace removes the current Participants for this Event.</strong></p> : <p>Merge preserves existing records; any exact ticket conflict rejects the complete operation.</p>}<p>This operation is atomic: it either completes fully or rolls back.</p></div> }
 function PersistedParticipantSection({ event, verification }: { event: Event | null; verification: VerificationState }) {
+  const checkedInCount = verification.status === 'ready'
+    ? verification.result.records.filter((record) => record.isCheckedIn).length
+    : null
   return <Card className="production-import-preview__summary-card" aria-labelledby="persisted-participants-title">
     <h2 id="persisted-participants-title">Persisted Participants</h2>
     <p>Event: <strong>{event?.name ?? 'No Event selected'}</strong></p>
@@ -243,7 +275,8 @@ function PersistedParticipantSection({ event, verification }: { event: Event | n
     {verification.status === 'empty' ? <p>No Participants are persisted for this Event.</p> : null}
     {verification.status === 'ready' ? <>
       <p>Total stored Participants: {verification.result.totalCount}</p>
-      <div className="production-import-preview__ticket-preview">{verification.result.records.map((record) => <code key={record.id}>{record.ticketNumber}</code>)}</div>
+      <p>Checked in in visible records: {checkedInCount}{verification.result.truncated ? ' (preview only)' : ''}</p>
+      <Table caption="Persisted Participants"><thead><tr><TableHeader>Ticket Number</TableHeader><TableHeader>Name</TableHeader><TableHeader>Group</TableHeader><TableHeader>Check-in</TableHeader></tr></thead><tbody>{verification.result.records.map((record) => <tr key={record.id}><th scope="row" className="production-import-preview__ticket"><code>{record.ticketNumber}</code></th><td>{record.name ?? '—'}</td><td>{record.group ?? '—'}</td><td>{record.isCheckedIn ? 'Checked in' : 'Not checked in'}</td></tr>)}</tbody></Table>
       {verification.result.truncated ? <p>Preview truncated to {verification.result.records.length} Participants.</p> : null}
     </> : null}
   </Card>

@@ -1,5 +1,5 @@
 import { StrictMode } from 'react'
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProductionDrawPresentation } from './ProductionDrawPresentation.tsx'
 import type { PresentationResultProjection } from '../../../application/workflow/presentation-projection.ts'
@@ -14,9 +14,10 @@ describe('ProductionDrawPresentation', () => {
 
   it.each([1, 20, 50, 100])('reveals %i winners in sequence order without changing ticket strings', async (count) => {
     render(<ProductionDrawPresentation result={result(count)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" practiceResult={{ drawSessionId: result(count).drawSessionId, winners: result(count).winners as never, createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1 }} onFailure={() => undefined} />)
-    expect(await screen.findByRole('list', { name: `${count} Practice winners` })).toBeInTheDocument()
+    const winnerList = await screen.findByRole('list', { name: `${count} Practice winners` })
+    expect(winnerList).toBeInTheDocument()
     expect(screen.getAllByRole('listitem')).toHaveLength(count)
-    expect(screen.getByText('00042')).toBeInTheDocument()
+    expect(within(winnerList).getByText('00042')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Skip animation' })).not.toBeInTheDocument()
   })
 
@@ -49,6 +50,24 @@ describe('ProductionDrawPresentation', () => {
     render(<ProductionDrawPresentation result={result(1)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} onResetPractice={vi.fn()} />)
     expect(await screen.findByRole('heading', { name: 'Winner reveal' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reset rehearsal' })).not.toBeInTheDocument()
+  })
+
+  it('renders the production control deck and structured Audience status during countdown', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn() }))
+    render(<ProductionDrawPresentation result={result(2)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" practiceResult={{ drawSessionId: result(2).drawSessionId, winners: result(2).winners as never, createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1 }} recap={{ winnerCount: 2, eligibleCount: 40, winningRule: 'uniform', countdownSeconds: 5, rollingSeconds: 8 }} audienceStatus={{ label: 'Connected', detail: 'Audience presence is active and the latest public snapshot was acknowledged.', displayUrl: null }} onFailure={() => undefined} />)
+    expect(await screen.findByRole('heading', { name: 'Get ready' })).toBeInTheDocument()
+    expect(screen.getAllByText('Connected')[0]).toHaveClass('ui-badge--success')
+    expect(screen.getAllByText('Audience presence is active and the latest public snapshot was acknowledged.')).toHaveLength(2)
+    expect(screen.getByText('Winner count').nextElementSibling).toHaveTextContent('2')
+    expect(screen.queryByRole('button', { name: 'Reset rehearsal' })).not.toBeInTheDocument()
+  })
+
+  it('renders exact winner values in the authoritative preview during reveal', async () => {
+    render(<ProductionDrawPresentation result={result(1)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} audienceStatus={{ label: 'Connected', detail: 'Acknowledged', displayUrl: null }} onFailure={() => undefined} />)
+    expect(await screen.findByRole('heading', { name: 'Winner reveal' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: '1 Practice winners' })).toHaveTextContent('00042')
+    expect(screen.getByTestId('production-preview')).toHaveAttribute('data-public-stage', 'reveal')
+    expect(within(screen.getByTestId('production-preview')).getByText('00042')).toBeInTheDocument()
   })
 
   it('survives Strict Mode recovery hydration and continues from the persisted stage', async () => {

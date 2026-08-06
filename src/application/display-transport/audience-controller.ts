@@ -124,7 +124,8 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     if (contextError !== undefined) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: contextError.kind }; return }
     const sender = `${envelope.sender.kind}:${envelope.sender.id}`
     if (acceptedOperator !== undefined && sender !== acceptedOperator) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'operator-mismatch' }; return }
-    if (acceptedSession !== undefined && envelope.drawSessionId !== acceptedSession) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'session-mismatch' }; return }
+    const isSafeNonDrawState = envelope.message.displayTest === true || envelope.message.stage === 'standby'
+    if (!isSafeNonDrawState && acceptedSession !== undefined && envelope.drawSessionId !== acceptedSession) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'session-mismatch' }; return }
     if (acceptedMessageIds.has(envelope.messageId)) { diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'duplicate-message' }; return }
     const message = envelope.message
     const isRestore = message.restore === true
@@ -146,12 +147,12 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         ...(message.mode === undefined ? {} : { mode: message.mode }),
         ...(message.ticketNumbers === undefined ? {} : { ticketNumbers: message.ticketNumbers }),
         ...(message.winnerStatuses === undefined ? {} : { winnerStatuses: message.winnerStatuses }),
-      }, acceptedSession)
+      }, isSafeNonDrawState ? undefined : acceptedSession)
       const wasConnected = connection === 'connected'
       acceptedMessageIds.add(envelope.messageId)
       acceptedOrdering = { epoch: envelope.epoch, sequence: envelope.sequence }
       acceptedOperator = sender
-      acceptedSession ??= snapshot.drawSessionId
+      if (!isSafeNonDrawState) acceptedSession ??= snapshot.drawSessionId
       restoreRequested = false
       connection = 'connected'
       state = { kind: 'snapshot', connection, snapshot }

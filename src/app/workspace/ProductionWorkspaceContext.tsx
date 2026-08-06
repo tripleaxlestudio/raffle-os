@@ -1,10 +1,16 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
 import type { Event } from '../../domain/events/event.types.ts'
 import type { AppMode } from '../../domain/types/app-mode.ts'
 import type { DisplayConfiguration } from '../../domain/display/display-configuration.types.ts'
 import { DEFAULT_EVENT_SETTINGS, type EventSettings } from '../../domain/settings/event-settings.types.ts'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
+import { createOperatorPublisher, type OperatorPublisher, type PublisherResult, type PublisherStatus } from '../../application/display-transport/operator-publisher.ts'
+import { createBroadcastChannelTransport } from '../../application/display-transport/transport.ts'
+import type { PresentationProjectionSource, PublicDisplaySnapshot } from '../../application/display-transport/public-projection.ts'
+import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
+import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
+import { setDisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
 
 export type ProductionWorkspaceState =
   | { readonly status: 'loading' }
@@ -26,6 +32,15 @@ export type ProductionWorkspaceState =
     }
 
 const WorkspaceContext = createContext<ProductionWorkspaceState | undefined>(undefined)
+type AudiencePublisherContextValue = {
+  readonly publisher: OperatorPublisher | null
+  readonly status: PublisherStatus
+  readonly publish: (source: PresentationProjectionSource) => PublisherResult
+  readonly subscribe: (listener: (status: PublisherStatus) => void) => () => void
+  readonly getSnapshot: () => PublicDisplaySnapshot | undefined
+  readonly getDiagnostics: () => ReturnType<OperatorPublisher['getDiagnostics']> | undefined
+}
+const AudiencePublisherContext = createContext<AudiencePublisherContextValue | undefined>(undefined)
 const WORKSPACE_CHANGED = 'raffle-os:workspace-changed'
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -36,6 +51,11 @@ export function signalProductionWorkspaceChanged(): void {
 export function ProductionWorkspaceProvider({ children }: { readonly children: ReactNode }) {
   const services = useMemo(() => createDrawSetupProductionServices(), [])
   const [state, setState] = useState<ProductionWorkspaceState>({ status: 'loading' })
+  const publisherRef = useRef<OperatorPublisher | null>(null)
+  const publisherScopeRef = useRef<string | undefined>(undefined)
+  const publisherStatusCleanupRef = useRef<(() => void) | null>(null)
+  const [publisher, setPublisher] = useState<OperatorPublisher | null>(null)
+  const [publisherStatus, setPublisherStatus] = useState<PublisherStatus>({ kind: 'waiting-for-display' })
 
   const refresh = useCallback(() => {
     let active = true
@@ -95,7 +115,67 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
     return () => window.removeEventListener(WORKSPACE_CHANGED, listener)
   }, [refresh])
 
-  return <WorkspaceContext.Provider value={state}>{children}</WorkspaceContext.Provider>
+  useEffect(() => {
+    if (state.status !== 'ready' || state.displayConfiguration === null) return
+    const scopeKey = `${state.event.id}:${state.displayConfiguration.id}`
+    if (publisherScopeRef.current === scopeKey && publisherRef.current !== null) return
+    publisherStatusCleanupRef.current?.()
+    publisherRef.current?.close()
+    publisherStatusCleanupRef.current = null
+    const parsed = parseDrawSessionId(state.event.id)
+    if (!parsed.ok) return
+    const scope = { eventId: state.event.id, displayId: state.displayConfiguration.id }
+    const publisher = createOperatorPublisher({
+      transport: createBroadcastChannelTransport('raffle-os-display', scope),
+      transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope),
+      scope,
+      senderId: `operator:${state.event.id}:${state.displayConfiguration.id}`,
+      clock: { now: () => new Date().toISOString() as IsoTimestamp },
+    })
+    publisherRef.current = publisher
+    publisherScopeRef.current = scopeKey
+    const unsubscribe = publisher.subscribe((status) => {
+      setPublisherStatus(status)
+      if (status.kind === 'display-ready' || status.kind === 'snapshot-applied') setDisplayConnectionStatus(scopeKey, 'connected')
+      if (status.kind === 'transport-error') setDisplayConnectionStatus(scopeKey, 'publication-failed')
+    })
+    publisherStatusCleanupRef.current = unsubscribe
+    const initial = state.eventSettings
+    publisher.start({
+      drawSessionId: parsed.value,
+      stage: 'standby',
+      blackoutRequested: false,
+      displayTest: false,
+      eventName: initial.displayName,
+      eventSubtitle: initial.subtitle,
+      primaryColor: initial.primaryColor,
+      accentColor: initial.accentColor,
+      logo: initial.logo === undefined ? undefined : { type: initial.logo.type, blob: initial.logo.blob },
+      background: initial.background === undefined ? undefined : { type: initial.background.type, blob: initial.background.blob },
+      blackoutAppearance: initial.blackoutAppearance,
+      safeAreaMargin: initial.safeAreaMargin,
+    })
+    queueMicrotask(() => { if (publisherRef.current === publisher) setPublisher(publisher) })
+  }, [state])
+
+  useEffect(() => () => {
+    publisherStatusCleanupRef.current?.()
+    publisherRef.current?.close()
+    publisherRef.current = null
+    setPublisher(null)
+    publisherScopeRef.current = undefined
+  }, [])
+
+  const audiencePublisher = useMemo<AudiencePublisherContextValue>(() => ({
+    publisher,
+    status: publisherStatus,
+    publish: (source) => publisherRef.current === null ? { ok: false, error: { kind: 'transport-closed' } } : publisherRef.current.publish(source),
+    subscribe: (listener) => publisherRef.current?.subscribe(listener) ?? (() => undefined),
+    getSnapshot: () => publisherRef.current?.getSnapshot(),
+    getDiagnostics: () => publisherRef.current?.getDiagnostics(),
+  }), [publisher, publisherStatus])
+
+  return <WorkspaceContext.Provider value={state}><AudiencePublisherContext.Provider value={audiencePublisher}>{children}</AudiencePublisherContext.Provider></WorkspaceContext.Provider>
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -103,4 +183,11 @@ export function useProductionWorkspace(): ProductionWorkspaceState {
   const state = useContext(WorkspaceContext)
   if (state === undefined) throw new Error('useProductionWorkspace must be used inside ProductionWorkspaceProvider.')
   return state
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useProductionAudiencePublisher(): AudiencePublisherContextValue {
+  const value = useContext(AudiencePublisherContext)
+  if (value === undefined) throw new Error('useProductionAudiencePublisher must be used inside ProductionWorkspaceProvider.')
+  return value
 }

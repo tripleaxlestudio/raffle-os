@@ -1,7 +1,7 @@
-import { Link, Outlet } from 'react-router'
+import { Link, Outlet, useLocation } from 'react-router'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { getDisplayConnectionStatus, subscribeDisplayConnectionStatus, type DisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
-import { ProductionWorkspaceProvider, useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
+import { ProductionWorkspaceProvider, useProductionAudiencePublisher, useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
 import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
 
 function ProductionOperatorHeader() {
@@ -70,6 +70,23 @@ function ProductionOperatorHeader() {
   </header>
 }
 
+function ProductionAudienceDiagnostics() {
+  const audience = useProductionAudiencePublisher()
+  const location = useLocation()
+  if (!import.meta.env.DEV) return null
+  const diagnostics = audience.getDiagnostics()
+  return <details data-testid="operator-audience-publisher-diagnostics"><summary>Audience publisher diagnostics</summary><dl>
+    <div><dt>Publisher owner</dt><dd>Production workspace shell</dd></div>
+    <div><dt>Operator route</dt><dd>{location.pathname}</dd></div>
+    <div><dt>Publisher instance</dt><dd>{diagnostics?.publisherInstanceId ?? '—'}</dd></div>
+    <div><dt>Scope</dt><dd>{diagnostics === undefined ? '—' : `${diagnostics.channelName}`}</dd></div>
+    <div><dt>Epoch / sequence</dt><dd>{diagnostics === undefined ? '—' : `${diagnostics.epoch} / ${diagnostics.sequence}`}</dd></div>
+    <div><dt>Retained public state</dt><dd>{diagnostics?.retainedPublicState ?? '—'}</dd></div>
+    <div><dt>Last snapshot sent</dt><dd>{diagnostics?.lastEnvelopeSent === undefined ? '—' : `${diagnostics.lastEnvelopeSent.publicState} @ ${diagnostics.lastEnvelopeSent.epoch}/${diagnostics.lastEnvelopeSent.sequence}`}</dd></div>
+    <div><dt>Last applied acknowledgement</dt><dd>{diagnostics?.lastAcknowledgement === undefined ? '—' : `${diagnostics.lastAcknowledgement.publicState} @ ${diagnostics.lastAcknowledgement.epoch}/${diagnostics.lastAcknowledgement.sequence}`}</dd></div>
+  </dl></details>
+}
+
 function statusLabel(status: ReturnType<typeof getDisplayConnectionStatus>): string {
   return status === 'setup-required' ? 'Setup required' : status === 'publication-failed' ? 'Publication failed' : status.charAt(0).toUpperCase() + status.slice(1)
 }
@@ -80,7 +97,7 @@ export function ProductionOperatorLayout() {
       <OperatorSidebar production />
       <div className="operator-workspace">
         <ProductionOperatorHeader />
-          <main className="operator-main"><Outlet /></main>
+        <main className="operator-main"><Outlet /><ProductionAudienceDiagnostics /></main>
       </div>
     </div>
   </ProductionWorkspaceProvider>

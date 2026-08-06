@@ -80,6 +80,7 @@ export type AudienceRuntimeDiagnostics = {
   readonly firstSnapshotApplied: { readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' } | undefined
   readonly acknowledgementSentAt: string | undefined
   readonly transportCleanupReason: string | undefined
+  readonly activePresenceHeartbeatTimerCount: number
 }
 
 type AudienceControllerOptions = {
@@ -100,9 +101,13 @@ type AudienceControllerOptions = {
   readonly restoreRetryMs?: number
   readonly scheduleRestoreRetry?: (callback: () => void, delayMs: number) => unknown
   readonly cancelRestoreRetry?: (handle: unknown) => void
+  readonly presenceHeartbeatIntervalMs?: number
+  readonly schedulePresenceHeartbeat?: (callback: () => void, delayMs: number) => unknown
+  readonly cancelPresenceHeartbeat?: (handle: unknown) => void
 }
 
 export const AUDIENCE_LIVENESS_TIMEOUT_MS = 5000
+export const AUDIENCE_PRESENCE_HEARTBEAT_INTERVAL_MS = 1000
 
 export function createAudienceController(options: AudienceControllerOptions): AudienceController {
   let currentTransport = options.transport
@@ -119,6 +124,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   let reconnectHandle: unknown = null
   let restoreRetryHandle: unknown = null
   let restoreRetryGeneration = 0
+  let presenceHeartbeatHandle: unknown = null
   let watchdogHandle: unknown = null
   let watchdogGeneration = 0
   let closed = false
@@ -171,6 +177,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     firstSnapshotApplied: undefined,
     acknowledgementSentAt: undefined,
     transportCleanupReason: undefined,
+    activePresenceHeartbeatTimerCount: 0,
   }
   const listeners = new Set<() => void>()
   const notify = () => listeners.forEach((listener) => { try { listener() } catch { /* one display cannot break another */ } })
@@ -181,6 +188,8 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   const cancelWatchdog = options.cancelWatchdog ?? ((handle) => globalThis.clearTimeout(handle as number))
   const scheduleRestoreRetry = options.scheduleRestoreRetry ?? ((callback, delay) => globalThis.setTimeout(callback, delay))
   const cancelRestoreRetry = options.cancelRestoreRetry ?? ((handle) => globalThis.clearTimeout(handle as number))
+  const schedulePresenceHeartbeat = options.schedulePresenceHeartbeat ?? ((callback, delay) => globalThis.setInterval(callback, delay))
+  const cancelPresenceHeartbeat = options.cancelPresenceHeartbeat ?? ((handle) => globalThis.clearInterval(handle as number))
 
   const clearRestoreRetry = (): void => {
     restoreRetryGeneration += 1
@@ -235,9 +244,16 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     const publicState = message.type === 'display-snapshot-applied' ? message.publicState : 'unknown'
     if (message.type === 'display-ready') diagnostics = { ...diagnostics, helloCount: diagnostics.helloCount + 1, helloSentAt: now() }
     if (message.type === 'display-restore-request') diagnostics = { ...diagnostics, restoreRequestCount: diagnostics.restoreRequestCount + 1 }
+    if (message.type === 'display-heartbeat') diagnostics = { ...diagnostics, heartbeatSentCount: diagnostics.heartbeatSentCount + 1 }
     trace({ epoch, sequence, direction: 'sent', messageType: message.type === 'display-ready' ? 'hello' : message.type === 'display-restore-request' ? 'restore-request' : message.type === 'display-snapshot-applied' ? 'acknowledgement' : message.type, publicState, validationResult: result.ok ? 'accepted' : 'rejected', orderingResult: 'accepted', acknowledgementStatus: message.type === 'display-snapshot-applied' ? 'sent' : 'not-applicable' })
   }
   const sendReady = () => send({ type: 'display-ready', capability: { broadcastChannel: currentTransport.capability.broadcastChannel, fullscreen: currentTransport.capability.fullscreen } }, 0)
+  const sendPresenceHeartbeat = () => send({ type: 'display-heartbeat' }, nextOutboundSequence++)
+  const startPresenceHeartbeat = (): void => {
+    if (presenceHeartbeatHandle !== null || closed || currentTransport.capability.transport !== 'available') return
+    presenceHeartbeatHandle = schedulePresenceHeartbeat(sendPresenceHeartbeat, options.presenceHeartbeatIntervalMs ?? AUDIENCE_PRESENCE_HEARTBEAT_INTERVAL_MS)
+    diagnostics = { ...diagnostics, activePresenceHeartbeatTimerCount: 1 }
+  }
   const sendApplied = (envelope: ProtocolEnvelope, snapshot: PublicDisplaySnapshot) => {
     const publicState = snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw'
     diagnostics = { ...diagnostics, lastSnapshotApplied: { epoch: envelope.epoch, sequence: envelope.sequence, publicState } }
@@ -290,6 +306,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     if (closed || currentTransport.capability.transport !== 'available' || diagnostics.listenerAttached) return
     diagnostics = { ...diagnostics, listenerAttached: true, listenerAttachedAt: now(), channelOpen: true }
     armWatchdog()
+    startPresenceHeartbeat()
     sendReady()
     requestRestore()
     if (retainedSnapshot === undefined) scheduleRestore()
@@ -375,6 +392,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
 
   const enterDisconnected = () => {
     if (closed) return
+    if (presenceHeartbeatHandle !== null) { cancelPresenceHeartbeat(presenceHeartbeatHandle); presenceHeartbeatHandle = null; diagnostics = { ...diagnostics, activePresenceHeartbeatTimerCount: 0 } }
     diagnostics = { ...diagnostics, channelOpen: false }
     connection = options.transportFactory === undefined ? 'disconnected-safe' : 'reconnect-pending'
     state = { kind: 'disconnected-safe', connection }
@@ -412,9 +430,11 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener) },
   close() {
       if (closed) return
+      send({ type: 'display-close' }, nextOutboundSequence++)
       closed = true
       clearWatchdog()
       clearRestoreRetry()
+      if (presenceHeartbeatHandle !== null) { cancelPresenceHeartbeat(presenceHeartbeatHandle); presenceHeartbeatHandle = null }
       if (reconnectHandle !== null) { cancel(reconnectHandle); reconnectHandle = null }
       unsubscribe()
       unsubscribeClose()
@@ -422,7 +442,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       trace({ messageType: 'listener-disposed', direction: 'local', cleanupDisposeReason: 'close-called', controllerStateBefore: state.kind, controllerStateAfter: 'disconnected-safe' })
       trace({ messageType: 'channel-closed', direction: 'local', cleanupDisposeReason: 'close-called' })
       connection = 'disconnected-safe'
-      diagnostics = { ...diagnostics, channelOpen: false, listenerAttached: false, transportCleanupReason: 'close-called' }
+      diagnostics = { ...diagnostics, channelOpen: false, listenerAttached: false, activePresenceHeartbeatTimerCount: 0, transportCleanupReason: 'close-called' }
       state = { kind: 'disconnected-safe', connection }
       notify()
       listeners.clear()

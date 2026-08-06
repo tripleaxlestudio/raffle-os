@@ -22,6 +22,7 @@ export type PublisherStatus =
   | { readonly kind: 'waiting-for-display' }
   | { readonly kind: 'display-ready' }
   | { readonly kind: 'snapshot-applied'; readonly epoch: number; readonly sequence: number; readonly publicState: 'display-test' | 'standby' | 'draw' }
+  | { readonly kind: 'audience-presence'; readonly status: 'connected' | 'waiting'; readonly subscriberCount: number }
   | { readonly kind: 'transport-error'; readonly error: ProtocolError }
   | { readonly kind: 'projection-error'; readonly message: string }
   | { readonly kind: 'closed' }
@@ -69,6 +70,13 @@ export type OperatorPublisherDiagnostics = {
   readonly helloCount: number
   readonly restoreRequestCount: number
   readonly retainedSnapshotResendCount: number
+  readonly audienceLivenessTimeoutMs: number
+  readonly audienceLivenessDeadline: string | undefined
+  readonly activeAudienceSubscriberCount: number
+  readonly audienceSubscriberRuntimeIds: readonly string[]
+  readonly lastAudienceActivity: string | undefined
+  readonly lastAudienceHeartbeat: string | undefined
+  readonly mostRecentSubscriberExpiryReason: string | undefined
 }
 
 type OperatorPublisherOptions = {
@@ -80,6 +88,9 @@ type OperatorPublisherOptions = {
   readonly epoch?: number
   readonly expectedSession?: string
   readonly heartbeatIntervalMs?: number
+  readonly audienceLivenessTimeoutMs?: number
+  readonly scheduleAudienceLiveness?: (callback: () => void, delayMs: number) => unknown
+  readonly cancelAudienceLiveness?: (handle: unknown) => void
   readonly scheduleHeartbeat?: (callback: () => void, delayMs: number) => unknown
   readonly cancelHeartbeat?: (handle: unknown) => void
   readonly route?: () => string
@@ -105,6 +116,12 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   let helloCount = 0
   let restoreRequestCount = 0
   let retainedSnapshotResendCount = 0
+  const audienceSubscribers = new Map<string, { readonly lastActivity: string; readonly lastHeartbeat?: string }>()
+  let audienceLivenessHandle: unknown = null
+  let audienceLivenessDeadline: string | undefined
+  let mostRecentSubscriberExpiryReason: string | undefined
+  let lastAudienceActivityTimestamp: string | undefined
+  let lastAudienceHeartbeatTimestamp: string | undefined
   let lastHeartbeatTimestamp: string | undefined
   let restoreCount = 0
   let lastEnvelopeSent: OperatorPublisherDiagnostics['lastEnvelopeSent']
@@ -197,18 +214,48 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     heartbeatHandle = null
   }
 
+  const audienceTimeoutMs = options.audienceLivenessTimeoutMs ?? 5000
+  const scheduleAudienceLiveness = options.scheduleAudienceLiveness ?? ((callback, delay) => globalThis.setInterval(callback, delay))
+  const cancelAudienceLiveness = options.cancelAudienceLiveness ?? ((handle) => globalThis.clearInterval(handle as number))
+  const reportPresence = (status: 'connected' | 'waiting'): void => report({ kind: 'audience-presence', status, subscriberCount: audienceSubscribers.size })
+  const touchAudience = (runtimeId: string, heartbeat: boolean): void => {
+    const timestamp = options.clock.now()
+    lastAudienceActivityTimestamp = timestamp
+    if (heartbeat) lastAudienceHeartbeatTimestamp = timestamp
+    audienceSubscribers.set(runtimeId, { lastActivity: timestamp, ...(heartbeat ? { lastHeartbeat: timestamp } : {}) })
+    audienceLivenessDeadline = new Date(Date.parse(timestamp) + audienceTimeoutMs).toISOString()
+    if (audienceSubscribers.size === 1) reportPresence('connected')
+  }
+  const removeAudience = (runtimeId: string, reason: string): void => {
+    if (!audienceSubscribers.delete(runtimeId)) return
+    mostRecentSubscriberExpiryReason = reason
+    if (audienceSubscribers.size === 0) reportPresence('waiting')
+  }
+  const expireAudience = (): void => {
+    const expiry = Date.parse(options.clock.now()) - audienceTimeoutMs
+    for (const [runtimeId, presence] of audienceSubscribers) {
+      if (Date.parse(presence.lastActivity) <= expiry) removeAudience(runtimeId, 'presence-timeout')
+    }
+  }
+  const armAudienceLiveness = (): void => {
+    if (audienceLivenessHandle !== null) return
+    audienceLivenessHandle = scheduleAudienceLiveness(expireAudience, Math.min(1000, audienceTimeoutMs))
+  }
+
   const onEnvelope = (envelope: ProtocolEnvelope): void => {
     const receivedState = envelope.message.type === 'display-snapshot-applied' ? envelope.message.publicState : 'unknown'
     trace({ epoch: envelope.epoch, sequence: envelope.sequence, direction: 'received', messageType: envelope.message.type, publicState: receivedState, validationResult: 'not-run', orderingResult: 'not-run', acknowledgementStatus: envelope.message.type === 'display-snapshot-applied' ? 'received' : 'not-applicable' })
-    if (closed || (envelope.message.type !== 'display-ready' && envelope.message.type !== 'display-restore-request' && envelope.message.type !== 'display-snapshot-applied' && envelope.message.type !== 'display-heartbeat')) return
+    if (closed || (envelope.message.type !== 'display-ready' && envelope.message.type !== 'display-restore-request' && envelope.message.type !== 'display-snapshot-applied' && envelope.message.type !== 'display-heartbeat' && envelope.message.type !== 'display-close')) return
     if (envelope.sender.kind !== 'display' || envelope.sender.id.length === 0) return
     if (validateEnvelopeContext(envelope, options.scope) !== undefined) return
     if (options.expectedSession !== undefined && envelope.drawSessionId !== undefined && envelope.drawSessionId !== options.expectedSession) return
     if (snapshot === undefined) return
     if (envelope.message.type === 'display-heartbeat') {
       heartbeatReceivedCount += 1
+      touchAudience(envelope.sender.id, true)
       return
     }
+    if (envelope.message.type === 'display-close') { removeAudience(envelope.sender.id, 'goodbye'); return }
     if (envelope.message.type === 'display-snapshot-applied') {
       if (lastEnvelopeSent === undefined || envelope.message.appliedEpoch !== lastEnvelopeSent.epoch || envelope.message.appliedSequence !== lastEnvelopeSent.sequence || envelope.message.publicState !== lastEnvelopeSent.publicState) return
       lastAcknowledgement = { ...lastEnvelopeSent }
@@ -216,6 +263,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       report({ kind: 'snapshot-applied', epoch, sequence, publicState: lastEnvelopeSent.publicState })
       return
     }
+    touchAudience(envelope.sender.id, false)
     if (envelope.message.type === 'display-ready') { helloCount += 1; trace({ messageType: 'hello', direction: 'received', validationResult: 'accepted' }); report({ kind: 'display-ready' }) }
     if (envelope.message.type === 'display-restore-request') restoreRequestCount += 1
     // Ready and restore are explicit, idempotent requests for the current public snapshot.
@@ -247,6 +295,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       const result = projectAndPublish(initial, true)
       if (result.ok) {
         armHeartbeat()
+        armAudienceLiveness()
         report({ kind: 'ready' })
         if (currentTransport.capability.transport === 'available') report({ kind: 'waiting-for-display' })
         else report({ kind: 'transport-error', error: { kind: 'transport-unavailable', reason: 'Display transport is unavailable.' } })
@@ -266,6 +315,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       if (closed) return
       closed = true
       clearHeartbeat()
+      if (audienceLivenessHandle !== null) { cancelAudienceLiveness(audienceLivenessHandle); audienceLivenessHandle = null }
       unsubscribe()
       currentTransport.close()
       trace({ messageType: 'publisher-disposed', direction: 'local', cleanupDisposeReason: 'close-called' })
@@ -295,6 +345,13 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       helloCount,
       restoreRequestCount,
       retainedSnapshotResendCount,
+      audienceLivenessTimeoutMs: audienceTimeoutMs,
+      audienceLivenessDeadline,
+      activeAudienceSubscriberCount: audienceSubscribers.size,
+      audienceSubscriberRuntimeIds: [...audienceSubscribers.keys()],
+      lastAudienceActivity: lastAudienceActivityTimestamp,
+      lastAudienceHeartbeat: lastAudienceHeartbeatTimestamp,
+      mostRecentSubscriberExpiryReason,
     }),
   }
 }

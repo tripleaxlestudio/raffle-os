@@ -29,8 +29,9 @@ export function ProductionSettingsPage() {
   const [settingsState, setSettingsState] = useState<'loading' | 'ready' | 'saving' | 'error'>('loading')
   const [message, setMessage] = useState<string | null>(null)
   const [connection, setConnection] = useState<DisplayConnectionStatus>('waiting')
-  const [testing, setTesting] = useState(false)
-  const [testVisibility, setTestVisibility] = useState<'inactive' | 'publishing' | 'visible' | 'stopping' | 'standby' | 'failed'>('inactive')
+  const initiallyTestActive = audience.getDiagnostics()?.retainedPublicState === 'display-test'
+  const [testing, setTesting] = useState(initiallyTestActive)
+  const [testVisibility, setTestVisibility] = useState<'inactive' | 'publishing' | 'visible' | 'stopping' | 'standby' | 'failed'>(initiallyTestActive ? 'visible' : 'inactive')
   const [popupBlocked, setPopupBlocked] = useState(false)
   const [audioMessage, setAudioMessage] = useState('')
   const testVisibilityRef = useRef(testVisibility)
@@ -44,6 +45,9 @@ export function ProductionSettingsPage() {
   }, [services, settingsService, workspace])
   useEffect(() => { void Promise.resolve().then(load) }, [load])
   useEffect(() => audience.subscribe((status) => {
+    const retainedState = audience.getDiagnostics()?.retainedPublicState
+    if (retainedState === 'display-test') { setTesting(true); setTestVisibility('visible') }
+    if (retainedState === 'standby' && testVisibilityRef.current !== 'publishing') { setTesting(false); setTestVisibility('standby') }
     if (status.kind === 'display-ready' || status.kind === 'snapshot-applied') {
       setConnection('connected')
       if (status.kind === 'snapshot-applied' && status.publicState === 'display-test') { setTesting(true); setTestVisibility('visible') }

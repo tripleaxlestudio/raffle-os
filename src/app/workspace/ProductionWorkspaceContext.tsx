@@ -139,6 +139,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
     const unsubscribe = publisher.subscribe((status) => {
       setPublisherStatus(status)
       if (status.kind === 'display-ready' || status.kind === 'snapshot-applied') setDisplayConnectionStatus(scopeKey, 'connected')
+      if (status.kind === 'audience-presence') setDisplayConnectionStatus(scopeKey, status.status === 'connected' ? 'connected' : 'waiting')
       if (status.kind === 'transport-error') setDisplayConnectionStatus(scopeKey, 'publication-failed')
     })
     publisherStatusCleanupRef.current = unsubscribe

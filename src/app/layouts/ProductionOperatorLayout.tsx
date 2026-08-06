@@ -99,9 +99,11 @@ function ProductionAudienceDiagnostics() {
     <div><dt>Scope</dt><dd>{diagnostics === undefined ? '—' : `${diagnostics.channelName}`}</dd></div>
     <div><dt>Epoch / sequence</dt><dd>{diagnostics === undefined ? '—' : `${diagnostics.epoch} / ${diagnostics.sequence}`}</dd></div>
     <div><dt>Retained public state</dt><dd>{diagnostics?.retainedPublicState ?? '—'}</dd></div>
+    <div><dt>Settings test-active</dt><dd>{diagnostics?.retainedPublicState === 'display-test' ? 'yes' : 'no'}</dd></div>
     <div><dt>Last snapshot sent</dt><dd>{diagnostics?.lastEnvelopeSent === undefined ? '—' : `${diagnostics.lastEnvelopeSent.publicState} @ ${diagnostics.lastEnvelopeSent.epoch}/${diagnostics.lastEnvelopeSent.sequence}`}</dd></div>
     <div><dt>Last applied acknowledgement</dt><dd>{diagnostics?.lastAcknowledgement === undefined ? '—' : `${diagnostics.lastAcknowledgement.publicState} @ ${diagnostics.lastAcknowledgement.epoch}/${diagnostics.lastAcknowledgement.sequence}`}</dd></div>
     <div><dt>Heartbeat count</dt><dd>{diagnostics?.heartbeatCount ?? 0}</dd></div>
+    <div><dt>Heartbeat sent</dt><dd>{diagnostics?.heartbeatCount ?? 0}</dd></div>
     <div><dt>Heartbeat interval</dt><dd>{diagnostics?.heartbeatIntervalMs ?? 0} ms</dd></div>
     <div><dt>Active heartbeat timers</dt><dd>{diagnostics?.activeHeartbeatTimerCount ?? 0}</dd></div>
     <div><dt>Heartbeat received</dt><dd>{diagnostics?.heartbeatReceivedCount ?? 0}</dd></div>
@@ -109,6 +111,13 @@ function ProductionAudienceDiagnostics() {
     <div><dt>Restore-request count</dt><dd>{diagnostics?.restoreRequestCount ?? 0}</dd></div>
     <div><dt>Retained snapshot resends</dt><dd>{diagnostics?.retainedSnapshotResendCount ?? 0}</dd></div>
     <div><dt>Last heartbeat</dt><dd>{diagnostics?.lastHeartbeatTimestamp ?? '—'}</dd></div>
+    <div><dt>Audience liveness timeout</dt><dd>{diagnostics?.audienceLivenessTimeoutMs ?? 0} ms</dd></div>
+    <div><dt>Audience liveness deadline</dt><dd>{diagnostics?.audienceLivenessDeadline ?? '—'}</dd></div>
+    <div><dt>Active Audience subscribers</dt><dd>{diagnostics?.activeAudienceSubscriberCount ?? 0}</dd></div>
+    <div><dt>Subscriber runtime IDs</dt><dd>{diagnostics?.audienceSubscriberRuntimeIds.join(', ') || '—'}</dd></div>
+    <div><dt>Last Audience activity</dt><dd>{diagnostics?.lastAudienceActivity ?? '—'}</dd></div>
+    <div><dt>Last Audience heartbeat</dt><dd>{diagnostics?.lastAudienceHeartbeat ?? '—'}</dd></div>
+    <div><dt>Subscriber expiry reason</dt><dd>{diagnostics?.mostRecentSubscriberExpiryReason ?? '—'}</dd></div>
   </dl>} />
 }
 

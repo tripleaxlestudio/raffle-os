@@ -2,9 +2,9 @@ import Dexie from 'dexie'
 import { afterEach, describe, expect, it } from 'vitest'
 import { IDBKeyRange, indexedDB } from 'fake-indexeddb'
 import { RaffleOSDatabase } from '../db.ts'
-import type { CommandId, DrawSessionId, ParticipantId } from '../../../domain/shared/identifiers.ts'
+import type { CommandId, DrawConfigurationId, DrawSessionId, ParticipantId } from '../../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../../domain/shared/timestamps.ts'
-import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3 } from './schema-v1.ts'
+import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4 } from './schema-v1.ts'
 
 const names: string[] = []
 const legacy = {
@@ -47,10 +47,22 @@ describe('schema v3 additive migration', () => {
     const name = await makeLegacyDatabase(version)
     const database = new RaffleOSDatabase(name, { IDBKeyRange, indexedDB })
     await database.openSupported()
-    expect(database.verno).toBe(4)
+    expect(database.verno).toBe(5)
     for (const [store, value] of Object.entries(legacy)) {
       const key = 'id' in value ? value.id : value.key
-      expect(await database.table(store).get(key)).toEqual(value)
+      if (store === 'draw_configurations') {
+        expect(await database.table(store).get(key)).toMatchObject({
+          ...value,
+          presentation: {
+            presentationMode: 'instant-reveal',
+            rollDurationSeconds: 8,
+            rollSpeedPerSecond: 12,
+            revealMode: 'all-together',
+          },
+        })
+      } else {
+        expect(await database.table(store).get(key)).toEqual(value)
+      }
     }
     expect(await database.participants.get('participant-1' as ParticipantId)).toMatchObject({ ticketNumber: '00042' })
     expect(await database.command_receipts.count()).toBe(0)
@@ -72,5 +84,33 @@ describe('schema v3 additive migration', () => {
     await reopened.openSupported()
     expect(await reopened.command_receipts.get('command-1' as CommandId)).toMatchObject({ canonicalPayload: '{}', status: 'unknown' })
     reopened.close()
+  })
+
+  it('adds the immutable presentation snapshot to an existing started session', async () => {
+    const name = `raffle-os-v4-to-v5-${crypto.randomUUID()}`
+    names.push(name)
+    const legacyDatabase = new Dexie(name, { autoOpen: false, IDBKeyRange, indexedDB })
+    legacyDatabase.version(1).stores(SCHEMA_V1)
+    legacyDatabase.version(2).stores(SCHEMA_V2)
+    legacyDatabase.version(3).stores(SCHEMA_V3)
+    legacyDatabase.version(4).stores(SCHEMA_V4)
+    await legacyDatabase.open()
+    await legacyDatabase.table('draw_configurations').add({ id: 'configuration-1', eventId: 'event-1', prizeCategoryId: 'prize-1', requestedWinners: 1, winningRule: 'once-per-event', requireCheckIn: false, eligibleGroupFilter: null, createdAt: '2026-08-05T01:00:00.000Z', updatedAt: '2026-08-05T01:00:00.000Z' })
+    await legacyDatabase.table('draw_sessions').add({ id: 'session-1', eventId: 'event-1', configurationId: 'configuration-1', mode: 'live', status: 'pending-confirmation', configurationSnapshot: { snapshotFormatVersion: 1, configurationId: 'configuration-1', prizeCategoryId: 'prize-1', categoryName: 'Prize', prizeName: 'Prize', requestedWinners: 1, winningRule: 'once-per-event', requireCheckIn: false, eligibleGroupFilter: null, capturedAt: '2026-08-05T01:00:00.000Z' }, candidatePoolSnapshot: { snapshotFormatVersion: 1, eventId: 'event-1', configurationId: 'configuration-1', prizeCategoryId: 'prize-1', mode: 'live', capturedAt: '2026-08-05T01:00:00.000Z', winningRule: 'once-per-event', requireCheckIn: false, eligibleGroupFilter: null, candidateEntries: [], eligibleSnapshotCount: 0 }, createdAt: '2026-08-05T01:00:00.000Z', updatedAt: '2026-08-05T01:00:00.000Z' })
+    legacyDatabase.close()
+
+    const database = new RaffleOSDatabase(name, { IDBKeyRange, indexedDB })
+    await database.openSupported()
+    expect(await database.draw_configurations.get('configuration-1' as DrawConfigurationId)).toMatchObject({
+      requestedWinners: 1,
+      presentation: { presentationMode: 'instant-reveal', rollDurationSeconds: 8, rollSpeedPerSecond: 12, revealMode: 'all-together' },
+    })
+    expect((await database.draw_sessions.get('session-1' as DrawSessionId))?.configurationSnapshot?.presentation).toEqual({
+      presentationMode: 'instant-reveal',
+      rollDurationSeconds: 8,
+      rollSpeedPerSecond: 12,
+      revealMode: 'all-together',
+    })
+    database.close()
   })
 })

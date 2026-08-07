@@ -13,6 +13,7 @@ export interface DrawAuthoringDraft {
   readonly requireCheckIn: boolean
   readonly eligibleGroupFilter: unknown
   readonly mode: unknown
+  readonly presentation?: unknown
   readonly configurationId?: string
   readonly sessionId?: string
 }

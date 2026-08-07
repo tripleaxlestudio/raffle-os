@@ -5,6 +5,7 @@ import {
   validateDrawSession,
 } from '../../../domain/draws/draw.invariants.ts'
 import type { DrawConfiguration } from '../../../domain/draws/draw-configuration.types.ts'
+import { resolveDrawPresentationConfiguration } from '../../../domain/draws/draw-presentation.types.ts'
 import type { DrawSession } from '../../../domain/draws/draw-session.types.ts'
 import { validateEvent } from '../../../domain/events/event.invariants.ts'
 import type { Event } from '../../../domain/events/event.types.ts'
@@ -162,6 +163,10 @@ export function validateSeedDataset(dataset: ValidatedSeedDataset): void {
       configurationSnapshot.winningRule !== config.winningRule ||
       configurationSnapshot.requireCheckIn !== config.requireCheckIn ||
       configurationSnapshot.eligibleGroupFilter !== config.eligibleGroupFilter
+      || resolveDrawPresentationConfiguration(configurationSnapshot.presentation).presentationMode !== resolveDrawPresentationConfiguration(config.presentation).presentationMode
+      || resolveDrawPresentationConfiguration(configurationSnapshot.presentation).rollDurationSeconds !== resolveDrawPresentationConfiguration(config.presentation).rollDurationSeconds
+      || resolveDrawPresentationConfiguration(configurationSnapshot.presentation).rollSpeedPerSecond !== resolveDrawPresentationConfiguration(config.presentation).rollSpeedPerSecond
+      || resolveDrawPresentationConfiguration(configurationSnapshot.presentation).revealMode !== resolveDrawPresentationConfiguration(config.presentation).revealMode
     ) {
       throw new RelationshipMismatchError(
         'DrawConfigurationSnapshot identity and required values must match the DrawConfiguration.',

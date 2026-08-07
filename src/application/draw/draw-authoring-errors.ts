@@ -10,6 +10,7 @@ export const DRAW_AUTHORING_ERROR_CODES = {
   invalidMode: 'invalid-mode',
   invalidRule: 'invalid-rule',
   invalidFilter: 'invalid-filter',
+  invalidPresentation: 'invalid-presentation',
   insufficientEligibleCapacity: 'insufficient-eligible-capacity',
   duplicateSave: 'duplicate-save',
   persistenceUnavailable: 'persistence-unavailable',

@@ -51,6 +51,7 @@ import {
 } from '../errors/persistence-errors.ts'
 import { DexieDisplayConfigurationRepository } from './display-configuration.repository.ts'
 import { DexieDrawConfigurationRepository } from './draw-configuration.repository.ts'
+import { DEFAULT_DRAW_PRESENTATION_CONFIGURATION } from '../../../domain/draws/draw-presentation.types.ts'
 import { DexiePreferenceRepository } from './preference.repository.ts'
 import { DexiePrizeCategoryRepository } from './prize-category.repository.ts'
 
@@ -157,6 +158,7 @@ function makeConfiguration(
     eligibleGroupFilter: null,
     eventId: event.id,
     id: createDrawConfigurationId(),
+    presentation: DEFAULT_DRAW_PRESENTATION_CONFIGURATION,
     prizeCategoryId: category.id,
     requestedWinners: 1,
     requireCheckIn: false,

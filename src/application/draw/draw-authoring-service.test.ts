@@ -32,6 +32,27 @@ describe('draw authoring service', () => {
     expect((result as { ok: true; record: { session: { status: string; mode: string } } }).record.session).toMatchObject({ status: 'ready', mode: 'practice' })
   })
 
+  it('persists a valid per-draw Random Number Roll configuration', async () => {
+    const result = await createDrawAuthoringService(makeRepositories()).save({
+      ...validDraft,
+      presentation: {
+        presentationMode: 'random-number-roll',
+        rollDurationSeconds: 5,
+        rollSpeedPerSecond: 20,
+        revealMode: 'all-together',
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.record.configuration.presentation).toEqual({
+      presentationMode: 'random-number-roll',
+      rollDurationSeconds: 5,
+      rollSpeedPerSecond: 20,
+      revealMode: 'all-together',
+    })
+  })
+
   it.each(['', 0, 101, 1.5, 'not-a-number'])('rejects invalid winner count %s', async (requestedWinners) => {
     const result = await createDrawAuthoringService(makeRepositories()).save({ ...validDraft, requestedWinners })
     expect(result).toMatchObject({ ok: false, error: { code: 'invalid-winner-count' } })

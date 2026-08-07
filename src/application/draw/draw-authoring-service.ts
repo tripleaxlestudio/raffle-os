@@ -7,6 +7,7 @@ import type { EventId } from '../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { DrawAuthoringError } from './draw-authoring-errors.ts'
 import type { DrawAuthoringDraft, DrawAuthoringLoadResult, DrawAuthoringRepositories, DrawAuthoringSaveResult, DrawAuthoringService } from './draw-authoring.types.ts'
+import { normalizeDrawPresentationConfiguration, validateDrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
 
 const RULES = new Set(['once-per-event', 'once-per-category', 'allow-repeat'])
 const MODES = new Set(['practice', 'live'])
@@ -69,6 +70,9 @@ export function createDrawAuthoringService(repositories: DrawAuthoringRepositori
       if (!MODES.has(String(draft.mode))) return invalid('invalid-mode', 'Mode must be Practice or Live.')
       if (!RULES.has(String(draft.winningRule))) return invalid('invalid-rule', 'The selected winning rule is not supported.')
       if (draft.eligibleGroupFilter !== null && draft.eligibleGroupFilter !== undefined && typeof draft.eligibleGroupFilter !== 'string') return invalid('invalid-filter', 'The eligible group filter is not supported.')
+      const presentationValidation = validateDrawPresentationConfiguration(draft.presentation === undefined ? normalizeDrawPresentationConfiguration(undefined) : draft.presentation)
+      if (!presentationValidation.ok) return invalid('invalid-presentation', presentationValidation.error.message)
+      const presentation = presentationValidation.value
       const groupFilter = typeof draft.eligibleGroupFilter === 'string' ? draft.eligibleGroupFilter.trim() : null
       try {
         const eventId = asEventId(draft.eventId)
@@ -80,8 +84,8 @@ export function createDrawAuthoringService(repositories: DrawAuthoringRepositori
         if (draft.sessionId !== undefined && loaded.session === null) return invalid('session-not-found', 'The DrawSession was not found.')
         if (loaded.session !== null && loaded.session.status !== 'ready') return invalid('session-not-editable', 'Only a ready DrawSession can be edited.')
         const timestamp = now()
-        const configuration: DrawConfiguration = loaded.configuration ?? { id: createDrawConfigurationId(), eventId, prizeCategoryId: category.id, requestedWinners, winningRule: draft.winningRule as DrawConfiguration['winningRule'], requireCheckIn: draft.requireCheckIn, eligibleGroupFilter: groupFilter, createdAt: timestamp, updatedAt: timestamp }
-        const updatedConfiguration: DrawConfiguration = { ...configuration, eventId, prizeCategoryId: category.id, requestedWinners, winningRule: draft.winningRule as DrawConfiguration['winningRule'], requireCheckIn: draft.requireCheckIn, eligibleGroupFilter: groupFilter, updatedAt: timestamp }
+        const configuration: DrawConfiguration = loaded.configuration ?? { id: createDrawConfigurationId(), eventId, prizeCategoryId: category.id, requestedWinners, winningRule: draft.winningRule as DrawConfiguration['winningRule'], requireCheckIn: draft.requireCheckIn, eligibleGroupFilter: groupFilter, presentation, createdAt: timestamp, updatedAt: timestamp }
+        const updatedConfiguration: DrawConfiguration = { ...configuration, eventId, prizeCategoryId: category.id, requestedWinners, winningRule: draft.winningRule as DrawConfiguration['winningRule'], requireCheckIn: draft.requireCheckIn, eligibleGroupFilter: groupFilter, presentation, updatedAt: timestamp }
         const session: DrawSession = loaded.session ?? { id: createDrawSessionId(), eventId, configurationId: updatedConfiguration.id, mode: draft.mode as DrawSession['mode'], status: 'ready', configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: timestamp, updatedAt: timestamp }
         const updatedSession: DrawSession = { ...session, eventId, configurationId: updatedConfiguration.id, mode: draft.mode as DrawSession['mode'], status: 'ready', updatedAt: timestamp }
         const valid = validateDrawConfiguration(updatedConfiguration)

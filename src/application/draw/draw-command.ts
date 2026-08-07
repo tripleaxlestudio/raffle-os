@@ -2,6 +2,7 @@ import { validateDrawConfiguration } from '../../domain/draws/draw.invariants.ts
 import { validateEvent } from '../../domain/events/event.invariants.ts'
 import { validatePrizeCategory } from '../../domain/prizes/prize.types.ts'
 import { validateDrawSession } from '../../domain/draws/draw.invariants.ts'
+import { resolveDrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
 import { isIsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { buildCandidatePool } from './candidate-pool-builder.ts'
 import { evaluateEligibility } from '../eligibility/eligibility-evaluator.ts'
@@ -52,6 +53,7 @@ function makeConfigurationSnapshot(
     winningRule: configuration.winningRule,
     requireCheckIn: configuration.requireCheckIn,
     eligibleGroupFilter: configuration.eligibleGroupFilter,
+    presentation: resolveDrawPresentationConfiguration(configuration.presentation),
     capturedAt,
   })
 }

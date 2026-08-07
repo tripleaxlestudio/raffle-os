@@ -53,6 +53,32 @@ function input(fixture: ReturnType<typeof makeDrawHistoryFixture>, mode: 'live' 
 }
 
 describe('executeDraw', () => {
+  it('captures per-draw presentation configuration without changing selection semantics', async () => {
+    const database = await openTestDatabase('command-presentation-snapshot')
+    const base = makeDrawHistoryFixture(['00042', '42'])
+    const fixture = {
+      ...base,
+      configuration: {
+        ...base.configuration,
+        presentation: {
+          presentationMode: 'random-number-roll' as const,
+          rollDurationSeconds: 12 as const,
+          rollSpeedPerSecond: 18,
+          revealMode: 'sequential' as const,
+        },
+      },
+    }
+    await seedReadyFixture(database, fixture)
+
+    const result = await executeDraw(input(fixture), dependencies(database))
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.configurationSnapshot.presentation).toEqual(fixture.configuration.presentation)
+    expect(Object.isFrozen(result.value.configurationSnapshot.presentation)).toBe(true)
+    expect(result.value.pendingWinners.map((winner) => winner.ticketNumber)).toEqual(['42', '00042'])
+  })
+
   it('persists one complete Live draw and preserves exact tickets after reopen', async () => {
     const database = await openTestDatabase('command-live')
     const fixture = makeDrawHistoryFixture(['00042', '42'])

@@ -45,5 +45,11 @@ export const SCHEMA_V3 = {
 export const SCHEMA_VERSION_4 = 4 as const
 export const SCHEMA_V4 = { event_settings: '&eventId, updatedAt' } as const
 
+export const SCHEMA_VERSION_5 = 5 as const
+export const SCHEMA_V5 = {
+  draw_configurations: SCHEMA_V1.draw_configurations,
+  draw_sessions: SCHEMA_V1.draw_sessions,
+} as const
+
 export type SchemaV1StoreName =
   (typeof SCHEMA_V1_STORE_NAMES)[number]

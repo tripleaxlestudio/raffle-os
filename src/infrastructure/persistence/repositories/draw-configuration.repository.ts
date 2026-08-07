@@ -1,5 +1,6 @@
 import type { DrawConfigurationRepository } from '../../../application/persistence/repositories/draw-configuration-repository.interface.ts'
 import { validateDrawConfiguration } from '../../../domain/draws/draw.invariants.ts'
+import { normalizeDrawConfigurationPresentation } from '../../../domain/draws/draw.invariants.ts'
 import type { DrawConfiguration } from '../../../domain/draws/draw-configuration.types.ts'
 import type { DrawSessionStatus } from '../../../domain/draws/draw-session.types.ts'
 import type {
@@ -38,7 +39,8 @@ export class DexieDrawConfigurationRepository
     id: DrawConfigurationId,
   ): Promise<DrawConfiguration | null> {
     try {
-      return (await this.database.draw_configurations.get(id)) ?? null
+      const configuration = await this.database.draw_configurations.get(id)
+      return configuration === undefined ? null : normalizeDrawConfigurationPresentation(configuration)
     } catch (error: unknown) {
       throw normalizeRepositoryError(
         error,
@@ -57,7 +59,7 @@ export class DexieDrawConfigurationRepository
           .equals(eventId)
           .toArray()
 
-      return configurations.sort(
+      return configurations.map(normalizeDrawConfigurationPresentation).sort(
         (left, right) =>
           left.createdAt.localeCompare(right.createdAt) ||
           left.id.localeCompare(right.id),
@@ -74,7 +76,8 @@ export class DexieDrawConfigurationRepository
     configuration: DrawConfiguration,
   ): Promise<void> {
     try {
-      requireValid(validateDrawConfiguration(configuration))
+      const normalizedConfiguration = normalizeDrawConfigurationPresentation(configuration)
+      requireValid(validateDrawConfiguration(normalizedConfiguration))
 
       await this.database.transaction(
         'rw',
@@ -112,7 +115,7 @@ export class DexieDrawConfigurationRepository
             )
           }
 
-          await this.database.draw_configurations.add(configuration)
+          await this.database.draw_configurations.add(normalizedConfiguration)
         },
       )
     } catch (error: unknown) {
@@ -127,7 +130,8 @@ export class DexieDrawConfigurationRepository
     configuration: DrawConfiguration,
   ): Promise<void> {
     try {
-      requireValid(validateDrawConfiguration(configuration))
+      const normalizedConfiguration = normalizeDrawConfigurationPresentation(configuration)
+      requireValid(validateDrawConfiguration(normalizedConfiguration))
 
       await this.database.transaction(
         'rw',
@@ -148,13 +152,13 @@ export class DexieDrawConfigurationRepository
             )
           }
 
-          if (configuration.eventId !== current.eventId) {
+          if (normalizedConfiguration.eventId !== current.eventId) {
             throw new RelationshipMismatchError(
               'A DrawConfiguration cannot be reassigned to another Event.',
             )
           }
 
-          if (configuration.createdAt !== current.createdAt) {
+          if (normalizedConfiguration.createdAt !== current.createdAt) {
             throw new ImmutableRecordError(
               'A DrawConfiguration creation time cannot be changed.',
             )
@@ -202,7 +206,7 @@ export class DexieDrawConfigurationRepository
             )
           }
 
-          await this.database.draw_configurations.put(configuration)
+          await this.database.draw_configurations.put(normalizedConfiguration)
         },
       )
     } catch (error: unknown) {

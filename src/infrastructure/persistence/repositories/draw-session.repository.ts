@@ -10,6 +10,7 @@ import type {
   DrawSessionStatus,
   DrawStartSnapshots,
 } from '../../../domain/draws/draw-session.types.ts'
+import { resolveDrawPresentationConfiguration } from '../../../domain/draws/draw-presentation.types.ts'
 import type {
   DrawSessionId,
   EventId,
@@ -37,6 +38,7 @@ function assertConfigurationSnapshotMatchesSource(
     readonly winningRule: string
     readonly requireCheckIn: boolean
     readonly eligibleGroupFilter: string | null
+    readonly presentation?: import('../../../domain/draws/draw-presentation.types.ts').DrawPresentationConfiguration
   },
   category: {
     readonly id: string
@@ -45,6 +47,8 @@ function assertConfigurationSnapshotMatchesSource(
   },
 ): void {
   const snapshot = snapshots.configurationSnapshot
+  const snapshotPresentation = resolveDrawPresentationConfiguration(snapshot.presentation)
+  const sourcePresentation = resolveDrawPresentationConfiguration(source.presentation)
 
   if (
     snapshot.configurationId !== source.id ||
@@ -56,6 +60,10 @@ function assertConfigurationSnapshotMatchesSource(
     snapshot.winningRule !== source.winningRule ||
     snapshot.requireCheckIn !== source.requireCheckIn ||
     snapshot.eligibleGroupFilter !== source.eligibleGroupFilter
+    || snapshotPresentation.presentationMode !== sourcePresentation.presentationMode
+    || snapshotPresentation.rollDurationSeconds !== sourcePresentation.rollDurationSeconds
+    || snapshotPresentation.rollSpeedPerSecond !== sourcePresentation.rollSpeedPerSecond
+    || snapshotPresentation.revealMode !== sourcePresentation.revealMode
   ) {
     throw new RelationshipMismatchError(
       'The configuration snapshot must exactly match its source DrawConfiguration and PrizeCategory.',

@@ -89,6 +89,32 @@ describe('ProductionDrawPresentation', () => {
     expect(screen.getByRole('button', { name: 'Return to Draw Sessions' })).toBeInTheDocument()
   })
 
+  it('completes a Practice timed roll without Skip animation', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn() }))
+    const practiceResult = { drawSessionId: result(1).drawSessionId, winners: result(1).winners as never, createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1 as const }
+    render(<ProductionDrawPresentation result={result(1)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" practiceResult={practiceResult} presentationConfiguration={{ presentationMode: 'random-number-roll', rollStopMode: 'timed', rollDurationSeconds: 5, rollSpeedPerSecond: 20, revealMode: 'sequential' }} onFailure={() => undefined} />)
+    await act(async () => { await Promise.resolve() })
+    expect(screen.getByRole('heading', { name: 'Get ready' })).toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000) })
+    expect(screen.getByRole('heading', { name: 'Rolling' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Skip animation' })).toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
+    expect(screen.getByRole('heading', { name: 'Winner reveal' })).toBeInTheDocument()
+  })
+
+  it('shows STOP & REVEAL only for Manual rolling', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-05T00:00:00.000Z'))
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn() }))
+    const practiceResult = { drawSessionId: result(1).drawSessionId, winners: result(1).winners as never, createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1 as const }
+    render(<ProductionDrawPresentation result={result(1)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" practiceResult={practiceResult} presentationConfiguration={{ presentationMode: 'random-number-roll', rollStopMode: 'manual', rollDurationSeconds: 5, rollSpeedPerSecond: 20, revealMode: 'sequential' }} initialPresentation={{ stage: 'rolling', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} />)
+    await act(async () => { await Promise.resolve() })
+    const stop = screen.getByRole('button', { name: 'STOP & REVEAL' })
+    expect(stop).toHaveClass('ui-button--danger', 'ui-button--lg', 'production-manual-stop')
+    expect(screen.queryByRole('button', { name: 'Skip animation' })).not.toBeInTheDocument()
+  })
+
   it('survives Strict Mode recovery hydration and continues from the persisted stage', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-05T00:00:00.000Z'))

@@ -1748,6 +1748,10 @@
 
 .production-presentation h1,
 .production-presentation p { margin: 0; }
+.production-manual-stop { min-width: 13rem; padding-inline: var(--space-6); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.production-manual-stop:hover:not(:disabled) { transform: translateY(-1px); }
+.production-manual-stop:active:not(:disabled) { transform: translateY(1px); }
+.production-manual-stop:focus-visible { outline: 0.1875rem solid var(--text-primary); outline-offset: 0.1875rem; }
 .production-presentation__content { display: grid; gap: var(--space-5); justify-items: center; }
 .production-countdown { color: var(--text-primary); font: 800 clamp(8rem, 22vw, 16rem)/.8 var(--font-family-mono); }
 .production-rolling { display: grid; gap: var(--space-4); justify-items: center; color: var(--text-muted); font: 700 clamp(2rem, 5vw, 4rem)/1 var(--font-family-mono); letter-spacing: .16em; }

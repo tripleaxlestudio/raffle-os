@@ -52,13 +52,15 @@ export class PresentationController {
     const duration = stage === 'countdown' ? this.policy.countdownDurationMs : this.rollingDurationMs()
     if (!Number.isFinite(elapsed) || elapsed >= duration) {
       await this.transition(this.nextAfter(stage))
-      if (this.getState().stage === 'rolling' && !this.isManualRolling()) this.schedule(this.rollingDurationMs())
       return
     }
     const label = stage === 'countdown' ? (Math.max(1, 3 - Math.floor(elapsed / this.policy.countdownLabelDurationMs)) as 3 | 2 | 1) : null
     this.state = { ...this.state, stage, countdownLabel: label, error: null, stageStartedAt, blackoutRequested }
     this.options.onState(this.state)
-    if (stage === 'countdown' || !this.isManualRolling()) this.schedule(Math.max(0, duration - elapsed), () => { void this.transition(stage === 'countdown' ? this.nextAfter('countdown') : 'reveal') })
+    if (stage === 'countdown' || !this.isManualRolling()) {
+      this.clearTimer()
+      this.schedule(Math.max(0, duration - elapsed), () => { void this.transition(stage === 'countdown' ? this.nextAfter('countdown') : 'reveal') })
+    }
   }
   async handoff(): Promise<void> {
     if (this.disposed || this.state.stage === 'result-locked' || this.state.stage === 'failed' || this.state.stage === 'pending-handoff') return
@@ -79,7 +81,6 @@ export class PresentationController {
     this.bootstrapStarted = true
     if (this.options.clock.prefersReducedMotion()) { await this.transition('reveal'); return }
     await this.transition('countdown')
-    if (this.getState().stage === 'countdown') this.schedule(this.policy.countdownLabelDurationMs)
   }
   async skip(): Promise<void> {
     if (this.disposed || (this.state.stage !== 'countdown' && this.state.stage !== 'rolling')) return
@@ -105,8 +106,12 @@ export class PresentationController {
     this.lifecycleVersion += 1
     this.clearTimer()
   }
-  private schedule(delayMs: number, callback?: () => void): void {
-    try { this.timeout = this.options.clock.setTimeout(() => { if (callback !== undefined) callback(); else void this.tick() }, delayMs) } catch (cause: unknown) { this.fail(new PresentationError('timer-controller-failure', 'Presentation was interrupted safely.', true, true, cause)) }
+  private scheduleStageCompletion(stage: 'countdown' | 'rolling', delayMs: number): void {
+    this.clearTimer()
+    this.schedule(delayMs, () => { void (stage === 'countdown' ? this.tick() : this.transition('reveal')) })
+  }
+  private schedule(delayMs: number, callback: () => void): void {
+    try { this.timeout = this.options.clock.setTimeout(callback, delayMs) } catch (cause: unknown) { this.fail(new PresentationError('timer-controller-failure', 'Presentation was interrupted safely.', true, true, cause)) }
   }
   private async tick(): Promise<void> {
     if (this.disposed || this.state.stage === 'failed' || this.transitioning) return
@@ -114,9 +119,8 @@ export class PresentationController {
       const nextLabel = this.state.countdownLabel === null ? 3 : this.state.countdownLabel > 1 ? (this.state.countdownLabel - 1) as 3 | 2 | 1 : null
       this.state = { ...this.state, countdownLabel: nextLabel }
       this.options.onState(this.state)
-      if (nextLabel !== null) { this.schedule(this.policy.countdownLabelDurationMs); return }
+      if (nextLabel !== null) { this.scheduleStageCompletion('countdown', this.policy.countdownLabelDurationMs); return }
       await this.transition(this.nextAfter('countdown'));
-      if (this.state.stage === 'rolling' && !this.isManualRolling()) this.schedule(this.rollingDurationMs())
       return
     }
     if (this.state.stage === 'rolling') await this.transition('reveal')
@@ -132,6 +136,8 @@ export class PresentationController {
       if (this.disposed || lifecycleVersion !== this.lifecycleVersion) return
       this.state = { ...this.state, stage: next, countdownLabel: next === 'countdown' ? 3 : null, error: null, stageStartedAt: startedAt, blackoutRequested: this.state.blackoutRequested }
       this.options.onState(this.state)
+      if (next === 'countdown') this.scheduleStageCompletion('countdown', this.policy.countdownLabelDurationMs)
+      else if (next === 'rolling' && !this.isManualRolling()) this.scheduleStageCompletion('rolling', this.rollingDurationMs())
     } catch (cause: unknown) {
       const error = cause instanceof PresentationError ? cause : new PresentationError(next === 'pending-handoff' ? 'pending-handoff-write-failure' : 'unexpected-presentation-failure', next === 'pending-handoff' ? 'Pending handoff could not be saved. Retry the handoff; the official result is preserved.' : 'Presentation could not continue safely.', true, true, cause)
       this.fail(error)

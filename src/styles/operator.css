@@ -4714,3 +4714,131 @@
     padding-block: var(--space-3);
   }
 }
+  .draw-presentation-settings__description {
+    margin: calc(var(--space-2) * -1) 0 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  .presentation-mode-choices,
+  .presentation-roll-controls,
+  .presentation-segmented {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .presentation-mode-choices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .presentation-choice,
+  .presentation-segment {
+    color: var(--text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .presentation-choice {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-2);
+    min-width: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-base);
+  }
+
+  .presentation-choice:hover,
+  .presentation-segment:hover {
+    border-color: var(--border-strong);
+  }
+
+  .presentation-choice:focus-visible,
+  .presentation-segment:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .presentation-choice--selected,
+  .presentation-segment--selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .presentation-choice__indicator {
+    width: 0.75rem;
+    height: 0.75rem;
+    margin-top: 0.2rem;
+    border: 2px solid var(--text-muted);
+    border-radius: 50%;
+  }
+
+  .presentation-choice--selected .presentation-choice__indicator {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 0.16rem var(--accent-soft);
+    background: var(--accent);
+  }
+
+  .presentation-choice__copy,
+  .presentation-control-group {
+    display: grid;
+    gap: var(--space-1);
+  }
+
+  .presentation-choice__copy small,
+  .presentation-control-group__hint,
+  .presentation-roll-controls__note {
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-normal);
+  }
+
+  .presentation-roll-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding-top: var(--space-1);
+  }
+
+  .presentation-control-group {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .presentation-control-group legend {
+    margin-bottom: var(--space-1);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+  }
+
+  .presentation-segmented {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .presentation-segmented--wide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .presentation-segment {
+    min-height: 2.5rem;
+    padding: var(--space-2);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: var(--surface-base);
+    text-align: center;
+    font-size: var(--font-size-xs);
+  }
+
+  .presentation-roll-controls__note {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  .presentation-roll-controls,
+  .presentation-mode-choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+

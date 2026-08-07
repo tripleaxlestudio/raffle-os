@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import type { DrawAuthoringDraft, DrawAuthoringRecord } from '../../application/draw/draw-authoring.types.ts'
+import { normalizeDrawPresentationConfiguration, type DrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
 import type { DrawSetupProductionServices } from '../../application/draw/draw-setup-query.types.ts'
 import { queryDrawReadiness } from '../../application/draw/draw-readiness-query.ts'
 import type { DrawReadinessResult } from '../../application/draw/draw-readiness.types.ts'
@@ -10,6 +11,7 @@ import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { Badge, Button, ButtonLink, Card, Checkbox, ConfirmationDialog, Input, Select } from '../../shared/ui/index.ts'
 import { signalProductionWorkspaceChanged } from '../../app/workspace/ProductionWorkspaceContext.tsx'
+import { DrawPresentationSettings } from '../../ui/operator/draw/DrawPresentationSettings.tsx'
 
 type FormState = {
   eventId: string
@@ -19,16 +21,17 @@ type FormState = {
   requireCheckIn: boolean
   eligibleGroupFilter: string
   mode: string
+  presentation: DrawPresentationConfiguration
   configurationId?: string
   sessionId?: string
 }
 
-const emptyForm: FormState = { eventId: '', prizeCategoryId: '', requestedWinners: '1', winningRule: 'once-per-event', requireCheckIn: false, eligibleGroupFilter: '', mode: 'practice' }
+const emptyForm: FormState = { eventId: '', prizeCategoryId: '', requestedWinners: '1', winningRule: 'once-per-event', requireCheckIn: false, eligibleGroupFilter: '', mode: 'practice', presentation: normalizeDrawPresentationConfiguration(undefined) }
 const QUICK_WINNER_COUNTS = [1, 3, 6, 10, 20, 50] as const
 
 function formFromRecord(record: DrawAuthoringRecord | null, eventId: string): FormState {
   if (record === null) return { ...emptyForm, eventId }
-  return { eventId: record.event.id, prizeCategoryId: record.category.id, requestedWinners: String(record.configuration.requestedWinners), winningRule: record.configuration.winningRule, requireCheckIn: record.configuration.requireCheckIn, eligibleGroupFilter: record.configuration.eligibleGroupFilter ?? '', mode: record.session.mode, configurationId: record.configuration.id, sessionId: record.session.id }
+  return { eventId: record.event.id, prizeCategoryId: record.category.id, requestedWinners: String(record.configuration.requestedWinners), winningRule: record.configuration.winningRule, requireCheckIn: record.configuration.requireCheckIn, eligibleGroupFilter: record.configuration.eligibleGroupFilter ?? '', mode: record.session.mode, presentation: normalizeDrawPresentationConfiguration(record.configuration.presentation), configurationId: record.configuration.id, sessionId: record.session.id }
 }
 
 function errorText(error: DrawAuthoringError): string {
@@ -82,7 +85,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   async function save() {
     if (saving) return
     setSaving(true); setSaved(false); setError(null)
-    const draft: DrawAuthoringDraft = { ...form, eligibleGroupFilter: form.eligibleGroupFilter === '' ? null : form.eligibleGroupFilter }
+    const draft: DrawAuthoringDraft = { ...form, eligibleGroupFilter: form.eligibleGroupFilter === '' ? null : form.eligibleGroupFilter, presentation: form.presentation }
     if (services.authoringService === undefined) { setError(new DrawAuthoringError('persistence-unavailable', 'Draw authoring services are unavailable.', { retryable: true })); setSaving(false); return }
     const result = await services.authoringService.save(draft)
     if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setDirty(false); setSaved(true); signalProductionWorkspaceChanged(); if (services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })) }
@@ -150,6 +153,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
               <div className="draw-setup-section__heading"><h2 id="winner-quantity-title">Winner quantity</h2><span className="draw-setup-section__hint">Saved to DrawConfiguration</span></div>
               <div className="winner-count-controls"><div className="winner-count-controls__presets"><div className="winner-count-choices" aria-label="Quick winner counts">{QUICK_WINNER_COUNTS.map((count) => <Button key={count} type="button" size="sm" variant={form.requestedWinners === String(count) ? 'primary' : 'secondary'} aria-pressed={form.requestedWinners === String(count)} onClick={() => update('requestedWinners', String(count))} disabled={started}>{count}</Button>)}</div><span className="draw-setup-section__hint">Choose a preset or enter 1–100. Save to recalculate readiness.</span></div><Input label="Custom winner count" type="number" min={1} max={100} step={1} value={form.requestedWinners} onChange={(event) => update('requestedWinners', event.target.value)} disabled={started} /></div>
             </section>
+            <DrawPresentationSettings configuration={form.presentation} winnerCount={Number(form.requestedWinners)} disabled={started} onChange={(presentation) => update('presentation', presentation)} />
             <section className="draw-setup-section" aria-labelledby="eligibility-rules-title">
               <div className="draw-setup-section__heading"><h2 id="eligibility-rules-title">Eligibility rules</h2></div>
               <div className="eligibility-control-grid">

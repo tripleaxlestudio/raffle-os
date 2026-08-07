@@ -476,6 +476,31 @@
     text-align: center;
   }
 
+  .ticket-tile[data-visible="false"] {
+    border-color: color-mix(in srgb, var(--border-strong) 45%, transparent);
+    background: color-mix(in srgb, #21113e 65%, transparent);
+  }
+
+  .ticket-tile[data-visible="true"] {
+    animation: audience-winner-reveal 220ms ease-out both;
+  }
+
+  .ticket-tile__waiting {
+    color: var(--text-muted);
+    font-size: clamp(0.55rem, 0.8vw, 0.85rem);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  @keyframes audience-winner-reveal {
+    from { opacity: 0; transform: translateY(0.35rem) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ticket-tile[data-visible="true"] { animation: none; }
+  }
+
   .ticket-tile::before {
     position: absolute;
     top: 0;
@@ -541,6 +566,10 @@
 
   .winner-grid--20 .ticket-tile__number {
     font-size: clamp(1.55rem, 2.85vw, 3.2rem);
+  }
+
+  .winner-grid[data-winner-count="50"] .ticket-tile__number {
+    font-size: clamp(1rem, 1.85vw, 2rem);
   }
 
   .audience-blackout-stage {

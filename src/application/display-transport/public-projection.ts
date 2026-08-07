@@ -29,6 +29,7 @@ export type PublicDisplaySnapshot = Readonly<{
   readonly rollDurationSeconds?: number
   readonly presentationSeed?: string
   readonly revealMode?: 'all-together' | 'sequential'
+  readonly revealStartedAt?: IsoTimestamp
   readonly ticketNumbers?: readonly TicketNumber[]
   readonly winnerStatuses?: readonly PublicWinnerStatus[]
 }>
@@ -150,6 +151,10 @@ export function projectPublicDisplaySnapshot(source: PresentationProjectionSourc
     presentationSeed: typeof value.presentationSeed === 'string' && value.presentationSeed.length > 0 ? value.presentationSeed : parsedSession.value,
     revealMode: configuration !== undefined && isRevealMode(configuration.revealMode) ? configuration.revealMode : 'all-together' as const,
   } : undefined
+  const reveal = stage === 'reveal' || stage === 'pending-handoff' ? {
+    revealMode: configuration !== undefined && isRevealMode(configuration.revealMode) ? configuration.revealMode : 'all-together' as const,
+    revealStartedAt: value.stageStartedAt as IsoTimestamp,
+  } : undefined
   const snapshot: PublicDisplaySnapshot = {
     drawSessionId: parsedSession.value,
     stage,
@@ -161,6 +166,7 @@ export function projectPublicDisplaySnapshot(source: PresentationProjectionSourc
     ...(value.eventSubtitle === undefined ? {} : { eventSubtitle: value.eventSubtitle as string }), ...(value.primaryColor === undefined ? {} : { primaryColor: value.primaryColor as string }), ...(value.accentColor === undefined ? {} : { accentColor: value.accentColor as string }), ...(value.logo === undefined ? {} : { logo: value.logo as PublicAsset }), ...(value.background === undefined ? {} : { background: value.background as PublicAsset }), ...(value.blackoutAppearance === undefined ? {} : { blackoutAppearance: value.blackoutAppearance as 'pure-black' | 'event-surface' }), ...(value.safeAreaMargin === undefined ? {} : { safeAreaMargin: value.safeAreaMargin as number }),
     ...(value.mode === undefined ? {} : { mode: value.mode }),
     ...(rolling === undefined ? {} : rolling),
+    ...(reveal === undefined ? {} : reveal),
     ...(projected === undefined ? {} : { ticketNumbers: projected.tickets, winnerStatuses: projected.statuses }),
   }
   return freezeSnapshot(snapshot)
@@ -171,6 +177,7 @@ export function serializePublicDisplaySnapshot(snapshot: PublicDisplaySnapshot):
     drawSessionId: snapshot.drawSessionId,
     stage: snapshot.stage,
     ...(snapshot.stageStartedAt === undefined ? {} : { stageStartedAt: snapshot.stageStartedAt }),
+    ...(snapshot.revealStartedAt === undefined ? {} : { revealStartedAt: snapshot.revealStartedAt }),
     ...(snapshot.countdownValue === undefined ? {} : { countdownValue: snapshot.countdownValue }),
     blackoutRequested: snapshot.blackoutRequested,
     ...(snapshot.displayTest === undefined ? {} : { displayTest: snapshot.displayTest }),
@@ -196,18 +203,21 @@ export function serializePublicDisplaySnapshot(snapshot: PublicDisplaySnapshot):
 
 export function parsePublicDisplaySnapshot(value: unknown, expectedSession?: DrawSessionId): PublicDisplaySnapshot {
   if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || value.stage === 'ready' || typeof value.blackoutRequested !== 'boolean' || (value.countdownValue !== undefined && value.countdownValue !== 1 && value.countdownValue !== 2 && value.countdownValue !== 3) || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot is malformed.')
-  if (!hasOnlyKeys(value, ['drawSessionId', 'stage', 'stageStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'revealMode', 'ticketNumbers', 'winnerStatuses'])) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot contains unsupported fields.')
+  if (!hasOnlyKeys(value, ['drawSessionId', 'stage', 'stageStartedAt', 'revealStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'revealMode', 'ticketNumbers', 'winnerStatuses'])) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot contains unsupported fields.')
   const parsedSession = parseDrawSessionId(value.drawSessionId)
   if (!parsedSession.ok) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot session is malformed.')
   if (expectedSession !== undefined && value.drawSessionId !== expectedSession) sessionMismatch(expectedSession, value.drawSessionId)
   if (value.stage !== 'standby' && (value.stageStartedAt === undefined || !isIsoTimestamp(value.stageStartedAt))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot timestamp is invalid.')
+  if (value.revealStartedAt !== undefined && !isIsoTimestamp(value.revealStartedAt)) throw new PublicProjectionError('invalid-public-snapshot', 'The reveal timestamp is invalid.')
   const needsTickets = value.stage === 'reveal' || value.stage === 'pending-handoff'
   if (needsTickets && value.ticketNumbers === undefined) throw new PublicProjectionError('invalid-public-snapshot', 'This public display stage requires tickets.')
   if (!needsTickets && value.ticketNumbers !== undefined) throw new PublicProjectionError('invalid-public-snapshot', 'This public display stage cannot carry tickets.')
   if (value.ticketNumbers !== undefined && (!Array.isArray(value.ticketNumbers) || value.ticketNumbers.length > 100 || value.ticketNumbers.some((ticket) => !isNonEmptyString(ticket) || !parseTicketNumber(ticket).ok))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display ticket list is invalid.')
   if (value.winnerStatuses !== undefined && (!Array.isArray(value.winnerStatuses) || value.winnerStatuses.length !== (Array.isArray(value.ticketNumbers) ? value.ticketNumbers.length : 0) || value.winnerStatuses.some((status) => status !== 'pending' && status !== 'confirmed'))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display winner statuses are invalid.')
   if (value.stage === 'rolling' && (typeof value.rollingSlotCount !== 'number' || !Number.isInteger(value.rollingSlotCount) || value.rollingSlotCount < 1 || value.rollingSlotCount > 100 || typeof value.rollSpeedPerSecond !== 'number' || !Number.isFinite(value.rollSpeedPerSecond) || value.rollSpeedPerSecond < 1 || !isRollStopMode(value.rollStopMode) || typeof value.rollDurationSeconds !== 'number' || !Number.isFinite(value.rollDurationSeconds) || value.rollDurationSeconds < 0 || typeof value.presentationSeed !== 'string' || value.presentationSeed.length === 0 || !isRevealMode(value.revealMode))) throw new PublicProjectionError('invalid-public-snapshot', 'Rolling presentation metadata is invalid.')
-  if (value.stage !== 'rolling' && ['rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'revealMode'].some((key) => key in value)) throw new PublicProjectionError('invalid-public-snapshot', 'Rolling metadata is only valid during rolling.')
+  if (value.stage !== 'rolling' && ['rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed'].some((key) => key in value)) throw new PublicProjectionError('invalid-public-snapshot', 'Rolling metadata is only valid during rolling.')
+  if (value.stage !== 'rolling' && value.stage !== 'reveal' && value.stage !== 'pending-handoff' && ['revealMode', 'revealStartedAt'].some((key) => key in value)) throw new PublicProjectionError('invalid-public-snapshot', 'Reveal metadata is only valid during reveal.')
+  if ((value.stage === 'reveal' || value.stage === 'pending-handoff') && value.revealMode !== undefined && !isRevealMode(value.revealMode)) throw new PublicProjectionError('invalid-public-snapshot', 'Reveal mode is invalid.')
   const tickets = value.ticketNumbers === undefined ? undefined : Object.freeze(value.ticketNumbers.map(parsePublicTicket))
   return freezeSnapshot({
     drawSessionId: parsedSession.value,
@@ -225,6 +235,7 @@ export function parsePublicDisplaySnapshot(value: unknown, expectedSession?: Dra
     ...(typeof value.rollDurationSeconds !== 'number' ? {} : { rollDurationSeconds: value.rollDurationSeconds }),
     ...(typeof value.presentationSeed !== 'string' ? {} : { presentationSeed: value.presentationSeed }),
     ...(isRevealMode(value.revealMode) ? { revealMode: value.revealMode } : {}),
+    ...(value.revealStartedAt === undefined ? {} : { revealStartedAt: value.revealStartedAt as IsoTimestamp }),
     ...(tickets === undefined ? {} : { ticketNumbers: tickets }),
     ...(value.winnerStatuses === undefined ? {} : { winnerStatuses: Object.freeze([...value.winnerStatuses] as PublicWinnerStatus[]) }),
   })
@@ -247,6 +258,7 @@ export const publicSnapshotToProtocolState = (snapshot: PublicDisplaySnapshot) =
   ...(snapshot.rollDurationSeconds === undefined ? {} : { rollDurationSeconds: snapshot.rollDurationSeconds }),
   ...(snapshot.presentationSeed === undefined ? {} : { presentationSeed: snapshot.presentationSeed }),
   ...(snapshot.revealMode === undefined ? {} : { revealMode: snapshot.revealMode }),
+  ...(snapshot.revealStartedAt === undefined ? {} : { revealStartedAt: snapshot.revealStartedAt }),
   ...(snapshot.ticketNumbers === undefined ? {} : { ticketNumbers: [...snapshot.ticketNumbers] }),
   ...(snapshot.winnerStatuses === undefined ? {} : { winnerStatuses: [...snapshot.winnerStatuses] }),
 })

@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react'
 import type { PublicAudienceScenario } from './audience-view.types.ts'
 import { AudienceStage } from './AudienceStage.tsx'
 import { DisplayStateLabel } from './DisplayStateLabel.tsx'
 import { EventBrand } from './EventBrand.tsx'
 import { WinnerGrid } from './WinnerGrid.tsx'
+import { SEQUENTIAL_REVEAL_INTERVAL_MS, visibleWinnerCount } from './sequential-reveal.ts'
 
 interface WinnerStageProps {
   scenario:
@@ -11,7 +13,21 @@ interface WinnerStageProps {
 
 export function WinnerStage({ scenario }: WinnerStageProps) {
   const confirmed = scenario.state === 'confirmed'
-  const count = scenario.layoutCount ?? scenario.ticketNumbers?.length ?? 1
+  const count = Math.max(1, scenario.layoutCount ?? scenario.ticketNumbers?.length ?? 1)
+  const sequential = scenario.state === 'reveal' && scenario.revealMode === 'sequential' && count > 1
+  const [visibleCount, setVisibleCount] = useState(() => sequential ? visibleWinnerCount(scenario.revealStartedAt, count) : count)
+
+  useEffect(() => {
+    if (!sequential) return
+    let timer: number | undefined
+    const update = () => {
+      const visible = visibleWinnerCount(scenario.revealStartedAt, count)
+      setVisibleCount(visible)
+      if (visible < count) timer = globalThis['setTimeout'](update, SEQUENTIAL_REVEAL_INTERVAL_MS)
+    }
+    update()
+    return () => { if (timer !== undefined) globalThis['clearTimeout'](timer) }
+  }, [count, scenario.revealStartedAt, sequential])
 
   return (
     <AudienceStage className="winner-stage" state={scenario.state}>
@@ -28,8 +44,9 @@ export function WinnerStage({ scenario }: WinnerStageProps) {
       </header>
       <WinnerGrid
         confirmed={confirmed}
-        count={count === 6 || count === 10 || count === 20 ? count : 1}
+        count={count}
         ticketNumbers={scenario.ticketNumbers ?? []}
+        visibleCount={sequential ? visibleCount : count}
       />
       <DisplayStateLabel
         tone={confirmed ? 'confirmed' : 'verification'}

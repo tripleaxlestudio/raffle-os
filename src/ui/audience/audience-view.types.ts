@@ -28,7 +28,7 @@ export type PublicAudienceScenario = PublicAudienceContext &
     readonly ticketNumbers?: readonly string[]
     readonly statusMessage?: string
     readonly instruction?: string
-    readonly layoutCount?: 1 | 6 | 10 | 20
+    readonly layoutCount?: number
     readonly displayTest?: boolean
     readonly primaryColor?: string
     readonly accentColor?: string
@@ -38,4 +38,6 @@ export type PublicAudienceScenario = PublicAudienceContext &
     readonly rollStopMode?: 'timed' | 'manual'
     readonly rollDurationSeconds?: number
     readonly presentationSeed?: string
+    readonly revealMode?: 'all-together' | 'sequential'
+    readonly revealStartedAt?: string
   }>

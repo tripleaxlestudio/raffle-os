@@ -36,6 +36,7 @@ export type PublicMessage =
       readonly stage: PublicDisplayStage;
       readonly drawSessionId?: string;
       readonly stageStartedAt?: string;
+      readonly revealStartedAt?: string;
       readonly countdownValue?: 3 | 2 | 1;
       readonly blackoutRequested?: boolean;
       readonly displayTest?: boolean;
@@ -187,7 +188,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
   const validStage = isStage(stage) ? stage : undefined;
   if (messageType === 'display-ready' && (!hasOnlyKeys(message, ['type', 'capability']) || validCapability === undefined)) return invalid('message', 'Display-ready message contains unsupported or invalid fields.');
   if (messageType === 'display-state' && validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
-  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'revealMode', 'ticketNumbers', 'winnerStatuses', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
+  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'revealStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'revealMode', 'ticketNumbers', 'winnerStatuses', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
   if (messageType === 'display-restore-request' && !hasOnlyKeys(message, ['type', 'requestedEpoch', 'requestedSequence'])) return invalid('message', 'Restore request contains unsupported fields.');
   if (messageType === 'display-snapshot-applied' && !hasOnlyKeys(message, ['type', 'appliedEpoch', 'appliedSequence', 'publicState'])) return invalid('message', 'Snapshot acknowledgement contains unsupported fields.');
   if (messageType === 'display-heartbeat' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Heartbeat contains unsupported fields.');
@@ -206,6 +207,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
     const winnerStatuses = message.winnerStatuses;
     if (message.drawSessionId !== undefined && !isNonEmptyString(message.drawSessionId)) return invalid('message.drawSessionId', 'Projection session ID must be a non-empty string.');
     if (message.stageStartedAt !== undefined && (!isNonEmptyString(message.stageStartedAt) || Number.isNaN(Date.parse(message.stageStartedAt)))) return invalid('message.stageStartedAt', 'Stage timestamp must be valid.');
+    if (message.revealStartedAt !== undefined && (!isNonEmptyString(message.revealStartedAt) || Number.isNaN(Date.parse(message.revealStartedAt)))) return invalid('message.revealStartedAt', 'Reveal timestamp must be valid.');
     if (message.countdownValue !== undefined && message.countdownValue !== 1 && message.countdownValue !== 2 && message.countdownValue !== 3) return invalid('message.countdownValue', 'Countdown value is invalid.');
     if (message.blackoutRequested !== undefined && typeof message.blackoutRequested !== 'boolean') return invalid('message.blackoutRequested', 'Blackout state must be boolean.');
     if (message.displayTest !== undefined && typeof message.displayTest !== 'boolean') return invalid('message.displayTest', 'Display-test marker must be boolean.');
@@ -232,6 +234,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
       stage: validStage,
       ...(message.drawSessionId === undefined ? {} : { drawSessionId: message.drawSessionId }),
       ...(message.stageStartedAt === undefined ? {} : { stageStartedAt: message.stageStartedAt }),
+      ...(message.revealStartedAt === undefined ? {} : { revealStartedAt: message.revealStartedAt }),
       ...(message.countdownValue === undefined ? {} : { countdownValue: message.countdownValue }),
       ...(message.blackoutRequested === undefined ? {} : { blackoutRequested: message.blackoutRequested }),
       ...(message.displayTest === undefined ? {} : { displayTest: message.displayTest }),

@@ -32,6 +32,7 @@ function snapshotScenario(snapshot: PublicDisplaySnapshot): PublicAudienceScenar
     ...(snapshot.primaryColor === undefined ? {} : { primaryColor: snapshot.primaryColor }),
     ...(snapshot.accentColor === undefined ? {} : { accentColor: snapshot.accentColor }),
     ...(snapshot.stage === 'rolling' ? { rollingStartedAt: snapshot.stageStartedAt, rollingSlotCount: snapshot.rollingSlotCount, rollSpeedPerSecond: snapshot.rollSpeedPerSecond, rollStopMode: snapshot.rollStopMode, rollDurationSeconds: snapshot.rollDurationSeconds, presentationSeed: snapshot.presentationSeed } : {}),
+    ...(snapshot.stage === 'reveal' || snapshot.stage === 'pending-handoff' ? { revealMode: snapshot.revealMode, revealStartedAt: snapshot.revealStartedAt ?? snapshot.stageStartedAt } : {}),
     state: committedState,
     message: committedState === 'standby' ? (snapshot.displayTest === false ? 'Waiting for the next presentation' : snapshot.stage === 'pending-handoff' ? 'No active winners' : 'Draw will begin shortly') : committedState === 'countdown' ? 'Get ready' : committedState === 'rolling' ? 'Drawing in progress' : undefined,
     countdownValue: snapshot.stage === 'countdown' ? String(snapshot.countdownValue ?? '—') : undefined,

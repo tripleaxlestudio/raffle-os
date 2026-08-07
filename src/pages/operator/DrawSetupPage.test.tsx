@@ -69,6 +69,47 @@ describe('Draw Setup persisted authoring', () => {
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ requestedWinners: '20' }))
   })
 
+  it('keeps Save changes disabled while pristine and re-enables it for each editable change', async () => {
+    const user = userEvent.setup()
+    const recordRef = { current: record as DrawAuthoringRecord | null }
+    const save = vi.fn(async (draft: DrawAuthoringDraft) => {
+      recordRef.current = {
+        ...recordRef.current!,
+        configuration: {
+          ...recordRef.current!.configuration,
+          requestedWinners: Number(draft.requestedWinners),
+          requireCheckIn: draft.requireCheckIn,
+          eligibleGroupFilter: draft.eligibleGroupFilter as string | null,
+          presentation: draft.presentation as DrawAuthoringRecord['configuration']['presentation'],
+        },
+        session: { ...recordRef.current!.session, mode: draft.mode as DrawAuthoringRecord['session']['mode'] },
+      }
+      return { ok: true as const, record: recordRef.current }
+    })
+    renderPage(services({ recordRef, save }))
+
+    const saveButton = await screen.findByRole('button', { name: 'Save changes' })
+    expect(saveButton).toBeDisabled()
+    expect(saveButton).toHaveAttribute('disabled')
+
+    await user.click(screen.getByRole('radio', { name: /Random Number Roll/ }))
+    await user.click(screen.getByRole('radio', { name: '5 sec' }))
+    expect(saveButton).toBeEnabled()
+    await user.click(saveButton)
+    expect(saveButton).toBeDisabled()
+
+    await user.click(screen.getByRole('radio', { name: /Smooth/ }))
+    expect(saveButton).toBeEnabled()
+    await user.click(saveButton)
+    expect(saveButton).toBeDisabled()
+    await user.click(screen.getByRole('radio', { name: 'Reveal Sequentially' }))
+    expect(saveButton).toBeEnabled()
+    await user.click(saveButton)
+    expect(saveButton).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: '3' }))
+    expect(saveButton).toBeEnabled()
+  })
+
   it('preserves the custom 1–100 input and validation errors', async () => {
     const user = userEvent.setup()
     const save = vi.fn(async () => ({ ok: false as const, error: new DrawAuthoringError('invalid-winner-count', 'Winner count must be an integer from 1 through 100.') }))
@@ -190,6 +231,7 @@ describe('Draw Setup persisted authoring', () => {
     expect(screen.getByRole('radio', { name: '12 sec' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('radio', { name: /Rapid/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('radio', { name: 'Reveal Sequentially' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
   })
 
   it('hides roll controls when switching back to Instant Reveal while preserving their draft values', async () => {

@@ -4,6 +4,7 @@ import type { Event } from '../../domain/events/event.types.ts'
 import type { PrizeCategory } from '../../domain/prizes/prize.types.ts'
 import type { AppMode } from '../../domain/types/app-mode.ts'
 import type { DrawAuthoringError } from './draw-authoring-errors.ts'
+import { normalizeDrawPresentationConfiguration, type DrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
 
 export interface DrawAuthoringDraft {
   readonly eventId: string
@@ -24,6 +25,28 @@ export interface DrawAuthoringRecord {
   readonly configuration: DrawConfiguration
   readonly session: DrawSession
   readonly eligibleCount: number
+}
+
+export function isDrawAuthoringDraftDirty(
+  draft: DrawAuthoringDraft,
+  record: DrawAuthoringRecord | null,
+): boolean {
+  if (record === null) return true
+
+  const presentation = normalizeDrawPresentationConfiguration(draft.presentation as Partial<DrawPresentationConfiguration> | undefined)
+  const persistedPresentation = normalizeDrawPresentationConfiguration(record.configuration.presentation)
+
+  return draft.eventId !== record.event.id ||
+    draft.prizeCategoryId !== record.category.id ||
+    String(draft.requestedWinners) !== String(record.configuration.requestedWinners) ||
+    draft.winningRule !== record.configuration.winningRule ||
+    draft.requireCheckIn !== record.configuration.requireCheckIn ||
+    (draft.eligibleGroupFilter === '' ? null : draft.eligibleGroupFilter) !== record.configuration.eligibleGroupFilter ||
+    draft.mode !== record.session.mode ||
+    presentation.presentationMode !== persistedPresentation.presentationMode ||
+    presentation.rollDurationSeconds !== persistedPresentation.rollDurationSeconds ||
+    presentation.rollSpeedPerSecond !== persistedPresentation.rollSpeedPerSecond ||
+    presentation.revealMode !== persistedPresentation.revealMode
 }
 
 export interface DrawAuthoringRepositories {

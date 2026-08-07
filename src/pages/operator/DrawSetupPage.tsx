@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import type { DrawAuthoringDraft, DrawAuthoringRecord } from '../../application/draw/draw-authoring.types.ts'
+import { isDrawAuthoringDraftDirty, type DrawAuthoringDraft, type DrawAuthoringRecord } from '../../application/draw/draw-authoring.types.ts'
 import { isDrawSessionAuthoringLocked } from '../../domain/draws/draw-session.types.ts'
 import { normalizeDrawPresentationConfiguration, type DrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
 import type { DrawSetupProductionServices } from '../../application/draw/draw-setup-query.types.ts'
@@ -39,6 +39,10 @@ function errorText(error: DrawAuthoringError): string {
   return error.message
 }
 
+function draftFromForm(form: FormState): DrawAuthoringDraft {
+  return { ...form, eligibleGroupFilter: form.eligibleGroupFilter === '' ? null : form.eligibleGroupFilter, presentation: form.presentation }
+}
+
 export function DrawSetupPage({ services: suppliedServices }: { services?: DrawSetupProductionServices } = {}) {
   const services = useMemo(() => suppliedServices ?? createDrawSetupProductionServices(), [suppliedServices])
   const navigate = useNavigate()
@@ -52,7 +56,6 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   const [saved, setSaved] = useState(false)
   const [eventMissing, setEventMissing] = useState(false)
   const [readiness, setReadiness] = useState<DrawReadinessResult | null>(null)
-  const [dirty, setDirty] = useState(false)
   const [confirmLive, setConfirmLive] = useState(false)
   const [handoffBusy, setHandoffBusy] = useState(false)
 
@@ -69,7 +72,6 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
       setCategories(result.categories as DrawAuthoringRecord['category'][])
       setRecord(result.record)
       setForm(formFromRecord(result.record, result.event?.id ?? activeEventId ?? ''))
-      setDirty(false)
       if (result.record !== null && services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto }))
       else setReadiness(null)
     } catch (cause: unknown) {
@@ -80,16 +82,16 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   useEffect(() => { void Promise.resolve().then(load) }, [load])
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setSaved(false); setError(null); setDirty(true); setForm((current) => ({ ...current, [key]: value }))
+    setSaved(false); setError(null); setForm((current) => ({ ...current, [key]: value }))
   }
 
   async function save() {
     if (saving) return
     setSaving(true); setSaved(false); setError(null)
-    const draft: DrawAuthoringDraft = { ...form, eligibleGroupFilter: form.eligibleGroupFilter === '' ? null : form.eligibleGroupFilter, presentation: form.presentation }
+    const draft = draftFromForm(form)
     if (services.authoringService === undefined) { setError(new DrawAuthoringError('persistence-unavailable', 'Draw authoring services are unavailable.', { retryable: true })); setSaving(false); return }
     const result = await services.authoringService.save(draft)
-    if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setDirty(false); setSaved(true); signalProductionWorkspaceChanged(); if (services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })) }
+    if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setSaved(true); signalProductionWorkspaceChanged(); if (services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })) }
     else setError(result.error)
     setSaving(false)
   }
@@ -112,6 +114,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   if (eventMissing || form.eventId === '') return <section className="draw-setup"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="No persisted Event is available" /><StatusBanner badge="Event required" title="Create or select an Event first" tone="warning">Draw Setup does not create demo Events or categories automatically.</StatusBanner><ButtonLink to="/events">Open Event management</ButtonLink>{error?.retryable ? <Button onClick={() => void load()}>Retry</Button> : null}</section>
 
   const started = record !== null && isDrawSessionAuthoringLocked(record.session)
+  const dirty = isDrawAuthoringDraftDirty(draftFromForm(form), record)
   const readinessBlocked = readiness !== null && readiness.state !== 'ready'
   const eligibilityNotEvaluated = readiness?.state === 'session-conflict'
   const capacity = dirty ? undefined : readiness?.data
@@ -172,7 +175,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
             </div></fieldset>
             <p>{form.mode === 'live' ? 'Live handoff leads to the official start gate. It does not start a draw here.' : 'Practice is rehearsal only and does not create official results.'} Mode is stored on the ready DrawSession; URL parameters cannot override it.</p>
             <div className="draw-setup-actions">
-              <Button type="submit" size="lg" variant={record === null || dirty ? 'primary' : 'secondary'} isLoading={saving} disabled={started || form.prizeCategoryId === ''}>{record === null ? 'Save ready configuration' : 'Save changes'}</Button>
+              <Button type="submit" size="lg" variant={record === null || dirty ? 'primary' : 'secondary'} isLoading={saving} disabled={started || !dirty || form.prizeCategoryId === ''}>{record === null ? 'Save ready configuration' : 'Save changes'}</Button>
               {saved ? <ButtonLink size="lg" variant="secondary" to="/draw/live">Open Draw Sessions</ButtonLink> : null}
               {record !== null ? <Button ref={handoffTriggerRef} type="button" size="lg" variant={!dirty && !readinessBlocked && readiness !== null ? 'primary' : 'secondary'} disabled={saving || handoffBusy || dirty || readinessBlocked || readiness === null} isLoading={handoffBusy} onClick={() => { if (form.mode === 'live') setConfirmLive(true); else void handoff() }}>{form.mode === 'live' ? 'Continue to Live start gate' : 'Open Practice start gate'}</Button> : null}
               {readiness?.retryable ? <Button type="button" variant="secondary" onClick={() => void refreshReadiness()}>Retry readiness</Button> : null}

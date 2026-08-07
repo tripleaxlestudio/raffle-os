@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PresentationController, type PresentationClock } from './presentation-controller.ts'
 import type { PresentationResultProjection } from './presentation-projection.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
+import type { DrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
 
 const result: PresentationResultProjection = { drawSessionId: '00000000-0000-4000-8000-000000000001' as never, winners: [{ winnerId: '00000000-0000-4000-8000-000000000002' as never, sequence: 1, ticketNumber: '00042' }] }
 const now = '2026-08-05T00:00:00.000Z' as IsoTimestamp
 
 function makeClock(reduced = false): PresentationClock { return { now: () => now, setTimeout: (callback, delay) => setTimeout(callback, delay), clearTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>), prefersReducedMotion: () => reduced } }
+function configuration(overrides: Partial<DrawPresentationConfiguration> = {}): DrawPresentationConfiguration { return { presentationMode: 'random-number-roll', rollStopMode: 'timed', rollDurationSeconds: 5, rollSpeedPerSecond: 20, revealMode: 'sequential', ...overrides } }
 
 describe('PresentationController', () => {
   beforeEach(() => vi.useFakeTimers())
@@ -39,7 +41,7 @@ describe('PresentationController', () => {
   })
 
   it('skips once and never starts a second transition', async () => {
-    const persistStage = vi.fn(async () => undefined)
+    const persistStage = vi.fn(async (stage: string) => { void stage })
     const controller = new PresentationController({ result, mode: 'practice', clock: makeClock(), persistStage, onState: () => undefined })
     await controller.start()
     await controller.skip()
@@ -108,5 +110,68 @@ describe('PresentationController', () => {
     expect(controller.getState().stage).toBe('countdown')
     expect(controller.result).toBe(result)
     expect(persistBlackout).toHaveBeenCalledWith(true)
+  })
+
+  it('executes instant reveal without a visible rolling stage', async () => {
+    const stages: string[] = []
+    const controller = new PresentationController({ result, mode: 'live', presentationConfiguration: configuration({ presentationMode: 'instant-reveal' }), clock: makeClock(), persistStage: async () => undefined, onState: (state) => stages.push(state.stage) })
+    await controller.start()
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(stages).not.toContain('rolling')
+    expect(controller.getState().stage).toBe('reveal')
+  })
+
+  it.each([5, 8, 12] as const)('uses the configured %s-second rolling duration', async (seconds) => {
+    const persisted: string[] = []
+    const controller = new PresentationController({ result, mode: 'practice', presentationConfiguration: configuration({ rollDurationSeconds: seconds }), clock: makeClock(), persistStage: async (stage) => { persisted.push(stage) }, onState: () => undefined })
+    await controller.start()
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(controller.getState().stage).toBe('rolling')
+    await vi.advanceTimersByTimeAsync(seconds * 1000 - 1)
+    expect(controller.getState().stage).toBe('rolling')
+    await vi.advanceTimersByTimeAsync(1)
+    expect(controller.getState().stage).toBe('reveal')
+    expect(persisted).toEqual(['countdown', 'rolling', 'reveal'])
+    expect(controller.getState().presentationConfiguration.rollSpeedPerSecond).toBe(20)
+    expect(controller.getState().presentationConfiguration.revealMode).toBe('sequential')
+    expect(controller.result).toBe(result)
+  })
+
+  it('keeps manual rolling active past its configured duration until Stop & Reveal', async () => {
+    const persisted: string[] = []
+    const controller = new PresentationController({ result, mode: 'practice', presentationConfiguration: configuration({ rollStopMode: 'manual', rollDurationSeconds: 5 }), clock: makeClock(), persistStage: async (stage) => { persisted.push(stage) }, onState: () => undefined })
+    await controller.start()
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(controller.getState().stage).toBe('rolling')
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(controller.getState().stage).toBe('rolling')
+    expect(persisted).toEqual(['countdown', 'rolling'])
+    await controller.stopRollingAndReveal()
+    expect(controller.getState().stage).toBe('reveal')
+    expect(persisted).toEqual(['countdown', 'rolling', 'reveal'])
+    expect(controller.result).toBe(result)
+  })
+
+  it('ignores Stop & Reveal before rolling and repeated calls after reveal', async () => {
+    const persistStage = vi.fn(async (stage: string) => { void stage })
+    const controller = new PresentationController({ result, mode: 'live', presentationConfiguration: configuration({ rollStopMode: 'manual' }), clock: makeClock(), persistStage, onState: () => undefined })
+    await controller.stopRollingAndReveal()
+    expect(controller.getState().stage).toBe('result-locked')
+    await controller.start()
+    await vi.advanceTimersByTimeAsync(3000)
+    await controller.stopRollingAndReveal()
+    await controller.stopRollingAndReveal()
+    expect(controller.getState().stage).toBe('reveal')
+    expect(persistStage.mock.calls.map(([stage]) => stage)).toEqual(['countdown', 'rolling', 'reveal'])
+  })
+
+  it('resumes manual rolling without starting an automatic reveal timer', async () => {
+    const controller = new PresentationController({ result, mode: 'live', presentationConfiguration: configuration({ rollStopMode: 'manual' }), clock: makeClock(), persistStage: async () => undefined, onState: () => undefined })
+    await controller.resume('rolling', now)
+    expect(controller.getState().stage).toBe('rolling')
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(controller.getState().stage).toBe('rolling')
+    await controller.stopRollingAndReveal()
+    expect(controller.getState().stage).toBe('reveal')
   })
 })

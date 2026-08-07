@@ -51,5 +51,8 @@ export const SCHEMA_V5 = {
   draw_sessions: SCHEMA_V1.draw_sessions,
 } as const
 
+export const SCHEMA_VERSION_6 = 6 as const
+export const SCHEMA_V6 = SCHEMA_V5
+
 export type SchemaV1StoreName =
   (typeof SCHEMA_V1_STORE_NAMES)[number]

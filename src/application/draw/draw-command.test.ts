@@ -62,6 +62,7 @@ describe('executeDraw', () => {
         ...base.configuration,
         presentation: {
           presentationMode: 'random-number-roll' as const,
+          rollStopMode: 'timed' as const,
           rollDurationSeconds: 12 as const,
           rollSpeedPerSecond: 18,
           revealMode: 'sequential' as const,

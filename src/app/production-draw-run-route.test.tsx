@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { savePracticeResult } from '../application/draw/practice-result-storage.ts'
@@ -140,9 +140,26 @@ describe('production Draw Run route shell', () => {
 
   it('surfaces a corrupt Practice projection as a typed bootstrap error without invoking selection', async () => {
     sessionStorage.setItem(`raffle-os:practice-result:v1:${mocks.practiceSessionId}`, '{bad-json}')
-    renderRoute(`/draw/run/${mocks.practiceSessionId}`)
-    expect(await screen.findByRole('heading', { name: 'Presentation paused safely' })).toBeInTheDocument()
-    expect(screen.getByText('The Practice result projection is invalid and could not start presentation.')).toBeInTheDocument()
+    const { router } = renderRoute(`/draw/run/${mocks.practiceSessionId}`)
+    const dialog = await screen.findByRole('dialog', { name: 'Presentation needs attention' })
+    expect(dialog).toHaveClass('ui-modal--production-surface')
+    expect(screen.getByRole('heading', { name: 'Presentation recovery' })).toBeInTheDocument()
+    expect(screen.getByText('Draw Run workspace')).toBeInTheDocument()
+    expect(document.querySelector('.production-draw-run-shell')).toBeInTheDocument()
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(screen.getByText('SAFE STATE')).toBeInTheDocument()
+    expect(screen.getByText('Your locked winner result is preserved.')).toBeInTheDocument()
+    expect(screen.getByText('The presentation stage transition could not continue.')).toBeInTheDocument()
+    expect(screen.getByText('You can retry the presentation from the same result or return to Draw Setup.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back to Draw Setup' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry presentation' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'Audience publisher diagnostics' })).toBeInTheDocument()
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    expect(screen.getByRole('dialog', { name: 'Presentation needs attention' })).toBeInTheDocument()
+    expect(sessionStorage.getItem(`raffle-os:practice-result:v1:${mocks.practiceSessionId}`)).toBe('{bad-json}')
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Draw Setup' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/draw/setup'))
+    expect(sessionStorage.getItem(`raffle-os:practice-result:v1:${mocks.practiceSessionId}`)).toBe('{bad-json}')
     expect(mocks.command).not.toHaveBeenCalled()
   })
 })

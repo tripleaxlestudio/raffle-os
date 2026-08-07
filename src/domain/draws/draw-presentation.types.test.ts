@@ -11,6 +11,7 @@ describe('draw presentation configuration', () => {
   it('supports Random Number Roll', () => {
     const configuration = {
       presentationMode: 'random-number-roll',
+      rollStopMode: 'manual',
       rollDurationSeconds: 12,
       rollSpeedPerSecond: 18,
       revealMode: 'sequential',
@@ -43,9 +44,20 @@ describe('draw presentation configuration', () => {
   it('resolves a legacy configuration to safe defaults', () => {
     expect(resolveDrawPresentationConfiguration(undefined)).toEqual({
       presentationMode: 'instant-reveal',
+      rollStopMode: 'timed',
       rollDurationSeconds: 8,
       rollSpeedPerSecond: 12,
       revealMode: 'all-together',
+    })
+  })
+
+  it('defaults existing roll configurations to timed while preserving values', () => {
+    expect(resolveDrawPresentationConfiguration({ presentationMode: 'random-number-roll', rollDurationSeconds: 12, rollSpeedPerSecond: 20, revealMode: 'sequential' })).toEqual({
+      presentationMode: 'random-number-roll',
+      rollStopMode: 'timed',
+      rollDurationSeconds: 12,
+      rollSpeedPerSecond: 20,
+      revealMode: 'sequential',
     })
   })
 })

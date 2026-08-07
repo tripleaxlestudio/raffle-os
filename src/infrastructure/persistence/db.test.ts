@@ -336,7 +336,7 @@ async function writeFixtureSet(
 describe('RaffleOS database construction and Schema Version 1', () => {
   it('uses the production defaults without constructing a singleton', () => {
     expect(DEFAULT_DATABASE_NAME).toBe('RaffleOS_DB')
-    expect(APPLICATION_SCHEMA_VERSION).toBe(5)
+    expect(APPLICATION_SCHEMA_VERSION).toBe(6)
   })
 
   it('does not open on construction and accepts a custom database name', async () => {
@@ -407,7 +407,7 @@ describe('RaffleOS database construction and Schema Version 1', () => {
     ).sort()
     const expectedStores = [...SCHEMA_V1_STORE_NAMES, 'presentation_checkpoints', 'command_receipts', 'event_settings'].sort()
 
-    expect(database.verno).toBe(5)
+    expect(database.verno).toBe(6)
     expect(dexieStores).toEqual(expectedStores)
     expect(nativeStores).toEqual(expectedStores)
   })
@@ -657,7 +657,7 @@ describe('safe open boundary and persistence errors', () => {
         indexedDB,
       }),
     )
-    newerDatabase.version(6).stores({
+    newerDatabase.version(7).stores({
       ...SCHEMA_V1,
       ...SCHEMA_V2,
       ...SCHEMA_V3,

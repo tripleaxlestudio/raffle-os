@@ -47,7 +47,7 @@ describe('schema v3 additive migration', () => {
     const name = await makeLegacyDatabase(version)
     const database = new RaffleOSDatabase(name, { IDBKeyRange, indexedDB })
     await database.openSupported()
-    expect(database.verno).toBe(5)
+    expect(database.verno).toBe(6)
     for (const [store, value] of Object.entries(legacy)) {
       const key = 'id' in value ? value.id : value.key
       if (store === 'draw_configurations') {
@@ -55,6 +55,7 @@ describe('schema v3 additive migration', () => {
           ...value,
           presentation: {
             presentationMode: 'instant-reveal',
+            rollStopMode: 'timed',
             rollDurationSeconds: 8,
             rollSpeedPerSecond: 12,
             revealMode: 'all-together',
@@ -103,10 +104,11 @@ describe('schema v3 additive migration', () => {
     await database.openSupported()
     expect(await database.draw_configurations.get('configuration-1' as DrawConfigurationId)).toMatchObject({
       requestedWinners: 1,
-      presentation: { presentationMode: 'instant-reveal', rollDurationSeconds: 8, rollSpeedPerSecond: 12, revealMode: 'all-together' },
+      presentation: { presentationMode: 'instant-reveal', rollStopMode: 'timed', rollDurationSeconds: 8, rollSpeedPerSecond: 12, revealMode: 'all-together' },
     })
     expect((await database.draw_sessions.get('session-1' as DrawSessionId))?.configurationSnapshot?.presentation).toEqual({
       presentationMode: 'instant-reveal',
+      rollStopMode: 'timed',
       rollDurationSeconds: 8,
       rollSpeedPerSecond: 12,
       revealMode: 'all-together',

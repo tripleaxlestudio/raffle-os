@@ -61,6 +61,7 @@ function assertConfigurationSnapshotMatchesSource(
     snapshot.requireCheckIn !== source.requireCheckIn ||
     snapshot.eligibleGroupFilter !== source.eligibleGroupFilter
     || snapshotPresentation.presentationMode !== sourcePresentation.presentationMode
+    || snapshotPresentation.rollStopMode !== sourcePresentation.rollStopMode
     || snapshotPresentation.rollDurationSeconds !== sourcePresentation.rollDurationSeconds
     || snapshotPresentation.rollSpeedPerSecond !== sourcePresentation.rollSpeedPerSecond
     || snapshotPresentation.revealMode !== sourcePresentation.revealMode

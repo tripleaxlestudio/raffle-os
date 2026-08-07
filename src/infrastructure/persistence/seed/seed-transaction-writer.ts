@@ -164,6 +164,7 @@ export function validateSeedDataset(dataset: ValidatedSeedDataset): void {
       configurationSnapshot.requireCheckIn !== config.requireCheckIn ||
       configurationSnapshot.eligibleGroupFilter !== config.eligibleGroupFilter
       || resolveDrawPresentationConfiguration(configurationSnapshot.presentation).presentationMode !== resolveDrawPresentationConfiguration(config.presentation).presentationMode
+      || resolveDrawPresentationConfiguration(configurationSnapshot.presentation).rollStopMode !== resolveDrawPresentationConfiguration(config.presentation).rollStopMode
       || resolveDrawPresentationConfiguration(configurationSnapshot.presentation).rollDurationSeconds !== resolveDrawPresentationConfiguration(config.presentation).rollDurationSeconds
       || resolveDrawPresentationConfiguration(configurationSnapshot.presentation).rollSpeedPerSecond !== resolveDrawPresentationConfiguration(config.presentation).rollSpeedPerSecond
       || resolveDrawPresentationConfiguration(configurationSnapshot.presentation).revealMode !== resolveDrawPresentationConfiguration(config.presentation).revealMode

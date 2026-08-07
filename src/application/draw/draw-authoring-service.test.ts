@@ -37,6 +37,7 @@ describe('draw authoring service', () => {
       ...validDraft,
       presentation: {
         presentationMode: 'random-number-roll',
+        rollStopMode: 'timed',
         rollDurationSeconds: 5,
         rollSpeedPerSecond: 20,
         revealMode: 'all-together',
@@ -47,6 +48,7 @@ describe('draw authoring service', () => {
     if (!result.ok) return
     expect(result.record.configuration.presentation).toEqual({
       presentationMode: 'random-number-roll',
+      rollStopMode: 'timed',
       rollDurationSeconds: 5,
       rollSpeedPerSecond: 20,
       revealMode: 'all-together',
@@ -62,7 +64,7 @@ describe('draw authoring service', () => {
       sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => [session]) } as never,
       authoring: { persistReadyAuthoring } as never,
     })
-    const result = await createDrawAuthoringService(repositories).save({ ...validDraft, configurationId: configuration.id, sessionId: session.id, presentation: { presentationMode: 'random-number-roll', rollDurationSeconds: 12, rollSpeedPerSecond: 20, revealMode: 'sequential' } })
+    const result = await createDrawAuthoringService(repositories).save({ ...validDraft, configurationId: configuration.id, sessionId: session.id, presentation: { presentationMode: 'random-number-roll', rollStopMode: 'timed', rollDurationSeconds: 12, rollSpeedPerSecond: 20, revealMode: 'sequential' } })
     expect(result.ok).toBe(true)
     expect(persistReadyAuthoring).toHaveBeenCalledWith(expect.objectContaining({ existingConfigurationId: configuration.id, existingSessionId: undefined, session: expect.objectContaining({ status: 'ready', mode: 'practice' }) }))
     const persisted = persistReadyAuthoring.mock.calls[0]?.[0] as { session: { id: string } } | undefined

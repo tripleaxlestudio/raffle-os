@@ -21,20 +21,26 @@ const focusableSelector = [
 interface ModalProps {
   children: ReactNode
   description?: string
+  eyebrow?: string
   footer?: ReactNode
   initialFocusRef?: RefObject<HTMLElement | null>
   onClose: () => void
   open: boolean
+  closeOnEscape?: boolean
+  showCloseButton?: boolean
   title: string
 }
 
 export function Modal({
   children,
   description,
+  eyebrow = 'Operator confirmation',
   footer,
   initialFocusRef,
   onClose,
   open,
+  closeOnEscape = true,
+  showCloseButton = true,
   title,
 }: ModalProps) {
   const titleId = useId()
@@ -66,7 +72,7 @@ export function Modal({
   }, [initialFocusRef, open])
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key === 'Escape') {
+    if (event.key === 'Escape' && closeOnEscape) {
       event.preventDefault()
       onClose()
       return
@@ -118,7 +124,7 @@ export function Modal({
         aria-describedby={description === undefined ? undefined : descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="ui-modal"
+        className="ui-modal ui-modal--production-surface"
         onKeyDown={handleKeyDown}
         ref={dialogRef}
         role="dialog"
@@ -126,17 +132,19 @@ export function Modal({
       >
         <header className="ui-modal__header">
           <div>
-            <p className="ui-modal__eyebrow">Operator confirmation</p>
+            <p className="ui-modal__eyebrow">{eyebrow}</p>
             <h2 id={titleId}>{title}</h2>
           </div>
-          <Button
-            aria-label="Close dialog"
-            onClick={onClose}
-            size="sm"
-            variant="quiet"
-          >
-            Close
-          </Button>
+          {showCloseButton ? (
+            <Button
+              aria-label="Close dialog"
+              onClick={onClose}
+              size="sm"
+              variant="quiet"
+            >
+              Close
+            </Button>
+          ) : null}
         </header>
         {description === undefined ? null : (
           <p className="ui-modal__description" id={descriptionId}>

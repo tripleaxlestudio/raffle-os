@@ -205,7 +205,47 @@ describe('Draw Setup persisted authoring', () => {
     await user.click(screen.getByRole('radio', { name: 'Reveal Together' }))
     expect(screen.getByRole('radio', { name: 'Practice' })).toBeChecked()
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ requestedWinners: '1', mode: 'practice', presentation: { presentationMode: 'random-number-roll', rollDurationSeconds: 12, rollSpeedPerSecond: 20, revealMode: 'all-together' } }))
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ requestedWinners: '1', mode: 'practice', presentation: { presentationMode: 'random-number-roll', rollStopMode: 'timed', rollDurationSeconds: 12, rollSpeedPerSecond: 20, revealMode: 'all-together' } }))
+  })
+
+  it('shows timed duration controls by default and preserves the duration across Manual Stop', async () => {
+    const user = userEvent.setup()
+    renderPage(services())
+    await screen.findByRole('heading', { name: 'Reveal style' })
+    await user.click(screen.getByRole('radio', { name: /Random Number Roll/ }))
+    await user.click(screen.getByRole('radio', { name: '5 sec' }))
+    await user.click(screen.getByRole('radio', { name: 'Manual Stop' }))
+    expect(screen.getByText('Manual control')).toBeInTheDocument()
+    expect(screen.getByText('Stop & Reveal from Live Draw')).toBeInTheDocument()
+    expect(screen.getByText('Rolling continues until the operator stops it.')).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Roll duration' })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Smooth/ })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Reveal Together' })).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Timed' }))
+    expect(screen.getByRole('radio', { name: '5 sec' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('saves and reloads Manual Stop with speed and reveal settings intact', async () => {
+    const user = userEvent.setup()
+    const recordRef = { current: record as DrawAuthoringRecord | null }
+    const save = vi.fn(async (draft: DrawAuthoringDraft) => {
+      recordRef.current = { ...record, configuration: { ...record.configuration, presentation: draft.presentation as DrawAuthoringRecord['configuration']['presentation'] } }
+      return { ok: true as const, record: recordRef.current }
+    })
+    const value = services({ recordRef, save })
+    const first = renderPage(value)
+    await user.click(await screen.findByRole('radio', { name: /Random Number Roll/ }))
+    await user.click(screen.getByRole('radio', { name: 'Manual Stop' }))
+    await user.click(screen.getByRole('radio', { name: /Smooth/ }))
+    await user.click(screen.getByRole('radio', { name: 'Reveal Sequentially' }))
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ presentation: { presentationMode: 'random-number-roll', rollStopMode: 'manual', rollDurationSeconds: 8, rollSpeedPerSecond: 6, revealMode: 'sequential' } }))
+    first.unmount()
+    renderPage(value)
+    expect(await screen.findByRole('radio', { name: 'Manual Stop' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('group', { name: 'Roll duration' })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Smooth/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('radio', { name: 'Reveal Sequentially' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('restores the selected presentation UI after Save changes and reload', async () => {
@@ -245,7 +285,7 @@ describe('Draw Setup persisted authoring', () => {
     await user.click(screen.getByRole('radio', { name: /Instant Reveal/ }))
     expect(screen.queryByRole('radio', { name: '5 sec' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ presentation: { presentationMode: 'instant-reveal', rollDurationSeconds: 5, rollSpeedPerSecond: 20, revealMode: 'all-together' } }))
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ presentation: { presentationMode: 'instant-reveal', rollStopMode: 'timed', rollDurationSeconds: 5, rollSpeedPerSecond: 20, revealMode: 'all-together' } }))
   })
 
   it('does not claim authoritative readiness while dirty and blocks handoff', async () => {

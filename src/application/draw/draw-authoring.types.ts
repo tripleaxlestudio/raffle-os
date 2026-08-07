@@ -44,6 +44,7 @@ export function isDrawAuthoringDraftDirty(
     (draft.eligibleGroupFilter === '' ? null : draft.eligibleGroupFilter) !== record.configuration.eligibleGroupFilter ||
     draft.mode !== record.session.mode ||
     presentation.presentationMode !== persistedPresentation.presentationMode ||
+    presentation.rollStopMode !== persistedPresentation.rollStopMode ||
     presentation.rollDurationSeconds !== persistedPresentation.rollDurationSeconds ||
     presentation.rollSpeedPerSecond !== persistedPresentation.rollSpeedPerSecond ||
     presentation.revealMode !== persistedPresentation.revealMode

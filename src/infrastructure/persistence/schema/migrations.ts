@@ -14,6 +14,8 @@ import {
   SCHEMA_VERSION_4,
   SCHEMA_V5,
   SCHEMA_VERSION_5,
+  SCHEMA_V6,
+  SCHEMA_VERSION_6,
 } from './schema-v1.ts'
 import { normalizeDrawPresentationConfiguration } from '../../../domain/draws/draw-presentation.types.ts'
 import type { DrawConfiguration } from '../../../domain/draws/draw-configuration.types.ts'
@@ -34,7 +36,7 @@ export interface PersistenceMigration {
   ) => PromiseLike<void> | void
 }
 
-export const CURRENT_SUPPORTED_SCHEMA_VERSION = SCHEMA_VERSION_5
+export const CURRENT_SUPPORTED_SCHEMA_VERSION = SCHEMA_VERSION_6
 
 export const PERSISTENCE_MIGRATIONS:
   readonly PersistenceMigration[] = [
@@ -75,6 +77,26 @@ export const PERSISTENCE_MIGRATIONS:
           if (presentation !== undefined) {
             const mutableSession = session as MutableDrawSession
             mutableSession.configurationSnapshot = { ...snapshot, presentation }
+          }
+        })
+      },
+    },
+    {
+      stores: SCHEMA_V6,
+      version: SCHEMA_VERSION_6,
+      upgrade: async (transaction) => {
+        await transaction.table('draw_configurations').toCollection().modify((configuration: DrawConfiguration) => {
+          const mutableConfiguration = configuration as MutableDrawConfiguration
+          mutableConfiguration.presentation = normalizeDrawPresentationConfiguration(configuration.presentation)
+        })
+
+        await transaction.table('draw_sessions').toCollection().modify((session: DrawSession) => {
+          const snapshot = session.configurationSnapshot
+          if (snapshot === undefined || snapshot === null) return
+          const mutableSession = session as MutableDrawSession
+          mutableSession.configurationSnapshot = {
+            ...snapshot,
+            presentation: normalizeDrawPresentationConfiguration(snapshot.presentation),
           }
         })
       },

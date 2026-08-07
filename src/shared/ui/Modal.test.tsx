@@ -38,6 +38,9 @@ describe('Modal and ConfirmationDialog', () => {
     expect(
       screen.getByRole('dialog', { name: 'Advance static state?' }),
     ).toHaveAttribute('aria-modal', 'true')
+    expect(screen.getByRole('dialog', { name: 'Advance static state?' })).toHaveClass(
+      'ui-modal--production-surface',
+    )
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
     expect(
       screen.getByRole('button', { name: 'Close dialog' }),

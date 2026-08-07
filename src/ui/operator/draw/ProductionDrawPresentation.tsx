@@ -78,7 +78,7 @@ export function ProductionDrawPresentation({ result, mode, eventName, eventId = 
   const publisher = sharedPublisher ?? localPublisher
   const sourceForState = useCallback((next: PresentationControllerState) => next.stage === 'failed' || next.stage === 'result-locked'
     ? { drawSessionId: result.drawSessionId, stage: 'ready' as const, blackoutRequested: next.blackoutRequested ?? false, mode, result }
-    : { drawSessionId: result.drawSessionId, stage: next.stage, stageStartedAt: next.stageStartedAt, countdownValue: next.stage === 'countdown' ? next.countdownLabel ?? 3 : undefined, blackoutRequested: next.blackoutRequested ?? false, mode, result }, [mode, result])
+    : { drawSessionId: result.drawSessionId, stage: next.stage, stageStartedAt: next.stageStartedAt, countdownValue: next.stage === 'countdown' ? next.countdownLabel ?? 3 : undefined, blackoutRequested: next.blackoutRequested ?? false, mode, result, ...(next.stage === 'rolling' && runtimePresentationConfiguration?.presentationMode === 'random-number-roll' ? { presentationConfiguration: { ...runtimePresentationConfiguration, winnerCount: result.winners.length }, presentationSeed: result.drawSessionId } : {}) }, [mode, result, runtimePresentationConfiguration])
   const controller = useMemo(() => new PresentationController({
     result, mode, presentationConfiguration: runtimePresentationConfiguration, clock: browserClock(),
     persistStage: async (stage, stageStartedAt) => {

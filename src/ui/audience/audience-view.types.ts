@@ -32,4 +32,10 @@ export type PublicAudienceScenario = PublicAudienceContext &
     readonly displayTest?: boolean
     readonly primaryColor?: string
     readonly accentColor?: string
+    readonly rollingStartedAt?: string
+    readonly rollingSlotCount?: number
+    readonly rollSpeedPerSecond?: number
+    readonly rollStopMode?: 'timed' | 'manual'
+    readonly rollDurationSeconds?: number
+    readonly presentationSeed?: string
   }>

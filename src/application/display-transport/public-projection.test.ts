@@ -40,8 +40,9 @@ describe('public display projection privacy boundary', () => {
   })
 
   it('projects rolling without candidate or participant data', () => {
-    const projection = projectPublicDisplaySnapshot(source({ stage: 'rolling', stageStartedAt: timestamp, result }))
+    const projection = projectPublicDisplaySnapshot(source({ stage: 'rolling', stageStartedAt: timestamp, result, presentationConfiguration: { winnerCount: 6, rollSpeedPerSecond: 12, rollStopMode: 'manual', rollDurationSeconds: 8, revealMode: 'all-together' }, presentationSeed: 'safe-presentation-seed' }))
     expect(projection).not.toHaveProperty('ticketNumbers')
+    expect(projection).toMatchObject({ rollingSlotCount: 6, rollSpeedPerSecond: 12, rollStopMode: 'manual', rollDurationSeconds: 8, presentationSeed: 'safe-presentation-seed', revealMode: 'all-together' })
     expect(JSON.stringify(projection)).not.toMatch(/winnerId|name|isCheckedIn|group|notes|candidate|eligibility|filter|operatorControls/)
   })
 

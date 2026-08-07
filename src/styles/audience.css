@@ -300,6 +300,16 @@
     list-style: none;
   }
 
+  .rolling-ticket-stream[data-slot-count="1"] { width: min(100%, 42rem); grid-template-columns: minmax(0, 1fr); }
+  .rolling-ticket-stream[data-slot-count="6"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rolling-ticket-stream[data-slot-count="10"],
+  .rolling-ticket-stream[data-slot-count="20"],
+  .rolling-ticket-stream[data-slot-count="50"] { width: min(100%, 94rem); grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(0.35rem, 0.8vw, 0.8rem); }
+  .rolling-ticket-stream[data-slot-count="20"] .rolling-ticket,
+  .rolling-ticket-stream[data-slot-count="50"] .rolling-ticket { min-height: clamp(2.5rem, 7vh, 5rem); }
+  .rolling-ticket-stream[data-slot-count="20"] .rolling-ticket span,
+  .rolling-ticket-stream[data-slot-count="50"] .rolling-ticket span { font-size: clamp(1rem, 2vw, 2rem); }
+
   .rolling-ticket {
     display: grid;
     min-width: 0;

@@ -48,6 +48,12 @@ export type PublicMessage =
       readonly blackoutAppearance?: 'pure-black' | 'event-surface';
       readonly safeAreaMargin?: number;
       readonly mode?: 'practice' | 'live';
+      readonly rollingSlotCount?: number;
+      readonly rollSpeedPerSecond?: number;
+      readonly rollStopMode?: 'timed' | 'manual';
+      readonly rollDurationSeconds?: number;
+      readonly presentationSeed?: string;
+      readonly revealMode?: 'all-together' | 'sequential';
       readonly ticketNumbers?: readonly string[];
       readonly winnerStatuses?: readonly PublicWinnerStatus[];
       readonly restore?: boolean;
@@ -181,7 +187,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
   const validStage = isStage(stage) ? stage : undefined;
   if (messageType === 'display-ready' && (!hasOnlyKeys(message, ['type', 'capability']) || validCapability === undefined)) return invalid('message', 'Display-ready message contains unsupported or invalid fields.');
   if (messageType === 'display-state' && validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
-  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'ticketNumbers', 'winnerStatuses', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
+  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'revealMode', 'ticketNumbers', 'winnerStatuses', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
   if (messageType === 'display-restore-request' && !hasOnlyKeys(message, ['type', 'requestedEpoch', 'requestedSequence'])) return invalid('message', 'Restore request contains unsupported fields.');
   if (messageType === 'display-snapshot-applied' && !hasOnlyKeys(message, ['type', 'appliedEpoch', 'appliedSequence', 'publicState'])) return invalid('message', 'Snapshot acknowledgement contains unsupported fields.');
   if (messageType === 'display-heartbeat' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Heartbeat contains unsupported fields.');
@@ -212,6 +218,12 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
     if (message.logo !== undefined && !isPublicAsset(message.logo)) return invalid('message.logo', 'Public logo is invalid.');
     if (message.background !== undefined && !isPublicAsset(message.background)) return invalid('message.background', 'Public background is invalid.');
     if (message.mode !== undefined && message.mode !== 'practice' && message.mode !== 'live') return invalid('message.mode', 'Display mode is invalid.');
+    if (message.rollingSlotCount !== undefined && (typeof message.rollingSlotCount !== 'number' || !Number.isInteger(message.rollingSlotCount) || message.rollingSlotCount < 1 || message.rollingSlotCount > 100)) return invalid('message.rollingSlotCount', 'Rolling slot count is invalid.');
+    if (message.rollSpeedPerSecond !== undefined && (typeof message.rollSpeedPerSecond !== 'number' || !Number.isFinite(message.rollSpeedPerSecond) || message.rollSpeedPerSecond < 1)) return invalid('message.rollSpeedPerSecond', 'Rolling speed is invalid.');
+    if (message.rollStopMode !== undefined && message.rollStopMode !== 'timed' && message.rollStopMode !== 'manual') return invalid('message.rollStopMode', 'Rolling stop mode is invalid.');
+    if (message.rollDurationSeconds !== undefined && (typeof message.rollDurationSeconds !== 'number' || !Number.isFinite(message.rollDurationSeconds) || message.rollDurationSeconds < 0)) return invalid('message.rollDurationSeconds', 'Rolling duration is invalid.');
+    if (message.presentationSeed !== undefined && !isNonEmptyString(message.presentationSeed)) return invalid('message.presentationSeed', 'Presentation seed is invalid.');
+    if (message.revealMode !== undefined && message.revealMode !== 'all-together' && message.revealMode !== 'sequential') return invalid('message.revealMode', 'Reveal mode is invalid.');
     if (message.restore !== undefined && typeof message.restore !== 'boolean') return invalid('message.restore', 'Restore marker must be boolean.');
     if (ticketNumbers !== undefined && (!Array.isArray(ticketNumbers) || ticketNumbers.some((ticket) => !isNonEmptyString(ticket)))) return invalid('message.ticketNumbers', 'Ticket numbers must be non-empty strings.');
     if (winnerStatuses !== undefined && (!Array.isArray(winnerStatuses) || winnerStatuses.some((status) => status !== 'pending' && status !== 'confirmed'))) return invalid('message.winnerStatuses', 'Winner statuses are invalid.');
@@ -232,6 +244,12 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
       ...(message.blackoutAppearance === undefined ? {} : { blackoutAppearance: message.blackoutAppearance }),
       ...(message.safeAreaMargin === undefined ? {} : { safeAreaMargin: message.safeAreaMargin }),
       ...(message.mode === undefined ? {} : { mode: message.mode }),
+      ...(typeof message.rollingSlotCount !== 'number' ? {} : { rollingSlotCount: message.rollingSlotCount }),
+      ...(message.rollSpeedPerSecond === undefined ? {} : { rollSpeedPerSecond: message.rollSpeedPerSecond }),
+      ...(message.rollStopMode === undefined ? {} : { rollStopMode: message.rollStopMode }),
+      ...(message.rollDurationSeconds === undefined ? {} : { rollDurationSeconds: message.rollDurationSeconds }),
+      ...(message.presentationSeed === undefined ? {} : { presentationSeed: message.presentationSeed }),
+      ...(message.revealMode === undefined ? {} : { revealMode: message.revealMode }),
       ...(ticketNumbers === undefined ? {} : { ticketNumbers: [...ticketNumbers] }),
       ...(winnerStatuses === undefined ? {} : { winnerStatuses: [...winnerStatuses] }),
       ...(message.restore === undefined ? {} : { restore: message.restore }),

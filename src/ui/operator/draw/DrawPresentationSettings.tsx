@@ -30,7 +30,7 @@ interface SegmentedChoiceProps {
 }
 
 function SegmentedChoice({ label, selected, disabled, onSelect }: SegmentedChoiceProps) {
-  return <button type="button" role="radio" aria-checked={selected} className={`presentation-segment${selected ? ' presentation-segment--selected' : ''}`} onClick={onSelect} disabled={disabled}>{label}</button>
+  return <button type="button" role="radio" aria-checked={selected} aria-pressed={selected} data-selected={selected ? 'true' : 'false'} className={`presentation-segment${selected ? ' presentation-segment--selected' : ''}`} onClick={onSelect} disabled={disabled}>{label}</button>
 }
 
 export function DrawPresentationSettings({ configuration, winnerCount, disabled, onChange }: { readonly configuration: DrawPresentationConfiguration; readonly winnerCount: number; readonly disabled: boolean; readonly onChange: (value: DrawPresentationConfiguration) => void }) {

@@ -53,6 +53,22 @@ describe('draw authoring service', () => {
     })
   })
 
+  it.each(['completed', 'cancelled'] as const)('creates a new ready session after a terminal %s session', async (status) => {
+    const configuration = { id: 'configuration-a', eventId: event.id, prizeCategoryId: category.id, requestedWinners: 1, winningRule: 'once-per-event', requireCheckIn: true, eligibleGroupFilter: null, createdAt: event.createdAt, updatedAt: event.updatedAt }
+    const session = { id: 'old-session', eventId: event.id, configurationId: configuration.id, mode: 'practice', status, configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: event.createdAt, updatedAt: event.updatedAt }
+    const persistReadyAuthoring = vi.fn(async (input: unknown) => input === undefined ? undefined : undefined)
+    const repositories = makeRepositories({
+      configurations: { findById: vi.fn(async () => configuration), findByEventId: vi.fn(async () => [configuration]) } as never,
+      sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => [session]) } as never,
+      authoring: { persistReadyAuthoring } as never,
+    })
+    const result = await createDrawAuthoringService(repositories).save({ ...validDraft, configurationId: configuration.id, sessionId: session.id, presentation: { presentationMode: 'random-number-roll', rollDurationSeconds: 12, rollSpeedPerSecond: 20, revealMode: 'sequential' } })
+    expect(result.ok).toBe(true)
+    expect(persistReadyAuthoring).toHaveBeenCalledWith(expect.objectContaining({ existingConfigurationId: configuration.id, existingSessionId: undefined, session: expect.objectContaining({ status: 'ready', mode: 'practice' }) }))
+    const persisted = persistReadyAuthoring.mock.calls[0]?.[0] as { session: { id: string } } | undefined
+    expect(persisted?.session.id).not.toBe(session.id)
+  })
+
   it.each(['', 0, 101, 1.5, 'not-a-number'])('rejects invalid winner count %s', async (requestedWinners) => {
     const result = await createDrawAuthoringService(makeRepositories()).save({ ...validDraft, requestedWinners })
     expect(result).toMatchObject({ ok: false, error: { code: 'invalid-winner-count' } })

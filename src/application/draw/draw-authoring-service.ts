@@ -2,7 +2,7 @@ import { evaluateEligibility } from '../eligibility/eligibility-evaluator.ts'
 import { validateDrawConfiguration } from '../../domain/draws/draw.invariants.ts'
 import { createDrawConfigurationId, createDrawSessionId } from '../../domain/shared/identifiers.ts'
 import type { DrawConfiguration } from '../../domain/draws/draw-configuration.types.ts'
-import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
+import { isDrawSessionAuthoringLocked, type DrawSession } from '../../domain/draws/draw-session.types.ts'
 import type { EventId } from '../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { DrawAuthoringError } from './draw-authoring-errors.ts'
@@ -82,11 +82,14 @@ export function createDrawAuthoringService(repositories: DrawAuthoringRepositori
         if (category.eventId !== eventId) return invalid('cross-event-relationship', 'The selected prize category belongs to another Event.')
         if (draft.configurationId !== undefined && loaded.configuration === null) return invalid('configuration-not-found', 'The DrawConfiguration was not found.')
         if (draft.sessionId !== undefined && loaded.session === null) return invalid('session-not-found', 'The DrawSession was not found.')
-        if (loaded.session !== null && loaded.session.status !== 'ready') return invalid('session-not-editable', 'Only a ready DrawSession can be edited.')
+        if (loaded.session !== null && isDrawSessionAuthoringLocked(loaded.session)) return invalid('session-not-editable', 'An active DrawSession cannot be edited. Resolve the active draw before changing its configuration.')
         const timestamp = now()
         const configuration: DrawConfiguration = loaded.configuration ?? { id: createDrawConfigurationId(), eventId, prizeCategoryId: category.id, requestedWinners, winningRule: draft.winningRule as DrawConfiguration['winningRule'], requireCheckIn: draft.requireCheckIn, eligibleGroupFilter: groupFilter, presentation, createdAt: timestamp, updatedAt: timestamp }
         const updatedConfiguration: DrawConfiguration = { ...configuration, eventId, prizeCategoryId: category.id, requestedWinners, winningRule: draft.winningRule as DrawConfiguration['winningRule'], requireCheckIn: draft.requireCheckIn, eligibleGroupFilter: groupFilter, presentation, updatedAt: timestamp }
-        const session: DrawSession = loaded.session ?? { id: createDrawSessionId(), eventId, configurationId: updatedConfiguration.id, mode: draft.mode as DrawSession['mode'], status: 'ready', configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: timestamp, updatedAt: timestamp }
+        const reuseSession = loaded.session === null || loaded.session.status === 'ready'
+        const session: DrawSession = reuseSession && loaded.session !== null
+          ? loaded.session
+          : { id: createDrawSessionId(), eventId, configurationId: updatedConfiguration.id, mode: draft.mode as DrawSession['mode'], status: 'ready', configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: timestamp, updatedAt: timestamp }
         const updatedSession: DrawSession = { ...session, eventId, configurationId: updatedConfiguration.id, mode: draft.mode as DrawSession['mode'], status: 'ready', updatedAt: timestamp }
         const valid = validateDrawConfiguration(updatedConfiguration)
         if (!valid.ok) return invalid('write-failure', valid.error.message)
@@ -95,7 +98,7 @@ export function createDrawAuthoringService(repositories: DrawAuthoringRepositori
         const eligibility = evaluateEligibility({ activeEvent: loaded.event, drawConfiguration: updatedConfiguration, prizeCategory: category, mode: updatedSession.mode, participants, winnerRecords: winners, ruleContext: { officialSessions: [] } })
         if (eligibility.ok && eligibility.value.eligibleCount < requestedWinners) return invalid('insufficient-eligible-capacity', `Only ${eligibility.value.eligibleCount} eligible participants are available for ${requestedWinners} winners.`)
         if (repositories.authoring === undefined) return { ok: false, error: new DrawAuthoringError('persistence-unavailable', 'Draw authoring persistence is unavailable.', { retryable: true }) }
-        await repositories.authoring.persistReadyAuthoring({ configuration: updatedConfiguration, session: updatedSession, existingConfigurationId: loaded.configuration?.id, existingSessionId: loaded.session?.id })
+        await repositories.authoring.persistReadyAuthoring({ configuration: updatedConfiguration, session: updatedSession, existingConfigurationId: loaded.configuration?.id, existingSessionId: reuseSession ? loaded.session?.id : undefined })
         return { ok: true, record: { event: loaded.event, category, configuration: updatedConfiguration, session: updatedSession, eligibleCount: eligibility.ok ? eligibility.value.eligibleCount : 0 } }
       } catch (cause: unknown) {
         if (cause instanceof DrawAuthoringError) return { ok: false, error: cause }

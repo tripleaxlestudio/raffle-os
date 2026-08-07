@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
-import type { DrawAuthoringRecord } from '../../application/draw/draw-authoring.types.ts'
+import type { DrawAuthoringDraft, DrawAuthoringRecord } from '../../application/draw/draw-authoring.types.ts'
 import type { DrawSetupProductionServices } from '../../application/draw/draw-setup-query.types.ts'
 import { DrawAuthoringError } from '../../application/draw/draw-authoring-errors.ts'
 import { DrawSetupPage } from './DrawSetupPage.tsx'
@@ -18,11 +18,11 @@ const participants = [
   { id: 'participant-2', eventId: event.id, ticketNumber: '00043', isCheckedIn: false, group: 'VIP', createdAt: event.createdAt, updatedAt: event.updatedAt },
 ] as const
 
-function services(overrides: { record?: DrawAuthoringRecord | null; event?: typeof event | null; categories?: readonly (typeof category | typeof alternateCategory)[]; participants?: readonly typeof participants[number][]; save?: DrawSetupProductionServices['authoringService'] extends infer S ? S extends { save: (...args: never[]) => unknown } ? S['save'] : never : never; conflict?: 'drawing' | 'pending-confirmation'; conflictAfterSave?: 'drawing' | 'pending-confirmation' } = {}) {
+function services(overrides: { record?: DrawAuthoringRecord | null; recordRef?: { current: DrawAuthoringRecord | null }; event?: typeof event | null; categories?: readonly (typeof category | typeof alternateCategory)[]; participants?: readonly typeof participants[number][]; save?: DrawSetupProductionServices['authoringService'] extends infer S ? S extends { save: (...args: never[]) => unknown } ? S['save'] : never : never; conflict?: 'drawing' | 'pending-confirmation'; conflictAfterSave?: 'drawing' | 'pending-confirmation' } = {}) {
   const current = overrides.record === undefined ? record : overrides.record
-  const load = vi.fn(async () => ({ ok: true as const, event: overrides.event === undefined ? event : overrides.event, categories: overrides.categories ?? [category], record: current }))
+  const load = vi.fn(async () => ({ ok: true as const, event: overrides.event === undefined ? event : overrides.event, categories: overrides.categories ?? [category], record: overrides.recordRef === undefined ? current : overrides.recordRef.current }))
   let activeConflict = overrides.conflict
-  const save = overrides.save ?? vi.fn(async () => { activeConflict = overrides.conflictAfterSave; return { ok: true as const, record: current ?? record } })
+  const save = overrides.save ?? vi.fn(async () => { activeConflict = overrides.conflictAfterSave; return { ok: true as const, record: overrides.recordRef?.current ?? current ?? record } })
   const selectedParticipants = overrides.participants ?? participants
   return { open: vi.fn(async () => undefined), checkStorage: vi.fn(async () => ({ ok: true as const })), checkCrypto: vi.fn(async () => ({ ok: true as const })), preferences: { get: vi.fn(async () => event.id) }, events: { findById: vi.fn(async () => event) }, configurations: { findById: vi.fn(async () => configuration) }, categories: { findById: vi.fn(async () => category) }, sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => activeConflict === undefined ? [session] : [session, { ...session, id: 'live-conflict', mode: 'live' as const, status: activeConflict }]) }, participants: { countByEventId: vi.fn(async () => selectedParticipants.length), findByEventId: vi.fn(async () => selectedParticipants) }, winners: { findByEventId: vi.fn(async () => []) }, authoringService: { load, save }, } as unknown as DrawSetupProductionServices
 }
@@ -132,13 +132,25 @@ describe('Draw Setup persisted authoring', () => {
     await screen.findByRole('heading', { name: 'Reveal style' })
     await user.click(screen.getByRole('radio', { name: /Random Number Roll/ }))
     expect(screen.getByRole('radio', { name: /Random Number Roll/ })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: '8 sec' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: '8 sec' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('radio', { name: '8 sec' })).toHaveClass('presentation-segment--selected')
+    expect(screen.getByRole('radio', { name: /Fast/ })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: /Fast/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('radio', { name: /Fast/ })).toHaveClass('presentation-segment--selected')
+    expect(screen.getByRole('radio', { name: 'Reveal Together' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Reveal Together' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('radio', { name: 'Reveal Together' })).toHaveClass('presentation-segment--selected')
     expect(screen.getByRole('radio', { name: '5 sec' })).toHaveAttribute('aria-checked', 'false')
     await user.click(screen.getByRole('radio', { name: '5 sec' }))
     await user.click(screen.getByRole('radio', { name: /Smooth/ }))
     await user.click(screen.getByRole('radio', { name: 'Reveal Sequentially' }))
     expect(screen.getByRole('radio', { name: '5 sec' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: '5 sec' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('radio', { name: /Smooth/ })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: /Smooth/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('radio', { name: 'Reveal Sequentially' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Reveal Sequentially' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('persists the shared presentation configuration in Practice and does not alter winner quantity', async () => {
@@ -153,6 +165,31 @@ describe('Draw Setup persisted authoring', () => {
     expect(screen.getByRole('radio', { name: 'Practice' })).toBeChecked()
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ requestedWinners: '1', mode: 'practice', presentation: { presentationMode: 'random-number-roll', rollDurationSeconds: 12, rollSpeedPerSecond: 20, revealMode: 'all-together' } }))
+  })
+
+  it('restores the selected presentation UI after Save changes and reload', async () => {
+    const user = userEvent.setup()
+    const recordRef = { current: record as DrawAuthoringRecord | null }
+    const save = vi.fn(async (draft: DrawAuthoringDraft) => {
+      recordRef.current = { ...record, configuration: { ...record.configuration, presentation: draft.presentation as DrawAuthoringRecord['configuration']['presentation'] } }
+      return { ok: true as const, record: recordRef.current }
+    })
+    const value = services({ recordRef, save })
+    const first = renderPage(value)
+    await screen.findByRole('heading', { name: 'Reveal style' })
+    await user.click(screen.getByRole('radio', { name: /Random Number Roll/ }))
+    await user.click(screen.getByRole('radio', { name: '12 sec' }))
+    await user.click(screen.getByRole('radio', { name: /Rapid/ }))
+    await user.click(screen.getByRole('radio', { name: 'Reveal Sequentially' }))
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(await screen.findByText('Ready DrawSession persisted')).toBeInTheDocument()
+    first.unmount()
+    renderPage(value)
+    await screen.findByRole('heading', { name: 'Reveal style' })
+    expect(screen.getByRole('radio', { name: /Random Number Roll/ })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: '12 sec' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('radio', { name: /Rapid/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('radio', { name: 'Reveal Sequentially' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('hides roll controls when switching back to Instant Reveal while preserving their draft values', async () => {
@@ -198,5 +235,29 @@ describe('Draw Setup persisted authoring', () => {
     expect(await screen.findByRole('heading', { name: 'This DrawSession is not editable' })).toBeInTheDocument()
     expect(screen.getByLabelText('Custom winner count')).toBeDisabled()
     expect(screen.getByRole('radio', { name: 'Live' })).toBeDisabled()
+  })
+
+  it('keeps all presentation controls aligned with the active-session lock', async () => {
+    const activeRecord = { ...record, configuration: { ...record.configuration, presentation: { presentationMode: 'random-number-roll' as const, rollDurationSeconds: 8 as const, rollSpeedPerSecond: 12, revealMode: 'all-together' as const } }, session: { ...session, mode: 'live' as const, status: 'pending-confirmation' as const } } as unknown as DrawAuthoringRecord
+    renderPage(services({ record: activeRecord }))
+    await screen.findByRole('heading', { name: 'This DrawSession is not editable' })
+    expect(screen.getByRole('radio', { name: /Random Number Roll/ })).toBeDisabled()
+    expect(screen.getByRole('radio', { name: '5 sec' })).toBeDisabled()
+    expect(screen.getByRole('radio', { name: /Smooth/ })).toBeDisabled()
+    expect(screen.getByRole('radio', { name: 'Reveal Together' })).toBeDisabled()
+    expect(screen.getByLabelText('Custom winner count')).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
+  })
+
+  it('allows a completed previous session to prepare the next presentation configuration', async () => {
+    const user = userEvent.setup()
+    const completedRecord = { ...record, session: { ...session, status: 'completed' as const } } as unknown as DrawAuthoringRecord
+    renderPage(services({ record: completedRecord }))
+    await screen.findByRole('heading', { name: 'Reveal style' })
+    await user.click(screen.getByRole('radio', { name: /Random Number Roll/ }))
+    expect(screen.getByRole('radio', { name: '5 sec' })).toBeEnabled()
+    expect(screen.getByRole('radio', { name: /Smooth/ })).toBeEnabled()
+    expect(screen.getByRole('radio', { name: 'Reveal Together' })).toBeEnabled()
+    expect(screen.queryByRole('heading', { name: 'This DrawSession is not editable' })).not.toBeInTheDocument()
   })
 })

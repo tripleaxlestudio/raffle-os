@@ -73,3 +73,12 @@ export interface DrawSession {
   readonly updatedAt: IsoTimestamp
   readonly completedAt?: IsoTimestamp
 }
+
+/**
+ * Draw Setup is locked only while this session can still affect an active
+ * draw. Terminal sessions remain immutable, but a later authoring save must
+ * create a new ready session rather than treating the old session as active.
+ */
+export function isDrawSessionAuthoringLocked(session: DrawSession): boolean {
+  return session.status === 'drawing' || session.status === 'pending-confirmation'
+}

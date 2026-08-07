@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import type { DrawAuthoringDraft, DrawAuthoringRecord } from '../../application/draw/draw-authoring.types.ts'
+import { isDrawSessionAuthoringLocked } from '../../domain/draws/draw-session.types.ts'
 import { normalizeDrawPresentationConfiguration, type DrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
 import type { DrawSetupProductionServices } from '../../application/draw/draw-setup-query.types.ts'
 import { queryDrawReadiness } from '../../application/draw/draw-readiness-query.ts'
@@ -110,7 +111,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   if (loading) return <section className="draw-setup" aria-busy="true"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="Loading persisted Event and configuration…" /><StatusBanner badge="Loading" title="Preparing Draw Setup" tone="info">Configuration drafts are not active until they are saved.</StatusBanner></section>
   if (eventMissing || form.eventId === '') return <section className="draw-setup"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="No persisted Event is available" /><StatusBanner badge="Event required" title="Create or select an Event first" tone="warning">Draw Setup does not create demo Events or categories automatically.</StatusBanner><ButtonLink to="/events">Open Event management</ButtonLink>{error?.retryable ? <Button onClick={() => void load()}>Retry</Button> : null}</section>
 
-  const started = record !== null && record.session.status !== 'ready'
+  const started = record !== null && isDrawSessionAuthoringLocked(record.session)
   const readinessBlocked = readiness !== null && readiness.state !== 'ready'
   const eligibilityNotEvaluated = readiness?.state === 'session-conflict'
   const capacity = dirty ? undefined : readiness?.data

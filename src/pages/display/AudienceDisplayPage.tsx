@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useSyncExternalStore, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { createAudienceController, type AudienceController, type AudienceRenderedState } from '../../application/display-transport/audience-controller.ts'
 import { createFullscreenController, type FullscreenState } from '../../application/display-transport/fullscreen-controller.ts'
 import type { PublicDisplaySnapshot } from '../../application/display-transport/public-projection.ts'
@@ -34,13 +34,15 @@ function snapshotScenario(snapshot: PublicDisplaySnapshot): PublicAudienceScenar
     ...(snapshot.eventSubtitle === undefined ? {} : { eventSubtitle: snapshot.eventSubtitle }),
     ...(snapshot.prizeCategory === undefined ? {} : { prizeCategory: snapshot.prizeCategory }),
     ...(snapshot.prizeName === undefined ? {} : { prizeLabel: snapshot.prizeName }),
+    ...(snapshot.winnerCount === undefined ? {} : { winnerCount: snapshot.winnerCount }),
     ...(snapshot.logo === undefined ? {} : { logo: snapshot.logo.blob }),
     ...(snapshot.primaryColor === undefined ? {} : { primaryColor: snapshot.primaryColor }),
     ...(snapshot.accentColor === undefined ? {} : { accentColor: snapshot.accentColor }),
     ...(snapshot.stage === 'rolling' || snapshot.stage === 'reveal' || snapshot.stage === 'pending-handoff' ? { rollingStartedAt: snapshot.stage === 'rolling' ? snapshot.stageStartedAt : undefined, rollingSlotCount: snapshot.rollingSlotCount, rollSpeedPerSecond: snapshot.rollSpeedPerSecond, rollStopMode: snapshot.rollStopMode, rollDurationSeconds: snapshot.rollDurationSeconds, presentationSeed: snapshot.presentationSeed, presentationMode: snapshot.presentationMode } : {}),
     ...(snapshot.stage === 'reveal' || snapshot.stage === 'pending-handoff' ? { revealMode: snapshot.revealMode, revealStartedAt: snapshot.revealStartedAt ?? snapshot.stageStartedAt } : {}),
     state: committedState,
-    message: committedState === 'standby' ? (snapshot.displayTest === false ? 'Waiting for the next presentation' : snapshot.stage === 'pending-handoff' ? 'No active winners' : 'Draw will begin shortly') : committedState === 'countdown' ? 'Get ready' : committedState === 'rolling' ? 'Drawing in progress' : undefined,
+    nextDrawReady: committedState === 'standby' && snapshot.winnerCount !== undefined && snapshot.prizeName !== undefined,
+    message: committedState === 'standby' ? (snapshot.displayTest === false && snapshot.winnerCount === undefined ? 'Waiting for the next presentation' : snapshot.stage === 'pending-handoff' ? 'No active winners' : 'Draw will begin shortly') : committedState === 'countdown' ? 'Get ready' : committedState === 'rolling' ? 'Drawing in progress' : undefined,
     countdownValue: snapshot.stage === 'countdown' ? String(snapshot.countdownValue ?? '—') : undefined,
     ticketNumbers: snapshot.ticketNumbers,
     winnerStatuses: snapshot.winnerStatuses,
@@ -127,6 +129,18 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
   const transportFactory = useMemo(() => suppliedTransport === undefined ? () => createAudienceTransport('raffle-os-display', hookScope) : undefined, [hookScope, suppliedTransport])
   const controller = useMemo(() => suppliedController ?? createAudienceController({ transport, transportFactory, scope: hookScope, expectedSession, autoStartHandshake: suppliedController === undefined ? false : undefined }), [expectedSession, hookScope, suppliedController, transport, transportFactory])
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
+  const backgroundBlob = state.kind === 'snapshot' ? state.snapshot.background?.blob : undefined
+  const [backgroundUrl, setBackgroundUrl] = useState<string | undefined>(undefined)
+  useEffect(() => {
+    let active = true
+    if (backgroundBlob === undefined) {
+      queueMicrotask(() => { if (active) setBackgroundUrl(undefined) })
+      return () => { active = false }
+    }
+    const nextUrl = URL.createObjectURL(backgroundBlob)
+    queueMicrotask(() => { if (active) setBackgroundUrl(nextUrl) })
+    return () => { active = false; URL.revokeObjectURL(nextUrl) }
+  }, [backgroundBlob])
   const fullscreen = useMemo(() => createFullscreenController({ target: typeof document === 'undefined' ? undefined : document.documentElement }), [])
   const fullscreenState = useSyncExternalStore(fullscreen.subscribe, fullscreen.getState, fullscreen.getState)
   const controllerLifecycleGeneration = useRef(0)
@@ -156,7 +170,7 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
 
   const controls = <FullscreenControls controller={fullscreen} state={fullscreenState} />
   if (state.kind === 'connecting' || state.kind === 'disconnected-safe' || state.kind === 'unavailable') return <><DisconnectedStage scenario={safeStatusScenario(state.kind === 'connecting' ? 'connecting' : 'disconnected-safe')} />{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={state.kind} /></>
-  const audienceStyle = { '--audience-safe-inline': `${state.snapshot.safeAreaMargin ?? 0}px`, '--audience-safe-block': `${state.snapshot.safeAreaMargin ?? 0}px`, '--accent': state.snapshot.primaryColor ?? undefined, '--accent-hover': state.snapshot.accentColor ?? undefined, ...(state.snapshot.background === undefined ? {} : { '--audience-background-image': `url(${URL.createObjectURL(state.snapshot.background.blob)})` }) } as CSSProperties
+  const audienceStyle = { '--audience-safe-inline': `${state.snapshot.safeAreaMargin ?? 0}px`, '--audience-safe-block': `${state.snapshot.safeAreaMargin ?? 0}px`, '--accent': state.snapshot.primaryColor ?? undefined, '--accent-hover': state.snapshot.accentColor ?? undefined, ...(backgroundUrl === undefined ? {} : { '--audience-background-image': `url(${backgroundUrl})` }) } as CSSProperties
   if (state.snapshot.blackoutRequested) return <div style={audienceStyle}><BlackoutStage appearance={state.snapshot.blackoutAppearance} />{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={selectedRenderedState} /></div>
   const scenario = snapshotScenario(state.snapshot)
   const rendered = (() => {

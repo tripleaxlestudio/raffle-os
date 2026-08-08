@@ -16,12 +16,13 @@ export function StandbyStage({ scenario }: StandbyStageProps) {
       />
       <div className="standby-stage__message">
         {scenario.displayTest ? <p className="audience-test-badge" role="status">DISPLAY TEST · NOT AN OFFICIAL DRAW</p> : null}
-        <p className="audience-eyebrow">{scenario.displayTest === false ? 'Display ready' : 'Next draw'}</p>
-        <h1>{scenario.message ?? 'Draw will begin shortly'}</h1>
+        <p className="audience-eyebrow">{scenario.nextDrawReady ? 'Next draw' : scenario.displayTest === false ? 'Display ready' : 'Next draw'}</p>
+        {scenario.nextDrawReady ? <h1>{scenario.prizeLabel}</h1> : <h1>{scenario.message ?? 'Draw will begin shortly'}</h1>}
         <p className="audience-prize">
           <span>{scenario.prizeCategory}</span>
-          <strong>{scenario.prizeLabel}</strong>
+          {scenario.nextDrawReady ? <strong>{scenario.winnerCount} Winners</strong> : <strong>{scenario.prizeLabel}</strong>}
         </p>
+        {scenario.nextDrawReady ? <p className="standby-stage__next-draw-message">{scenario.message ?? 'Draw will begin shortly'}</p> : null}
       </div>
       <div aria-hidden="true" className="audience-safe-area-markers" />
     </AudienceStage>

@@ -59,6 +59,14 @@ describe('public display projection privacy boundary', () => {
     expect(projectPublicDisplaySnapshot(source({ stage: 'ready', mode: 'practice' }))).toEqual({ drawSessionId: session, stage: 'standby', blackoutRequested: false, mode: 'practice' })
   })
 
+  it('retains authoritative next-draw identity and winner quantity through ready snapshots', () => {
+    const projection = projectPublicDisplaySnapshot(source({ stage: 'ready', eventName: '24th K-Link Indonesia Anniversary', prizeCategory: 'Door Prize', prizeName: 'K-Ion Nano Premium 5', winnerCount: 10 }))
+    expect(projection).toMatchObject({ stage: 'standby', eventName: '24th K-Link Indonesia Anniversary', prizeCategory: 'Door Prize', prizeName: 'K-Ion Nano Premium 5', winnerCount: 10 })
+    const roundTrip = parsePublicDisplaySnapshot(JSON.parse(serializePublicDisplaySnapshot(projection)), session)
+    expect(roundTrip).toMatchObject({ prizeCategory: 'Door Prize', prizeName: 'K-Ion Nano Premium 5', winnerCount: 10 })
+    expect(publicSnapshotToProtocolState(roundTrip)).toMatchObject({ prizeCategory: 'Door Prize', prizeName: 'K-Ion Nano Premium 5', winnerCount: 10 })
+  })
+
   it('rejects empty, malformed, and non-string tickets through the typed boundary', () => {
     expect(() => projectPublicDisplaySnapshot(source({ stage: 'reveal', stageStartedAt: timestamp, result: { ...result, winners: [{ sequence: 1, ticketNumber: '' }] } }))).toThrowError(expect.objectContaining({ code: 'invalid-ticket' }))
     expect(() => projectPublicDisplaySnapshot(source({ stage: 'reveal', stageStartedAt: timestamp, result: { ...result, winners: [{ sequence: 1, ticketNumber: 42 }] } }))).toThrowError(expect.objectContaining({ code: 'invalid-ticket' }))

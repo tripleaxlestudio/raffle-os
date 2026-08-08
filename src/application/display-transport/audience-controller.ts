@@ -361,7 +361,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         blackoutRequested: message.blackoutRequested ?? false,
         ...(message.displayTest === undefined ? {} : { displayTest: message.displayTest }),
         ...(message.eventName === undefined ? {} : { eventName: message.eventName }),
-        ...(message.prizeCategory === undefined ? {} : { prizeCategory: message.prizeCategory }), ...(message.prizeName === undefined ? {} : { prizeName: message.prizeName }),
+        ...(message.prizeCategory === undefined ? {} : { prizeCategory: message.prizeCategory }), ...(message.prizeName === undefined ? {} : { prizeName: message.prizeName }), ...(message.winnerCount === undefined ? {} : { winnerCount: message.winnerCount }),
         ...(message.eventSubtitle === undefined ? {} : { eventSubtitle: message.eventSubtitle }), ...(message.primaryColor === undefined ? {} : { primaryColor: message.primaryColor }), ...(message.accentColor === undefined ? {} : { accentColor: message.accentColor }), ...(message.logo === undefined ? {} : { logo: message.logo }), ...(message.background === undefined ? {} : { background: message.background }), ...(message.blackoutAppearance === undefined ? {} : { blackoutAppearance: message.blackoutAppearance }), ...(message.safeAreaMargin === undefined ? {} : { safeAreaMargin: message.safeAreaMargin }),
         ...(message.mode === undefined ? {} : { mode: message.mode }),
         ...(message.rollingSlotCount === undefined ? {} : { rollingSlotCount: message.rollingSlotCount }),

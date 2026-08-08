@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { act, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ProductionDrawPresentation, ProductionDrawRunHeader } from './ProductionDrawPresentation.tsx'
+import { PresentationSupport, ProductionDrawPresentation, ProductionDrawRunHeader } from './ProductionDrawPresentation.tsx'
 import type { PresentationResultProjection } from '../../../application/workflow/presentation-projection.ts'
 
 function result(count: number): PresentationResultProjection {
@@ -12,6 +12,16 @@ function result(count: number): PresentationResultProjection {
 describe('ProductionDrawPresentation', () => {
   beforeEach(() => { vi.stubGlobal('matchMedia', () => ({ matches: true, addListener: vi.fn(), removeListener: vi.fn() })) })
   afterEach(() => { vi.useRealTimers() })
+
+  it('renders the persistent public monitor for the Ready-to-Start state', () => {
+    render(<PresentationSupport previewStage="ready" eventName="Spring Event" prizeCategory="Door Prize" prizeName="K-Ion Nano Premium 5" recap={{ winnerCount: 10, eligibleCount: 100, winningRule: 'Once per event', countdownSeconds: 3, rollingSeconds: 8 }} audienceStatus={{ label: 'Connected', detail: 'Acknowledged', displayUrl: null }} blackoutRequested={false} />)
+    const preview = screen.getByTestId('production-preview')
+    expect(preview).toHaveAttribute('data-public-stage', 'ready')
+    expect(preview).toHaveTextContent('NEXT DRAW')
+    expect(preview).toHaveTextContent('Door Prize · K-Ion Nano Premium 5 · 10 Winners')
+    expect(screen.getByText('Runtime status')).toBeInTheDocument()
+    expect(screen.getByText(/Audience acknowledgement: Acknowledged/)).toBeInTheDocument()
+  })
 
   it.each([1, 20, 50, 100])('reveals %i winners in sequence order without changing ticket strings', async (count) => {
     render(<ProductionDrawPresentation result={result(count)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" practiceResult={{ drawSessionId: result(count).drawSessionId, winners: result(count).winners as never, createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1 }} onFailure={() => undefined} />)
@@ -124,6 +134,8 @@ describe('ProductionDrawPresentation', () => {
     await act(async () => { await Promise.resolve() })
     const stop = screen.getByRole('button', { name: 'STOP & REVEAL' })
     expect(stop).toHaveClass('ui-button--danger', 'ui-button--lg', 'production-manual-stop')
+    expect(stop.closest('.production-presentation__content')).not.toBeNull()
+    expect(document.querySelector('.presentation-header-actions')?.querySelector('button')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Skip animation' })).not.toBeInTheDocument()
   })
 

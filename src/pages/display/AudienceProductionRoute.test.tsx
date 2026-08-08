@@ -63,6 +63,20 @@ describe('production Audience route', () => {
     publisher.close()
   })
 
+  it('renders an authoritative ready snapshot as the next draw without claiming current execution', () => {
+    const [publisher, display] = createInMemoryTransportPair('production-ready-next-draw')
+    render(<AudienceDisplayPage transport={display} scope={scope} />)
+    act(() => { publisher.publish(stateMessage(1, { eventName: '24th K-Link Indonesia Anniversary', prizeCategory: 'Door Prize', prizeName: 'K-Ion Nano Premium 5', winnerCount: 10 })) })
+    expect(screen.getByRole('heading', { level: 1, name: 'K-Ion Nano Premium 5' })).toBeVisible()
+    expect(screen.getByText('Door Prize')).toBeVisible()
+    expect(screen.getByText('10 Winners')).toBeVisible()
+    expect(screen.getByText('Draw will begin shortly')).toBeVisible()
+    expect(screen.queryByText('Current draw')).not.toBeInTheDocument()
+    expect(screen.queryByText('Waiting for the next presentation')).not.toBeInTheDocument()
+    display.close()
+    publisher.close()
+  })
+
   it('updates only the authoritative confirmed tile in place during partial verification', () => {
     const [publisher, display] = createInMemoryTransportPair('production-partial-verification')
     const controller = createAudienceController({ transport: display, scope })

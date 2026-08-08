@@ -18,6 +18,7 @@ export type PublicDisplaySnapshot = Readonly<{
   readonly eventSubtitle?: string
   readonly prizeCategory?: string
   readonly prizeName?: string
+  readonly winnerCount?: number
   readonly primaryColor?: string
   readonly accentColor?: string
   readonly logo?: PublicAsset
@@ -49,6 +50,7 @@ export type PresentationProjectionSource = Readonly<{
   readonly eventSubtitle?: string
   readonly prizeCategory?: string
   readonly prizeName?: string
+  readonly winnerCount?: number
   readonly primaryColor?: string
   readonly accentColor?: string
   readonly logo?: PublicAsset
@@ -144,7 +146,7 @@ function projectTickets(source: Record<string, unknown>, drawSessionId: string):
 
 export function projectPublicDisplaySnapshot(source: PresentationProjectionSource): PublicDisplaySnapshot {
   const value: unknown = source
-  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || typeof value.blackoutRequested !== 'boolean' || (value.countdownValue !== undefined && value.countdownValue !== 1 && value.countdownValue !== 2 && value.countdownValue !== 3) || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.prizeCategory !== undefined && !isNonEmptyString(value.prizeCategory)) || (value.prizeName !== undefined && !isNonEmptyString(value.prizeName)) || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) invalidSource('Presentation source is malformed.')
+  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || typeof value.blackoutRequested !== 'boolean' || (value.countdownValue !== undefined && value.countdownValue !== 1 && value.countdownValue !== 2 && value.countdownValue !== 3) || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.prizeCategory !== undefined && !isNonEmptyString(value.prizeCategory)) || (value.prizeName !== undefined && !isNonEmptyString(value.prizeName)) || (value.winnerCount !== undefined && (typeof value.winnerCount !== 'number' || !Number.isInteger(value.winnerCount) || value.winnerCount < 1 || value.winnerCount > 100)) || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) invalidSource('Presentation source is malformed.')
   const parsedSession = parseDrawSessionId(value.drawSessionId)
   if (!parsedSession.ok) invalidSource('Presentation source session is malformed.')
   if (value.stage !== 'ready' && value.stage !== 'standby' && (value.stageStartedAt === undefined || !isIsoTimestamp(value.stageStartedAt))) invalidSource('A non-standby presentation stage requires a valid timestamp.')
@@ -181,6 +183,7 @@ export function projectPublicDisplaySnapshot(source: PresentationProjectionSourc
     ...(value.eventName === undefined ? {} : { eventName: value.eventName }),
     ...(value.prizeCategory === undefined ? {} : { prizeCategory: value.prizeCategory as string }),
     ...(value.prizeName === undefined ? {} : { prizeName: value.prizeName as string }),
+    ...(value.winnerCount === undefined ? {} : { winnerCount: value.winnerCount as number }),
     ...(value.eventSubtitle === undefined ? {} : { eventSubtitle: value.eventSubtitle as string }), ...(value.primaryColor === undefined ? {} : { primaryColor: value.primaryColor as string }), ...(value.accentColor === undefined ? {} : { accentColor: value.accentColor as string }), ...(value.logo === undefined ? {} : { logo: value.logo as PublicAsset }), ...(value.background === undefined ? {} : { background: value.background as PublicAsset }), ...(value.blackoutAppearance === undefined ? {} : { blackoutAppearance: value.blackoutAppearance as 'pure-black' | 'event-surface' }), ...(value.safeAreaMargin === undefined ? {} : { safeAreaMargin: value.safeAreaMargin as number }),
     ...(value.mode === undefined ? {} : { mode: value.mode }),
     ...(rolling === undefined ? {} : rolling),
@@ -203,6 +206,7 @@ export function serializePublicDisplaySnapshot(snapshot: PublicDisplaySnapshot):
     ...(snapshot.eventName === undefined ? {} : { eventName: snapshot.eventName }),
     ...(snapshot.prizeCategory === undefined ? {} : { prizeCategory: snapshot.prizeCategory }),
     ...(snapshot.prizeName === undefined ? {} : { prizeName: snapshot.prizeName }),
+    ...(snapshot.winnerCount === undefined ? {} : { winnerCount: snapshot.winnerCount }),
     ...(snapshot.eventSubtitle === undefined ? {} : { eventSubtitle: snapshot.eventSubtitle }),
     ...(snapshot.primaryColor === undefined ? {} : { primaryColor: snapshot.primaryColor }),
     ...(snapshot.accentColor === undefined ? {} : { accentColor: snapshot.accentColor }),
@@ -225,8 +229,8 @@ export function serializePublicDisplaySnapshot(snapshot: PublicDisplaySnapshot):
 }
 
 export function parsePublicDisplaySnapshot(value: unknown, expectedSession?: DrawSessionId): PublicDisplaySnapshot {
-  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || value.stage === 'ready' || typeof value.blackoutRequested !== 'boolean' || (value.countdownValue !== undefined && value.countdownValue !== 1 && value.countdownValue !== 2 && value.countdownValue !== 3) || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.prizeCategory !== undefined && !isNonEmptyString(value.prizeCategory)) || (value.prizeName !== undefined && !isNonEmptyString(value.prizeName)) || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot is malformed.')
-  if (!hasOnlyKeys(value, ['drawSessionId', 'stage', 'stageStartedAt', 'revealStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'prizeCategory', 'prizeName', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'presentationMode', 'revealMode', 'ticketNumbers', 'winnerStatuses', 'verificationState'])) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot contains unsupported fields.')
+  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || value.stage === 'ready' || typeof value.blackoutRequested !== 'boolean' || (value.countdownValue !== undefined && value.countdownValue !== 1 && value.countdownValue !== 2 && value.countdownValue !== 3) || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.prizeCategory !== undefined && !isNonEmptyString(value.prizeCategory)) || (value.prizeName !== undefined && !isNonEmptyString(value.prizeName)) || (value.winnerCount !== undefined && (typeof value.winnerCount !== 'number' || !Number.isInteger(value.winnerCount) || value.winnerCount < 1 || value.winnerCount > 100)) || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot is malformed.')
+  if (!hasOnlyKeys(value, ['drawSessionId', 'stage', 'stageStartedAt', 'revealStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'prizeCategory', 'prizeName', 'winnerCount', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'presentationMode', 'revealMode', 'ticketNumbers', 'winnerStatuses', 'verificationState'])) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot contains unsupported fields.')
   const parsedSession = parseDrawSessionId(value.drawSessionId)
   if (!parsedSession.ok) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot session is malformed.')
   if (expectedSession !== undefined && value.drawSessionId !== expectedSession) sessionMismatch(expectedSession, value.drawSessionId)
@@ -254,6 +258,7 @@ export function parsePublicDisplaySnapshot(value: unknown, expectedSession?: Dra
     ...(value.eventName === undefined ? {} : { eventName: value.eventName }),
     ...(value.prizeCategory === undefined ? {} : { prizeCategory: value.prizeCategory as string }),
     ...(value.prizeName === undefined ? {} : { prizeName: value.prizeName as string }),
+    ...(value.winnerCount === undefined ? {} : { winnerCount: value.winnerCount as number }),
     ...(value.eventSubtitle === undefined ? {} : { eventSubtitle: value.eventSubtitle as string }), ...(value.primaryColor === undefined ? {} : { primaryColor: value.primaryColor as string }), ...(value.accentColor === undefined ? {} : { accentColor: value.accentColor as string }), ...(value.logo === undefined ? {} : { logo: value.logo as PublicAsset }), ...(value.background === undefined ? {} : { background: value.background as PublicAsset }), ...(value.blackoutAppearance === undefined ? {} : { blackoutAppearance: value.blackoutAppearance as 'pure-black' | 'event-surface' }), ...(value.safeAreaMargin === undefined ? {} : { safeAreaMargin: value.safeAreaMargin as number }),
     ...(value.mode === undefined ? {} : { mode: value.mode }),
     ...(typeof value.rollingSlotCount !== 'number' ? {} : { rollingSlotCount: value.rollingSlotCount }),
@@ -280,7 +285,8 @@ export const publicSnapshotToProtocolState = (snapshot: PublicDisplaySnapshot) =
   ...(snapshot.displayTest === undefined ? {} : { displayTest: snapshot.displayTest }),
   ...(snapshot.eventName === undefined ? {} : { eventName: snapshot.eventName }),
   ...(snapshot.prizeCategory === undefined ? {} : { prizeCategory: snapshot.prizeCategory }),
-  ...(snapshot.prizeName === undefined ? {} : { prizeName: snapshot.prizeName }),
+    ...(snapshot.prizeName === undefined ? {} : { prizeName: snapshot.prizeName }),
+    ...(snapshot.winnerCount === undefined ? {} : { winnerCount: snapshot.winnerCount }),
   ...(snapshot.eventSubtitle === undefined ? {} : { eventSubtitle: snapshot.eventSubtitle }), ...(snapshot.primaryColor === undefined ? {} : { primaryColor: snapshot.primaryColor }), ...(snapshot.accentColor === undefined ? {} : { accentColor: snapshot.accentColor }), ...(snapshot.logo === undefined ? {} : { logo: snapshot.logo }), ...(snapshot.background === undefined ? {} : { background: snapshot.background }), ...(snapshot.blackoutAppearance === undefined ? {} : { blackoutAppearance: snapshot.blackoutAppearance }), ...(snapshot.safeAreaMargin === undefined ? {} : { safeAreaMargin: snapshot.safeAreaMargin }),
   ...(snapshot.mode === undefined ? {} : { mode: snapshot.mode }),
   ...(snapshot.rollingSlotCount === undefined ? {} : { rollingSlotCount: snapshot.rollingSlotCount }),

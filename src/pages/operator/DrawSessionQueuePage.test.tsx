@@ -29,7 +29,7 @@ const deck: DrawSessionQueueDeck = {
 function renderDeck() {
   function Harness() {
     const [mode, setMode] = useState<'practice' | 'live'>('practice')
-    return <DrawControlDeck connection={{ acknowledged: true, detail: 'Last public snapshot acknowledged.', label: 'Connected', tone: 'success' }} deck={deck} displayUrl="/display?eventId=event-1" selectedMode={mode} setSelectedMode={setMode} />
+    return <DrawControlDeck connection={{ acknowledged: true, acknowledgedAt: undefined, detail: 'Last public snapshot acknowledged.', label: 'Connected', tone: 'success' }} deck={deck} displayUrl="/display?eventId=event-1" selectedMode={mode} setSelectedMode={setMode} />
   }
 
   return render(<MemoryRouter><Harness /></MemoryRouter>)
@@ -45,7 +45,14 @@ describe('Production Draw control deck', () => {
     expect(modeGroup).toBeInTheDocument()
     expect(practice).toHaveAttribute('aria-pressed', 'true')
     expect(practice).toHaveClass('is-selected')
-    expect(screen.getByText('Rehearsal only. No official result is created.')).toBeInTheDocument()
+    expect(screen.getByText('Rehearsal run — results will not be saved as official.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Live mode is not active' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Ready for rehearsal' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Start Practice' })).toHaveClass('ui-button--lg')
+    expect(screen.getByRole('link', { name: 'Start Practice' })).toHaveClass('ui-button--primary')
+    expect(screen.getByRole('link', { name: 'Open Draw Setup' })).toHaveAttribute('href', '/draw/setup')
+    expect(screen.getByRole('link', { name: 'Open Draw Setup' })).toHaveClass('ui-button--lg')
+    expect(screen.getByRole('link', { name: 'Open Draw Setup' })).toHaveClass('draw-control-deck__live-setup-action')
     expect(screen.getAllByText('Connected')).toHaveLength(1)
     expect(screen.getByText('Last public snapshot acknowledged.')).toBeInTheDocument()
     expect(screen.queryByText('Acknowledged')).not.toBeInTheDocument()
@@ -56,7 +63,8 @@ describe('Production Draw control deck', () => {
 
     expect(live).toHaveAttribute('aria-pressed', 'true')
     expect(live).toHaveClass('is-selected')
-    expect(screen.getByText('Official draw. Confirmation is required before starting.')).toBeInTheDocument()
+    expect(screen.getByText('Official run — eligible to create an official result after confirmation.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Start Live Draw' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Start Live Draw' })).toHaveClass('ui-button--danger')
   })
 })

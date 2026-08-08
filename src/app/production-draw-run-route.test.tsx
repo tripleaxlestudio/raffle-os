@@ -86,6 +86,42 @@ describe('production Draw Run route shell', () => {
     await waitFor(() => expect(mocks.command).not.toHaveBeenCalled())
   })
 
+  it('keeps the primary start action and persisted recap visible without the redundant checklist', async () => {
+    renderRoute(`/draw/run/${mocks.sessionId}`)
+    expect(await screen.findByRole('heading', { name: 'Ready to start' })).toBeInTheDocument()
+    for (const label of ['Event', 'Prize', 'Eligible pool', 'Presentation']) {
+      expect(screen.getAllByText(label, { exact: true }).length).toBeGreaterThanOrEqual(1)
+    }
+    expect(screen.queryByTestId('draw-run-readiness-summary')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Audience Display', { exact: true }).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('Locked draw details')).toBeInTheDocument()
+    expect(screen.getByText('Gold · Prize · 1 winners · Live')).toBeInTheDocument()
+    const details = screen.getByText('Locked draw details').closest('details')
+    expect(details).not.toHaveAttribute('open')
+    fireEvent.click(screen.getByText('View details ▾'))
+    expect(details).toHaveAttribute('open')
+    expect(screen.getByRole('button', { name: 'Hold to start official Live draw' })).toBeInTheDocument()
+    expect(mocks.command).not.toHaveBeenCalled()
+  })
+
+  it('keeps all-ready stage focused on centered execution without a redundant checklist', async () => {
+    renderRoute(`/draw/run/${mocks.sessionId}`)
+    expect(await screen.findByRole('heading', { name: 'Ready to start' })).toBeInTheDocument()
+    expect(screen.queryByText('PRACTICE MODE')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('draw-run-readiness-summary')).not.toBeInTheDocument()
+    expect(screen.queryByText('Practice does not affect official history')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hold to start official Live draw' })).toBeInTheDocument()
+  })
+
+  it('places the Practice safety notice inside the Start Draw stage', async () => {
+    renderRoute(`/draw/run/${mocks.practiceSessionId}`)
+    expect(await screen.findByRole('heading', { name: 'Ready to start' })).toBeInTheDocument()
+    expect(screen.getByText('PRACTICE MODE')).toBeInTheDocument()
+    expect(screen.getByText('Results will not affect official history.')).toBeInTheDocument()
+    expect(screen.queryByTestId('draw-run-readiness-summary')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hold to start Practice draw' })).toBeInTheDocument()
+  })
+
   it('surfaces a start failure instead of silently returning to Ready', async () => {
     mocks.command.mockResolvedValueOnce({ ok: false, error: { kind: 'validation', code: 'event-not-active', message: 'The Event is not active and cannot start a draw.' } })
     renderRoute(`/draw/run/${mocks.sessionId}`)

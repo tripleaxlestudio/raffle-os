@@ -60,6 +60,14 @@ describe('operator presentation publisher', () => {
     expect(harness.messages[0]).toMatchObject({ epoch: 7, sequence: 1, message: { type: 'display-state', stage: 'standby' } })
   })
 
+  it('retains the ready next-draw identity in the published snapshot', () => {
+    const harness = transportHarness()
+    const publisher = createOperatorPublisher({ transport: harness.transport, scope, senderId: 'operator-1', expectedSession: session, clock: { now: () => '2026-08-05T00:00:00.000Z' as never } })
+    const result = publisher.start({ ...source('ready'), eventName: '24th K-Link Indonesia Anniversary', prizeCategory: 'Door Prize', prizeName: 'K-Ion Nano Premium 5', winnerCount: 10 })
+    expect(result).toMatchObject({ snapshot: { stage: 'standby', prizeCategory: 'Door Prize', prizeName: 'K-Ion Nano Premium 5', winnerCount: 10 } })
+    expect(harness.messages[0]?.message).toMatchObject({ prizeCategory: 'Door Prize', prizeName: 'K-Ion Nano Premium 5', winnerCount: 10 })
+  })
+
   it.each([
     ['standby', 'countdown'], ['countdown', 'rolling'], ['rolling', 'reveal'], ['reveal', 'pending-handoff'],
   ] as const)('publishes exactly one message for %s to %s', (from, to) => {

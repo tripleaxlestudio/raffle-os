@@ -24,6 +24,8 @@ export type PublicAudienceScenario = PublicAudienceContext &
   Readonly<{
     readonly state: AudienceViewState
     readonly message?: string
+    readonly nextDrawReady?: boolean
+    readonly winnerCount?: number
     readonly countdownValue?: string
     readonly ticketNumbers?: readonly string[]
     readonly winnerStatuses?: readonly ('pending' | 'confirmed')[]

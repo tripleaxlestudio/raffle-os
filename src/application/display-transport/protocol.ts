@@ -45,6 +45,7 @@ export type PublicMessage =
       readonly eventSubtitle?: string;
       readonly prizeCategory?: string;
       readonly prizeName?: string;
+      readonly winnerCount?: number;
       readonly primaryColor?: string;
       readonly accentColor?: string;
       readonly logo?: PublicAsset;
@@ -193,7 +194,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
   const validStage = isStage(stage) ? stage : undefined;
   if (messageType === 'display-ready' && (!hasOnlyKeys(message, ['type', 'capability']) || validCapability === undefined)) return invalid('message', 'Display-ready message contains unsupported or invalid fields.');
   if (messageType === 'display-state' && validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
-  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'revealStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'prizeCategory', 'prizeName', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'presentationMode', 'revealMode', 'ticketNumbers', 'winnerStatuses', 'verificationState', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
+  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'revealStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'prizeCategory', 'prizeName', 'winnerCount', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'presentationMode', 'revealMode', 'ticketNumbers', 'winnerStatuses', 'verificationState', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
   if (messageType === 'display-restore-request' && !hasOnlyKeys(message, ['type', 'requestedEpoch', 'requestedSequence'])) return invalid('message', 'Restore request contains unsupported fields.');
   if (messageType === 'display-snapshot-applied' && !hasOnlyKeys(message, ['type', 'appliedEpoch', 'appliedSequence', 'publicState'])) return invalid('message', 'Snapshot acknowledgement contains unsupported fields.');
   if (messageType === 'display-heartbeat' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Heartbeat contains unsupported fields.');
@@ -221,6 +222,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
     if (message.eventSubtitle !== undefined && typeof message.eventSubtitle !== 'string') return invalid('message.eventSubtitle', 'Public subtitle is invalid.');
     if (message.prizeCategory !== undefined && !isNonEmptyString(message.prizeCategory)) return invalid('message.prizeCategory', 'Prize category is invalid.');
     if (message.prizeName !== undefined && !isNonEmptyString(message.prizeName)) return invalid('message.prizeName', 'Prize name is invalid.');
+    if (message.winnerCount !== undefined && (typeof message.winnerCount !== 'number' || !Number.isInteger(message.winnerCount) || message.winnerCount < 1 || message.winnerCount > 100)) return invalid('message.winnerCount', 'Winner count is invalid.');
     if (message.primaryColor !== undefined && !isNonEmptyString(message.primaryColor)) return invalid('message.primaryColor', 'Primary color is invalid.');
     if (message.accentColor !== undefined && !isNonEmptyString(message.accentColor)) return invalid('message.accentColor', 'Accent color is invalid.');
     if (message.blackoutAppearance !== undefined && message.blackoutAppearance !== 'pure-black' && message.blackoutAppearance !== 'event-surface') return invalid('message.blackoutAppearance', 'Blackout appearance is invalid.');
@@ -252,6 +254,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
       ...(message.eventSubtitle === undefined ? {} : { eventSubtitle: message.eventSubtitle }),
       ...(message.prizeCategory === undefined ? {} : { prizeCategory: message.prizeCategory }),
       ...(message.prizeName === undefined ? {} : { prizeName: message.prizeName }),
+      ...(message.winnerCount === undefined ? {} : { winnerCount: message.winnerCount }),
       ...(message.primaryColor === undefined ? {} : { primaryColor: message.primaryColor }),
       ...(message.accentColor === undefined ? {} : { accentColor: message.accentColor }),
       ...(message.logo === undefined ? {} : { logo: message.logo as PublicAsset }),

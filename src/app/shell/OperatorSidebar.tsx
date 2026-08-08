@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router'
 import { useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
+import { PRODUCTION_SETUP_JOURNEY } from '../../shared/components/production-setup-journey.ts'
 
 const prototypeNavigationItems = [
   { label: 'Dashboard', marker: 'DB', to: '/dashboard' },
@@ -13,12 +14,13 @@ const prototypeNavigationItems = [
 
 const productionNavigationItems = [
   { label: 'Dashboard', marker: 'DB', to: '/dashboard' },
+  { label: PRODUCTION_SETUP_JOURNEY[1].label, marker: 'PR', to: PRODUCTION_SETUP_JOURNEY[1].to },
   { label: 'Participants', marker: 'PT', to: '/participants' },
+  { label: PRODUCTION_SETUP_JOURNEY[3].label, marker: 'DV', to: PRODUCTION_SETUP_JOURNEY[3].to },
   { label: 'Draw Setup', marker: 'DS', to: '/draw/setup' },
   { label: 'Live Draw', marker: 'LD', to: '/draw/live' },
   { label: 'Pending Results', marker: 'PR', to: '/draw/pending' },
   { label: 'History', marker: 'HI', to: '/history' },
-  { label: 'Settings', marker: 'ST', to: '/settings' },
 ] as const
 
 export function OperatorSidebar({ eventScopedNavigationDisabled, production = false }: { readonly eventScopedNavigationDisabled?: boolean; readonly production?: boolean }) {

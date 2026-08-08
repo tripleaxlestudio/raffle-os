@@ -18,8 +18,8 @@ function LocationText() {
   return <>{useLocation().pathname}</>
 }
 
-function renderSidebar() {
-  return render(<MemoryRouter initialEntries={['/dashboard']}><OperatorSidebar production /><LocationProbe /></MemoryRouter>)
+function renderSidebar(path = '/dashboard') {
+  return render(<MemoryRouter initialEntries={[path]}><OperatorSidebar production /><LocationProbe /></MemoryRouter>)
 }
 
 beforeEach(() => { workspace.status = 'empty' })
@@ -30,7 +30,7 @@ describe('production sidebar Event gating', () => {
     renderSidebar()
 
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/dashboard')
-    for (const label of ['Participants', 'Draw Setup', 'Live Draw', 'Pending Results', 'History', 'Settings']) {
+    for (const label of ['Prize', 'Participants', 'Display Settings', 'Draw Setup', 'Live Draw', 'Pending Results', 'History']) {
       const item = screen.getByText(label).closest('[aria-disabled]') as HTMLElement
       expect(item).toHaveAttribute('aria-disabled', 'true')
       expect(item).not.toHaveAttribute('tabindex')
@@ -44,7 +44,7 @@ describe('production sidebar Event gating', () => {
     workspace.status = 'invalid-reference'
     renderSidebar()
 
-    expect(screen.getAllByRole('generic').filter((element) => element.getAttribute('aria-disabled') === 'true')).toHaveLength(6)
+    expect(screen.getAllByRole('generic').filter((element) => element.getAttribute('aria-disabled') === 'true')).toHaveLength(7)
   })
 
   it('restores all navigation when the workspace becomes ready without remounting', () => {
@@ -52,7 +52,7 @@ describe('production sidebar Event gating', () => {
     workspace.status = 'ready'
     view.rerender(<MemoryRouter initialEntries={['/dashboard']}><OperatorSidebar production /><LocationProbe /></MemoryRouter>)
 
-    for (const label of ['Dashboard', 'Participants', 'Draw Setup', 'Live Draw', 'Pending Results', 'History', 'Settings']) {
+    for (const label of ['Dashboard', 'Prize', 'Participants', 'Display Settings', 'Draw Setup', 'Live Draw', 'Pending Results', 'History']) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
     expect(screen.queryAllByText('Select an Event first')).toHaveLength(0)
@@ -62,7 +62,15 @@ describe('production sidebar Event gating', () => {
     workspace.status = 'loading'
     renderSidebar()
 
-    expect(screen.getAllByRole('link')).toHaveLength(7)
+    expect(screen.getAllByRole('link')).toHaveLength(8)
     expect(screen.queryAllByText('Select an Event first')).toHaveLength(0)
+  })
+
+  it('marks Prize active on the existing Prize Categories route', () => {
+    workspace.status = 'ready'
+    renderSidebar('/prize-categories')
+
+    expect(screen.getByRole('link', { name: 'Prize' })).toHaveClass('operator-nav__link--active')
+    expect(screen.getByRole('link', { name: 'Prize' })).toHaveAttribute('href', '/prize-categories')
   })
 })

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router'
 import { useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 import { Button, ButtonLink } from '../ui/index.ts'
+import { PRODUCTION_SETUP_JOURNEY } from './production-setup-journey.ts'
 
 export function ProductionSetupContinuation() {
   const workspace = useProductionWorkspace()
@@ -10,20 +11,16 @@ export function ProductionSetupContinuation() {
 
   return <section className="production-setup-continuation" aria-labelledby="setup-journey-title">
     <div className="production-setup-continuation__progress">
-      <p className="production-setup-continuation__eyebrow">Setup journey · Step 1 of 4</p>
+      <p className="production-setup-continuation__eyebrow">Setup journey · Step 1 of {PRODUCTION_SETUP_JOURNEY.length}</p>
       <h2 id="setup-journey-title">Event setup</h2>
-      <p className="production-setup-continuation__copy">{supportingCopy}</p>
-      {workspace.status === 'ready' ? <strong className="production-setup-continuation__event">{workspace.event.name}</strong> : null}
+      <p className="production-setup-continuation__copy">{supportingCopy}{workspace.status === 'ready' ? ` · ${workspace.event.name}` : ''}</p>
       <ol className="production-setup-continuation__steps" aria-label="Production setup steps">
-        <li aria-current="step">Event</li><li>Prize Categories</li><li>Participants</li><li>Draw Setup</li>
+        {PRODUCTION_SETUP_JOURNEY.map((step, index) => <li aria-current={index === 0 ? 'step' : undefined} key={step.to}>{step.label}</li>)}
       </ol>
     </div>
     <div className="production-setup-continuation__actions">
       <ButtonLink to="/dashboard" variant="secondary" size="sm">Back to Dashboard</ButtonLink>
-      <div className="production-setup-continuation__next">
-        <span className="production-setup-continuation__next-copy">{hasCurrentEvent ? 'Continue with the selected Event.' : 'Select an Event as Current to continue.'}</span>
-        <Button type="button" disabled={!hasCurrentEvent} onClick={() => navigate('/prize-categories')}>Next: Prize Categories <span aria-hidden="true">→</span></Button>
-      </div>
+      <Button type="button" disabled={!hasCurrentEvent} onClick={() => navigate('/prize-categories')}>Next: Prize <span aria-hidden="true">→</span></Button>
     </div>
   </section>
 }

@@ -48,7 +48,7 @@ export function PrizeCategoriesPage() {
 
   const isReadOnly = selectedEvent.status === 'archived'
   const isFormValid = form.name.trim().length > 0 && form.prizeName.trim().length > 0 && /^(0|[1-9]\d*)$/.test(form.displayOrder)
-  return <section className="prize-categories-page" aria-labelledby="categories-title"><div className="page-header"><div className="page-header__copy"><p className="page-header__eyebrow">Production setup</p><h1 id="categories-title">Prize Categories</h1><p className="page-header__description">Manage prize categories for {selectedEvent.name}.</p><p className="prize-categories-page__info">Prize changes apply to future draws. Existing draw records remain unchanged.</p></div><div className="page-header__actions"><ButtonLink to="/draw/setup" variant="secondary" size="sm">Back to Draw Setup</ButtonLink></div></div>
+  return <section className="prize-categories-page" aria-labelledby="categories-title"><div className="page-header"><div className="page-header__copy"><p className="page-header__eyebrow">Production setup</p><h1 id="categories-title">Prize Categories</h1><p className="page-header__description">Manage prize categories for {selectedEvent.name}.</p><p className="prize-categories-page__info">Prize changes apply to future draws. Existing draw records remain unchanged.</p></div></div>
     {saved ? <StatusBanner badge="Saved" title="Prize category saved" tone="success">The category was read back from IndexedDB and is available in Draw Setup.</StatusBanner> : null}
     {error ? <StatusBanner badge="Storage or validation error" title="Prize category action could not be completed" tone="warning">{error}</StatusBanner> : null}
     <div className="prize-categories-page__layout">

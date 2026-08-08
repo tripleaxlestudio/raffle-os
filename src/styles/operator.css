@@ -1594,6 +1594,9 @@
 .production-setup-continuation__steps { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; color: var(--text-secondary); font-size: var(--font-size-xs); line-height: 1.35; list-style: none; }
 .production-setup-continuation__steps li:not(:last-child)::after { content: '›'; margin-left: var(--space-2); color: var(--border-strong); }
 .production-setup-continuation__steps [aria-current='step'] { color: var(--accent-hover); font-weight: var(--font-weight-semibold); }
+.production-setup-continuation__steps .is-complete { color: var(--text-primary); }
+.production-setup-continuation__steps .is-current { color: var(--accent-hover); font-weight: var(--font-weight-semibold); }
+.production-setup-continuation__steps .is-locked { color: var(--text-tertiary); }
 .production-setup-continuation__actions { flex-shrink: 0; justify-content: flex-end; }
 
 @media (max-width: 60rem) {

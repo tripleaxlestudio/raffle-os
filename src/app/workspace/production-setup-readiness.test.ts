@@ -17,4 +17,10 @@ describe('production setup readiness', () => {
     const session = { configurationId: 'configuration', status: 'ready' } as never
     expect(deriveProductionSetupReadiness({ hasCurrentEvent: true, categories: [category], participants: [participant], displayConfiguration: { eventId: 'event' } as never, configurations: [configuration], sessions: [session] })).toEqual({ event: true, prize: true, participants: true, displaySettings: true, drawSetup: true })
   })
+
+  it('does not unlock Participants when the persisted Current Event has zero categories', () => {
+    const readiness = deriveProductionSetupReadiness({ hasCurrentEvent: true, categories: [], participants: [], displayConfiguration: null, configurations: [], sessions: [] })
+    expect(readiness).toEqual({ event: true, prize: false, participants: false, displaySettings: false, drawSetup: false })
+    expect([0, 1, 2, 3, 4].map((index) => productionSetupStageUnlocked(readiness, index))).toEqual([true, true, false, false, false])
+  })
 })

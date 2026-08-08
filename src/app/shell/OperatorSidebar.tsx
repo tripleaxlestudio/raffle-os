@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router'
 import { useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
 import { PRODUCTION_SETUP_JOURNEY } from '../../shared/components/production-setup-journey.ts'
-import { productionSetupStageUnlocked, type ProductionSetupReadiness } from '../workspace/production-setup-readiness.ts'
+import { productionSetupStageIndexForRoute, productionSetupStageUnlocked, type ProductionSetupReadiness } from '../workspace/production-setup-readiness.ts'
 
 const prototypeNavigationItems = [
   { label: 'Dashboard', marker: 'DB', to: '/dashboard' },
@@ -63,7 +63,7 @@ function OperatorSidebarContent({
         <ul className="operator-nav">
           {navigationItems.map((item) => (
             <li key={item.to}>
-              {item.to !== '/dashboard' && ((readiness !== null && !productionSetupStageUnlocked(readiness, navigationItems.indexOf(item) - 1)) || (readiness === null && disabled)) ? <span aria-disabled="true" className="operator-nav__link operator-nav__link--disabled" title="Complete the previous setup step first">
+              {item.to !== '/dashboard' && ((readiness !== null && !isProductionNavigationUnlocked(item.to, readiness)) || (readiness === null && disabled)) ? <span aria-disabled="true" className="operator-nav__link operator-nav__link--disabled" title="Complete the previous setup step first">
                 <span aria-hidden="true" className="operator-nav__marker">{item.marker}</span>
                 <span>{item.label}</span>
               </span> : <NavLink
@@ -86,4 +86,10 @@ function OperatorSidebarContent({
       </div>
     </aside>
   )
+}
+
+function isProductionNavigationUnlocked(pathname: string, readiness: ProductionSetupReadiness): boolean {
+  const stageIndex = productionSetupStageIndexForRoute(pathname)
+  if (stageIndex !== undefined) return productionSetupStageUnlocked(readiness, stageIndex)
+  return readiness.drawSetup
 }

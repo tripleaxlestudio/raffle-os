@@ -5,6 +5,8 @@ import { ProductionWorkspaceProvider, useProductionAudiencePublisher, useProduct
 import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
 import { RuntimeDiagnosticsPanel } from '../../application/display-transport/RuntimeDiagnostics.tsx'
 import { appendRuntimeTrace } from '../../application/display-transport/runtime-trace.ts'
+import { productionSetupStageIndexForRoute } from '../workspace/production-setup-readiness.ts'
+import { ProductionSetupContinuation } from '../../shared/components/ProductionSetupContinuation.tsx'
 
 function ProductionOperatorHeader() {
   const workspace = useProductionWorkspace()
@@ -134,6 +136,7 @@ function statusLabel(status: ReturnType<typeof getDisplayConnectionStatus>): str
 }
 
 export function ProductionOperatorLayout() {
+  const location = useLocation()
   useEffect(() => {
     appendRuntimeTrace({ side: 'Operator', publisherControllerInstanceId: 'operator-shell' }, { messageType: 'operator-shell-mount', direction: 'local' })
     return () => { appendRuntimeTrace({ side: 'Operator', publisherControllerInstanceId: 'operator-shell' }, { messageType: 'operator-shell-unmount', direction: 'local', cleanupDisposeReason: 'operator-shell-unmounted' }) }
@@ -143,7 +146,7 @@ export function ProductionOperatorLayout() {
       <OperatorSidebar production />
       <div className="operator-workspace">
         <ProductionOperatorHeader />
-        <main className="operator-main"><Outlet /><ProductionAudienceDiagnostics /></main>
+        <main className="operator-main"><Outlet />{productionSetupStageIndexForRoute(location.pathname) !== undefined ? <ProductionSetupContinuation /> : null}<ProductionAudienceDiagnostics /></main>
       </div>
     </div>
   </ProductionWorkspaceProvider>

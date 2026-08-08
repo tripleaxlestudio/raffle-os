@@ -5,6 +5,7 @@ import type { Participant } from '../../domain/participants/participant.types.ts
 import type { PrizeCategory } from '../../domain/prizes/prize.types.ts'
 
 export const PRODUCTION_SETUP_STAGE_COUNT = 5
+export const PRODUCTION_SETUP_STAGE_ROUTES = ['/events', '/prize-categories', '/participants', '/settings', '/draw/setup'] as const
 export interface ProductionSetupReadiness { readonly event: boolean; readonly prize: boolean; readonly participants: boolean; readonly displaySettings: boolean; readonly drawSetup: boolean }
 export interface ProductionSetupReadinessInput { readonly hasCurrentEvent: boolean; readonly categories: readonly PrizeCategory[]; readonly participants: readonly Participant[]; readonly displayConfiguration: DisplayConfiguration | null; readonly configurations: readonly DrawConfiguration[]; readonly sessions: readonly DrawSession[] }
 
@@ -18,9 +19,14 @@ export function deriveProductionSetupReadiness(input: ProductionSetupReadinessIn
 }
 export function productionSetupStageComplete(readiness: ProductionSetupReadiness, index: number): boolean { return [readiness.event, readiness.prize, readiness.participants, readiness.displaySettings, readiness.drawSetup][index] ?? false }
 export function productionSetupStageUnlocked(readiness: ProductionSetupReadiness, index: number): boolean {
-  if (index === 0) return readiness.event
+  if (index === 0) return true
   if (index < 0) return true
   return productionSetupStageComplete(readiness, index - 1) && productionSetupStageUnlocked(readiness, index - 1)
+}
+
+export function productionSetupStageIndexForRoute(pathname: string): number | undefined {
+  const index = PRODUCTION_SETUP_STAGE_ROUTES.indexOf(pathname as typeof PRODUCTION_SETUP_STAGE_ROUTES[number])
+  return index === -1 ? undefined : index
 }
 export function getProductionSetupProgress(readiness: ProductionSetupReadiness): { readonly completedIndex: number; readonly nextIndex: number } {
   let completedIndex = -1

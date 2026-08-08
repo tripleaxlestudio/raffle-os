@@ -12,7 +12,7 @@ function makeServices(): EventSetupServices & { eventsCreated: Event[]; categori
     eventsCreated,
     categoriesCreated,
     get selected() { return selected },
-    events: { findById: async (id) => eventsCreated.find((event) => event.id === id) ?? null, create: async (event) => { eventsCreated.push(event) }, updateDraft: async (event) => { eventsCreated.splice(0, 1, event) } },
+    events: { findById: async (id) => eventsCreated.find((event) => event.id === id) ?? null, create: async (event) => { eventsCreated.push(event) }, updateDraft: async (event) => { eventsCreated.splice(0, 1, event) }, transitionStatus: async (id, from, to, at) => { const index = eventsCreated.findIndex((event) => event.id === id); const current = eventsCreated[index]; if (current === undefined || current.status !== from) throw new Error('stale Event'); eventsCreated[index] = { ...current, status: to, updatedAt: at } } },
     categories: { create: async (category) => { categoriesCreated.push(category) }, updateDraft: async (category) => { categoriesCreated.splice(0, 1, category) } },
     preferences: { set: async (key, value, at) => { void at; if (key === 'activeEventId') { if (value === null) selected = null; else { const parsed = parseEventId(value); if (parsed.ok) selected = parsed.value } } } },
   }
@@ -34,6 +34,28 @@ describe('event setup service', () => {
     const event = await createEventSetupService(services).createEvent({ name: 'Event' })
     await createEventSetupService(services).selectEvent(event.id)
     expect(services.selected).toBe(event.id)
+  })
+
+  it('activates a draft Event through the supported draft-to-ready transition', async () => {
+    const services = makeServices()
+    const event = await createEventSetupService(services).createEvent({ name: 'Event' })
+
+    const activated = await createEventSetupService(services).activateEvent(event.id)
+
+    expect(activated.status).toBe('ready')
+    expect(services.eventsCreated[0].status).toBe('ready')
+    expect(activated.id).toBe(event.id)
+  })
+
+  it('activates only the requested Event', async () => {
+    const services = makeServices()
+    const first = await createEventSetupService(services).createEvent({ name: 'First Event' })
+    const second = await createEventSetupService(services).createEvent({ name: 'Second Event' })
+
+    await createEventSetupService(services).activateEvent(first.id)
+
+    expect(services.eventsCreated.find((candidate) => candidate.id === first.id)?.status).toBe('ready')
+    expect(services.eventsCreated.find((candidate) => candidate.id === second.id)?.status).toBe('draft')
   })
 
   it('creates a PrizeCategory with exact Event ownership', async () => {

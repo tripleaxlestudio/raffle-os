@@ -12,7 +12,7 @@ export interface ParticipantImportProductionServices {
   readonly database: { openSupported(): Promise<unknown> }
   readonly events: Pick<EventRepository, 'findById'>
   readonly participants: Pick<ParticipantRepository, 'findByEventId' | 'countByEventId'>
-  readonly getPersistedParticipantsForEvent: (eventId: Parameters<ParticipantRepository['findByEventId']>[0], limit: number) => Promise<PersistedParticipantPreview>
+  readonly getPersistedParticipantsForEvent: (eventId: Parameters<ParticipantRepository['findByEventId']>[0]) => Promise<PersistedParticipantPreview>
   readonly preferences: Pick<PreferenceRepository, 'get'>
   readonly sessions?: Pick<DrawSessionRepository, 'findByEventId'>
   readonly unitOfWork: ParticipantImportUnitOfWork

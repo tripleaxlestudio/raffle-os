@@ -20,7 +20,7 @@ const timestamp = (): IsoTimestamp => {
 }
 
 export function createDisplayConfigurationService(dependencies: {
-  readonly events: EventRepository
+  readonly events: Pick<EventRepository, 'findById'>
   readonly configurations: DisplayConfigurationRepository
 }): DisplayConfigurationService {
   return {

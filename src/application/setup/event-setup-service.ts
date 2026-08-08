@@ -7,7 +7,7 @@ import { createEventId, createPrizeCategoryId, type EventId, type PrizeCategoryI
 import { isoTimestampFromDate, parseIsoTimestamp, type IsoTimestamp } from '../../domain/shared/timestamps.ts'
 
 export interface EventSetupServices {
-  readonly events: Pick<EventRepository, 'findById' | 'create' | 'updateDraft'>
+  readonly events: Pick<EventRepository, 'findById' | 'create' | 'updateDraft' | 'transitionStatus'>
   readonly categories: Pick<PrizeCategoryRepository, 'create' | 'updateDraft'>
   readonly preferences: Pick<PreferenceRepository, 'set'>
 }
@@ -46,6 +46,15 @@ export function createEventSetupService(services: EventSetupServices) {
       const updated: Event = { ...event, name: draft.name.trim(), description: optionalText(draft.description), scheduledAt: optionalTimestamp(draft.scheduledAt), updatedAt: timestamp() }
       await services.events.updateDraft(updated)
       return updated
+    },
+    async activateEvent(eventId: EventId): Promise<Event> {
+      const event = await services.events.findById(eventId)
+      if (event === null) throw new Error('The Event to activate no longer exists.')
+      const at = timestamp()
+      await services.events.transitionStatus(event.id, event.status, 'ready', at)
+      const activated = await services.events.findById(event.id)
+      if (activated === null) throw new Error('The activated Event could not be read back.')
+      return activated
     },
     async selectEvent(eventId: EventId): Promise<void> {
       const event = await services.events.findById(eventId)

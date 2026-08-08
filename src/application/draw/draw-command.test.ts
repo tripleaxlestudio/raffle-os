@@ -19,6 +19,7 @@ import type { RandomSource } from './random-source.ts'
 import { executeDraw } from './draw-command.ts'
 import type { DrawCommandDependencies } from './draw-command.types.ts'
 import { RaffleOSDatabase } from '../../infrastructure/persistence/db.ts'
+import { DexieDrawAuthoringUnitOfWork } from '../../infrastructure/persistence/transactions/dexie-draw-authoring-unit-of-work.ts'
 
 afterEach(cleanupTestDatabases)
 
@@ -53,6 +54,29 @@ function input(fixture: ReturnType<typeof makeDrawHistoryFixture>, mode: 'live' 
 }
 
 describe('executeDraw', () => {
+  it.each([1, 3, 6, 10])('runs a fresh 100-participant Practice Event with %s winner(s)', async (requestedWinners) => {
+    const database = await openTestDatabase(`command-fresh-practice-${requestedWinners}`)
+    const base = makeDrawHistoryFixture(Array.from({ length: 100 }, (_, index) => String(index + 1).padStart(5, '0')))
+    const fixture = {
+      ...base,
+      event: { ...base.event, status: 'draft' as const },
+      configuration: { ...base.configuration, requestedWinners },
+      session: { ...base.session, mode: 'practice' as const },
+    }
+    await seedReadyFixture(database, fixture)
+    await new DexieDrawAuthoringUnitOfWork(database).persistReadyAuthoring({ configuration: fixture.configuration, session: fixture.session, existingConfigurationId: fixture.configuration.id, existingSessionId: fixture.session.id })
+
+    const result = await executeDraw(input(fixture, 'practice'), dependencies(database))
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.pendingWinners).toHaveLength(requestedWinners)
+    expect(result.value.candidatePoolSnapshot.eligibleSnapshotCount).toBe(100)
+    expect(result.value.pendingWinners.every((winner) => winner.ticketNumber.length === 5)).toBe(true)
+    expect((await database.events.get(fixture.event.id))?.status).toBe('ready')
+    expect((await database.draw_sessions.get(fixture.session.id))?.status).toBe('ready')
+  })
+
   it('captures per-draw presentation configuration without changing selection semantics', async () => {
     const database = await openTestDatabase('command-presentation-snapshot')
     const base = makeDrawHistoryFixture(['00042', '42'])

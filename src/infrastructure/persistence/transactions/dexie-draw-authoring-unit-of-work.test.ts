@@ -28,6 +28,7 @@ describe('DexieDrawAuthoringUnitOfWork', () => {
   it('creates configuration and ready session atomically and does not create official records', async () => {
     const { database, configuration, session } = await setup()
     await new DexieDrawAuthoringUnitOfWork(database).persistReadyAuthoring({ configuration, session })
+    expect((await database.events.get(configuration.eventId))?.status).toBe('ready')
     expect(await database.draw_configurations.get(configuration.id)).toEqual(configuration)
     expect(await database.draw_sessions.get(session.id)).toEqual(session)
     expect(await database.winner_records.count()).toBe(0)

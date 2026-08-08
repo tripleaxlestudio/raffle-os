@@ -15,7 +15,7 @@ export function createParticipantImportProductionServices() {
     database,
     events: new DexieEventRepository(database),
     participants,
-    getPersistedParticipantsForEvent: (eventId: Parameters<DexieParticipantRepository['findByEventId']>[0], limit: number) => getPersistedParticipantsForEvent(participants, eventId, limit),
+    getPersistedParticipantsForEvent: (eventId: Parameters<DexieParticipantRepository['findByEventId']>[0]) => getPersistedParticipantsForEvent(participants, eventId),
     preferences: new DexiePreferenceRepository(database),
     sessions,
     unitOfWork: new DexieParticipantImportUnitOfWork(database),

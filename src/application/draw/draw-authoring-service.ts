@@ -99,7 +99,8 @@ export function createDrawAuthoringService(repositories: DrawAuthoringRepositori
         if (eligibility.ok && eligibility.value.eligibleCount < requestedWinners) return invalid('insufficient-eligible-capacity', `Only ${eligibility.value.eligibleCount} eligible participants are available for ${requestedWinners} winners.`)
         if (repositories.authoring === undefined) return { ok: false, error: new DrawAuthoringError('persistence-unavailable', 'Draw authoring persistence is unavailable.', { retryable: true }) }
         await repositories.authoring.persistReadyAuthoring({ configuration: updatedConfiguration, session: updatedSession, existingConfigurationId: loaded.configuration?.id, existingSessionId: reuseSession ? loaded.session?.id : undefined })
-        return { ok: true, record: { event: loaded.event, category, configuration: updatedConfiguration, session: updatedSession, eligibleCount: eligibility.ok ? eligibility.value.eligibleCount : 0 } }
+        const readyEvent = loaded.event.status === 'draft' ? { ...loaded.event, status: 'ready' as const, updatedAt: timestamp } : loaded.event
+        return { ok: true, record: { event: readyEvent, category, configuration: updatedConfiguration, session: updatedSession, eligibleCount: eligibility.ok ? eligibility.value.eligibleCount : 0 } }
       } catch (cause: unknown) {
         if (cause instanceof DrawAuthoringError) return { ok: false, error: cause }
         const code = typeof cause === 'object' && cause !== null && 'code' in cause && cause.code === 'duplicate-record' ? 'duplicate-save' : 'write-failure'

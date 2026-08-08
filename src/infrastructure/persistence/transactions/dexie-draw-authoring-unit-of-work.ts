@@ -4,6 +4,7 @@ import { validateDrawSession } from '../../../domain/draws/draw.invariants.ts'
 import { RelationshipMismatchError, ImmutableRecordError, RecordNotFoundError, ValidationError } from '../errors/persistence-errors.ts'
 import { normalizeRepositoryError, requireValid } from '../repositories/repository-helpers.ts'
 import type { RaffleOSDatabase } from '../db.ts'
+import { transitionEventStatus } from '../../../domain/events/event.invariants.ts'
 
 const NON_EDITABLE = new Set(['drawing', 'pending-confirmation', 'completed', 'cancelled'])
 
@@ -35,6 +36,14 @@ export class DexieDrawAuthoringUnitOfWork implements DrawAuthoringUnitOfWork {
           if (currentSession.eventId !== event.id || currentSession.configurationId !== input.configuration.id) throw new RelationshipMismatchError('The DrawSession relationship does not match the selected Event and configuration.')
           if (NON_EDITABLE.has(currentSession.status)) throw new ImmutableRecordError('A started DrawSession cannot be edited or reset to ready.')
         }
+        const readyEvent = event.status === 'draft'
+          ? (() => {
+              const transition = transitionEventStatus(event, 'ready', input.configuration.updatedAt)
+              if (!transition.ok) throw new ValidationError(transition.error.message, { cause: transition.error })
+              return transition.value
+            })()
+          : event
+        await this.database.events.put(readyEvent)
         await this.database.draw_configurations.put(input.configuration)
         await this.database.draw_sessions.put(input.session)
       })

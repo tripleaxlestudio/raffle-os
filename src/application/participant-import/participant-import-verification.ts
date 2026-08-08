@@ -5,23 +5,17 @@ import type { EventId } from '../../domain/shared/identifiers.ts'
 export interface PersistedParticipantPreview {
   readonly totalCount: number
   readonly records: readonly Participant[]
-  readonly truncated: boolean
 }
 
 export async function getPersistedParticipantsForEvent(
   participants: Pick<ParticipantRepository, 'findByEventId' | 'countByEventId'>,
   eventId: EventId,
-  limit: number,
 ): Promise<PersistedParticipantPreview> {
-  const [records, totalCount] = await Promise.all([
-    participants.findByEventId(eventId, { limit, offset: 0 }),
-    participants.countByEventId(eventId),
-  ])
-  const boundedRecords = records.slice(0, limit)
+  const totalCount = await participants.countByEventId(eventId)
+  const records = await participants.findByEventId(eventId, { limit: totalCount, offset: 0 })
 
   return {
     totalCount,
-    records: boundedRecords,
-    truncated: totalCount > boundedRecords.length,
+    records,
   }
 }

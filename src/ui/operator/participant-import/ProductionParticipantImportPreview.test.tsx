@@ -272,6 +272,15 @@ describe('production participant import preview audit', () => {
     expect(await screen.findByText(/Inserted: 1 · Removed\/replaced: 2 · Unchanged: 0/)).toBeVisible()
 
     expect(replace.getPersistedParticipantsForEvent).toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Review and confirm import' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Import Another File' })).toBeVisible()
+    const completedProgress = screen.getByRole('navigation', { name: 'Participant Import progress' })
+    expect(within(completedProgress).getAllByText('Complete')).toHaveLength(4)
+    expect(screen.queryByLabelText('Validation workspace')).not.toBeInTheDocument()
+    const completedLayout = screen.getByLabelText('Participant import completed')
+    expect(completedLayout).toHaveClass('production-import-preview__success-layout')
+    expect(within(completedLayout).getByRole('region', { name: 'Persisted Participants' })).toBeVisible()
+    expect(completedLayout.querySelectorAll('.production-import-preview__success-metrics > div')).toHaveLength(3)
     replaceView.unmount()
     const merge = makeServices(); renderProduction(merge); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Merge'); await user.click(screen.getByRole('button', { name: 'Confirm atomic Merge' }))
     expect(await screen.findByText(/Inserted: 1 · Removed\/replaced: 0 · Unchanged: 2/)).toBeVisible()
@@ -313,7 +322,7 @@ describe('production participant import preview audit', () => {
   })
 
   it('clears success when a new file or mapping is selected', async () => {
-    const user = userEvent.setup(); const services = makeServices(); renderProduction(services); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Merge'); await user.click(screen.getByRole('button', { name: 'Confirm atomic Merge' })); await screen.findByRole('heading', { name: 'Participant import complete' })
+    const user = userEvent.setup(); const services = makeServices(); renderProduction(services); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Merge'); await user.click(screen.getByRole('button', { name: 'Confirm atomic Merge' })); await screen.findByRole('heading', { name: 'Participant import complete' }); await user.click(screen.getByRole('button', { name: 'Import Another File' }))
     await user.upload(screen.getByLabelText('Participant file'), new File(['Ticket Number,Name\n00099,Bob'], 'new.csv', { type: 'text/csv' }))
     expect(screen.queryByRole('heading', { name: 'Participant import complete' })).not.toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('combobox', { name: /Participant Name/ })).toBeInTheDocument())

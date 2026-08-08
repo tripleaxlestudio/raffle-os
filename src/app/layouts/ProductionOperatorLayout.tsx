@@ -1,19 +1,38 @@
 import { Link, Outlet, useLocation } from 'react-router'
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { getDisplayConnectionStatus, subscribeDisplayConnectionStatus, type DisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
-import { ProductionWorkspaceProvider, useProductionAudiencePublisher, useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
+import { ProductionWorkspaceProvider, signalProductionWorkspaceChanged, useProductionAudiencePublisher, useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
 import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
 import { RuntimeDiagnosticsPanel } from '../../application/display-transport/RuntimeDiagnostics.tsx'
 import { appendRuntimeTrace } from '../../application/display-transport/runtime-trace.ts'
 import { productionSetupStageIndexForRoute } from '../workspace/production-setup-readiness.ts'
 import { ProductionSetupContinuation } from '../../shared/components/ProductionSetupContinuation.tsx'
+import { createEventSetupProductionServices } from '../../infrastructure/composition/event-setup-production.ts'
+import type { Event as RaffleEvent } from '../../domain/events/event.types.ts'
 
 function ProductionOperatorHeader() {
   const workspace = useProductionWorkspace()
+  const eventServices = useMemo(() => createEventSetupProductionServices(), [])
   const [eventMenuOpen, setEventMenuOpen] = useState(false)
+  const [availableEvents, setAvailableEvents] = useState<readonly RaffleEvent[]>([])
+  const [eventsLoading, setEventsLoading] = useState(false)
+  const [eventSwitching, setEventSwitching] = useState(false)
+  const [eventMenuError, setEventMenuError] = useState<string | null>(null)
   const eventButtonRef = useRef<HTMLButtonElement>(null)
   const eventPopoverRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const loadAvailableEvents = useCallback(async () => {
+    setEventsLoading(true)
+    try {
+      await eventServices.open()
+      setAvailableEvents((await eventServices.events.findAll()).filter((event) => event.status !== 'archived'))
+      setEventMenuError(null)
+    } catch (cause: unknown) {
+      setEventMenuError(cause instanceof Error ? cause.message : 'Events could not be read safely.')
+    } finally {
+      setEventsLoading(false)
+    }
+  }, [eventServices])
   const eventLabel = workspace.status === 'loading'
     ? 'Reading active Event'
     : workspace.status === 'ready'
@@ -33,6 +52,24 @@ function ProductionOperatorHeader() {
     ? `/display?eventId=${encodeURIComponent(workspace.event.id)}&displayConfigurationId=${encodeURIComponent(workspace.displayConfiguration.id)}`
     : null
   const audienceDetail = audienceUrl === null ? 'Open Settings to configure the production display.' : 'Production display scope is ready; waiting for operator publication.'
+  const selectEvent = async (event: RaffleEvent) => {
+    if (eventSwitching) return
+    setEventMenuError(null)
+    if (workspace.status === 'ready' && workspace.event.id === event.id) {
+      setEventMenuOpen(false)
+      return
+    }
+    setEventSwitching(true)
+    try {
+      await eventServices.service.selectEvent(event.id)
+      signalProductionWorkspaceChanged()
+      setEventMenuOpen(false)
+    } catch (cause: unknown) {
+      setEventMenuError(cause instanceof Error ? cause.message : 'The Event could not be selected.')
+    } finally {
+      setEventSwitching(false)
+    }
+  }
   const openAudience = () => {
     if (audienceUrl === null) return
     window.open(audienceUrl, '_blank', 'noopener,noreferrer')
@@ -64,15 +101,25 @@ function ProductionOperatorHeader() {
   }, [eventMenuOpen])
   return <header className="operator-header">
     <div ref={eventPopoverRef} className="operator-header__event">
-      <button ref={eventButtonRef} type="button" className="operator-header__event-control" aria-haspopup="menu" aria-expanded={eventMenuOpen} onClick={() => setEventMenuOpen((open) => !open)}>
+      <button ref={eventButtonRef} type="button" className="operator-header__event-control" aria-haspopup="menu" aria-expanded={eventMenuOpen} onClick={() => { const nextOpen = !eventMenuOpen; setEventMenuOpen(nextOpen); if (nextOpen) void loadAvailableEvents() }}>
         <span className="operator-header__label">Current Event</span>
         <strong title={eventLabel}>{eventLabel}</strong>
         <span className="operator-event-status">{eventStatus}</span>
         <span className="operator-header__chevron" aria-hidden="true" />
       </button>
-      {eventMenuOpen ? <div ref={menuRef} className="operator-header__menu" role="menu" aria-label="Current Event actions">
-        <Link role="menuitem" to="/events" onClick={() => setEventMenuOpen(false)}>Switch / Manage Events</Link>
-        <Link role="menuitem" to="/prize-categories" onClick={() => setEventMenuOpen(false)}>Manage Prize Categories</Link>
+      {eventMenuOpen ? <div ref={menuRef} className="operator-header__menu" role="menu" aria-label="Current Event switcher">
+        {eventsLoading ? <span className="operator-header__menu-status" role="status">Loading Events…</span> : null}
+        {eventMenuError === null ? availableEvents.map((event) => {
+          const isCurrent = workspace.status === 'ready' && workspace.event.id === event.id
+          return <div className={`operator-header__event-option${isCurrent ? ' operator-header__event-option--current' : ''}`} key={event.id}>
+            <button type="button" role="menuitem" className="operator-header__event-switch" aria-current={isCurrent ? 'true' : undefined} disabled={eventSwitching} onClick={() => void selectEvent(event)}>
+              <span className="operator-header__event-option-copy"><strong>{event.name}</strong><span>{event.status}</span></span>
+              {isCurrent ? <span className="operator-header__event-current">Current</span> : null}
+            </button>
+            <Link role="menuitem" className="operator-header__event-manage" aria-label={`Manage ${event.name}`} to={`/events?eventId=${encodeURIComponent(event.id)}`} onClick={() => setEventMenuOpen(false)}><span aria-hidden="true">⚙</span></Link>
+          </div>
+        }) : <span className="operator-header__menu-status" role="alert">{eventMenuError}</span>}
+        {!eventsLoading && eventMenuError === null && availableEvents.length === 0 ? <span className="operator-header__menu-status">No available Events.</span> : null}
       </div> : null}
     </div>
     <div className="operator-header__status" aria-label="Operator utilities">

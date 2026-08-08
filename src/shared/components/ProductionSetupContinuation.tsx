@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router'
 import { useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 import { Button, ButtonLink } from '../ui/index.ts'
-import { productionSetupStageComplete, productionSetupStageIndexForRoute } from '../../app/workspace/production-setup-readiness.ts'
+import { productionSetupJourneyComplete, productionSetupStageComplete, productionSetupStageIndexForRoute } from '../../app/workspace/production-setup-readiness.ts'
 import { PRODUCTION_SETUP_JOURNEY } from './production-setup-journey.ts'
 
 export function ProductionSetupContinuation() {
@@ -9,6 +9,7 @@ export function ProductionSetupContinuation() {
   const navigate = useNavigate()
   const location = useLocation()
   const readiness = workspace.status === 'ready' ? (workspace.setupReadiness ?? { event: true, prize: false, participants: false, displaySettings: false, drawSetup: false }) : { event: false, prize: false, participants: false, displaySettings: false, drawSetup: false }
+  if (workspace.status === 'ready' && productionSetupJourneyComplete(readiness)) return null
   const currentIndex = productionSetupStageIndexForRoute(location.pathname) ?? 0
   const currentStep = PRODUCTION_SETUP_JOURNEY[currentIndex]
   const complete = productionSetupStageComplete(readiness, currentIndex)

@@ -8,11 +8,13 @@ export interface ProgressStep {
 interface ProgressStepperProps {
   currentStep: PrototypeImportStep
   steps: readonly ProgressStep[]
+  completed?: boolean
 }
 
 export function ProgressStepper({
   currentStep,
   steps,
+  completed = false,
 }: ProgressStepperProps) {
   const matchedIndex = steps.findIndex((step) => step.id === currentStep)
   const currentIndex = matchedIndex < 0 ? 0 : matchedIndex
@@ -21,12 +23,11 @@ export function ProgressStepper({
     <nav aria-label="Participant Import progress" className="progress-stepper">
       <ol>
         {steps.map((step, index) => {
-          const state =
-            index < currentIndex
-              ? 'complete'
-              : index === currentIndex
-                ? 'active'
-                : 'upcoming'
+          const state = completed || index < currentIndex
+            ? 'complete'
+            : index === currentIndex
+              ? 'active'
+              : 'upcoming'
           const stateLabel =
             state === 'complete'
               ? 'Complete'

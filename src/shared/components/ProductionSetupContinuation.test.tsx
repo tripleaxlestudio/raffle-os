@@ -85,4 +85,38 @@ describe('ProductionSetupContinuation', () => {
     await userEvent.setup().click(screen.getByRole('link', { name: 'Back to Dashboard' }))
     expect(router.state.location.pathname).toBe('/dashboard')
   })
+
+  it('keeps Step 5 visible while authoritative Draw Setup is incomplete', () => {
+    workspace.value = { status: 'ready', event: { name: 'Gala Dinner 2026' }, setupJourneyReachedStep: 5, advanceSetupJourney: vi.fn(), setupReadiness: { event: true, prize: true, participants: true, displaySettings: true, drawSetup: false } } as never
+    renderContinuation('/draw/setup')
+
+    expect(screen.getByText(/SETUP JOURNEY/)).toHaveTextContent('STEP 5 OF 5')
+  })
+
+  it('hides the complete journey on every setup route without leaving footer space', () => {
+    const completeReadiness = { event: true, prize: true, participants: true, displaySettings: true, drawSetup: true }
+    for (const route of ['/events', '/draw/setup', '/prize-categories', '/participants', '/settings']) {
+      cleanup()
+      workspace.value = { status: 'ready', event: { name: 'Gala Dinner 2026' }, setupJourneyReachedStep: 5, advanceSetupJourney: vi.fn(), setupReadiness: completeReadiness } as never
+      renderContinuation(route)
+      expect(screen.queryByRole('region', { name: /setup/i })).not.toBeInTheDocument()
+      expect(screen.queryByText(/SETUP JOURNEY/)).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Next: Complete/i })).not.toBeInTheDocument()
+      expect(document.querySelector('[data-setup-journey-surface="sticky"]')).toBeNull()
+    }
+  })
+
+  it('shows the recovery journey again when authoritative setup becomes incomplete', () => {
+    workspace.value = { status: 'ready', event: { name: 'Gala Dinner 2026' }, setupJourneyReachedStep: 5, advanceSetupJourney: vi.fn(), setupReadiness: { event: true, prize: true, participants: true, displaySettings: false, drawSetup: false } } as never
+    renderContinuation('/settings')
+
+    expect(screen.getByText(/SETUP JOURNEY/)).toHaveTextContent('STEP 4 OF 5')
+  })
+
+  it('does not carry completion suppression between Events', () => {
+    workspace.value = { status: 'ready', event: { name: 'Incomplete Event' }, setupJourneyReachedStep: 5, advanceSetupJourney: vi.fn(), setupReadiness: { event: true, prize: true, participants: true, displaySettings: true, drawSetup: false } } as never
+    renderContinuation('/draw/setup')
+
+    expect(screen.getByRole('region', { name: 'Draw Setup setup' })).toHaveTextContent('Incomplete Event')
+  })
 })

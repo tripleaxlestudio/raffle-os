@@ -90,4 +90,14 @@ describe('production sidebar Event gating', () => {
     expect(screen.getByRole('link', { name: 'Participants' })).toBeInTheDocument()
     expect(screen.getByText('Display Settings').closest('[aria-disabled]')).toHaveAttribute('aria-disabled', 'true')
   })
+
+  it('restores normal production navigation after authoritative setup completion', () => {
+    Object.assign(workspace, { status: 'ready', setupReadiness: { event: true, prize: true, participants: true, displaySettings: true, drawSetup: true }, setupJourneyReachedStep: 5 })
+    renderSidebar('/draw/setup')
+
+    for (const label of ['Prize', 'Participants', 'Display Settings', 'Draw Setup', 'Live Draw', 'Pending Results', 'History']) {
+      expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
+    }
+    expect(screen.queryAllByLabelText('Complete the previous setup step first')).toHaveLength(0)
+  })
 })

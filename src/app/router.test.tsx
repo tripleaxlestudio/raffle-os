@@ -58,7 +58,10 @@ describe('application routes', () => {
   it.each(['/draw/live', '/draw/pending', '/settings'])('keeps production route %s honest', async (path) => {
     renderRoute(path)
     await waitFor(() => expect(screen.getByRole('main')).toBeInTheDocument())
-    if (path === '/settings') expect(screen.getAllByText(/not configured/i).length).toBeGreaterThan(0)
+    if (path === '/settings') {
+      expect(screen.getByRole('heading', { name: 'Event required' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Open Event Management' })).toHaveAttribute('href', '/events')
+    }
     else expect(screen.getByRole('heading', { name: path === '/draw/pending' ? 'Pending Results' : 'Live Draw' })).toBeInTheDocument()
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })

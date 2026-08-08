@@ -7,6 +7,7 @@ import { queryDrawSessionQueue, type DrawSessionQueueResult } from '../../applic
 import { useProductionAudiencePublisher, useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 import { groupDrawSessionQueueDecks, presentDrawSessionQueueItem, type DrawSessionQueueDeck } from '../../ui/operator/draw/draw-session-queue-view-model.ts'
 import { presentAudienceConnection } from '../../ui/operator/draw/audience-connection-view-model.ts'
+import { ProductionLoadingState, ProductionSetupRequired } from '../../shared/components/ProductionWorkspaceState.tsx'
 
 function audienceUrl(eventId: string, displayConfigurationId: string): string {
   return `/display?eventId=${encodeURIComponent(eventId)}&displayConfigurationId=${encodeURIComponent(displayConfigurationId)}`
@@ -35,8 +36,8 @@ export function DrawSessionQueuePage() {
   useEffect(() => { void Promise.resolve().then(load) }, [load])
   useEffect(() => audience.subscribe(setAudienceStatus), [audience])
 
-  if (workspace.status === 'loading' || state.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="LIVE OPERATIONS" headingId="draw-queue-title" title="Live Draw" description="Reading authoritative local sessions…" /></section>
-  if (workspace.status === 'empty' || workspace.status === 'invalid-reference') return <section aria-labelledby="draw-queue-title"><PageHeader eyebrow="LIVE OPERATIONS" headingId="draw-queue-title" title="Live Draw" description="An active Event is required." /><StatusBanner badge="Setup required" title="Select or create an Event first" tone="warning">Sessions are scoped to the selected Event and are never inferred.</StatusBanner><ButtonLink to="/events">Open Event management</ButtonLink></section>
+  if (workspace.status === 'loading' || state.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="LIVE OPERATIONS" headingId="draw-queue-title" title="Live Draw" description="Reading authoritative local sessions…" /><ProductionLoadingState description="Reading authoritative local sessions…" /></section>
+  if (workspace.status === 'empty' || workspace.status === 'invalid-reference') return <section aria-labelledby="draw-queue-title"><PageHeader eyebrow="LIVE OPERATIONS" headingId="draw-queue-title" title="Live Draw" description="An active Event is required." /><ProductionSetupRequired title="Event required for Live Draw" description="Select or create an Event before operating Live Draw." /></section>
   if (workspace.status === 'error') return <section aria-labelledby="draw-queue-title"><PageHeader eyebrow="LIVE OPERATIONS" headingId="draw-queue-title" title="Live Draw" description="The production queue is unavailable." /><StatusBanner badge="Storage error" title="Could not read DrawSessions" tone="warning">{workspace.message}</StatusBanner></section>
   if (state.status === 'error') return <section aria-labelledby="draw-queue-title"><PageHeader eyebrow="LIVE OPERATIONS" headingId="draw-queue-title" title="Live Draw" description="The production queue is unavailable." /><StatusBanner badge="Read failure" title="Could not read DrawSessions" tone="warning">{state.message}</StatusBanner><Button onClick={() => void load()}>Retry read</Button></section>
 

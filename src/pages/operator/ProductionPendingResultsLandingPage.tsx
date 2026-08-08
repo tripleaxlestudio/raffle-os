@@ -5,6 +5,7 @@ import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 import { queryDrawSessionQueue, type DrawSessionQueueResult } from '../../application/draw/draw-session-queue.ts'
 import { useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
+import { ProductionLoadingState, ProductionSetupRequired } from '../../shared/components/ProductionWorkspaceState.tsx'
 
 type LandingState = { readonly status: 'loading' } | { readonly status: 'error'; readonly message: string } | { readonly status: 'ready'; readonly queue: DrawSessionQueueResult }
 
@@ -25,8 +26,8 @@ export function ProductionPendingResultsLandingPage() {
   }, [services, workspace])
   useEffect(() => { void Promise.resolve().then(load) }, [load])
 
-  if (workspace.status === 'loading' || state.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Production operations" headingId="pending-landing-title" title="Pending Results" description="Reading authoritative pending sessions…" /></section>
-  if (workspace.status !== 'ready') return <section aria-labelledby="pending-landing-title"><PageHeader eyebrow="Production operations" headingId="pending-landing-title" title="Pending Results" description="An active Event is required." /><StatusBanner badge="Setup required" title="Select or create an Event first" tone="warning">Pending results are scoped to the authoritative active Event.</StatusBanner><ButtonLink to="/events">Open Event management</ButtonLink></section>
+  if (workspace.status === 'loading' || state.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Production operations" headingId="pending-landing-title" title="Pending Results" description="Reading authoritative pending sessions…" /><ProductionLoadingState description="Reading authoritative pending sessions…" /></section>
+  if (workspace.status !== 'ready') return <section aria-labelledby="pending-landing-title"><PageHeader eyebrow="Production operations" headingId="pending-landing-title" title="Pending Results" description="An active Event is required." /><ProductionSetupRequired title="Event required for Pending Results" description="Select or create an Event before reviewing pending results." /></section>
   if (state.status === 'error') return <section aria-labelledby="pending-landing-title"><PageHeader eyebrow="Production operations" headingId="pending-landing-title" title="Pending Results" description="The production pending list is unavailable." /><StatusBanner badge="Read failure" title="Could not read pending sessions" tone="warning">{state.message}</StatusBanner><Button onClick={() => void load()}>Retry read</Button></section>
 
   const pending = state.queue.items.filter((item) => item.session.mode === 'live' && item.session.status === 'pending-confirmation')

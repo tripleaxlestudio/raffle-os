@@ -4,11 +4,12 @@ import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { SummaryList } from '../../shared/components/SummaryList.tsx'
 import { useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
+import { ProductionLoadingState, ProductionSetupRequired } from '../../shared/components/ProductionWorkspaceState.tsx'
 
 export function ProductionDashboardPage() {
   const workspace = useProductionWorkspace()
-  if (workspace.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Production workspace" headingId="dashboard-title" title="Dashboard" description="Reading authoritative local workspace data…" /></section>
-  if (workspace.status === 'empty') return <section aria-labelledby="dashboard-title"><PageHeader eyebrow="Production workspace" headingId="dashboard-title" title="Dashboard" description="No active Event is selected." /><StatusBanner badge="Setup required" title="Select or create an Event before operating" tone="warning">No fictional Event or readiness values are shown.</StatusBanner><p><ButtonLink to="/events">Open Event management</ButtonLink></p></section>
+  if (workspace.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Production workspace" headingId="dashboard-title" title="Dashboard" description="Reading authoritative local workspace data…" /><ProductionLoadingState description="Reading authoritative local workspace data…" /></section>
+  if (workspace.status === 'empty') return <section aria-labelledby="dashboard-title"><PageHeader eyebrow="Production workspace" headingId="dashboard-title" title="Dashboard" description="No active Event is selected." /><ProductionSetupRequired /></section>
   if (workspace.status === 'invalid-reference') return <section aria-labelledby="dashboard-title"><PageHeader eyebrow="Production workspace" headingId="dashboard-title" title="Dashboard" description="The saved active Event reference is invalid." /><StatusBanner badge="Recovery required" title="Select a valid persisted Event" tone="warning">Stored Event reference {workspace.eventId} does not resolve to an Event. No operational data was inferred.</StatusBanner><p><ButtonLink to="/events">Choose Event</ButtonLink></p></section>
   if (workspace.status === 'error') return <section aria-labelledby="dashboard-title"><PageHeader eyebrow="Production workspace" headingId="dashboard-title" title="Dashboard" description="Authoritative workspace data could not be read." /><StatusBanner badge="Storage error" title="Workspace unavailable" tone="warning">{workspace.message}</StatusBanner></section>
 

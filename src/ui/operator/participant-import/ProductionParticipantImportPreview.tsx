@@ -14,6 +14,7 @@ import type { ParticipantImportProductionServices } from '../../../application/p
 import type { PersistedParticipantPreview } from '../../../application/participant-import/participant-import-verification.ts'
 import type { EventId } from '../../../domain/shared/identifiers.ts'
 import { signalProductionWorkspaceChanged } from '../../../app/workspace/ProductionWorkspaceContext.tsx'
+import { ProductionSetupRequired } from '../../../shared/components/ProductionWorkspaceState.tsx'
 
 export const MAX_ISSUE_ROWS_SHOWN = 20
 export const MAX_PREVIEW_ROWS = 20
@@ -230,6 +231,7 @@ export function ProductionParticipantImportPreview({ services: providedServices 
       : state.status === 'validation-ready' || state.status === 'commit-failure' || staged === null || staged.validation.summary.validRows === 0 || hasBlockingDiagnostics || strategy === null
         ? 'validation'
         : 'summary'
+  if (!eventLoading && event === null && (eventError?.includes('No current Event') === true || eventError?.includes('current Event could not be found') === true)) return <section className="participant-import production-import-preview" aria-labelledby="production-import-title"><header className="page-header production-import-preview__header"><div className="page-header__copy"><p className="page-header__eyebrow">Participant Operations</p><h1 id="production-import-title">Participant Import</h1><p className="page-header__description">Import Participants into the current Event.</p></div></header><ProductionSetupRequired title="Event required for participant import" description="Select or create an Event before importing participants." /></section>
   return <section className="participant-import production-import-preview" aria-label="Participant file import" data-workflow-state={state.status}>
     <header className="page-header production-import-preview__header"><div className="page-header__copy"><p className="page-header__eyebrow">Participant Operations</p><div className="production-import-preview__title-row"><h1 id="production-import-title">Participant Import</h1></div><p className="page-header__description">Stage, validate, and atomically import Participants into the current Event.</p></div></header>
     <ProgressStepper currentStep={progressStep} steps={productionImportProgressSteps} />

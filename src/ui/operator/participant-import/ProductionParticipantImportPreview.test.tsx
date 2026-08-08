@@ -90,7 +90,8 @@ describe('production participant import preview audit', () => {
     draftView.unmount()
     const noEvent = makeServices({ event: null })
     renderProduction(noEvent, '/participants?workflow=production-preview')
-    expect(await screen.findByText('No current Event is selected. Select a real Event before importing participants.')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Event required for participant import' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Open Event Management' })).toHaveAttribute('href', '/events')
   })
 
   it('keeps validation current and confirmation disabled when all rows are invalid', async () => {
@@ -219,7 +220,7 @@ describe('production participant import preview audit', () => {
 
   it('blocks when no Event is selected and blocks immutable Events', async () => {
     renderProduction(makeServices({ event: null }))
-    expect(await screen.findByText(/No current Event|could not be found/)).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Event required for participant import' })).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Review and confirm import' })).not.toBeInTheDocument()
 
     renderProduction(makeServices({ event: immutableEvent }))

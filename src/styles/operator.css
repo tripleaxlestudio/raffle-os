@@ -2443,6 +2443,41 @@
 }
 
 /* Production participant import integration */
+.production-workspace-state {
+  width: min(100%, 38rem);
+  margin: var(--space-5) auto 0;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  border-color: color-mix(in srgb, var(--status-warning) 42%, var(--border-default));
+  background: var(--surface-raised);
+  text-align: center;
+}
+
+.production-workspace-state__icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid var(--status-warning);
+  border-radius: 50%;
+  color: var(--status-warning);
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-bold);
+}
+
+.production-workspace-state__icon--loading {
+  border-color: var(--border-strong);
+  border-top-color: var(--accent);
+  animation: production-workspace-state-spin 800ms linear infinite;
+}
+
+.production-workspace-state__copy { display: grid; gap: var(--space-2); }
+.production-workspace-state__copy h2 { margin: 0; color: var(--text-primary); font-size: var(--font-size-lg); }
+.production-workspace-state__copy p { max-width: 30rem; margin: 0; color: var(--text-secondary); }
+.production-workspace-state--loading { border-color: var(--border-default); }
+@keyframes production-workspace-state-spin { to { transform: rotate(360deg); } }
+
 .production-import-preview {
   display: grid;
   gap: var(--content-grid-gap);

@@ -13,6 +13,7 @@ import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { Badge, Button, ButtonLink, Card, Checkbox, ConfirmationDialog, Input, Select } from '../../shared/ui/index.ts'
 import { signalProductionWorkspaceChanged } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 import { DrawPresentationSettings } from '../../ui/operator/draw/DrawPresentationSettings.tsx'
+import { ProductionLoadingState, ProductionSetupRequired } from '../../shared/components/ProductionWorkspaceState.tsx'
 
 type FormState = {
   eventId: string
@@ -110,8 +111,8 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
     setHandoffBusy(false)
   }
 
-  if (loading) return <section className="draw-setup" aria-busy="true"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="Loading persisted Event and configuration…" /><StatusBanner badge="Loading" title="Preparing Draw Setup" tone="info">Configuration drafts are not active until they are saved.</StatusBanner></section>
-  if (eventMissing || form.eventId === '') return <section className="draw-setup"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="No persisted Event is available" /><StatusBanner badge="Event required" title="Create or select an Event first" tone="warning">Draw Setup does not create demo Events or categories automatically.</StatusBanner><ButtonLink to="/events">Open Event management</ButtonLink>{error?.retryable ? <Button onClick={() => void load()}>Retry</Button> : null}</section>
+  if (loading) return <section className="draw-setup" aria-busy="true"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="Loading persisted Event and configuration…" /><ProductionLoadingState description="Reading authoritative setup state…" /></section>
+  if (eventMissing || form.eventId === '') return <section className="draw-setup"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="No persisted Event is available" /><ProductionSetupRequired description="Select or create an Event before configuring a draw." />{error?.retryable ? <Button onClick={() => void load()}>Retry</Button> : null}</section>
 
   const started = record !== null && isDrawSessionAuthoringLocked(record.session)
   const dirty = isDrawAuthoringDraftDirty(draftFromForm(form), record)

@@ -6,6 +6,7 @@ import { createDrawSetupProductionServices } from '../../infrastructure/composit
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { Badge, Button, ButtonLink, Card, Select, Table } from '../../shared/ui/index.ts'
+import { ProductionLoadingState, ProductionSetupRequired } from '../../shared/components/ProductionWorkspaceState.tsx'
 
 type LoadState = { readonly status: 'loading' } | { readonly status: 'ready'; readonly sessions: readonly OfficialHistorySession[] } | { readonly status: 'error'; readonly message: string }
 type SessionStatus = OfficialHistorySession['session']['status']
@@ -61,10 +62,10 @@ export function ProductionHistoryPage() {
 
   useEffect(() => { void Promise.resolve().then(load) }, [load])
 
-  if (workspace.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Official records" headingId="history-title" title="History" description="Reading the selected Event…" /></section>
-  if (workspace.status === 'empty' || workspace.status === 'invalid-reference') return <section aria-labelledby="history-title"><PageHeader eyebrow="Official records" headingId="history-title" title="History" description="An active Event is required to read official history." /><StatusBanner badge="Setup required" title={workspace.status === 'empty' ? 'No active Event selected' : 'The saved Event reference is stale'} tone="warning">No history is fabricated or combined across Events.</StatusBanner><ButtonLink to="/events">Open Event management</ButtonLink></section>
+  if (workspace.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Official records" headingId="history-title" title="History" description="Reading the selected Event…" /><ProductionLoadingState description="Reading the selected Event…" /></section>
+  if (workspace.status === 'empty' || workspace.status === 'invalid-reference') return <section aria-labelledby="history-title"><PageHeader eyebrow="Official records" headingId="history-title" title="History" description="An active Event is required to read official history." /><ProductionSetupRequired title="No active Event" description="Select an Event to view its official draw history." /></section>
   if (workspace.status === 'error') return <section aria-labelledby="history-title"><PageHeader eyebrow="Official records" headingId="history-title" title="History unavailable" description="The selected Event could not be read." /><StatusBanner badge="Storage error" title="Official history was not changed" tone="warning">{workspace.message}</StatusBanner></section>
-  if (state.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Official records" headingId="history-title" title="History" description={`Reading official history for ${workspace.event.name}…`} /></section>
+  if (state.status === 'loading') return <section aria-busy="true"><PageHeader eyebrow="Official records" headingId="history-title" title="History" description={`Reading official history for ${workspace.event.name}…`} /><ProductionLoadingState description={`Reading official history for ${workspace.event.name}…`} /></section>
   if (state.status === 'error') return <section aria-labelledby="history-title"><PageHeader eyebrow="Official records" headingId="history-title" title="History unavailable" description={state.message} /><StatusBanner badge="Read-only recovery" title="No decision or mutation was run" tone="warning">Retry the local read.</StatusBanner><Button onClick={() => void load()}>Retry read</Button></section>
 
   const filtered = state.sessions.filter((item) => (status === 'all' || item.session.status === status) && (mode === 'all' || item.session.mode === mode))

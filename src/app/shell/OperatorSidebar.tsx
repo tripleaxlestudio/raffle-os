@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router'
 import { useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
 import { PRODUCTION_SETUP_JOURNEY } from '../../shared/components/production-setup-journey.ts'
+import { productionSetupStageUnlocked, type ProductionSetupReadiness } from '../workspace/production-setup-readiness.ts'
 
 const prototypeNavigationItems = [
   { label: 'Dashboard', marker: 'DB', to: '/dashboard' },
@@ -32,17 +33,19 @@ export function OperatorSidebar({ eventScopedNavigationDisabled, production = fa
 function ProductionOperatorSidebar() {
   const workspace = useProductionWorkspace()
   const eventScopedNavigationDisabled = workspace.status === 'empty' || workspace.status === 'invalid-reference'
-  return <OperatorSidebarContent disabled={eventScopedNavigationDisabled} navigationItems={productionNavigationItems} production />
+  return <OperatorSidebarContent disabled={eventScopedNavigationDisabled} readiness={workspace.status === 'ready' ? workspace.setupReadiness : null} navigationItems={productionNavigationItems} production />
 }
 
 function OperatorSidebarContent({
   disabled = false,
   navigationItems,
   production = false,
+  readiness = null,
 }: {
   readonly disabled?: boolean
   readonly navigationItems: readonly { readonly label: string; readonly marker: string; readonly to: string }[]
   readonly production?: boolean
+  readonly readiness?: ProductionSetupReadiness | null
 }) {
   return (
     <aside className="operator-sidebar" aria-label="Operator sidebar">
@@ -60,7 +63,7 @@ function OperatorSidebarContent({
         <ul className="operator-nav">
           {navigationItems.map((item) => (
             <li key={item.to}>
-              {disabled && item.to !== '/dashboard' ? <span aria-disabled="true" className="operator-nav__link operator-nav__link--disabled" title="Select an Event first">
+              {item.to !== '/dashboard' && ((readiness !== null && !productionSetupStageUnlocked(readiness, navigationItems.indexOf(item) - 1)) || (readiness === null && disabled)) ? <span aria-disabled="true" className="operator-nav__link operator-nav__link--disabled" title="Complete the previous setup step first">
                 <span aria-hidden="true" className="operator-nav__marker">{item.marker}</span>
                 <span>{item.label}</span>
               </span> : <NavLink

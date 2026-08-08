@@ -11,6 +11,7 @@ import type { PresentationProjectionSource, PublicDisplaySnapshot } from '../../
 import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { setDisplayConnectionStatus, syncAudiencePresenceConnectionStatus } from '../../application/display-transport/connection-status.ts'
+import { deriveProductionSetupReadiness, type ProductionSetupReadiness } from './production-setup-readiness.ts'
 
 export type ProductionWorkspaceState =
   | { readonly status: 'loading' }
@@ -29,6 +30,7 @@ export type ProductionWorkspaceState =
       readonly currentMode: AppMode | null
       readonly displayConfiguration: DisplayConfiguration | null
       readonly eventSettings: EventSettings
+      readonly setupReadiness: ProductionSetupReadiness
     }
 
 const WorkspaceContext = createContext<ProductionWorkspaceState | undefined>(undefined)
@@ -73,11 +75,12 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
           if (active) setState({ status: 'invalid-reference', eventId: activeEventId })
           return
         }
-        const [participantCount, participants, categories, sessions, currentMode, displayConfiguration, eventSettings] = await Promise.all([
+        const [participantCount, participants, categories, sessions, configurations, currentMode, displayConfiguration, eventSettings] = await Promise.all([
           services.participants.countByEventId(event.id),
           services.participants.findByEventId(event.id, { limit: 100_000, offset: 0 }),
           services.categories.findByEventId(event.id),
           services.sessions.findByEventId(event.id),
+          services.configurations.findByEventId(event.id),
           services.preferences.get('lastOperatorMode'),
           services.displayConfigurations?.findByEventId(event.id) ?? Promise.resolve(null),
           services.eventSettings.findByEventId(event.id),
@@ -99,6 +102,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
             currentMode,
             displayConfiguration,
             eventSettings: eventSettings ?? { eventId: event.id, ...DEFAULT_EVENT_SETTINGS, displayName: event.name, updatedAt: new Date().toISOString() },
+            setupReadiness: deriveProductionSetupReadiness({ hasCurrentEvent: true, categories, participants, displayConfiguration, configurations, sessions }),
           })
         }
       } catch (cause: unknown) {

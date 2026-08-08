@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getProductionSetupProgress, productionSetupStageUnlocked, deriveProductionSetupReadiness, type ProductionSetupReadiness } from './production-setup-readiness.ts'
+import { getInitialProductionSetupAdmission, getProductionSetupProgress, productionSetupStageUnlocked, deriveProductionSetupReadiness, type ProductionSetupReadiness } from './production-setup-readiness.ts'
 
 const stages = (overrides: Partial<ProductionSetupReadiness> = {}): ProductionSetupReadiness => ({ event: false, prize: false, participants: false, displaySettings: false, drawSetup: false, ...overrides })
 
@@ -22,5 +22,10 @@ describe('production setup readiness', () => {
     const readiness = deriveProductionSetupReadiness({ hasCurrentEvent: true, categories: [], participants: [], displayConfiguration: null, configurations: [], sessions: [] })
     expect(readiness).toEqual({ event: true, prize: false, participants: false, displaySettings: false, drawSetup: false })
     expect([0, 1, 2, 3, 4].map((index) => productionSetupStageUnlocked(readiness, index))).toEqual([true, true, false, false, false])
+  })
+
+  it('initializes admission at the first incomplete stage and fully admits mature Events', () => {
+    expect(getInitialProductionSetupAdmission(stages({ event: true }))).toBe(1)
+    expect(getInitialProductionSetupAdmission(stages({ event: true, prize: true, participants: true, displaySettings: true, drawSetup: true }))).toBe(4)
   })
 })

@@ -18,6 +18,11 @@ export function deriveProductionSetupReadiness(input: ProductionSetupReadinessIn
   return { event, prize, participants, displaySettings, drawSetup }
 }
 export function productionSetupStageComplete(readiness: ProductionSetupReadiness, index: number): boolean { return [readiness.event, readiness.prize, readiness.participants, readiness.displaySettings, readiness.drawSetup][index] ?? false }
+export function getInitialProductionSetupAdmission(readiness: ProductionSetupReadiness): number {
+  let admittedThrough = 0
+  while (admittedThrough < PRODUCTION_SETUP_STAGE_COUNT - 1 && productionSetupStageComplete(readiness, admittedThrough)) admittedThrough += 1
+  return admittedThrough
+}
 export function productionSetupStageUnlocked(readiness: ProductionSetupReadiness, index: number): boolean {
   if (index === 0) return true
   if (index < 0) return true

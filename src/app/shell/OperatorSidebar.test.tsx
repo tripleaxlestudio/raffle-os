@@ -73,4 +73,21 @@ describe('production sidebar Event gating', () => {
     expect(screen.getByRole('link', { name: 'Prize' })).toHaveClass('operator-nav__link--active')
     expect(screen.getByRole('link', { name: 'Prize' })).toHaveAttribute('href', '/prize-categories')
   })
+
+  it('keeps the next stage disabled when the current stage is complete but not admitted', () => {
+    Object.assign(workspace, { status: 'ready', setupReadiness: { event: true, prize: true, participants: false, displaySettings: false, drawSetup: false }, setupAdmittedThrough: 1 })
+    renderSidebar('/prize-categories')
+
+    expect(screen.getByRole('link', { name: 'Prize' })).toHaveClass('operator-nav__link--active')
+    expect(screen.getByText('Participants').closest('[aria-disabled]')).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByText('Display Settings').closest('[aria-disabled]')).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('admits the next stage without revoking it when navigating back', () => {
+    Object.assign(workspace, { status: 'ready', setupReadiness: { event: true, prize: true, participants: false, displaySettings: false, drawSetup: false }, setupAdmittedThrough: 2 })
+    renderSidebar('/prize-categories')
+
+    expect(screen.getByRole('link', { name: 'Participants' })).toBeInTheDocument()
+    expect(screen.getByText('Display Settings').closest('[aria-disabled]')).toHaveAttribute('aria-disabled', 'true')
+  })
 })

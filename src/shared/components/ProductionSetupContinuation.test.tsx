@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ProductionSetupContinuation } from './ProductionSetupContinuation.tsx'
 import { PRODUCTION_SETUP_JOURNEY } from './production-setup-journey.ts'
 
-const workspace = vi.hoisted(() => ({ value: { status: 'empty' as 'empty' | 'ready', event: undefined as { name: string } | undefined } }))
+const workspace = vi.hoisted(() => ({ value: { status: 'empty' as 'empty' | 'ready', event: undefined as { name: string } | undefined, setupAdmittedThrough: undefined as number | undefined, admitSetupStage: vi.fn() } }))
 
 vi.mock('../../app/workspace/ProductionWorkspaceContext.tsx', () => ({ useProductionWorkspace: () => workspace.value }))
 
@@ -14,7 +14,7 @@ function renderContinuation(initialEntry = '/events') {
   return { router, ...render(<RouterProvider router={router} />) }
 }
 
-afterEach(() => { cleanup(); workspace.value = { status: 'empty', event: undefined } })
+afterEach(() => { cleanup(); workspace.value = { status: 'empty', event: undefined, setupAdmittedThrough: undefined, admitSetupStage: vi.fn() } })
 
 describe('ProductionSetupContinuation', () => {
   it('reports the five-stage production setup journey in order', () => {
@@ -38,7 +38,7 @@ describe('ProductionSetupContinuation', () => {
   })
 
   it('keeps Participants locked while Prize has no persisted category', () => {
-    workspace.value = { status: 'ready', event: { name: 'Gala Dinner 2026' } }
+    workspace.value = { status: 'ready', event: { name: 'Gala Dinner 2026' }, setupAdmittedThrough: 1, admitSetupStage: vi.fn() } as never
     renderContinuation('/prize-categories')
     expect(screen.getByText(/PRIZE IN PROGRESS/)).toBeVisible()
     expect(screen.getByText(/Create at least one prize category to continue\./)).toBeVisible()
@@ -46,12 +46,20 @@ describe('ProductionSetupContinuation', () => {
   })
 
   it('uses persisted readiness to enable the next stage without a visit flag', async () => {
-    workspace.value = { status: 'ready', event: { name: 'Gala Dinner 2026' }, setupReadiness: { event: true, prize: true, participants: false, displaySettings: false, drawSetup: false } } as never
+    workspace.value = { status: 'ready', event: { name: 'Gala Dinner 2026' }, setupAdmittedThrough: 1, admitSetupStage: vi.fn(), setupReadiness: { event: true, prize: true, participants: false, displaySettings: false, drawSetup: false } } as never
     const { router } = renderContinuation('/prize-categories')
     expect(screen.getByText(/PRIZE COMPLETE/)).toBeVisible()
     expect(screen.getByRole('button', { name: /Next: Participants/i })).toBeEnabled()
     await userEvent.setup().click(screen.getByRole('button', { name: /Next: Participants/i }))
+    expect(workspace.value.admitSetupStage).toHaveBeenCalledWith(2)
     expect(router.state.location.pathname).toBe('/participants')
+  })
+
+  it('does not admit Participants merely because Prize is complete', () => {
+    workspace.value = { status: 'ready', event: { name: 'Gala Dinner 2026' }, setupAdmittedThrough: 1, admitSetupStage: vi.fn(), setupReadiness: { event: true, prize: true, participants: false, displaySettings: false, drawSetup: false } } as never
+    renderContinuation('/prize-categories')
+    expect(screen.getByRole('button', { name: /Next: Participants/i })).toBeEnabled()
+    expect(workspace.value.setupAdmittedThrough).toBe(1)
   })
 
   it('uses Previous for every stage after Event', async () => {
@@ -61,7 +69,7 @@ describe('ProductionSetupContinuation', () => {
   })
 
   it('enables Next and shows the Current Event identity as workspace state becomes ready', async () => {
-    workspace.value = { status: 'ready', event: { name: 'Gala Dinner 2026' } }
+    workspace.value = { status: 'ready', event: { name: 'Gala Dinner 2026' }, setupAdmittedThrough: 0, admitSetupStage: vi.fn() } as never
     const { router } = renderContinuation()
     expect(screen.getByText(/Gala Dinner 2026/)).toBeVisible()
     const next = screen.getByRole('button', { name: /Next: Prize/i })

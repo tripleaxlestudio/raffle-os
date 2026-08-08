@@ -11,7 +11,7 @@ import type { PresentationProjectionSource, PublicDisplaySnapshot } from '../../
 import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { setDisplayConnectionStatus, syncAudiencePresenceConnectionStatus } from '../../application/display-transport/connection-status.ts'
-import { deriveProductionSetupReadiness, type ProductionSetupReadiness } from './production-setup-readiness.ts'
+import { deriveProductionSetupReadiness, getInitialProductionSetupAdmission, type ProductionSetupReadiness } from './production-setup-readiness.ts'
 
 export type ProductionWorkspaceState =
   | { readonly status: 'loading' }
@@ -31,6 +31,8 @@ export type ProductionWorkspaceState =
       readonly displayConfiguration: DisplayConfiguration | null
       readonly eventSettings: EventSettings
       readonly setupReadiness: ProductionSetupReadiness
+      readonly setupAdmittedThrough: number
+      readonly admitSetupStage: (index: number) => void
     }
 
 const WorkspaceContext = createContext<ProductionWorkspaceState | undefined>(undefined)
@@ -53,6 +55,7 @@ export function signalProductionWorkspaceChanged(): void {
 export function ProductionWorkspaceProvider({ children }: { readonly children: ReactNode }) {
   const services = useMemo(() => createDrawSetupProductionServices(), [])
   const [state, setState] = useState<ProductionWorkspaceState>({ status: 'loading' })
+  const setupAdmissionRef = useRef<{ readonly eventId: string; readonly admittedThrough: number } | null>(null)
   const publisherRef = useRef<OperatorPublisher | null>(null)
   const publisherScopeRef = useRef<string | undefined>(undefined)
   const publisherStatusCleanupRef = useRef<(() => void) | null>(null)
@@ -67,11 +70,13 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
         await services.open()
         const activeEventId = await services.preferences.get('activeEventId')
         if (activeEventId === null) {
+          setupAdmissionRef.current = null
           if (active) setState({ status: 'empty', reason: 'no-active-event' })
           return
         }
         const event = await services.events.findById(activeEventId)
         if (event === null) {
+          setupAdmissionRef.current = null
           if (active) setState({ status: 'invalid-reference', eventId: activeEventId })
           return
         }
@@ -89,6 +94,11 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
           .filter((session) => session.mode === 'live' && (session.status === 'drawing' || session.status === 'pending-confirmation'))
           .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] ?? null
         if (active) {
+          const setupReadiness = deriveProductionSetupReadiness({ hasCurrentEvent: true, categories, participants, displayConfiguration, configurations, sessions })
+          const admission = setupAdmissionRef.current?.eventId === event.id
+            ? setupAdmissionRef.current
+            : { eventId: event.id, admittedThrough: getInitialProductionSetupAdmission(setupReadiness) }
+          setupAdmissionRef.current = admission
           const sessionCounts = sessions.reduce((counts, session) => ({ ...counts, [session.status]: counts[session.status] + 1 }), { draft: 0, ready: 0, drawing: 0, 'pending-confirmation': 0, completed: 0, cancelled: 0 } as Record<DrawSession['status'], number>)
           setState({
             status: 'ready',
@@ -102,7 +112,14 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
             currentMode,
             displayConfiguration,
             eventSettings: eventSettings ?? { eventId: event.id, ...DEFAULT_EVENT_SETTINGS, displayName: event.name, updatedAt: new Date().toISOString() },
-            setupReadiness: deriveProductionSetupReadiness({ hasCurrentEvent: true, categories, participants, displayConfiguration, configurations, sessions }),
+            setupReadiness,
+            setupAdmittedThrough: admission.admittedThrough,
+            admitSetupStage: (index) => {
+              if (index < 0 || index >= 5 || setupAdmissionRef.current?.eventId !== event.id) return
+              const admittedThrough = Math.max(setupAdmissionRef.current?.admittedThrough ?? 0, index)
+              setupAdmissionRef.current = { eventId: event.id, admittedThrough }
+              setState((current) => current.status === 'ready' && current.event.id === event.id ? { ...current, setupAdmittedThrough: admittedThrough } : current)
+            },
           })
         }
       } catch (cause: unknown) {

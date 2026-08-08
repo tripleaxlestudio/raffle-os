@@ -75,7 +75,7 @@ export function OperatorLayout() {
       data-interface="operator"
       data-operator-shell
     >
-      <OperatorSidebar production={isProductionEventRoute} />
+      <OperatorSidebar eventScopedNavigationDisabled={isProductionEventRoute && !productionEventLoading && productionEvent === null} production={isProductionEventRoute} />
       <div className="operator-workspace">
         <OperatorHeader
           connectionStatus={prototype.connectionStatus}

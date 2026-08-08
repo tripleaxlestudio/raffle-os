@@ -143,6 +143,19 @@
     flex: 1 1 auto;
   }
 
+  .operator-nav__link--disabled {
+    color: var(--text-muted);
+    cursor: not-allowed;
+    opacity: 0.48;
+    pointer-events: none;
+  }
+
+  .operator-nav__link--disabled .operator-nav__marker {
+    border-color: var(--border-default);
+    background: var(--surface-muted);
+    color: var(--text-muted);
+  }
+
   .operator-header__event strong {
     font-size: var(--font-size-sm);
   }

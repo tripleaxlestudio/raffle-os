@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router'
+import { useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
 
 const prototypeNavigationItems = [
   { label: 'Dashboard', marker: 'DB', to: '/dashboard' },
@@ -20,8 +21,27 @@ const productionNavigationItems = [
   { label: 'Settings', marker: 'ST', to: '/settings' },
 ] as const
 
-export function OperatorSidebar({ production = false }: { production?: boolean }) {
-  const navigationItems = production ? productionNavigationItems : prototypeNavigationItems
+export function OperatorSidebar({ eventScopedNavigationDisabled, production = false }: { readonly eventScopedNavigationDisabled?: boolean; readonly production?: boolean }) {
+  if (production && eventScopedNavigationDisabled !== undefined) return <OperatorSidebarContent disabled={eventScopedNavigationDisabled} navigationItems={productionNavigationItems} production />
+  if (production) return <ProductionOperatorSidebar />
+  return <OperatorSidebarContent navigationItems={prototypeNavigationItems} />
+}
+
+function ProductionOperatorSidebar() {
+  const workspace = useProductionWorkspace()
+  const eventScopedNavigationDisabled = workspace.status === 'empty' || workspace.status === 'invalid-reference'
+  return <OperatorSidebarContent disabled={eventScopedNavigationDisabled} navigationItems={productionNavigationItems} production />
+}
+
+function OperatorSidebarContent({
+  disabled = false,
+  navigationItems,
+  production = false,
+}: {
+  readonly disabled?: boolean
+  readonly navigationItems: readonly { readonly label: string; readonly marker: string; readonly to: string }[]
+  readonly production?: boolean
+}) {
   return (
     <aside className="operator-sidebar" aria-label="Operator sidebar">
       <div className="operator-sidebar__brand">
@@ -38,20 +58,17 @@ export function OperatorSidebar({ production = false }: { production?: boolean }
         <ul className="operator-nav">
           {navigationItems.map((item) => (
             <li key={item.to}>
-              <NavLink
-                className={({ isActive }) =>
-                  isActive
-                    ? 'operator-nav__link operator-nav__link--active'
-                    : 'operator-nav__link'
-                }
+              {disabled && item.to !== '/dashboard' ? <span aria-disabled="true" className="operator-nav__link operator-nav__link--disabled" title="Select an Event first">
+                <span aria-hidden="true" className="operator-nav__marker">{item.marker}</span>
+                <span>{item.label}</span>
+              </span> : <NavLink
+                className={({ isActive }) => isActive ? 'operator-nav__link operator-nav__link--active' : 'operator-nav__link'}
                 end
                 to={item.to}
               >
-                <span aria-hidden="true" className="operator-nav__marker">
-                  {item.marker}
-                </span>
+                <span aria-hidden="true" className="operator-nav__marker">{item.marker}</span>
                 <span>{item.label}</span>
-              </NavLink>
+              </NavLink>}
             </li>
           ))}
         </ul>

@@ -2,7 +2,7 @@ import { parseTicketNumber } from '../../domain/participants/participant.invaria
 import type { TicketNumber } from '../../domain/participants/participant.types.ts'
 import { parseDrawSessionId, type DrawSessionId } from '../../domain/shared/identifiers.ts'
 import { isIsoTimestamp, type IsoTimestamp } from '../../domain/shared/timestamps.ts'
-import type { PublicAsset, PublicDisplayStage, PublicWinnerStatus } from './protocol.ts'
+import type { PublicAsset, PublicDisplayStage, PublicVerificationState, PublicWinnerStatus } from './protocol.ts'
 
 export type PublicProjectionStage = 'standby' | 'countdown' | 'rolling' | 'reveal' | 'pending-handoff'
 export type PublicProjectionMode = 'practice' | 'live'
@@ -16,6 +16,8 @@ export type PublicDisplaySnapshot = Readonly<{
   readonly displayTest?: boolean
   readonly eventName?: string
   readonly eventSubtitle?: string
+  readonly prizeCategory?: string
+  readonly prizeName?: string
   readonly primaryColor?: string
   readonly accentColor?: string
   readonly logo?: PublicAsset
@@ -28,10 +30,12 @@ export type PublicDisplaySnapshot = Readonly<{
   readonly rollStopMode?: 'timed' | 'manual'
   readonly rollDurationSeconds?: number
   readonly presentationSeed?: string
+  readonly presentationMode?: 'instant-reveal' | 'random-number-roll'
   readonly revealMode?: 'all-together' | 'sequential'
   readonly revealStartedAt?: IsoTimestamp
   readonly ticketNumbers?: readonly TicketNumber[]
   readonly winnerStatuses?: readonly PublicWinnerStatus[]
+  readonly verificationState?: PublicVerificationState
 }>
 
 export type PresentationProjectionSource = Readonly<{
@@ -43,6 +47,8 @@ export type PresentationProjectionSource = Readonly<{
   readonly displayTest?: boolean
   readonly eventName?: string
   readonly eventSubtitle?: string
+  readonly prizeCategory?: string
+  readonly prizeName?: string
   readonly primaryColor?: string
   readonly accentColor?: string
   readonly logo?: PublicAsset
@@ -52,6 +58,7 @@ export type PresentationProjectionSource = Readonly<{
   readonly mode?: PublicProjectionMode
   readonly presentationConfiguration?: Readonly<{
     readonly winnerCount: number
+    readonly presentationMode: 'instant-reveal' | 'random-number-roll'
     readonly rollSpeedPerSecond: number
     readonly rollStopMode: 'timed' | 'manual'
     readonly rollDurationSeconds: number
@@ -62,6 +69,7 @@ export type PresentationProjectionSource = Readonly<{
     readonly drawSessionId: DrawSessionId
     readonly winners: readonly Readonly<{ readonly sequence: number; readonly ticketNumber: string; readonly status?: PublicWinnerStatus }>[]
   }>
+  readonly verificationState?: PublicVerificationState
 }>
 
 export type PublicProjectionErrorCode =
@@ -90,6 +98,7 @@ const isStage = (value: unknown): value is PresentationProjectionSource['stage']
 const isMode = (value: unknown): value is PublicProjectionMode => value === 'practice' || value === 'live'
 const isRollStopMode = (value: unknown): value is 'timed' | 'manual' => value === 'timed' || value === 'manual'
 const isRevealMode = (value: unknown): value is 'all-together' | 'sequential' => value === 'all-together' || value === 'sequential'
+const isPresentationMode = (value: unknown): value is 'instant-reveal' | 'random-number-roll' => value === 'instant-reveal' || value === 'random-number-roll'
 const hasOnlyKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean => Object.keys(value).every((key) => keys.includes(key))
 const isPublicAsset = (value: unknown): value is PublicAsset => isRecord(value) && typeof value.type === 'string' && value.blob instanceof Blob
 
@@ -135,7 +144,7 @@ function projectTickets(source: Record<string, unknown>, drawSessionId: string):
 
 export function projectPublicDisplaySnapshot(source: PresentationProjectionSource): PublicDisplaySnapshot {
   const value: unknown = source
-  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || typeof value.blackoutRequested !== 'boolean' || (value.countdownValue !== undefined && value.countdownValue !== 1 && value.countdownValue !== 2 && value.countdownValue !== 3) || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) invalidSource('Presentation source is malformed.')
+  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || typeof value.blackoutRequested !== 'boolean' || (value.countdownValue !== undefined && value.countdownValue !== 1 && value.countdownValue !== 2 && value.countdownValue !== 3) || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.prizeCategory !== undefined && !isNonEmptyString(value.prizeCategory)) || (value.prizeName !== undefined && !isNonEmptyString(value.prizeName)) || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) invalidSource('Presentation source is malformed.')
   const parsedSession = parseDrawSessionId(value.drawSessionId)
   if (!parsedSession.ok) invalidSource('Presentation source session is malformed.')
   if (value.stage !== 'ready' && value.stage !== 'standby' && (value.stageStartedAt === undefined || !isIsoTimestamp(value.stageStartedAt))) invalidSource('A non-standby presentation stage requires a valid timestamp.')
@@ -145,6 +154,7 @@ export function projectPublicDisplaySnapshot(source: PresentationProjectionSourc
   const winners = isRecord(value.result) && Array.isArray(value.result.winners) ? value.result.winners : []
   const rolling = stage === 'rolling' ? {
     rollingSlotCount: configuration !== undefined && typeof configuration.winnerCount === 'number' ? configuration.winnerCount : winners.length || 1,
+    presentationMode: configuration !== undefined && isPresentationMode(configuration.presentationMode) ? configuration.presentationMode : 'instant-reveal' as const,
     rollSpeedPerSecond: configuration !== undefined && typeof configuration.rollSpeedPerSecond === 'number' ? configuration.rollSpeedPerSecond : 12,
     rollStopMode: configuration !== undefined && isRollStopMode(configuration.rollStopMode) ? configuration.rollStopMode : 'timed' as const,
     rollDurationSeconds: configuration !== undefined && typeof configuration.rollDurationSeconds === 'number' ? configuration.rollDurationSeconds : 8,
@@ -152,6 +162,12 @@ export function projectPublicDisplaySnapshot(source: PresentationProjectionSourc
     revealMode: configuration !== undefined && isRevealMode(configuration.revealMode) ? configuration.revealMode : 'all-together' as const,
   } : undefined
   const reveal = stage === 'reveal' || stage === 'pending-handoff' ? {
+    rollingSlotCount: configuration !== undefined && typeof configuration.winnerCount === 'number' ? configuration.winnerCount : winners.length || 1,
+    presentationMode: configuration !== undefined && isPresentationMode(configuration.presentationMode) ? configuration.presentationMode : 'instant-reveal' as const,
+    rollSpeedPerSecond: configuration !== undefined && typeof configuration.rollSpeedPerSecond === 'number' ? configuration.rollSpeedPerSecond : 12,
+    rollStopMode: configuration !== undefined && isRollStopMode(configuration.rollStopMode) ? configuration.rollStopMode : 'timed' as const,
+    rollDurationSeconds: configuration !== undefined && typeof configuration.rollDurationSeconds === 'number' ? configuration.rollDurationSeconds : 8,
+    presentationSeed: typeof value.presentationSeed === 'string' && value.presentationSeed.length > 0 ? value.presentationSeed : parsedSession.value,
     revealMode: configuration !== undefined && isRevealMode(configuration.revealMode) ? configuration.revealMode : 'all-together' as const,
     revealStartedAt: value.stageStartedAt as IsoTimestamp,
   } : undefined
@@ -163,11 +179,14 @@ export function projectPublicDisplaySnapshot(source: PresentationProjectionSourc
     blackoutRequested: value.blackoutRequested,
     ...(value.displayTest === undefined ? {} : { displayTest: value.displayTest }),
     ...(value.eventName === undefined ? {} : { eventName: value.eventName }),
+    ...(value.prizeCategory === undefined ? {} : { prizeCategory: value.prizeCategory as string }),
+    ...(value.prizeName === undefined ? {} : { prizeName: value.prizeName as string }),
     ...(value.eventSubtitle === undefined ? {} : { eventSubtitle: value.eventSubtitle as string }), ...(value.primaryColor === undefined ? {} : { primaryColor: value.primaryColor as string }), ...(value.accentColor === undefined ? {} : { accentColor: value.accentColor as string }), ...(value.logo === undefined ? {} : { logo: value.logo as PublicAsset }), ...(value.background === undefined ? {} : { background: value.background as PublicAsset }), ...(value.blackoutAppearance === undefined ? {} : { blackoutAppearance: value.blackoutAppearance as 'pure-black' | 'event-surface' }), ...(value.safeAreaMargin === undefined ? {} : { safeAreaMargin: value.safeAreaMargin as number }),
     ...(value.mode === undefined ? {} : { mode: value.mode }),
     ...(rolling === undefined ? {} : rolling),
     ...(reveal === undefined ? {} : reveal),
     ...(projected === undefined ? {} : { ticketNumbers: projected.tickets, winnerStatuses: projected.statuses }),
+    ...(value.verificationState === undefined ? {} : { verificationState: value.verificationState as PublicVerificationState }),
   }
   return freezeSnapshot(snapshot)
 }
@@ -182,6 +201,8 @@ export function serializePublicDisplaySnapshot(snapshot: PublicDisplaySnapshot):
     blackoutRequested: snapshot.blackoutRequested,
     ...(snapshot.displayTest === undefined ? {} : { displayTest: snapshot.displayTest }),
     ...(snapshot.eventName === undefined ? {} : { eventName: snapshot.eventName }),
+    ...(snapshot.prizeCategory === undefined ? {} : { prizeCategory: snapshot.prizeCategory }),
+    ...(snapshot.prizeName === undefined ? {} : { prizeName: snapshot.prizeName }),
     ...(snapshot.eventSubtitle === undefined ? {} : { eventSubtitle: snapshot.eventSubtitle }),
     ...(snapshot.primaryColor === undefined ? {} : { primaryColor: snapshot.primaryColor }),
     ...(snapshot.accentColor === undefined ? {} : { accentColor: snapshot.accentColor }),
@@ -195,15 +216,17 @@ export function serializePublicDisplaySnapshot(snapshot: PublicDisplaySnapshot):
     ...(snapshot.rollStopMode === undefined ? {} : { rollStopMode: snapshot.rollStopMode }),
     ...(snapshot.rollDurationSeconds === undefined ? {} : { rollDurationSeconds: snapshot.rollDurationSeconds }),
     ...(snapshot.presentationSeed === undefined ? {} : { presentationSeed: snapshot.presentationSeed }),
+    ...(snapshot.presentationMode === undefined ? {} : { presentationMode: snapshot.presentationMode }),
     ...(snapshot.revealMode === undefined ? {} : { revealMode: snapshot.revealMode }),
     ...(snapshot.ticketNumbers === undefined ? {} : { ticketNumbers: [...snapshot.ticketNumbers] }),
     ...(snapshot.winnerStatuses === undefined ? {} : { winnerStatuses: [...snapshot.winnerStatuses] }),
+    ...(snapshot.verificationState === undefined ? {} : { verificationState: snapshot.verificationState }),
   })
 }
 
 export function parsePublicDisplaySnapshot(value: unknown, expectedSession?: DrawSessionId): PublicDisplaySnapshot {
-  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || value.stage === 'ready' || typeof value.blackoutRequested !== 'boolean' || (value.countdownValue !== undefined && value.countdownValue !== 1 && value.countdownValue !== 2 && value.countdownValue !== 3) || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot is malformed.')
-  if (!hasOnlyKeys(value, ['drawSessionId', 'stage', 'stageStartedAt', 'revealStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'revealMode', 'ticketNumbers', 'winnerStatuses'])) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot contains unsupported fields.')
+  if (!isRecord(value) || !isNonEmptyString(value.drawSessionId) || !isStage(value.stage) || value.stage === 'ready' || typeof value.blackoutRequested !== 'boolean' || (value.countdownValue !== undefined && value.countdownValue !== 1 && value.countdownValue !== 2 && value.countdownValue !== 3) || (value.mode !== undefined && !isMode(value.mode)) || (value.displayTest !== undefined && typeof value.displayTest !== 'boolean') || (value.eventName !== undefined && !isNonEmptyString(value.eventName)) || (value.eventSubtitle !== undefined && typeof value.eventSubtitle !== 'string') || (value.prizeCategory !== undefined && !isNonEmptyString(value.prizeCategory)) || (value.prizeName !== undefined && !isNonEmptyString(value.prizeName)) || (value.logo !== undefined && !isPublicAsset(value.logo)) || (value.background !== undefined && !isPublicAsset(value.background))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot is malformed.')
+  if (!hasOnlyKeys(value, ['drawSessionId', 'stage', 'stageStartedAt', 'revealStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'prizeCategory', 'prizeName', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'presentationMode', 'revealMode', 'ticketNumbers', 'winnerStatuses', 'verificationState'])) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot contains unsupported fields.')
   const parsedSession = parseDrawSessionId(value.drawSessionId)
   if (!parsedSession.ok) throw new PublicProjectionError('invalid-public-snapshot', 'The public display snapshot session is malformed.')
   if (expectedSession !== undefined && value.drawSessionId !== expectedSession) sessionMismatch(expectedSession, value.drawSessionId)
@@ -214,8 +237,10 @@ export function parsePublicDisplaySnapshot(value: unknown, expectedSession?: Dra
   if (!needsTickets && value.ticketNumbers !== undefined) throw new PublicProjectionError('invalid-public-snapshot', 'This public display stage cannot carry tickets.')
   if (value.ticketNumbers !== undefined && (!Array.isArray(value.ticketNumbers) || value.ticketNumbers.length > 100 || value.ticketNumbers.some((ticket) => !isNonEmptyString(ticket) || !parseTicketNumber(ticket).ok))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display ticket list is invalid.')
   if (value.winnerStatuses !== undefined && (!Array.isArray(value.winnerStatuses) || value.winnerStatuses.length !== (Array.isArray(value.ticketNumbers) ? value.ticketNumbers.length : 0) || value.winnerStatuses.some((status) => status !== 'pending' && status !== 'confirmed'))) throw new PublicProjectionError('invalid-public-snapshot', 'The public display winner statuses are invalid.')
+  if (value.verificationState !== undefined && value.verificationState !== 'pending' && value.verificationState !== 'in-progress' && value.verificationState !== 'verified') throw new PublicProjectionError('invalid-public-snapshot', 'The public display verification state is invalid.')
   if (value.stage === 'rolling' && (typeof value.rollingSlotCount !== 'number' || !Number.isInteger(value.rollingSlotCount) || value.rollingSlotCount < 1 || value.rollingSlotCount > 100 || typeof value.rollSpeedPerSecond !== 'number' || !Number.isFinite(value.rollSpeedPerSecond) || value.rollSpeedPerSecond < 1 || !isRollStopMode(value.rollStopMode) || typeof value.rollDurationSeconds !== 'number' || !Number.isFinite(value.rollDurationSeconds) || value.rollDurationSeconds < 0 || typeof value.presentationSeed !== 'string' || value.presentationSeed.length === 0 || !isRevealMode(value.revealMode))) throw new PublicProjectionError('invalid-public-snapshot', 'Rolling presentation metadata is invalid.')
-  if (value.stage !== 'rolling' && ['rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed'].some((key) => key in value)) throw new PublicProjectionError('invalid-public-snapshot', 'Rolling metadata is only valid during rolling.')
+  if (value.presentationMode !== undefined && !isPresentationMode(value.presentationMode)) throw new PublicProjectionError('invalid-public-snapshot', 'Presentation mode is invalid.')
+  if (value.stage !== 'rolling' && value.stage !== 'reveal' && value.stage !== 'pending-handoff' && ['rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed'].some((key) => key in value)) throw new PublicProjectionError('invalid-public-snapshot', 'Rolling metadata is only valid during a draw presentation.')
   if (value.stage !== 'rolling' && value.stage !== 'reveal' && value.stage !== 'pending-handoff' && ['revealMode', 'revealStartedAt'].some((key) => key in value)) throw new PublicProjectionError('invalid-public-snapshot', 'Reveal metadata is only valid during reveal.')
   if ((value.stage === 'reveal' || value.stage === 'pending-handoff') && value.revealMode !== undefined && !isRevealMode(value.revealMode)) throw new PublicProjectionError('invalid-public-snapshot', 'Reveal mode is invalid.')
   const tickets = value.ticketNumbers === undefined ? undefined : Object.freeze(value.ticketNumbers.map(parsePublicTicket))
@@ -227,6 +252,8 @@ export function parsePublicDisplaySnapshot(value: unknown, expectedSession?: Dra
     blackoutRequested: value.blackoutRequested,
     ...(value.displayTest === undefined ? {} : { displayTest: value.displayTest }),
     ...(value.eventName === undefined ? {} : { eventName: value.eventName }),
+    ...(value.prizeCategory === undefined ? {} : { prizeCategory: value.prizeCategory as string }),
+    ...(value.prizeName === undefined ? {} : { prizeName: value.prizeName as string }),
     ...(value.eventSubtitle === undefined ? {} : { eventSubtitle: value.eventSubtitle as string }), ...(value.primaryColor === undefined ? {} : { primaryColor: value.primaryColor as string }), ...(value.accentColor === undefined ? {} : { accentColor: value.accentColor as string }), ...(value.logo === undefined ? {} : { logo: value.logo as PublicAsset }), ...(value.background === undefined ? {} : { background: value.background as PublicAsset }), ...(value.blackoutAppearance === undefined ? {} : { blackoutAppearance: value.blackoutAppearance as 'pure-black' | 'event-surface' }), ...(value.safeAreaMargin === undefined ? {} : { safeAreaMargin: value.safeAreaMargin as number }),
     ...(value.mode === undefined ? {} : { mode: value.mode }),
     ...(typeof value.rollingSlotCount !== 'number' ? {} : { rollingSlotCount: value.rollingSlotCount }),
@@ -234,10 +261,12 @@ export function parsePublicDisplaySnapshot(value: unknown, expectedSession?: Dra
     ...(isRollStopMode(value.rollStopMode) ? { rollStopMode: value.rollStopMode } : {}),
     ...(typeof value.rollDurationSeconds !== 'number' ? {} : { rollDurationSeconds: value.rollDurationSeconds }),
     ...(typeof value.presentationSeed !== 'string' ? {} : { presentationSeed: value.presentationSeed }),
+    ...(isPresentationMode(value.presentationMode) ? { presentationMode: value.presentationMode } : {}),
     ...(isRevealMode(value.revealMode) ? { revealMode: value.revealMode } : {}),
     ...(value.revealStartedAt === undefined ? {} : { revealStartedAt: value.revealStartedAt as IsoTimestamp }),
     ...(tickets === undefined ? {} : { ticketNumbers: tickets }),
     ...(value.winnerStatuses === undefined ? {} : { winnerStatuses: Object.freeze([...value.winnerStatuses] as PublicWinnerStatus[]) }),
+    ...(value.verificationState === undefined ? {} : { verificationState: value.verificationState as PublicVerificationState }),
   })
 }
 
@@ -250,6 +279,8 @@ export const publicSnapshotToProtocolState = (snapshot: PublicDisplaySnapshot) =
   blackoutRequested: snapshot.blackoutRequested,
   ...(snapshot.displayTest === undefined ? {} : { displayTest: snapshot.displayTest }),
   ...(snapshot.eventName === undefined ? {} : { eventName: snapshot.eventName }),
+  ...(snapshot.prizeCategory === undefined ? {} : { prizeCategory: snapshot.prizeCategory }),
+  ...(snapshot.prizeName === undefined ? {} : { prizeName: snapshot.prizeName }),
   ...(snapshot.eventSubtitle === undefined ? {} : { eventSubtitle: snapshot.eventSubtitle }), ...(snapshot.primaryColor === undefined ? {} : { primaryColor: snapshot.primaryColor }), ...(snapshot.accentColor === undefined ? {} : { accentColor: snapshot.accentColor }), ...(snapshot.logo === undefined ? {} : { logo: snapshot.logo }), ...(snapshot.background === undefined ? {} : { background: snapshot.background }), ...(snapshot.blackoutAppearance === undefined ? {} : { blackoutAppearance: snapshot.blackoutAppearance }), ...(snapshot.safeAreaMargin === undefined ? {} : { safeAreaMargin: snapshot.safeAreaMargin }),
   ...(snapshot.mode === undefined ? {} : { mode: snapshot.mode }),
   ...(snapshot.rollingSlotCount === undefined ? {} : { rollingSlotCount: snapshot.rollingSlotCount }),
@@ -257,8 +288,10 @@ export const publicSnapshotToProtocolState = (snapshot: PublicDisplaySnapshot) =
   ...(snapshot.rollStopMode === undefined ? {} : { rollStopMode: snapshot.rollStopMode }),
   ...(snapshot.rollDurationSeconds === undefined ? {} : { rollDurationSeconds: snapshot.rollDurationSeconds }),
   ...(snapshot.presentationSeed === undefined ? {} : { presentationSeed: snapshot.presentationSeed }),
+  ...(snapshot.presentationMode === undefined ? {} : { presentationMode: snapshot.presentationMode }),
   ...(snapshot.revealMode === undefined ? {} : { revealMode: snapshot.revealMode }),
   ...(snapshot.revealStartedAt === undefined ? {} : { revealStartedAt: snapshot.revealStartedAt }),
   ...(snapshot.ticketNumbers === undefined ? {} : { ticketNumbers: [...snapshot.ticketNumbers] }),
   ...(snapshot.winnerStatuses === undefined ? {} : { winnerStatuses: [...snapshot.winnerStatuses] }),
+  ...(snapshot.verificationState === undefined ? {} : { verificationState: snapshot.verificationState }),
 })

@@ -361,6 +361,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         blackoutRequested: message.blackoutRequested ?? false,
         ...(message.displayTest === undefined ? {} : { displayTest: message.displayTest }),
         ...(message.eventName === undefined ? {} : { eventName: message.eventName }),
+        ...(message.prizeCategory === undefined ? {} : { prizeCategory: message.prizeCategory }), ...(message.prizeName === undefined ? {} : { prizeName: message.prizeName }),
         ...(message.eventSubtitle === undefined ? {} : { eventSubtitle: message.eventSubtitle }), ...(message.primaryColor === undefined ? {} : { primaryColor: message.primaryColor }), ...(message.accentColor === undefined ? {} : { accentColor: message.accentColor }), ...(message.logo === undefined ? {} : { logo: message.logo }), ...(message.background === undefined ? {} : { background: message.background }), ...(message.blackoutAppearance === undefined ? {} : { blackoutAppearance: message.blackoutAppearance }), ...(message.safeAreaMargin === undefined ? {} : { safeAreaMargin: message.safeAreaMargin }),
         ...(message.mode === undefined ? {} : { mode: message.mode }),
         ...(message.rollingSlotCount === undefined ? {} : { rollingSlotCount: message.rollingSlotCount }),
@@ -368,6 +369,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         ...(message.rollStopMode === undefined ? {} : { rollStopMode: message.rollStopMode }),
         ...(message.rollDurationSeconds === undefined ? {} : { rollDurationSeconds: message.rollDurationSeconds }),
         ...(message.presentationSeed === undefined ? {} : { presentationSeed: message.presentationSeed }),
+        ...(message.presentationMode === undefined ? {} : { presentationMode: message.presentationMode }),
         ...(message.revealMode === undefined ? {} : { revealMode: message.revealMode }),
         ...(message.stage === 'rolling' ? {
           rollingSlotCount: message.rollingSlotCount ?? 1,
@@ -379,6 +381,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         } : {}),
         ...(message.ticketNumbers === undefined ? {} : { ticketNumbers: message.ticketNumbers }),
         ...(message.winnerStatuses === undefined ? {} : { winnerStatuses: message.winnerStatuses }),
+        ...(message.verificationState === undefined ? {} : { verificationState: message.verificationState }),
       }, isSafeNonDrawState ? undefined : acceptedSession)
       acceptedMessageIds.add(envelope.messageId)
       acceptedOrdering = { epoch: envelope.epoch, sequence: envelope.sequence }

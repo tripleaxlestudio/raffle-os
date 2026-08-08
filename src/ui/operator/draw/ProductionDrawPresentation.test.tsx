@@ -80,6 +80,18 @@ describe('ProductionDrawPresentation', () => {
     expect(within(screen.getByTestId('production-preview')).getByText('00042')).toBeInTheDocument()
   })
 
+  it('centers 3-winner result and preview groups without changing ticket strings', async () => {
+    render(<ProductionDrawPresentation result={result(3)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} />)
+    expect(await screen.findByRole('heading', { name: 'Winner reveal' })).toBeInTheDocument()
+    const winnerList = screen.getByRole('list', { name: '3 Practice winners' })
+    expect(winnerList).toHaveClass('production-winner-list--3')
+    expect(winnerList).not.toHaveClass('production-winner-list--1')
+    expect(within(winnerList).getByText('00042')).toBeInTheDocument()
+    const preview = screen.getByTestId('production-preview')
+    expect(preview.querySelector('.production-preview__tickets')).toHaveClass('production-preview__tickets')
+    expect(preview.querySelectorAll('code')).toHaveLength(3)
+  })
+
   it('restores Reset rehearsal for completed Practice reveal only', async () => {
     const onResetPractice = vi.fn()
     render(<ProductionDrawPresentation result={result(1)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} onResetPractice={onResetPractice} />)

@@ -10,15 +10,32 @@ export function projectCommittedAudienceState(input: {
   readonly stageStartedAt: IsoTimestamp
   readonly blackoutRequested: boolean
 }): PresentationProjectionSource {
+  const presentation = input.session.configurationSnapshot?.presentation
   const active = input.winners
     .filter((winner) => winner.drawSessionId === input.session.id && winner.status !== 'cancelled')
     .sort((left, right) => left.sequenceNumber - right.sequenceNumber)
+  const verificationState = input.winners.some((winner) => winner.status === 'cancelled')
+    ? 'in-progress' as const
+    : active.length > 0 && active.every((winner) => winner.status === 'confirmed')
+      ? 'verified' as const
+      : active.some((winner) => winner.status === 'confirmed')
+        ? 'in-progress' as const
+        : 'pending' as const
   return {
     drawSessionId: input.session.id,
     stage: 'pending-handoff',
     stageStartedAt: input.stageStartedAt,
     blackoutRequested: input.blackoutRequested,
     mode: input.session.mode,
+    verificationState,
+    ...(input.session.configurationSnapshot === null ? {} : { prizeCategory: input.session.configurationSnapshot.categoryName, prizeName: input.session.configurationSnapshot.prizeName }),
+    ...(presentation === undefined ? {} : {
+      presentationConfiguration: {
+        ...presentation,
+        winnerCount: active.length,
+      },
+      presentationSeed: input.session.id,
+    }),
     result: {
       drawSessionId: input.session.id,
       winners: active.map((winner, index) => ({

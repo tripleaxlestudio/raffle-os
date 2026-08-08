@@ -7,7 +7,7 @@ import type { ProtocolScope } from '../../application/display-transport/protocol
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
 import { parseEventId, parseDisplayConfigurationId } from '../../domain/shared/identifiers.ts'
 import { deriveProductionDisplayScope } from '../../application/display/display-configuration-service.ts'
-import { BlackoutStage, CountdownStage, DisconnectedStage, RollingStage, StandbyStage, WinnerStage } from '../../ui/audience/index.ts'
+import { BlackoutStage, CountdownStage, DisconnectedStage, RandomNumberRollStage, RollingStage, StandbyStage, WinnerStage } from '../../ui/audience/index.ts'
 import type { PublicAudienceScenario } from '../../ui/audience/audience-view.types.ts'
 import { RuntimeDiagnosticsPanel } from '../../application/display-transport/RuntimeDiagnostics.tsx'
 import { appendRuntimeTrace } from '../../application/display-transport/runtime-trace.ts'
@@ -19,25 +19,32 @@ type AudienceDisplayPageProps = Readonly<{ transport?: Transport; scope?: Protoc
 function snapshotScenario(snapshot: PublicDisplaySnapshot): PublicAudienceScenario {
   const statuses = snapshot.winnerStatuses ?? []
   const hasTickets = (snapshot.ticketNumbers?.length ?? 0) > 0
+  const allConfirmed = hasTickets && statuses.length === snapshot.ticketNumbers?.length && statuses.every((status) => status === 'confirmed')
+  const someConfirmed = statuses.some((status) => status === 'confirmed')
+  const verified = snapshot.verificationState === 'verified' || (snapshot.verificationState === undefined && allConfirmed)
+  const inProgress = snapshot.verificationState === 'in-progress' || (snapshot.verificationState === undefined && someConfirmed)
   const committedState = snapshot.stage === 'pending-handoff' && !hasTickets
     ? 'standby' as const
-    : snapshot.stage === 'pending-handoff' && hasTickets && statuses.length > 0 && statuses.every((status) => status === 'confirmed')
+    : snapshot.stage === 'pending-handoff' && verified
       ? 'confirmed' as const
       : snapshot.stage
   return {
     ...publicContext,
     ...(snapshot.eventName === undefined ? {} : { eventName: snapshot.eventName }),
     ...(snapshot.eventSubtitle === undefined ? {} : { eventSubtitle: snapshot.eventSubtitle }),
+    ...(snapshot.prizeCategory === undefined ? {} : { prizeCategory: snapshot.prizeCategory }),
+    ...(snapshot.prizeName === undefined ? {} : { prizeLabel: snapshot.prizeName }),
     ...(snapshot.logo === undefined ? {} : { logo: snapshot.logo.blob }),
     ...(snapshot.primaryColor === undefined ? {} : { primaryColor: snapshot.primaryColor }),
     ...(snapshot.accentColor === undefined ? {} : { accentColor: snapshot.accentColor }),
-    ...(snapshot.stage === 'rolling' ? { rollingStartedAt: snapshot.stageStartedAt, rollingSlotCount: snapshot.rollingSlotCount, rollSpeedPerSecond: snapshot.rollSpeedPerSecond, rollStopMode: snapshot.rollStopMode, rollDurationSeconds: snapshot.rollDurationSeconds, presentationSeed: snapshot.presentationSeed } : {}),
+    ...(snapshot.stage === 'rolling' || snapshot.stage === 'reveal' || snapshot.stage === 'pending-handoff' ? { rollingStartedAt: snapshot.stage === 'rolling' ? snapshot.stageStartedAt : undefined, rollingSlotCount: snapshot.rollingSlotCount, rollSpeedPerSecond: snapshot.rollSpeedPerSecond, rollStopMode: snapshot.rollStopMode, rollDurationSeconds: snapshot.rollDurationSeconds, presentationSeed: snapshot.presentationSeed, presentationMode: snapshot.presentationMode } : {}),
     ...(snapshot.stage === 'reveal' || snapshot.stage === 'pending-handoff' ? { revealMode: snapshot.revealMode, revealStartedAt: snapshot.revealStartedAt ?? snapshot.stageStartedAt } : {}),
     state: committedState,
     message: committedState === 'standby' ? (snapshot.displayTest === false ? 'Waiting for the next presentation' : snapshot.stage === 'pending-handoff' ? 'No active winners' : 'Draw will begin shortly') : committedState === 'countdown' ? 'Get ready' : committedState === 'rolling' ? 'Drawing in progress' : undefined,
     countdownValue: snapshot.stage === 'countdown' ? String(snapshot.countdownValue ?? '—') : undefined,
     ticketNumbers: snapshot.ticketNumbers,
-    statusMessage: committedState === 'confirmed' ? 'Confirmed result' : snapshot.stage === 'pending-handoff' ? (snapshot.winnerStatuses === undefined ? 'Public result' : 'Results under verification') : snapshot.stage === 'reveal' ? 'Results under verification' : undefined,
+    winnerStatuses: snapshot.winnerStatuses,
+    statusMessage: committedState === 'confirmed' ? 'WINNERS VERIFIED' : snapshot.stage === 'pending-handoff' ? (inProgress ? 'VERIFICATION IN PROGRESS' : 'RESULTS UNDER VERIFICATION') : snapshot.stage === 'reveal' ? 'RESULTS UNDER VERIFICATION' : undefined,
     displayTest: snapshot.displayTest,
   }
 }
@@ -153,6 +160,7 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
   if (state.snapshot.blackoutRequested) return <div style={audienceStyle}><BlackoutStage appearance={state.snapshot.blackoutAppearance} />{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={selectedRenderedState} /></div>
   const scenario = snapshotScenario(state.snapshot)
   const rendered = (() => {
+  if (scenario.presentationMode === 'random-number-roll' && (scenario.state === 'rolling' || scenario.state === 'reveal')) return <RandomNumberRollStage scenario={scenario} />
   switch (scenario.state) {
     case 'standby': return <StandbyStage scenario={scenario} />
     case 'countdown': return <CountdownStage scenario={scenario} />

@@ -88,6 +88,19 @@ describe('operator presentation publisher', () => {
     expect(harness.messages.at(-1)?.message).not.toHaveProperty('winnerId')
   })
 
+  it('publishes a new retained snapshot when only authoritative winner status changes', () => {
+    const harness = transportHarness()
+    const publisher = createOperatorPublisher({ transport: harness.transport, scope, senderId: 'operator-1', clock: { now: () => '2026-08-05T00:00:00.000Z' as never } })
+    const pending = { ...source('pending-handoff'), result: { drawSessionId: session, winners: [{ sequence: 1, ticketNumber: '00073', status: 'pending' as const }] } }
+    const confirmed = { ...pending, result: { drawSessionId: session, winners: [{ sequence: 1, ticketNumber: '00073', status: 'confirmed' as const }] } }
+    publisher.start(pending)
+    const before = harness.messages.length
+    expect(publisher.publish(confirmed)).toMatchObject({ ok: true, published: true })
+    expect(harness.messages).toHaveLength(before + 1)
+    expect(harness.messages.at(-1)?.message).toMatchObject({ winnerStatuses: ['confirmed'], ticketNumbers: ['00073'] })
+    expect(publisher.getSnapshot()?.winnerStatuses).toEqual(['confirmed'])
+  })
+
   it('increments sequence for blackout without changing the underlying stage', () => {
     const harness = transportHarness()
     const publisher = createOperatorPublisher({ transport: harness.transport, scope, senderId: 'operator-1', clock: { now: () => '2026-08-05T00:00:00.000Z' as never } })

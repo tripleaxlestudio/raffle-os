@@ -25,6 +25,7 @@ export type PublicDisplayStage =
   | 'confirmed';
 
 export type PublicWinnerStatus = 'pending' | 'confirmed';
+export type PublicVerificationState = 'pending' | 'in-progress' | 'verified';
 
 export type PublicMessage =
   | {
@@ -42,6 +43,8 @@ export type PublicMessage =
       readonly displayTest?: boolean;
       readonly eventName?: string;
       readonly eventSubtitle?: string;
+      readonly prizeCategory?: string;
+      readonly prizeName?: string;
       readonly primaryColor?: string;
       readonly accentColor?: string;
       readonly logo?: PublicAsset;
@@ -54,9 +57,11 @@ export type PublicMessage =
       readonly rollStopMode?: 'timed' | 'manual';
       readonly rollDurationSeconds?: number;
       readonly presentationSeed?: string;
+      readonly presentationMode?: 'instant-reveal' | 'random-number-roll';
       readonly revealMode?: 'all-together' | 'sequential';
       readonly ticketNumbers?: readonly string[];
       readonly winnerStatuses?: readonly PublicWinnerStatus[];
+      readonly verificationState?: PublicVerificationState;
       readonly restore?: boolean;
     }
   | {
@@ -188,7 +193,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
   const validStage = isStage(stage) ? stage : undefined;
   if (messageType === 'display-ready' && (!hasOnlyKeys(message, ['type', 'capability']) || validCapability === undefined)) return invalid('message', 'Display-ready message contains unsupported or invalid fields.');
   if (messageType === 'display-state' && validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
-  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'revealStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'revealMode', 'ticketNumbers', 'winnerStatuses', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
+  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'revealStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'prizeCategory', 'prizeName', 'primaryColor', 'accentColor', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'presentationMode', 'revealMode', 'ticketNumbers', 'winnerStatuses', 'verificationState', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
   if (messageType === 'display-restore-request' && !hasOnlyKeys(message, ['type', 'requestedEpoch', 'requestedSequence'])) return invalid('message', 'Restore request contains unsupported fields.');
   if (messageType === 'display-snapshot-applied' && !hasOnlyKeys(message, ['type', 'appliedEpoch', 'appliedSequence', 'publicState'])) return invalid('message', 'Snapshot acknowledgement contains unsupported fields.');
   if (messageType === 'display-heartbeat' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Heartbeat contains unsupported fields.');
@@ -205,6 +210,7 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
     if (validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
     const ticketNumbers = message.ticketNumbers;
     const winnerStatuses = message.winnerStatuses;
+    const verificationState = message.verificationState;
     if (message.drawSessionId !== undefined && !isNonEmptyString(message.drawSessionId)) return invalid('message.drawSessionId', 'Projection session ID must be a non-empty string.');
     if (message.stageStartedAt !== undefined && (!isNonEmptyString(message.stageStartedAt) || Number.isNaN(Date.parse(message.stageStartedAt)))) return invalid('message.stageStartedAt', 'Stage timestamp must be valid.');
     if (message.revealStartedAt !== undefined && (!isNonEmptyString(message.revealStartedAt) || Number.isNaN(Date.parse(message.revealStartedAt)))) return invalid('message.revealStartedAt', 'Reveal timestamp must be valid.');
@@ -213,6 +219,8 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
     if (message.displayTest !== undefined && typeof message.displayTest !== 'boolean') return invalid('message.displayTest', 'Display-test marker must be boolean.');
     if (message.eventName !== undefined && !isNonEmptyString(message.eventName)) return invalid('message.eventName', 'Public Event name must be a non-empty string.');
     if (message.eventSubtitle !== undefined && typeof message.eventSubtitle !== 'string') return invalid('message.eventSubtitle', 'Public subtitle is invalid.');
+    if (message.prizeCategory !== undefined && !isNonEmptyString(message.prizeCategory)) return invalid('message.prizeCategory', 'Prize category is invalid.');
+    if (message.prizeName !== undefined && !isNonEmptyString(message.prizeName)) return invalid('message.prizeName', 'Prize name is invalid.');
     if (message.primaryColor !== undefined && !isNonEmptyString(message.primaryColor)) return invalid('message.primaryColor', 'Primary color is invalid.');
     if (message.accentColor !== undefined && !isNonEmptyString(message.accentColor)) return invalid('message.accentColor', 'Accent color is invalid.');
     if (message.blackoutAppearance !== undefined && message.blackoutAppearance !== 'pure-black' && message.blackoutAppearance !== 'event-surface') return invalid('message.blackoutAppearance', 'Blackout appearance is invalid.');
@@ -226,9 +234,11 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
     if (message.rollDurationSeconds !== undefined && (typeof message.rollDurationSeconds !== 'number' || !Number.isFinite(message.rollDurationSeconds) || message.rollDurationSeconds < 0)) return invalid('message.rollDurationSeconds', 'Rolling duration is invalid.');
     if (message.presentationSeed !== undefined && !isNonEmptyString(message.presentationSeed)) return invalid('message.presentationSeed', 'Presentation seed is invalid.');
     if (message.revealMode !== undefined && message.revealMode !== 'all-together' && message.revealMode !== 'sequential') return invalid('message.revealMode', 'Reveal mode is invalid.');
+    if (message.presentationMode !== undefined && message.presentationMode !== 'instant-reveal' && message.presentationMode !== 'random-number-roll') return invalid('message.presentationMode', 'Presentation mode is invalid.');
     if (message.restore !== undefined && typeof message.restore !== 'boolean') return invalid('message.restore', 'Restore marker must be boolean.');
     if (ticketNumbers !== undefined && (!Array.isArray(ticketNumbers) || ticketNumbers.some((ticket) => !isNonEmptyString(ticket)))) return invalid('message.ticketNumbers', 'Ticket numbers must be non-empty strings.');
     if (winnerStatuses !== undefined && (!Array.isArray(winnerStatuses) || winnerStatuses.some((status) => status !== 'pending' && status !== 'confirmed'))) return invalid('message.winnerStatuses', 'Winner statuses are invalid.');
+    if (verificationState !== undefined && verificationState !== 'pending' && verificationState !== 'in-progress' && verificationState !== 'verified') return invalid('message.verificationState', 'Verification state is invalid.');
     parsedMessage = {
       type: messageType,
       stage: validStage,
@@ -240,6 +250,8 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
       ...(message.displayTest === undefined ? {} : { displayTest: message.displayTest }),
       ...(message.eventName === undefined ? {} : { eventName: message.eventName }),
       ...(message.eventSubtitle === undefined ? {} : { eventSubtitle: message.eventSubtitle }),
+      ...(message.prizeCategory === undefined ? {} : { prizeCategory: message.prizeCategory }),
+      ...(message.prizeName === undefined ? {} : { prizeName: message.prizeName }),
       ...(message.primaryColor === undefined ? {} : { primaryColor: message.primaryColor }),
       ...(message.accentColor === undefined ? {} : { accentColor: message.accentColor }),
       ...(message.logo === undefined ? {} : { logo: message.logo as PublicAsset }),
@@ -253,8 +265,10 @@ export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
       ...(message.rollDurationSeconds === undefined ? {} : { rollDurationSeconds: message.rollDurationSeconds }),
       ...(message.presentationSeed === undefined ? {} : { presentationSeed: message.presentationSeed }),
       ...(message.revealMode === undefined ? {} : { revealMode: message.revealMode }),
+      ...(message.presentationMode === undefined ? {} : { presentationMode: message.presentationMode }),
       ...(ticketNumbers === undefined ? {} : { ticketNumbers: [...ticketNumbers] }),
       ...(winnerStatuses === undefined ? {} : { winnerStatuses: [...winnerStatuses] }),
+      ...(verificationState === undefined ? {} : { verificationState }),
       ...(message.restore === undefined ? {} : { restore: message.restore }),
     };
   } else if (messageType === 'display-restore-request') {

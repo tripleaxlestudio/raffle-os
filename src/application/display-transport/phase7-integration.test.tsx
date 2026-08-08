@@ -26,6 +26,8 @@ function source(stage: PresentationProjectionSource['stage'], mode: 'practice' |
     stage,
     mode,
     blackoutRequested,
+    prizeCategory: 'Door Prize',
+    prizeName: 'Sepeda',
     result,
     ...(stage !== 'ready' && stage !== 'standby' ? { stageStartedAt: timestamp as never } : {}),
   }
@@ -84,11 +86,35 @@ describe('Phase 7 integration and automated acceptance', () => {
     expect(screen.getByRole('heading', { name: 'Get ready' })).toBeVisible()
     act(() => { publisher.publish(source('rolling')) })
     expect(screen.getByRole('heading', { name: 'Drawing in progress' })).toBeVisible()
+    expect(screen.getByText('Door Prize')).toBeVisible()
+    expect(screen.getByText('Sepeda')).toBeVisible()
     act(() => { publisher.publish(source('reveal')) })
     expect(screen.getByText('00042')).toBeVisible()
     expect(screen.getByText('42')).toBeVisible()
+    expect(screen.getByText('Door Prize')).toBeVisible()
+    expect(screen.getByText('Sepeda')).toBeVisible()
     act(() => { publisher.publish(source('pending-handoff')) })
-    expect(screen.getByText('Public result')).toBeVisible()
+    expect(screen.getByText('RESULTS UNDER VERIFICATION')).toBeVisible()
+
+    publisher.close()
+    unmount()
+    displayTransport.close()
+  })
+
+  it('keeps Random Number Roll through committed projection, protocol, and Audience lock', () => {
+    const committedSource: PresentationProjectionSource = {
+      ...source('reveal'),
+      presentationConfiguration: { presentationMode: 'random-number-roll', winnerCount: 2, rollSpeedPerSecond: 12, rollStopMode: 'timed', rollDurationSeconds: 8, revealMode: 'all-together' },
+      presentationSeed: session,
+    }
+    const [operatorTransport, displayTransport] = createInMemoryTransportPair('phase7-random-roll-lock')
+    const publisher = createOperatorPublisher({ transport: operatorTransport, scope, senderId: 'operator-1', expectedSession: session, epoch: 4, clock: clock() })
+    const { unmount } = render(<AudienceDisplayPage transport={displayTransport} scope={scope} />)
+
+    act(() => { expect(publisher.start(committedSource)).toMatchObject({ ok: true, published: true }) })
+    expect(publisher.getSnapshot()).toMatchObject({ stage: 'reveal', presentationMode: 'random-number-roll', revealStartedAt: timestamp, presentationSeed: session, ticketNumbers: ['00042', '42'] })
+    expect(screen.getByTestId('winner-grid').querySelectorAll('[data-reveal-entrance="true"]')).toHaveLength(0)
+    expect(screen.getByTestId('winner-grid').querySelectorAll('[data-reveal-entrance="false"]')).toHaveLength(2)
 
     publisher.close()
     unmount()

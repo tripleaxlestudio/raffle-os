@@ -26,6 +26,7 @@ export type PublicAudienceScenario = PublicAudienceContext &
     readonly message?: string
     readonly countdownValue?: string
     readonly ticketNumbers?: readonly string[]
+    readonly winnerStatuses?: readonly ('pending' | 'confirmed')[]
     readonly statusMessage?: string
     readonly instruction?: string
     readonly layoutCount?: number
@@ -38,6 +39,7 @@ export type PublicAudienceScenario = PublicAudienceContext &
     readonly rollStopMode?: 'timed' | 'manual'
     readonly rollDurationSeconds?: number
     readonly presentationSeed?: string
+    readonly presentationMode?: 'instant-reveal' | 'random-number-roll'
     readonly revealMode?: 'all-together' | 'sequential'
     readonly revealStartedAt?: string
   }>

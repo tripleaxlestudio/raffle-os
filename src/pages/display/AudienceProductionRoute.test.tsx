@@ -57,8 +57,25 @@ describe('production Audience route', () => {
     expect(screen.getByText('42')).toBeVisible()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
     act(() => { publisher.publish(stateMessage(5, { stage: 'pending-handoff', stageStartedAt: '2026-08-05T00:00:00.000Z', ticketNumbers: ['00042', '42'], winnerStatuses: ['confirmed', 'confirmed'] })) })
-    expect(screen.getByText('Confirmed result')).toBeVisible()
+    expect(screen.getByText('WINNERS VERIFIED')).toBeVisible()
+    expect(screen.getAllByTestId('winner-grid')[0]).toHaveAttribute('data-row-composition', '2')
     display.close()
+    publisher.close()
+  })
+
+  it('updates only the authoritative confirmed tile in place during partial verification', () => {
+    const [publisher, display] = createInMemoryTransportPair('production-partial-verification')
+    const controller = createAudienceController({ transport: display, scope })
+    render(<AudienceDisplayPage controller={controller} scope={scope} />)
+    act(() => { publisher.publish(stateMessage(1, { stage: 'pending-handoff', stageStartedAt: '2026-08-05T00:00:00.000Z', ticketNumbers: ['00073', '00052', '00059'], winnerStatuses: ['pending', 'pending', 'pending'] })) })
+    const before = [...document.querySelectorAll('[data-ticket-tile]')]
+    act(() => { publisher.publish(stateMessage(2, { stage: 'pending-handoff', stageStartedAt: '2026-08-05T00:00:00.000Z', ticketNumbers: ['00073', '00052', '00059'], winnerStatuses: ['confirmed', 'pending', 'pending'] })) })
+    const after = [...document.querySelectorAll('[data-ticket-tile]')]
+    expect(screen.getByText('VERIFICATION IN PROGRESS')).toBeVisible()
+    expect(after.map((tile) => tile.getAttribute('data-verification-status'))).toEqual(['confirmed', 'pending', 'pending'])
+    expect(after).toEqual(before)
+    expect(after.map((tile) => tile.textContent?.replace('Confirmed', '').replace('Pending', '').trim())).toEqual(['00073', '00052', '00059'])
+    controller.close()
     publisher.close()
   })
 

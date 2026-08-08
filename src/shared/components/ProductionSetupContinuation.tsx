@@ -21,7 +21,7 @@ export function ProductionSetupContinuation() {
   const stateLabel = complete ? 'COMPLETE' : unlocked ? 'IN PROGRESS' : 'LOCKED'
   const supportingCopy = workspace.status !== 'ready' ? 'Select an Event as Current to continue.' : !unlocked ? 'Complete the previous setup step to continue.' : currentIndex === 1 && !complete ? 'Create at least one prize category to continue.' : complete ? `${currentStep.label} setup is complete.` : `Complete ${currentStep.label} setup to continue.`
 
-  return <section className="production-setup-continuation" aria-labelledby="setup-journey-title">
+  return <section className="production-setup-continuation" data-setup-journey-surface="sticky" aria-labelledby="setup-journey-title">
     <div className="production-setup-continuation__progress">
       <p className="production-setup-continuation__eyebrow">SETUP JOURNEY · STEP {currentIndex + 1} OF {PRODUCTION_SETUP_JOURNEY.length} · {currentStep.label.toUpperCase()} {stateLabel}</p>
       <h2 id="setup-journey-title">{currentStep.label} setup</h2>

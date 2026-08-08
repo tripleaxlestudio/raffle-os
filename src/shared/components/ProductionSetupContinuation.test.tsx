@@ -19,6 +19,8 @@ afterEach(() => { cleanup(); workspace.value = { status: 'empty', event: undefin
 describe('ProductionSetupContinuation', () => {
   it('reports the five-stage production setup journey in order', () => {
     renderContinuation()
+    expect(screen.getByRole('region', { name: 'Event setup' })).toHaveClass('production-setup-continuation')
+    expect(screen.getByRole('region', { name: 'Event setup' })).toHaveAttribute('data-setup-journey-surface', 'sticky')
     expect(screen.getByText(/SETUP JOURNEY · STEP 1 OF 5 · EVENT IN PROGRESS/)).toBeVisible()
     expect(screen.getByRole('list', { name: 'Production setup steps' })).toHaveTextContent('EventPrizeParticipantsDisplay SettingsDraw Setup')
     expect(PRODUCTION_SETUP_JOURNEY.map((step) => step.label)).toEqual(['Event', 'Prize', 'Participants', 'Display Settings', 'Draw Setup'])

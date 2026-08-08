@@ -280,6 +280,10 @@
     scrollbar-color: var(--border-strong) transparent;
   }
 
+  .operator-main--production {
+    padding-bottom: calc(var(--content-padding) + var(--space-5));
+  }
+
   :root[data-side-panel-open] .operator-main {
     overflow: hidden;
   }

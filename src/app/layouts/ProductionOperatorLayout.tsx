@@ -146,7 +146,7 @@ export function ProductionOperatorLayout() {
       <OperatorSidebar production />
       <div className="operator-workspace">
         <ProductionOperatorHeader />
-        <main className="operator-main"><Outlet />{productionSetupStageIndexForRoute(location.pathname) !== undefined ? <ProductionSetupContinuation /> : null}<ProductionAudienceDiagnostics /></main>
+        <main className="operator-main operator-main--production" data-production-content-scroll="true"><Outlet /><ProductionAudienceDiagnostics />{productionSetupStageIndexForRoute(location.pathname) !== undefined ? <ProductionSetupContinuation /> : null}</main>
       </div>
     </div>
   </ProductionWorkspaceProvider>

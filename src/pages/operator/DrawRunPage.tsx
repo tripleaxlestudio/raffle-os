@@ -20,6 +20,7 @@ import { useProductionAudiencePublisher, useProductionWorkspace } from '../../ap
 import { presentAudienceConnection } from '../../ui/operator/draw/audience-connection-view-model.ts'
 import { presentationPolicyFromSettings } from '../../application/workflow/presentation-policy.ts'
 import { resolveDrawPresentationConfiguration, type DrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
+import { createDrawRunPreflight, type DrawRunPreflight } from '../../application/draw/draw-run-preflight.ts'
 
 type GateState = 'loading' | 'ready' | 'holding' | 'invoking' | 'locked' | 'error'
 
@@ -38,6 +39,7 @@ export function DrawRunPage() {
   const { drawSessionId } = useParams<{ drawSessionId: string }>()
   const sessionId = drawSessionId as DrawSessionId | undefined
   const [readiness, setReadiness] = useState<DrawReadinessResult | null>(null)
+  const [preflight, setPreflight] = useState<DrawRunPreflight | null>(null)
   const [state, setState] = useState<GateState>('loading')
   const [error, setError] = useState<LiveStartGateError | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -69,7 +71,11 @@ export function DrawRunPage() {
       await services.open()
       const next = await queryDrawReadiness(drawSessionId, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })
       setReadiness(next)
-      if (next.data !== undefined && services.displayConfigurations !== undefined) setDisplayConfigurationId((await services.displayConfigurations.findByEventId(next.data.event.id))?.id)
+      const displayConfiguration = next.data === undefined ? null : services.displayConfigurations === undefined ? undefined : await services.displayConfigurations.findByEventId(next.data.event.id)
+      setDisplayConfigurationId(displayConfiguration?.id)
+      const nextAudienceState = displayConfiguration === null ? 'setup-required' : presentAudienceConnection(audience.status, audience.getDiagnostics()).label === 'Connected' ? 'connected' : presentAudienceConnection(audience.status, audience.getDiagnostics()).label === 'Unavailable' || presentAudienceConnection(audience.status, audience.getDiagnostics()).label === 'Publication failed' ? 'unavailable' : 'waiting'
+      const nextPreflight = createDrawRunPreflight(next, displayConfiguration, nextAudienceState)
+      setPreflight(nextPreflight)
       if (next.data?.session.status === 'pending-confirmation') {
         const winners = await services.winners.findByDrawSessionId(sessionId!)
         if (winners.length > 0) {
@@ -90,7 +96,7 @@ export function DrawRunPage() {
           return
         }
       }
-      setState(next.state === 'ready' ? 'ready' : 'error')
+      setState(nextPreflight.canStart ? 'ready' : 'error')
     } catch (cause: unknown) {
       if (cause instanceof PresentationError) {
         setPresentationBootstrapError(cause)
@@ -100,7 +106,7 @@ export function DrawRunPage() {
       setError(toLiveStartGateError(cause))
       setState('error')
     }
-  }, [drawSessionId, navigate, services, sessionId])
+  }, [audience, drawSessionId, navigate, services, sessionId])
 
   useEffect(() => { void Promise.resolve().then(load) }, [load])
   useEffect(() => audience.subscribe(setAudienceStatus), [audience])
@@ -112,6 +118,7 @@ export function DrawRunPage() {
     setState('invoking')
     setError(null)
     const data = readiness.data
+    if (preflight?.canStart !== true) throw new LiveStartGateError('stale-configuration', preflight?.blocker?.detail ?? 'Resolve the Draw Run preflight before starting.', 'return-to-setup')
     const input: DrawCommandInput = { drawSessionId: sessionId, eventId: data.event.id, configurationId: data.configuration.id, prizeCategoryId: data.category.id, mode: data.session.mode, expectedStatus: 'ready' }
     try {
       const latest = await queryDrawReadiness(sessionId, { ...services, checkStorage: services.checkStorage!, checkCrypto: services.checkCrypto! })
@@ -143,7 +150,7 @@ export function DrawRunPage() {
       setError(toLiveStartGateError(cause))
       setState('error')
     }
-  }, [readiness, services, sessionId])
+  }, [preflight, readiness, services, sessionId])
 
   useEffect(() => {
     if (state !== 'ready' || readiness?.data === undefined) return
@@ -234,8 +241,10 @@ export function DrawRunPage() {
   const data = readiness.data
   const live = data.mode === 'live'
   const presentationConfiguration: DrawPresentationConfiguration = resolveDrawPresentationConfiguration(data.session.configurationSnapshot?.presentation ?? data.configuration.presentation)
+  if (preflight !== null && preflight.state === 'blocked') return <section aria-labelledby="draw-run-title" className="draw-setup draw-run-production"><div className="production-draw-run-shell"><ProductionDrawRunHeader backTo="/draw/live" mode={data.mode} stage="Preflight required" eventName={data.event.name} prizeCategory={data.category.name} prizeName={data.category.prizeName} recap={{ winnerCount: data.configuration.requestedWinners, eligibleCount: data.authoritativeEligibleCount, winningRule: data.configuration.winningRule, countdownSeconds: workspace.status === 'ready' ? workspace.eventSettings.presentation.countdownDurationSeconds : 3, rollingSeconds: presentationConfiguration.rollDurationSeconds, presentationConfiguration }} audienceStatus={{ label: audienceConnection.label, detail: audienceConnection.detail, displayUrl: audienceDisplayUrl }} /><Card padding="md"><div className="draw-run-preflight-heading"><div><p className="operator-eyebrow">Production readiness</p><h2>Resolve before starting</h2></div><span className="draw-run-preflight-state">NOT READY</span></div><div className="draw-run-preflight-list">{preflight.checks.map((check) => <div className={`draw-run-preflight-item draw-run-preflight-item--${check.state}`} key={check.key}><div><strong>{check.label}</strong><span>{check.detail}</span></div><strong>{check.value}</strong>{check.recoveryPath === undefined ? null : <Link to={check.recoveryPath}>Open Display Settings</Link>}</div>)}</div><div className="draw-action-bar__actions"><Button onClick={() => { attemptRef.current = false; void load() }}>Recheck preflight</Button><Button variant="secondary" onClick={() => navigate('/draw/setup')}>Back to Draw Setup</Button></div></Card></div></section>
   return <section aria-labelledby="draw-run-title" className="draw-setup draw-run-production">
-    <div className="production-draw-run-shell"><ProductionDrawRunHeader backTo="/draw/live" mode={data.mode} stage="Ready to start" eventName={data.event.name} prizeCategory={data.category.name} prizeName={data.category.prizeName} recap={{ winnerCount: data.configuration.requestedWinners, eligibleCount: data.authoritativeEligibleCount, winningRule: data.configuration.winningRule, countdownSeconds: workspace.status === 'ready' ? workspace.eventSettings.presentation.countdownDurationSeconds : 3, rollingSeconds: presentationConfiguration.rollDurationSeconds, presentationConfiguration }} audienceStatus={{ label: audienceConnection.label, detail: audienceConnection.detail, displayUrl: audienceDisplayUrl }} /><div className="production-draw-run-ready-grid">
+    <div className="production-draw-run-shell"><ProductionDrawRunHeader backTo="/draw/live" mode={data.mode} stage="Ready to start" eventName={data.event.name} prizeCategory={data.category.name} prizeName={data.category.prizeName} recap={{ winnerCount: data.configuration.requestedWinners, eligibleCount: data.authoritativeEligibleCount, winningRule: data.configuration.winningRule, countdownSeconds: workspace.status === 'ready' ? workspace.eventSettings.presentation.countdownDurationSeconds : 3, rollingSeconds: presentationConfiguration.rollDurationSeconds, presentationConfiguration }} audienceStatus={{ label: audienceConnection.label, detail: audienceConnection.detail, displayUrl: audienceDisplayUrl }} /><Card padding="md"><div className="draw-run-preflight-heading"><div><p className="operator-eyebrow">Production readiness</p><h2>READY TO START</h2></div><span className="draw-run-preflight-state">{data.mode === 'live' ? 'LIVE' : 'PRACTICE'}</span></div><div className="draw-run-preflight-list">{preflight?.checks.map((check) => <div className={`draw-run-preflight-item draw-run-preflight-item--${check.state}`} key={check.key}><div><strong>{check.label}</strong><span>{check.detail}</span></div><strong>{check.value}</strong></div>)}</div></Card>
+    <div className="production-draw-run-ready-grid">
     <div className="live-ready__layout"><div className="live-ready__main"><Card padding="md"><h2>Locked persisted recap</h2><dl className="summary-list"><div className="summary-list__item"><dt>Event</dt><dd>{data.event.name}</dd></div><div className="summary-list__item"><dt>Prize category</dt><dd>{data.category.name}</dd></div><div className="summary-list__item"><dt>Prize</dt><dd>{data.category.prizeName}</dd></div><div className="summary-list__item"><dt>Winner count</dt><dd>{data.configuration.requestedWinners}</dd></div><div className="summary-list__item"><dt>Eligible participants</dt><dd>{data.authoritativeEligibleCount}</dd></div><div className="summary-list__item"><dt>Winning rule</dt><dd>{data.configuration.winningRule}</dd></div><div className="summary-list__item"><dt>Check-in</dt><dd>{data.configuration.requireCheckIn ? 'Required' : 'Not required'}</dd></div><div className="summary-list__item"><dt>Eligible group</dt><dd>{data.configuration.eligibleGroupFilter ?? 'All groups'}</dd></div><div className="summary-list__item"><dt>Persisted mode</dt><dd>{live ? 'Live — official' : 'Practice — not official'}</dd></div></dl></Card><StatusBanner badge={live ? 'Irreversible Live action' : 'Rehearsal only'} title={live ? 'This starts one official draw' : 'This result will not affect official history'} tone={live ? 'warning' : 'info'}>{live ? 'The authoritative session and eligibility will be checked again immediately before the Phase 5 command runs.' : 'Practice uses secure selection and the persisted setup, but writes only a minimal result projection to this browser tab.'}</StatusBanner></div><aside className="live-ready__aside"><Card padding="md"><div className="start-control"><span className="start-control__mode">{live ? 'Live / official' : 'Practice / rehearsal'}</span><h2>{holding ? 'Keep holding…' : 'Start draw'}</h2><p>{holding ? 'Release cancels. Hold for 1.5 seconds.' : live ? 'Hold the control or use accessible confirmation.' : 'Hold for 1.5 seconds to begin the rehearsal.'}</p><Button ref={triggerRef} className="start-control__button" disabled={state !== 'ready'} onPointerDown={beginHold} onPointerUp={cancelHold} onPointerCancel={cancelHold} onLostPointerCapture={cancelHold} onPointerLeave={cancelHold} onKeyDown={handleSpace} onKeyUp={handleSpace} aria-label={live ? 'Hold to start official Live draw' : 'Hold to start Practice draw'}>{holding ? 'Holding to start' : 'Hold to start'}</Button><Button variant="secondary" onClick={() => setConfirmOpen(true)} disabled={state !== 'ready'}>Use accessible start confirmation</Button><Link to="/draw/setup">Back to Draw Setup</Link></div></Card></aside></div>
     <ConfirmationDialog open={confirmOpen} onCancel={closeConfirm} onConfirm={confirmStart} title={live ? 'Confirm official Live start' : 'Confirm Practice start'} confirmLabel={live ? 'Confirm and start Live' : 'Confirm and start Practice'} consequence={live ? 'This invokes the secure Phase 5 command and creates the official persisted result. It cannot be undone from this screen.' : 'This runs secure selection for rehearsal only. It does not create WinnerRecords or change official history.'} />
     {toast === null ? null : <Toast title={toast.title} description={toast.description} onDismiss={() => setToast(null)} urgent={toast.variant === 'danger'} variant={toast.variant} />}

@@ -1695,6 +1695,16 @@
 }
 
 .production-draw-run-ready-grid { display: grid; gap: var(--space-5); }
+.draw-run-preflight-heading { display: flex; align-items: start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-4); }
+.draw-run-preflight-heading h2 { margin: 0; color: var(--text-primary); }
+.draw-run-preflight-state { color: var(--text-secondary); font-size: var(--font-size-xs); font-weight: 800; letter-spacing: .1em; }
+.draw-run-preflight-list { display: grid; gap: 0; border-top: 1px solid var(--border-subtle); }
+.draw-run-preflight-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-4); padding: .85rem 0; border-bottom: 1px solid var(--border-subtle); }
+.draw-run-preflight-item > div { display: grid; gap: .2rem; }
+.draw-run-preflight-item span { color: var(--text-secondary); font-size: var(--font-size-sm); }
+.draw-run-preflight-item--blocked > strong:last-of-type { color: var(--danger); }
+.draw-run-preflight-item--waiting > strong:last-of-type { color: var(--warning); }
+.draw-run-preflight-item a { color: var(--accent); font-weight: 700; }
 .production-recovery-layout { display: grid; width: min(100%, 52rem); justify-self: center; gap: var(--space-5); padding-top: var(--space-5); }
 .production-recovery-card { border-left: 0.25rem solid var(--status-warning); }
 .production-recovery-card h2,

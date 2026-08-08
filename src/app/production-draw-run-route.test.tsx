@@ -86,6 +86,18 @@ describe('production Draw Run route shell', () => {
     await waitFor(() => expect(mocks.command).not.toHaveBeenCalled())
   })
 
+  it('surfaces a start failure instead of silently returning to Ready', async () => {
+    mocks.command.mockResolvedValueOnce({ ok: false, error: { kind: 'validation', code: 'event-not-active', message: 'The Event is not active and cannot start a draw.' } })
+    renderRoute(`/draw/run/${mocks.sessionId}`)
+    await screen.findByRole('button', { name: 'Hold to start official Live draw' })
+    fireEvent.click(screen.getByRole('button', { name: 'Use accessible start confirmation' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm and start Live' }))
+    expect(await screen.findByText('The draw could not start safely.')).toBeInTheDocument()
+    expect(screen.getByText('The Event is not active and cannot start a draw.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back to Draw Setup' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Ready to start' })).not.toBeInTheDocument()
+  })
+
   it('hydrates a valid Practice projection on initial mount and does not show start controls', async () => {
     savePracticeResult({
       drawSessionId: mocks.practiceSessionId,

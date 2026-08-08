@@ -10,6 +10,7 @@ function ProductionOperatorHeader() {
   const workspace = useProductionWorkspace()
   const [eventMenuOpen, setEventMenuOpen] = useState(false)
   const eventButtonRef = useRef<HTMLButtonElement>(null)
+  const eventPopoverRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const eventLabel = workspace.status === 'loading'
     ? 'Reading active Event'
@@ -50,15 +51,22 @@ function ProductionOperatorHeader() {
       }
     }
     document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
+    const onPointerDown = (event: PointerEvent) => {
+      if (!eventPopoverRef.current?.contains(event.target as Node)) setEventMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('pointerdown', onPointerDown)
+    }
   }, [eventMenuOpen])
   return <header className="operator-header">
-    <div className="operator-header__event">
+    <div ref={eventPopoverRef} className="operator-header__event">
       <button ref={eventButtonRef} type="button" className="operator-header__event-control" aria-haspopup="menu" aria-expanded={eventMenuOpen} onClick={() => setEventMenuOpen((open) => !open)}>
         <span className="operator-header__label">Current Event</span>
         <strong title={eventLabel}>{eventLabel}</strong>
         <span className="operator-event-status">{eventStatus}</span>
-        <span aria-hidden="true">⌄</span>
+        <span className="operator-header__chevron" aria-hidden="true" />
       </button>
       {eventMenuOpen ? <div ref={menuRef} className="operator-header__menu" role="menu" aria-label="Current Event actions">
         <Link role="menuitem" to="/events" onClick={() => setEventMenuOpen(false)}>Switch / Manage Events</Link>

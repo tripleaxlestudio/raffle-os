@@ -36,9 +36,9 @@ function makeServices(options: { event?: Event | null; initialRecords?: Particip
       countByEventId: vi.fn().mockImplementation(async (id: EventId) => id === eventId ? records.length : 0),
       findByEventId: vi.fn().mockImplementation(async (id: EventId) => id === eventId ? records.slice() : []),
     },
-    getPersistedParticipantsForEvent: vi.fn().mockImplementation(async (id: EventId, limit: number) => {
+    getPersistedParticipantsForEvent: vi.fn().mockImplementation(async (id: EventId) => {
       const eventRecords = id === eventId ? records : []
-      return { totalCount: eventRecords.length, records: eventRecords.slice(0, limit), truncated: eventRecords.length > limit }
+      return { totalCount: eventRecords.length, records: eventRecords.slice() }
     }),
     unitOfWork: { commitParticipantImport: vi.fn().mockImplementation(async (input: ParticipantImportTransactionInput) => {
       if (options.commit) return options.commit(input)
@@ -59,7 +59,7 @@ function renderProduction(services: ParticipantImportProductionServices, path = 
 
 async function stageFile(user: ReturnType<typeof userEvent.setup>) {
   const file = new File(['Ticket Number,Name\n00042,Ada\n,Invalid'], 'participants.csv', { type: 'text/csv' })
-  await user.upload(screen.getByLabelText('Choose participant file'), file)
+  await user.upload(screen.getByLabelText('Participant file'), file)
   await waitFor(() => expect(screen.getByRole('heading', { name: 'Validation diagnostics and summary' })).toBeInTheDocument())
 }
 
@@ -72,7 +72,7 @@ async function chooseStrategyAndOpenConfirmation(user: ReturnType<typeof userEve
 describe('production participant import preview audit', () => {
   it.each(['/participants', '/participants?workflow=production-preview', '/participants?workflow=unknown', '/participants?workflow='])('promotes %s to the production workflow', (path) => {
     renderProduction(makeServices(), path)
-    expect(screen.getByLabelText('Choose participant file')).toBeInTheDocument()
+    expect(screen.getByLabelText('Participant file')).toBeInTheDocument()
     expect(screen.queryByText('Fictional participant data for static interface review. No file or participant record is read, changed, or stored.')).not.toBeInTheDocument()
   })
 
@@ -96,7 +96,7 @@ describe('production participant import preview audit', () => {
   it('keeps validation current and confirmation disabled when all rows are invalid', async () => {
     const user = userEvent.setup()
     renderProduction(makeServices())
-    await user.upload(screen.getByLabelText('Choose participant file'), new File(['Ticket Number\n\n'], 'invalid.csv', { type: 'text/csv' }))
+    await user.upload(screen.getByLabelText('Participant file'), new File(['Ticket Number\n\n'], 'invalid.csv', { type: 'text/csv' }))
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Validation diagnostics and summary' })).toBeInTheDocument())
     const progress = screen.getByRole('navigation', { name: 'Participant Import progress' })
     expect(within(progress).getByText('Validate Data').closest('li')).toHaveAttribute('data-state', 'active')
@@ -117,10 +117,10 @@ describe('production participant import preview audit', () => {
     expect(within(eventRegion).getByText('Draft Event')).toBeVisible()
     const persistedRegion = screen.getByRole('region', { name: 'Persisted Participants' })
     expect(persistedRegion).toBeVisible()
-    expect(screen.getByLabelText('Choose participant file')).toBeVisible()
+    expect(screen.getByLabelText('Participant file')).toBeVisible()
 
     const user = userEvent.setup()
-    await user.upload(screen.getByLabelText('Choose participant file'), new File(['Ticket Number,Name\n00042,Ada'], 'participants.csv', { type: 'text/csv' }))
+    await user.upload(screen.getByLabelText('Participant file'), new File(['Ticket Number,Name\n00042,Ada'], 'participants.csv', { type: 'text/csv' }))
     await waitFor(() => expect(screen.getByRole('table', { name: 'Parsed participant rows' })).toBeVisible())
     expect(screen.getByRole('table', { name: 'Parsed participant rows' })).toHaveTextContent('00042')
     expect(screen.getByRole('combobox', { name: /Ticket Number · Required/ })).toBeVisible()
@@ -146,8 +146,8 @@ describe('production participant import preview audit', () => {
     expect(await screen.findByText('Total stored Participants: 2')).toBeVisible()
     expect(screen.getByText('00042')).toBeVisible()
     expect(screen.getByText('42')).toBeVisible()
-    expect(services.getPersistedParticipantsForEvent).toHaveBeenCalledWith(eventId, 50)
-    expect(screen.queryByLabelText('Choose participant file')).toBeInTheDocument()
+    expect(services.getPersistedParticipantsForEvent).toHaveBeenCalledWith(eventId)
+    expect(screen.queryByLabelText('Participant file')).toBeInTheDocument()
   })
 
   it('shows empty, bounded, and safe read-failure verification states', async () => {
@@ -159,7 +159,9 @@ describe('production participant import preview audit', () => {
     const many = Array.from({ length: 51 }, (_, index) => ({ id: `${index}` as ParticipantId, eventId, ticketNumber: `${index}` as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }))
     const bounded = makeServices({ initialRecords: many })
     const boundedView = renderProduction(bounded)
-    expect(await screen.findByText('Preview truncated to 50 Participants.')).toBeVisible()
+    expect(await screen.findByText('51 participants · 0 checked in')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+    expect(screen.queryByText('Preview truncated to 50 Participants.')).not.toBeInTheDocument()
     expect(screen.getByText('Total stored Participants: 51')).toBeVisible()
     boundedView.unmount()
 
@@ -170,6 +172,33 @@ describe('production participant import preview audit', () => {
     expect(alert).not.toHaveTextContent('SECRET_DATABASE_DETAIL')
   })
 
+  it('paginates the complete persisted dataset without changing ticket strings or order', async () => {
+    const user = userEvent.setup()
+    const records = Array.from({ length: 100 }, (_, index) => ({ id: `${index}` as ParticipantId, eventId, ticketNumber: String(index).padStart(5, '0') as never, isCheckedIn: true, createdAt: timestamp, updatedAt: timestamp }))
+    renderProduction(makeServices({ initialRecords: records }))
+    const table = await screen.findByRole('table', { name: 'Persisted Participants' })
+    expect(table).toHaveTextContent('00000')
+    expect(table).toHaveTextContent('00009')
+    expect(table).not.toHaveTextContent('00010')
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    expect(table).toHaveTextContent('00010')
+    expect(table).not.toHaveTextContent('00000')
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled()
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Rows per page' }), '50')
+    expect(table).toHaveTextContent('00000')
+    expect(table).toHaveTextContent('00049')
+    expect(table).not.toHaveTextContent('00050')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Rows per page' }), '100')
+    expect(table).toHaveTextContent('00099')
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    expect(screen.getByText('100 participants · 100 checked in')).toBeVisible()
+  })
+
   it('reloads persisted verification when the active Event changes', async () => {
     const secondEventId = '22222222-2222-4222-8222-222222222222' as EventId
     const secondEvent: Event = { ...draftEvent, id: secondEventId, name: 'Second Draft Event' }
@@ -178,9 +207,9 @@ describe('production participant import preview audit', () => {
       .mockResolvedValueOnce(eventId)
       .mockResolvedValueOnce(secondEventId)
     vi.mocked(services.events.findById).mockImplementation(async (id) => id === eventId ? draftEvent : secondEvent)
-    vi.mocked(services.getPersistedParticipantsForEvent).mockImplementation(async (id, limit) => id === eventId
-      ? { totalCount: 1, records: [{ id: '1' as ParticipantId, eventId, ticketNumber: '00042' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }], truncated: false }
-      : { totalCount: 1, records: [{ id: '2' as ParticipantId, eventId: secondEventId, ticketNumber: '00700' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }].slice(0, limit), truncated: false })
+    vi.mocked(services.getPersistedParticipantsForEvent).mockImplementation(async (id) => id === eventId
+      ? { totalCount: 1, records: [{ id: '1' as ParticipantId, eventId, ticketNumber: '00042' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }] }
+      : { totalCount: 1, records: [{ id: '2' as ParticipantId, eventId: secondEventId, ticketNumber: '00700' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }] })
     renderProduction(services)
     expect(await screen.findByText('00042')).toBeVisible()
     window.dispatchEvent(new Event('focus'))
@@ -224,7 +253,7 @@ describe('production participant import preview audit', () => {
     const confirm = screen.getByRole('button', { name: 'Confirm atomic Merge' })
     await user.click(confirm); await user.click(confirm)
     expect(services.unitOfWork.commitParticipantImport).toHaveBeenCalledTimes(1)
-    expect(screen.getByLabelText('Choose participant file')).toBeDisabled()
+    expect(screen.getByLabelText('Participant file')).toBeDisabled()
     expect(screen.getByRole('radio', { name: 'Merge' })).toBeDisabled()
     pending.resolve({ removedCount: 0, unchangedCount: 0 })
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Participant import complete' })).toBeInTheDocument())
@@ -284,7 +313,7 @@ describe('production participant import preview audit', () => {
 
   it('clears success when a new file or mapping is selected', async () => {
     const user = userEvent.setup(); const services = makeServices(); renderProduction(services); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Merge'); await user.click(screen.getByRole('button', { name: 'Confirm atomic Merge' })); await screen.findByRole('heading', { name: 'Participant import complete' })
-    await user.upload(screen.getByLabelText('Choose participant file'), new File(['Ticket Number,Name\n00099,Bob'], 'new.csv', { type: 'text/csv' }))
+    await user.upload(screen.getByLabelText('Participant file'), new File(['Ticket Number,Name\n00099,Bob'], 'new.csv', { type: 'text/csv' }))
     expect(screen.queryByRole('heading', { name: 'Participant import complete' })).not.toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('combobox', { name: /Participant Name/ })).toBeInTheDocument())
     await user.selectOptions(screen.getByRole('combobox', { name: /Participant Name/ }), '')
@@ -299,7 +328,7 @@ describe('production participant import preview audit', () => {
     prototypeView.unmount()
     const audienceRouter = createMemoryRouter(appRoutes, { initialEntries: ['/display?workflow=production-preview&ticketNumber=00042'] })
     render(<RouterProvider router={audienceRouter} />)
-    expect(screen.queryByLabelText('Choose participant file')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Participant file')).not.toBeInTheDocument()
     expect(screen.queryByText('00042')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Participant Import' })).not.toBeInTheDocument()
   })

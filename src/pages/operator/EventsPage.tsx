@@ -1,71 +1,39 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, ButtonLink, Card, Input } from '../../shared/ui/index.ts'
+import { useNavigate } from 'react-router'
+import { Badge, Button, Card, ConfirmationDialog, Input, Modal } from '../../shared/ui/index.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { createEventSetupProductionServices } from '../../infrastructure/composition/event-setup-production.ts'
 import { signalProductionWorkspaceChanged, useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 import type { Event } from '../../domain/events/event.types.ts'
 import type { EventId } from '../../domain/shared/identifiers.ts'
+import { formatEventTimestamp, toCanonicalTimestamp, toDatetimeLocal } from './event-schedule.ts'
 
-type EventSummary = { readonly event: Event; readonly participantCount: number; readonly categoryCount: number; readonly liveSessionCount: number }
-const empty = { name: '', description: '', scheduledAt: '' }
+type EventSummary = { readonly event: Event; readonly participantCount: number; readonly categoryCount: number; readonly liveSessionCount: number; readonly blockedSessionCount: number }
+type EventForm = { readonly name: string; readonly description: string; readonly scheduledAt: string }
+const empty: EventForm = { name: '', description: '', scheduledAt: '' }
 
 export function EventsPage() {
   const services = useMemo(() => createEventSetupProductionServices(), [])
-  const workspace = useProductionWorkspace()
-  const [items, setItems] = useState<EventSummary[]>([])
-  const [form, setForm] = useState(empty)
-  const [editing, setEditing] = useState<Event | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
-
-  const load = useCallback(async () => {
-    setLoading(true); setError(null)
-    try {
-      await services.open()
-      const events = await services.events.findAll()
-      setItems(await Promise.all(events.map(async (event) => {
-        const [participantCount, categories, sessions] = await Promise.all([services.participants.countByEventId(event.id), services.categories.findByEventId(event.id), services.sessions.findByEventId(event.id)])
-        return { event, participantCount, categoryCount: categories.length, liveSessionCount: sessions.filter((session) => session.mode === 'live').length }
-      })))
-    } catch (cause: unknown) { setError(cause instanceof Error ? cause.message : 'Events could not be read from local storage.') } finally { setLoading(false) }
-  }, [services])
+  const workspace = useProductionWorkspace(); const navigate = useNavigate()
+  const [items, setItems] = useState<EventSummary[]>([]); const [form, setForm] = useState(empty); const [editing, setEditing] = useState<Event | null>(null)
+  const [loading, setLoading] = useState(true); const [submitting, setSubmitting] = useState(false); const [error, setError] = useState<string | null>(null); const [saved, setSaved] = useState(false)
+  const [activating, setActivating] = useState<Event | null>(null); const [deleting, setDeleting] = useState<EventSummary | null>(null); const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  const load = useCallback(async () => { setLoading(true); setError(null); try { await services.open(); const events = await services.events.findAll(); setItems(await Promise.all(events.map(async (event) => { const [participantCount, categories, sessions] = await Promise.all([services.participants.countByEventId(event.id), services.categories.findByEventId(event.id), services.sessions.findByEventId(event.id)]); return { event, participantCount, categoryCount: categories.length, liveSessionCount: sessions.filter((s) => s.mode === 'live').length, blockedSessionCount: sessions.filter((s) => s.status === 'drawing' || s.status === 'pending-confirmation').length } }))) } catch (cause: unknown) { setError(cause instanceof Error ? cause.message : 'Events could not be read from local storage.') } finally { setLoading(false) } }, [services])
   useEffect(() => { void Promise.resolve().then(load) }, [load])
-
-  function beginEdit(event: Event) { setEditing(event); setForm({ name: event.name, description: event.description ?? '', scheduledAt: event.scheduledAt ?? '' }); setSaved(false); setError(null) }
+  function beginEdit(event: Event) { setEditing(event); setForm({ name: event.name, description: event.description ?? '', scheduledAt: toDatetimeLocal(event.scheduledAt) }); setSaved(false); setError(null) }
   function resetForm() { setEditing(null); setForm(empty); setSaved(false) }
-  async function submit() {
-    if (submitting) return
-    setSubmitting(true); setError(null); setSaved(false)
-    try {
-      if (editing === null) await services.service.createEvent(form)
-      else await services.service.updateEvent(editing, form)
-      resetForm(); setSaved(true); signalProductionWorkspaceChanged(); await load()
-    } catch (cause: unknown) { setError(cause instanceof Error ? cause.message : 'The Event could not be saved.') } finally { setSubmitting(false) }
-  }
-  async function select(eventId: EventId) {
-    if (submitting) return
-    setSubmitting(true); setError(null)
-    try { await services.service.selectEvent(eventId); signalProductionWorkspaceChanged(); await load() }
-    catch (cause: unknown) { setError(cause instanceof Error ? cause.message : 'The Event could not be selected.') }
-    finally { setSubmitting(false) }
-  }
+  async function submit() { if (submitting) return; setSubmitting(true); setError(null); try { const draft = { ...form, scheduledAt: toCanonicalTimestamp(form.scheduledAt) }; if (editing === null) await services.service.createEvent(draft); else await services.service.updateEvent(editing, draft); resetForm(); setSaved(true); signalProductionWorkspaceChanged(); await load() } catch (cause: unknown) { setError(cause instanceof Error ? cause.message : 'The Event could not be saved.') } finally { setSubmitting(false) } }
+  async function select(eventId: EventId) { if (submitting) return; setSubmitting(true); setError(null); try { await services.service.selectEvent(eventId); signalProductionWorkspaceChanged(); await load() } catch (cause: unknown) { setError(cause instanceof Error ? cause.message : 'The Event could not be selected.') } finally { setSubmitting(false) } }
+  async function manageCategories(event: Event) { if (workspace.status !== 'ready' || workspace.event.id !== event.id) await select(event.id); navigate('/prize-categories') }
+  async function activate(event: Event) { if (submitting) return; setSubmitting(true); try { await services.service.activateEvent(event.id); setActivating(null); setSaved(true); signalProductionWorkspaceChanged(); await load() } catch (cause: unknown) { setError(cause instanceof Error ? cause.message : 'The Event could not be activated.') } finally { setSubmitting(false) } }
+  async function deleteEvent(summary: EventSummary) { if (submitting || summary.blockedSessionCount > 0 || summary.event.status === 'live') return; setSubmitting(true); setError(null); try { await services.events.deletePermanently(summary.event.id); setDeleting(null); setDeleteConfirmation(''); setSaved(true); signalProductionWorkspaceChanged(); await load() } catch (cause: unknown) { setError(cause instanceof Error ? cause.message : 'The Event could not be deleted safely.') } finally { setSubmitting(false) } }
 
-  return <section aria-labelledby="events-title">
-    <PageHeader eyebrow="Production setup" headingId="events-title" title="Events" description="Create and select the local Event that owns participants, categories, and draw history." />
-    {saved ? <StatusBanner badge="Saved" title="Event saved" tone="success">The record was read back from IndexedDB.</StatusBanner> : null}
-    {error ? <StatusBanner badge="Storage or validation error" title="Event action could not be completed" tone="warning">{error}</StatusBanner> : null}
-    <div className="setup-grid">
-      <Card padding="md"><h2>{editing === null ? 'Create Event' : 'Edit draft Event'}</h2><form onSubmit={(event) => { event.preventDefault(); void submit() }}>
-        <Input label="Event name" value={form.name} required maxLength={120} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-        <label className="ui-field"><span className="ui-field__label">Description</span><textarea className="ui-input" maxLength={500} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
-        <Input label="Scheduled at (UTC ISO timestamp)" placeholder="2026-08-06T09:00:00.000Z" value={form.scheduledAt} onChange={(event) => setForm({ ...form, scheduledAt: event.target.value })} />
-        <div className="page-header__actions"><Button type="submit" isLoading={submitting}>{editing === null ? 'Create Event' : 'Save draft changes'}</Button>{editing !== null ? <Button type="button" variant="secondary" onClick={resetForm}>Cancel</Button> : null}</div>
-      </form></Card>
-      <Card padding="md"><h2>Persisted Events</h2>{loading ? <p role="status">Loading Events…</p> : items.length === 0 ? <p role="status">No Events exist yet. Create the first Event to begin setup.</p> : <ul className="setup-record-list">{items.map(({ event, participantCount, categoryCount, liveSessionCount }) => <li key={event.id} className={workspace.status === 'ready' && workspace.event.id === event.id ? 'setup-record setup-record--selected' : 'setup-record'}><div><strong>{event.name}</strong><span>{event.status} · {participantCount} participants · {categoryCount} PrizeCategories · {liveSessionCount} Live sessions</span><small>Created {event.createdAt} · Updated {event.updatedAt}</small></div><div className="page-header__actions">{workspace.status === 'ready' && workspace.event.id === event.id ? <span aria-label="Selected Event">Selected / current</span> : <Button size="sm" variant="secondary" disabled={submitting} onClick={() => void select(event.id)}>Open Event</Button>}{event.status === 'draft' ? <Button size="sm" variant="quiet" onClick={() => beginEdit(event)}>Edit draft</Button> : <span aria-label="Event is immutable">Read-only</span>}</div></li>)}</ul>}</Card>
-    </div>
-    <p><ButtonLink variant="secondary" to="/prize-categories">Manage PrizeCategories</ButtonLink></p>
+  return <section className="events-page" aria-labelledby="events-title"><PageHeader eyebrow="Production setup" headingId="events-title" title="Events" description="Create and manage Events used by participants, prizes, and draws." />
+    {saved ? <StatusBanner badge="Saved" title="Event action completed" tone="success">The record was read back from IndexedDB.</StatusBanner> : null}{error ? <StatusBanner badge="Storage or validation error" title="Event action could not be completed" tone="warning">{error}</StatusBanner> : null}
+    <div className="events-page__layout"><Card padding="md" className="events-page__form-card"><div className="events-page__card-heading"><div><p className="events-page__eyebrow">{editing === null ? 'New workspace record' : 'Draft record'}</p><h2>{editing === null ? 'Create Event' : 'Edit draft Event'}</h2></div></div><form className="events-page__form" onSubmit={(e) => { e.preventDefault(); void submit() }}><Input label="Event name" value={form.name} required maxLength={120} onChange={(e) => setForm({ ...form, name: e.target.value })} /><label className="ui-field"><span className="ui-field__label">Description</span><textarea className="ui-input" maxLength={500} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label><label className="ui-field"><span className="ui-field__label">Schedule</span><input className="ui-input" type="datetime-local" value={form.scheduledAt} onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })} /></label><div className="page-header__actions"><Button type="submit" isLoading={submitting}>{editing === null ? 'Create Event' : 'Save draft changes'}</Button>{editing !== null ? <Button type="button" variant="secondary" onClick={resetForm}>Cancel</Button> : null}</div></form></Card>
+      <Card padding="md" className="events-page__list-card"><div className="events-page__card-heading"><div><p className="events-page__eyebrow">Workflow</p><h2>Persisted Events</h2></div><span className="events-page__record-count">{items.length} {items.length === 1 ? 'record' : 'records'}</span></div>{loading ? <p role="status">Loading Events…</p> : items.length === 0 ? <p role="status">No Events exist yet. Create the first Event to begin setup.</p> : <ul className="events-page__list">{items.map((summary) => { const { event, participantCount, categoryCount, liveSessionCount, blockedSessionCount } = summary; const isCurrent = workspace.status === 'ready' && workspace.event.id === event.id; const blocked = blockedSessionCount > 0 || event.status === 'live'; return <li key={event.id} className={`events-page__event-card${isCurrent ? ' events-page__event-card--current' : ''}`}><div className="events-page__event-main"><div className="events-page__event-heading"><h3>{event.name}</h3><div className="events-page__badges">{isCurrent ? <Badge variant="info">CURRENT</Badge> : null}<Badge variant={event.status === 'live' ? 'live' : event.status === 'draft' ? 'practice' : 'neutral'}>{event.status.toUpperCase()}</Badge>{event.status !== 'draft' && event.status !== 'live' ? <Badge variant="neutral">READ ONLY</Badge> : null}</div></div><p className="events-page__summary">{participantCount} participants · {categoryCount} prize categories · {liveSessionCount} live sessions</p><dl className="events-page__metadata"><div><dt>Scheduled</dt><dd>{formatEventTimestamp(event.scheduledAt)}</dd></div><div><dt>Updated</dt><dd>{formatEventTimestamp(event.updatedAt)}</dd></div></dl></div><div className="events-page__actions">{isCurrent ? <span className="events-page__current-label">Current Event</span> : <Button size="sm" variant="secondary" disabled={submitting || event.status === 'archived'} onClick={() => void select(event.id)}>Set as Current</Button>}{event.status === 'draft' ? <Button size="sm" variant="quiet" onClick={() => beginEdit(event)}>Edit draft</Button> : null}{event.status === 'draft' ? <Button size="sm" variant="primary" disabled={submitting} onClick={() => setActivating(event)}>Activate Event</Button> : null}<Button size="sm" variant="quiet" disabled={submitting} onClick={() => void manageCategories(event)}>Manage Prize Categories</Button>{blocked ? <span className="events-page__readonly" title="Resolve active draw operations first.">Protected</span> : <Button size="sm" variant="danger" disabled={submitting} onClick={() => { setDeleting(summary); setDeleteConfirmation('') }}>Delete Permanently</Button>}</div></li> })}</ul>}</Card></div>
+    <ConfirmationDialog open={activating !== null} title={`Activate ${activating?.name ?? 'Event'}?`} confirmLabel="Activate Event" confirmDisabled={submitting} confirmLoading={submitting} onCancel={() => setActivating(null)} onConfirm={() => { if (activating !== null) void activate(activating) }} consequence="Verify the Event setup before continuing." />
+    <Modal open={deleting !== null} title="DELETE EVENT PERMANENTLY" onClose={() => { if (!submitting) { setDeleting(null); setDeleteConfirmation('') } }} footer={<><Button variant="secondary" onClick={() => { setDeleting(null); setDeleteConfirmation('') }}>Cancel</Button><Button variant="danger" disabled={submitting || (deleting !== null && deleting.liveSessionCount > 0 && deleteConfirmation !== deleting.event.name)} isLoading={submitting} onClick={() => { if (deleting !== null) void deleteEvent(deleting) }}>Delete Event Permanently</Button></>}>{deleting ? <><p><strong>{deleting.event.name}</strong></p><p>This permanently removes this Event and all of its local Event-owned records. This action cannot be undone.</p><ul><li>{deleting.participantCount} Participants</li><li>{deleting.categoryCount} Prize Categories</li><li>{deleting.liveSessionCount} Live DrawSessions</li></ul>{deleting.liveSessionCount > 0 ? <Input label={`Type “${deleting.event.name}” to confirm`} value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} /> : <p>Explicit confirmation is required for this unused setup Event.</p>}</> : null}</Modal>
   </section>
 }

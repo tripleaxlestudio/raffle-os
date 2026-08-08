@@ -11,6 +11,7 @@ export { ConfirmationDialog } from './ConfirmationDialog.tsx'
 export { EmptyState } from './EmptyState.tsx'
 export { Input } from './Input.tsx'
 export { Modal } from './Modal.tsx'
+export { Pagination } from './Pagination.tsx'
 export {
   SegmentedControl,
   type SegmentedControlOption,

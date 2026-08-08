@@ -33,7 +33,7 @@ export function OperatorSidebar({ eventScopedNavigationDisabled, production = fa
 function ProductionOperatorSidebar() {
   const workspace = useProductionWorkspace()
   const eventScopedNavigationDisabled = workspace.status === 'empty' || workspace.status === 'invalid-reference'
-  return <OperatorSidebarContent disabled={eventScopedNavigationDisabled} readiness={workspace.status === 'ready' ? workspace.setupReadiness : null} admittedThrough={workspace.status === 'ready' ? workspace.setupAdmittedThrough : undefined} navigationItems={productionNavigationItems} production />
+  return <OperatorSidebarContent disabled={eventScopedNavigationDisabled} readiness={workspace.status === 'ready' ? workspace.setupReadiness : null} reachedStep={workspace.status === 'ready' ? workspace.setupJourneyReachedStep : undefined} navigationItems={productionNavigationItems} production />
 }
 
 function OperatorSidebarContent({
@@ -41,13 +41,13 @@ function OperatorSidebarContent({
   navigationItems,
   production = false,
   readiness = null,
-  admittedThrough,
+  reachedStep,
 }: {
   readonly disabled?: boolean
   readonly navigationItems: readonly { readonly label: string; readonly marker: string; readonly to: string }[]
   readonly production?: boolean
   readonly readiness?: ProductionSetupReadiness | null
-  readonly admittedThrough?: number
+  readonly reachedStep?: number
 }) {
   return (
     <aside className="operator-sidebar" aria-label="Operator sidebar">
@@ -65,7 +65,7 @@ function OperatorSidebarContent({
         <ul className="operator-nav">
           {navigationItems.map((item) => (
             <li key={item.to}>
-              {item.to !== '/dashboard' && ((readiness !== null && !isProductionNavigationUnlocked(item.to, readiness, admittedThrough)) || (readiness === null && disabled)) ? <span aria-disabled="true" className="operator-nav__link operator-nav__link--disabled" title="Complete the previous setup step first">
+              {item.to !== '/dashboard' && ((readiness !== null && !isProductionNavigationUnlocked(item.to, readiness, reachedStep)) || (readiness === null && disabled)) ? <span aria-disabled="true" className="operator-nav__link operator-nav__link--disabled" title="Complete the previous setup step first">
                 <span aria-hidden="true" className="operator-nav__marker">{item.marker}</span>
                 <span>{item.label}</span>
               </span> : <NavLink
@@ -90,8 +90,8 @@ function OperatorSidebarContent({
   )
 }
 
-function isProductionNavigationUnlocked(pathname: string, readiness: ProductionSetupReadiness, admittedThrough = -1): boolean {
+function isProductionNavigationUnlocked(pathname: string, readiness: ProductionSetupReadiness, reachedStep = 0): boolean {
   const stageIndex = productionSetupStageIndexForRoute(pathname)
-  if (stageIndex !== undefined) return stageIndex <= admittedThrough
-  return admittedThrough >= 4 && readiness.drawSetup
+  if (stageIndex !== undefined) return stageIndex < reachedStep
+  return reachedStep >= 5 && readiness.drawSetup
 }

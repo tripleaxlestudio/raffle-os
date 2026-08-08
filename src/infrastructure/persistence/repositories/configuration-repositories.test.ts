@@ -1072,6 +1072,20 @@ describe('DexiePreferenceRepository typed behavior', () => {
     },
   )
 
+  it('persists Event-scoped setup journey reached steps for reload and Event switching', async () => {
+    const database = await createOpenDatabase()
+    const repository = new DexiePreferenceRepository(database)
+    const firstEvent = createEventId()
+    const secondEvent = createEventId()
+    const reached = { [firstEvent]: 3, [secondEvent]: 1 }
+
+    await repository.set('setupJourneyReachedStepByEvent', reached, laterTimestamp)
+
+    expect(await repository.get('setupJourneyReachedStepByEvent')).toEqual(reached)
+    expect((await repository.get('setupJourneyReachedStepByEvent'))?.[firstEvent]).toBe(3)
+    expect((await repository.get('setupJourneyReachedStepByEvent'))?.[secondEvent]).toBe(1)
+  })
+
   it('rejects runtime-invalid keys, values, and timestamps', async () => {
     const database = await createOpenDatabase()
     const repository = new DexiePreferenceRepository(database)

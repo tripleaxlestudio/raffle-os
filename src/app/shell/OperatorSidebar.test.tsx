@@ -75,7 +75,7 @@ describe('production sidebar Event gating', () => {
   })
 
   it('keeps the next stage disabled when the current stage is complete but not admitted', () => {
-    Object.assign(workspace, { status: 'ready', setupReadiness: { event: true, prize: true, participants: false, displaySettings: false, drawSetup: false }, setupAdmittedThrough: 1 })
+    Object.assign(workspace, { status: 'ready', setupReadiness: { event: true, prize: true, participants: false, displaySettings: false, drawSetup: false }, setupJourneyReachedStep: 2 })
     renderSidebar('/prize-categories')
 
     expect(screen.getByRole('link', { name: 'Prize' })).toHaveClass('operator-nav__link--active')
@@ -84,7 +84,7 @@ describe('production sidebar Event gating', () => {
   })
 
   it('admits the next stage without revoking it when navigating back', () => {
-    Object.assign(workspace, { status: 'ready', setupReadiness: { event: true, prize: true, participants: false, displaySettings: false, drawSetup: false }, setupAdmittedThrough: 2 })
+    Object.assign(workspace, { status: 'ready', setupReadiness: { event: true, prize: true, participants: false, displaySettings: false, drawSetup: false }, setupJourneyReachedStep: 3 })
     renderSidebar('/prize-categories')
 
     expect(screen.getByRole('link', { name: 'Participants' })).toBeInTheDocument()

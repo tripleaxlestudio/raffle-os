@@ -73,6 +73,14 @@ function validateStoredPreference(
     }
   }
 
+  if (value.key === 'setupJourneyReachedStepByEvent') {
+    return {
+      key: value.key,
+      updatedAt: value.updatedAt,
+      value: requireValid(validateApplicationPreferenceValue(value.key, value.value)),
+    }
+  }
+
   return {
     key: value.key,
     updatedAt: value.updatedAt,
@@ -162,17 +170,12 @@ export class DexiePreferenceRepository
         return
       }
 
-      const mode = requireValid(
-        validateApplicationPreferenceValue(
-          'lastOperatorMode',
-          value,
-        ),
-      )
-      const preference: ApplicationPreference<'lastOperatorMode'> = {
-        key: 'lastOperatorMode',
-        updatedAt: at,
-        value: mode,
+      if (key === 'lastOperatorMode') {
+        const preference: ApplicationPreference<'lastOperatorMode'> = { key, updatedAt: at, value: requireValid(validateApplicationPreferenceValue(key, value)) }
+        await this.database.preferences.put(preference)
+        return
       }
+      const preference: ApplicationPreference<'setupJourneyReachedStepByEvent'> = { key, updatedAt: at, value: requireValid(validateApplicationPreferenceValue(key, value)) }
       await this.database.preferences.put(preference)
     } catch (error: unknown) {
       throw normalizeRepositoryError(

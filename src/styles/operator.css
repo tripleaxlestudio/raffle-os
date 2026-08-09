@@ -4963,8 +4963,10 @@
   .history-table__date { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
   .history-table__status { display: flex; flex-wrap: wrap; gap: var(--space-1); }
   .history-table__action-cell { text-align: right; }
+  .history-table__actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--space-2); }
+  .history-table__show-action { display: inline-flex; align-items: center; gap: var(--space-2); }
+  .history-table__show-action [role='status'] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .history-table__action { white-space: nowrap; }
-  .history-table__action .ui-button__icon { display: none; }
   .history-table .ui-badge { font-size: 0.6875rem; }
   .history-table .ui-table__header--sortable,
   .history-detail__summary-grid dt {

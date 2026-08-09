@@ -6,6 +6,7 @@ import { ProductionHistoryPage } from './ProductionHistoryPage.tsx'
 
 const mocks = vi.hoisted(() => ({
   findByEventId: vi.fn(),
+  publish: vi.fn(() => ({ ok: true })),
 }))
 
 const event = {
@@ -17,7 +18,8 @@ const event = {
 }
 
 vi.mock('../../app/workspace/ProductionWorkspaceContext.tsx', () => ({
-  useProductionWorkspace: () => ({ status: 'ready', event }),
+  useProductionWorkspace: () => ({ status: 'ready', event, eventSettings: { displayName: 'Current event', subtitle: '', primaryColor: '#111111', accentColor: '#222222' }, displayConfiguration: null }),
+  useProductionAudiencePublisher: () => ({ publish: mocks.publish }),
 }))
 
 vi.mock('../../infrastructure/composition/draw-command-production.ts', () => ({
@@ -36,7 +38,20 @@ vi.mock('../../application/history/history-read-model.ts', async () => {
   const actual = await vi.importActual<typeof import('../../application/history/history-read-model.ts')>('../../application/history/history-read-model.ts')
   return {
     ...actual,
-    reconstructOfficialHistoryForEvent: async (eventId: string) => ({ eventId, sessions: (await mocks.findByEventId(eventId)).map((session: OfficialHistorySession['session']) => ({ kind: 'complete' as const, value: { audits: [], category: null, configuration: null, event: { id: eventId, name: '24th K-Link Indonesia Anniversary', status: 'live', createdAt: '2026-08-08T00:00:00.000Z', updatedAt: '2026-08-08T00:00:00.000Z' }, issues: [], lineages: [], redraws: [], session, summary: { categoryId: null, categoryName: null, completionTimestamp: session.completedAt, drawSessionId: session.id, drawTimestamp: session.createdAt, eligibleCount: null, eventId, eventName: '24th K-Link Indonesia Anniversary', mode: session.mode, prizeName: null, requestedWinnerCount: null, sessionStatus: session.status }, winners: [] } })) }),
+    reconstructOfficialHistoryForEvent: async (eventId: string) => {
+      const sessions = await mocks.findByEventId(eventId)
+      return {
+        eventId,
+        sessions: sessions.map((session: OfficialHistorySession['session']) => ({
+          kind: 'complete' as const,
+          value: {
+            audits: [], category: null, configuration: null, event: { id: eventId, name: '24th K-Link Indonesia Anniversary', status: 'live', createdAt: '2026-08-08T00:00:00.000Z', updatedAt: '2026-08-08T00:00:00.000Z' }, issues: [], lineages: [], redraws: [], session,
+            summary: { categoryId: null, categoryName: null, completionTimestamp: session.completedAt, drawSessionId: session.id, drawTimestamp: session.createdAt, eligibleCount: null, eventId, eventName: '24th K-Link Indonesia Anniversary', mode: session.mode, prizeName: null, requestedWinnerCount: null, sessionStatus: session.status },
+            winners: session.status === 'completed' ? [{ winnerRecordId: `winner-${session.id}`, drawSessionId: session.id, participantId: 'participant-1', selectedTimestamp: session.createdAt, sequence: 1, status: 'confirmed', ticketNumber: '00042', confirmationTimestamp: session.completedAt }] : [],
+          },
+        })),
+      }
+    },
   }
 })
 
@@ -61,6 +76,7 @@ function renderPage(path = '/history') {
 
 beforeEach(() => {
   mocks.findByEventId.mockResolvedValue([])
+  mocks.publish.mockClear()
 })
 
 describe('production History empty state', () => {
@@ -100,6 +116,17 @@ describe('production History empty state', () => {
     expect(mocks.findByEventId).toHaveBeenCalledWith('event-selected')
   })
 
+  it('shows and publishes from an eligible row while retaining the details action', async () => {
+    mocks.findByEventId.mockResolvedValue([session('completed-1'), session('cancelled-1', 'cancelled')])
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: 'Show' })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'View Details' }).find((link) => link.getAttribute('href') === '/history/completed-1')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Show' })).toHaveLength(1)
+    await screen.getByRole('button', { name: 'Show' }).click()
+    expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ drawSessionId: 'completed-1', verificationState: 'verified', result: { drawSessionId: 'completed-1', winners: [{ sequence: 1, ticketNumber: '00042', status: 'confirmed' }] } }))
+  })
+
   it('renders an official result route without the history list', async () => {
     mocks.findByEventId.mockResolvedValue([session('completed-1')])
     renderPage('/history/completed-1')
@@ -107,5 +134,6 @@ describe('production History empty state', () => {
     expect(await screen.findByRole('heading', { name: 'Winner records' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Official history sessions')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to History' })).toHaveAttribute('href', '/history')
+    expect(screen.queryByRole('button', { name: 'Show' })).not.toBeInTheDocument()
   })
 })

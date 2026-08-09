@@ -56,4 +56,10 @@ describe('committed Audience projection', () => {
     expect(pending.result?.winners).toEqual([{ sequence: 1, ticketNumber: '00073', status: 'pending' }, { sequence: 2, ticketNumber: '00052', status: 'confirmed' }])
     expect(confirmed.result?.winners).toEqual([{ sequence: 1, ticketNumber: '00073', status: 'confirmed' }, { sequence: 2, ticketNumber: '00052', status: 'confirmed' }])
   })
+
+  it('marks mixed confirmed and cancelled results as resolved with no pending winners', () => {
+    const source = projectCommittedAudienceState({ session: { ...session, status: 'completed' }, winners: [winner('a', 1, '00073', 'confirmed'), winner('b', 2, '00052', 'cancelled')], stageStartedAt: '2026-08-05T00:00:01.000Z' as never, blackoutRequested: false })
+    expect(source.verificationState).toBe('verified')
+    expect(source.result?.winners).toEqual([{ sequence: 1, ticketNumber: '00073', status: 'confirmed' }])
+  })
 })

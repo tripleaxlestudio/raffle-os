@@ -31,7 +31,7 @@ export async function queryDrawSetup(
     if (event === null) return { state: 'no-active-event', mode }
 
     const configurations = await repositories.configurations.findByEventId(event.id)
-    const configuration = configurations[0]
+    const configuration = [...configurations].sort((left, right) => right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id))[0]
     if (configuration === undefined) return { state: 'no-configuration', mode, event }
 
     const category = await repositories.categories.findById(configuration.prizeCategoryId)
@@ -39,7 +39,13 @@ export async function queryDrawSetup(
       return { state: 'invalid-category', mode, event, configuration }
     }
 
-    const session = await repositories.sessions.findLatestByEventId(event.id, mode)
+    const sessions = await repositories.sessions.findByEventId(event.id)
+    const session = sessions
+      .filter((candidate) => candidate.configurationId === configuration.id && candidate.mode === mode)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id))
+      .find((candidate) => candidate.status === 'ready') ?? sessions
+      .filter((candidate) => candidate.configurationId === configuration.id && candidate.mode === mode)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id))[0] ?? null
     const totalParticipantCount = await repositories.participants.countByEventId(event.id)
     if (totalParticipantCount === 0) {
       return { state: 'no-participants', mode, event, configuration, category, session }
@@ -47,17 +53,24 @@ export async function queryDrawSetup(
 
     const participants = await loadParticipants(repositories, event.id)
     const winnerRecords = await repositories.winners.findByEventId(event.id)
-    const sessions = await repositories.sessions.findByEventId(event.id)
-    const officialSessions = sessions
-      .filter((candidate) => candidate.mode === 'live' && candidate.configurationId === configuration.id)
-      .map((candidate) => ({
-        id: candidate.id,
-        eventId: candidate.eventId,
-        configurationId: candidate.configurationId,
-        prizeCategoryId: category.id,
-        mode: candidate.mode,
-        status: candidate.status,
+    const resolvedOfficialSessions = await Promise.all(sessions
+      .filter((candidate) => candidate.mode === 'live')
+      .map(async (candidate) => {
+        const candidateConfiguration = await repositories.configurations.findById(candidate.configurationId)
+        if (candidateConfiguration === null || candidateConfiguration.eventId !== event.id) return null
+        return {
+          id: candidate.id,
+          eventId: candidate.eventId,
+          configurationId: candidate.configurationId,
+          prizeCategoryId: candidateConfiguration.prizeCategoryId,
+          mode: candidate.mode,
+          status: candidate.status,
+        }
       }))
+    if (resolvedOfficialSessions.some((candidate) => candidate === null)) {
+      return { state: 'blocked', mode, event, configuration, category, session, totalParticipantCount, eligibleCandidateCount: 0, excludedCount: participants.length, exclusionCounts: {}, reason: 'A historical Live DrawSession references unavailable or mismatched configuration data.' }
+    }
+    const officialSessions = resolvedOfficialSessions.filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== null)
     const build = buildCandidatePool({
       activeEvent: event,
       drawConfiguration: configuration,

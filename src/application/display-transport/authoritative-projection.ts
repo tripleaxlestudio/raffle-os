@@ -14,13 +14,13 @@ export function projectCommittedAudienceState(input: {
   const active = input.winners
     .filter((winner) => winner.drawSessionId === input.session.id && winner.status !== 'cancelled')
     .sort((left, right) => left.sequenceNumber - right.sequenceNumber)
-  const verificationState = input.winners.some((winner) => winner.status === 'cancelled')
+  const hasPendingWinner = input.winners.some((winner) => winner.status === 'pending')
+  const resultIsResolved = input.winners.length > 0 && input.winners.every((winner) => winner.status === 'confirmed' || winner.status === 'cancelled')
+  const verificationState = hasPendingWinner
     ? 'in-progress' as const
-    : active.length > 0 && active.every((winner) => winner.status === 'confirmed')
+    : resultIsResolved
       ? 'verified' as const
-      : active.some((winner) => winner.status === 'confirmed')
-        ? 'in-progress' as const
-        : 'pending' as const
+      : 'pending' as const
   return {
     drawSessionId: input.session.id,
     stage: 'pending-handoff',

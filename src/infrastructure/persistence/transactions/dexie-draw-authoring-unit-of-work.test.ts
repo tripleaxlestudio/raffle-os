@@ -51,4 +51,18 @@ describe('DexieDrawAuthoringUnitOfWork', () => {
     await expect(new DexieDrawAuthoringUnitOfWork(database).persistReadyAuthoring({ configuration: { ...configuration, requestedWinners: 2 }, session: { ...session, status: 'ready' }, existingConfigurationId: configuration.id, existingSessionId: session.id })).rejects.toMatchObject({ code: 'immutable-record' })
     expect((await database.draw_sessions.get(session.id))?.status).toBe('completed')
   })
+
+  it('keeps the completed configuration immutable when a forked ready draw is persisted', async () => {
+    const { database, configuration, session } = await setup()
+    const completed = { ...session, status: 'completed' as const }
+    const forkedConfiguration: DrawConfiguration = { ...configuration, id: '55555555-5555-4555-8555-555555555555' as DrawConfiguration['id'], requestedWinners: 2 }
+    const forkedSession: DrawSession = { ...session, id: '66666666-6666-4666-8666-666666666666' as DrawSession['id'], configurationId: forkedConfiguration.id }
+    await database.draw_configurations.add(configuration)
+    await database.draw_sessions.add(completed)
+    await new DexieDrawAuthoringUnitOfWork(database).persistReadyAuthoring({ configuration: forkedConfiguration, session: forkedSession })
+    expect(await database.draw_configurations.get(configuration.id)).toEqual(configuration)
+    expect(await database.draw_sessions.get(session.id)).toEqual(completed)
+    expect(await database.draw_configurations.get(forkedConfiguration.id)).toEqual(forkedConfiguration)
+    expect(await database.draw_sessions.get(forkedSession.id)).toEqual(forkedSession)
+  })
 })

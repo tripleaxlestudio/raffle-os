@@ -20,8 +20,9 @@ async function readRecord(repositories: DrawAuthoringRepositories, eventId: Even
   const event = await repositories.events.findById(eventId)
   if (event === null) throw new DrawAuthoringError('event-not-found', 'The selected Event was not found.')
   const categories = await repositories.categories.findByEventId(event.id)
+  const configurations = await repositories.configurations.findByEventId(event.id)
   const configuration = configurationId === undefined
-    ? (await repositories.configurations.findByEventId(event.id))[0] ?? null
+    ? [...configurations].sort((left, right) => right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id))[0] ?? null
     : await repositories.configurations.findById(configurationId as DrawConfiguration['id'])
   if (configuration === null) {
     if (configurationId !== undefined) throw new DrawAuthoringError('configuration-not-found', 'The DrawConfiguration was not found.')
@@ -32,8 +33,11 @@ async function readRecord(repositories: DrawAuthoringRepositories, eventId: Even
   if (category === null) throw new DrawAuthoringError('category-not-found', 'The selected prize category was not found.')
   if (category.eventId !== event.id) throw new DrawAuthoringError('cross-event-relationship', 'The prize category belongs to another Event.')
   const sessions = await repositories.sessions.findByEventId(event.id)
+  const matchingSessions = sessions
+    .filter((candidate) => candidate.configurationId === configuration.id)
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id))
   const session = sessionId === undefined
-    ? sessions.find((candidate) => candidate.configurationId === configuration.id && candidate.status === 'ready') ?? sessions.find((candidate) => candidate.configurationId === configuration.id) ?? null
+    ? matchingSessions.find((candidate) => candidate.status === 'ready') ?? matchingSessions[0] ?? null
     : sessions.find((candidate) => candidate.id === sessionId) ?? null
   if (session !== null && (session.eventId !== event.id || session.configurationId !== configuration.id)) throw new DrawAuthoringError('cross-event-relationship', 'The DrawSession does not belong to the selected Event and configuration.')
   return { event, categories, configuration, session }
@@ -84,7 +88,17 @@ export function createDrawAuthoringService(repositories: DrawAuthoringRepositori
         if (draft.sessionId !== undefined && loaded.session === null) return invalid('session-not-found', 'The DrawSession was not found.')
         if (loaded.session !== null && isDrawSessionAuthoringLocked(loaded.session)) return invalid('session-not-editable', 'An active DrawSession cannot be edited. Resolve the active draw before changing its configuration.')
         const timestamp = now()
-        const configuration: DrawConfiguration = loaded.configuration ?? { id: createDrawConfigurationId(), eventId, prizeCategoryId: category.id, requestedWinners, winningRule: draft.winningRule as DrawConfiguration['winningRule'], requireCheckIn: draft.requireCheckIn, eligibleGroupFilter: groupFilter, presentation, createdAt: timestamp, updatedAt: timestamp }
+        const existingSessions = loaded.configuration === null
+          ? []
+          : await repositories.sessions.findByEventId(eventId)
+        const configurationHasStartedSession = existingSessions.some((candidate) =>
+          candidate.configurationId === loaded.configuration?.id &&
+          candidate.status !== 'draft' &&
+          candidate.status !== 'ready',
+        )
+        const configuration: DrawConfiguration = loaded.configuration === null || configurationHasStartedSession
+          ? { id: createDrawConfigurationId(), eventId, prizeCategoryId: category.id, requestedWinners, winningRule: draft.winningRule as DrawConfiguration['winningRule'], requireCheckIn: draft.requireCheckIn, eligibleGroupFilter: groupFilter, presentation, createdAt: timestamp, updatedAt: timestamp }
+          : loaded.configuration
         const updatedConfiguration: DrawConfiguration = { ...configuration, eventId, prizeCategoryId: category.id, requestedWinners, winningRule: draft.winningRule as DrawConfiguration['winningRule'], requireCheckIn: draft.requireCheckIn, eligibleGroupFilter: groupFilter, presentation, updatedAt: timestamp }
         const reuseSession = loaded.session === null || loaded.session.status === 'ready'
         const session: DrawSession = reuseSession && loaded.session !== null
@@ -98,7 +112,7 @@ export function createDrawAuthoringService(repositories: DrawAuthoringRepositori
         const eligibility = evaluateEligibility({ activeEvent: loaded.event, drawConfiguration: updatedConfiguration, prizeCategory: category, mode: updatedSession.mode, participants, winnerRecords: winners, ruleContext: { officialSessions: [] } })
         if (eligibility.ok && eligibility.value.eligibleCount < requestedWinners) return invalid('insufficient-eligible-capacity', `Only ${eligibility.value.eligibleCount} eligible participants are available for ${requestedWinners} winners.`)
         if (repositories.authoring === undefined) return { ok: false, error: new DrawAuthoringError('persistence-unavailable', 'Draw authoring persistence is unavailable.', { retryable: true }) }
-        await repositories.authoring.persistReadyAuthoring({ configuration: updatedConfiguration, session: updatedSession, existingConfigurationId: loaded.configuration?.id, existingSessionId: reuseSession ? loaded.session?.id : undefined })
+        await repositories.authoring.persistReadyAuthoring({ configuration: updatedConfiguration, session: updatedSession, existingConfigurationId: configurationHasStartedSession ? undefined : loaded.configuration?.id, existingSessionId: reuseSession ? loaded.session?.id : undefined })
         const readyEvent = loaded.event.status === 'draft' ? { ...loaded.event, status: 'ready' as const, updatedAt: timestamp } : loaded.event
         return { ok: true, record: { event: readyEvent, category, configuration: updatedConfiguration, session: updatedSession, eligibleCount: eligibility.ok ? eligibility.value.eligibleCount : 0 } }
       } catch (cause: unknown) {

@@ -22,7 +22,7 @@ function snapshotScenario(snapshot: PublicDisplaySnapshot): PublicAudienceScenar
   const allConfirmed = hasTickets && statuses.length === snapshot.ticketNumbers?.length && statuses.every((status) => status === 'confirmed')
   const someConfirmed = statuses.some((status) => status === 'confirmed')
   const verified = snapshot.verificationState === 'verified' || (snapshot.verificationState === undefined && allConfirmed)
-  const inProgress = snapshot.verificationState === 'in-progress' || (snapshot.verificationState === undefined && someConfirmed)
+  const inProgress = snapshot.verificationState === 'in-progress' || (snapshot.verificationState === undefined && someConfirmed && !allConfirmed)
   const committedState = snapshot.stage === 'pending-handoff' && !hasTickets
     ? 'standby' as const
     : snapshot.stage === 'pending-handoff' && verified
@@ -46,7 +46,7 @@ function snapshotScenario(snapshot: PublicDisplaySnapshot): PublicAudienceScenar
     countdownValue: snapshot.stage === 'countdown' ? String(snapshot.countdownValue ?? '—') : undefined,
     ticketNumbers: snapshot.ticketNumbers,
     winnerStatuses: snapshot.winnerStatuses,
-    statusMessage: committedState === 'confirmed' ? 'WINNERS VERIFIED' : snapshot.stage === 'pending-handoff' ? (inProgress ? 'VERIFICATION IN PROGRESS' : 'RESULTS UNDER VERIFICATION') : snapshot.stage === 'reveal' ? 'RESULTS UNDER VERIFICATION' : undefined,
+    statusMessage: committedState === 'confirmed' ? 'RESULTS CONFIRMED' : snapshot.stage === 'pending-handoff' ? (inProgress ? 'VERIFICATION IN PROGRESS' : 'RESULTS UNDER VERIFICATION') : snapshot.stage === 'reveal' ? 'RESULTS UNDER VERIFICATION' : undefined,
     displayTest: snapshot.displayTest,
   }
 }

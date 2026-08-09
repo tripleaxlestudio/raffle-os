@@ -66,9 +66,38 @@ describe('draw authoring service', () => {
     })
     const result = await createDrawAuthoringService(repositories).save({ ...validDraft, configurationId: configuration.id, sessionId: session.id, presentation: { presentationMode: 'random-number-roll', rollStopMode: 'timed', rollDurationSeconds: 12, rollSpeedPerSecond: 20, revealMode: 'sequential' } })
     expect(result.ok).toBe(true)
-    expect(persistReadyAuthoring).toHaveBeenCalledWith(expect.objectContaining({ existingConfigurationId: configuration.id, existingSessionId: undefined, session: expect.objectContaining({ status: 'ready', mode: 'practice' }) }))
-    const persisted = persistReadyAuthoring.mock.calls[0]?.[0] as { session: { id: string } } | undefined
+    expect(persistReadyAuthoring).toHaveBeenCalledWith(expect.objectContaining({ existingConfigurationId: undefined, existingSessionId: undefined, session: expect.objectContaining({ status: 'ready', mode: 'practice' }) }))
+    const persisted = persistReadyAuthoring.mock.calls[0]?.[0] as { configuration: { id: string; prizeCategoryId: string }; session: { id: string; configurationId: string } } | undefined
     expect(persisted?.session.id).not.toBe(session.id)
+    expect(persisted?.configuration.id).not.toBe(configuration.id)
+    expect(persisted?.session.configurationId).toBe(persisted?.configuration.id)
+  })
+
+  it('forks the configuration when a completed official draw changes prize', async () => {
+    const nextCategory = { ...category, id: 'category-b', name: 'Next Prize', prizeName: 'Next prize name' }
+    const configuration = { id: 'configuration-a', eventId: event.id, prizeCategoryId: category.id, requestedWinners: 1, winningRule: 'once-per-event', requireCheckIn: true, eligibleGroupFilter: null, createdAt: event.createdAt, updatedAt: event.updatedAt }
+    const session = { id: 'old-session', eventId: event.id, configurationId: configuration.id, mode: 'live', status: 'completed' as const, configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: event.createdAt, updatedAt: event.updatedAt }
+    const repositories = makeRepositories({
+      categories: { findById: vi.fn(async (id: string) => id === nextCategory.id ? nextCategory : category), findByEventId: vi.fn(async () => [category, nextCategory]) } as never,
+      configurations: { findById: vi.fn(async () => configuration), findByEventId: vi.fn(async () => [configuration]) } as never,
+      sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => [session]) } as never,
+    })
+    const result = await createDrawAuthoringService(repositories).save({ ...validDraft, prizeCategoryId: nextCategory.id, mode: 'live', configurationId: configuration.id, sessionId: session.id })
+    expect(result.ok).toBe(true)
+    expect(repositories.authoring?.persistReadyAuthoring).toHaveBeenCalledWith(expect.objectContaining({ existingConfigurationId: undefined, configuration: expect.objectContaining({ prizeCategoryId: nextCategory.id }), session: expect.objectContaining({ status: 'ready' }) }))
+  })
+
+  it('loads the newest authoring configuration after multiple prize configurations exist', async () => {
+    const older = { id: 'configuration-old', eventId: event.id, prizeCategoryId: category.id, requestedWinners: 1, winningRule: 'once-per-event', requireCheckIn: true, eligibleGroupFilter: null, createdAt: '2026-08-01T00:00:00.000Z', updatedAt: '2026-08-01T00:00:00.000Z' }
+    const newer = { ...older, id: 'configuration-new', prizeCategoryId: category.id, createdAt: '2026-08-02T00:00:00.000Z', updatedAt: '2026-08-02T00:00:00.000Z' }
+    const newerSession = { id: 'new-session', eventId: event.id, configurationId: newer.id, mode: 'live' as const, status: 'ready' as const, configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: newer.createdAt, updatedAt: newer.updatedAt }
+    const repositories = makeRepositories({
+      configurations: { findById: vi.fn(async (id: string) => id === newer.id ? newer : older), findByEventId: vi.fn(async () => [older, newer]) } as never,
+      sessions: { findById: vi.fn(async () => newerSession), findByEventId: vi.fn(async () => [newerSession]) } as never,
+    })
+    const result = await createDrawAuthoringService(repositories).load({ eventId: event.id })
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.record?.configuration.id).toBe(newer.id)
   })
 
   it.each(['', 0, 101, 1.5, 'not-a-number'])('rejects invalid winner count %s', async (requestedWinners) => {

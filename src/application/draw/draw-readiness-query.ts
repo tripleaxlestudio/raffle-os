@@ -39,7 +39,13 @@ export async function queryDrawReadiness(
     const total = await dependencies.participants.countByEventId(event.id)
     const participants = await dependencies.participants.findByEventId(event.id, { limit: total, offset: 0 })
     const winners = await dependencies.winners.findByEventId(event.id)
-    const officialSessions = sessions.filter((candidate) => candidate.mode === 'live').map((candidate) => ({ id: candidate.id, eventId: candidate.eventId, configurationId: candidate.configurationId, prizeCategoryId: configuration.prizeCategoryId, mode: candidate.mode, status: candidate.status }))
+    const resolvedOfficialSessions = await Promise.all(sessions.filter((candidate) => candidate.mode === 'live').map(async (candidate) => {
+      const candidateConfiguration = await dependencies.configurations.findById(candidate.configurationId)
+      if (candidateConfiguration === null || candidateConfiguration.eventId !== event.id) return null
+      return { id: candidate.id, eventId: candidate.eventId, configurationId: candidate.configurationId, prizeCategoryId: candidateConfiguration.prizeCategoryId, mode: candidate.mode, status: candidate.status }
+    }))
+    if (resolvedOfficialSessions.some((candidate) => candidate === null)) return blocked('stale-data', 'A historical Live DrawSession references unavailable or mismatched configuration data.', false, 'relationship-mismatch')
+    const officialSessions = resolvedOfficialSessions.filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== null)
     const eligibility = evaluateEligibility({ activeEvent: event, drawConfiguration: configuration, prizeCategory: category, mode: session.mode, participants, winnerRecords: winners, ruleContext: { officialSessions } })
     if (!eligibility.ok) return blocked('failed', 'Authoritative eligibility could not be evaluated from persisted data.', true, 'eligibility-failed')
     const data: DrawReadinessData = {

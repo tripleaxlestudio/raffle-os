@@ -57,7 +57,7 @@ describe('production Audience route', () => {
     expect(screen.getByText('42')).toBeVisible()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
     act(() => { publisher.publish(stateMessage(5, { stage: 'pending-handoff', stageStartedAt: '2026-08-05T00:00:00.000Z', ticketNumbers: ['00042', '42'], winnerStatuses: ['confirmed', 'confirmed'] })) })
-    expect(screen.getByText('WINNERS VERIFIED')).toBeVisible()
+    expect(screen.getByText('RESULTS CONFIRMED')).toBeVisible()
     expect(screen.getAllByTestId('winner-grid')[0]).toHaveAttribute('data-row-composition', '2')
     display.close()
     publisher.close()

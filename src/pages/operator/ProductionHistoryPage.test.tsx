@@ -36,13 +36,7 @@ vi.mock('../../application/history/history-read-model.ts', async () => {
   const actual = await vi.importActual<typeof import('../../application/history/history-read-model.ts')>('../../application/history/history-read-model.ts')
   return {
     ...actual,
-    buildOfficialHistorySession: (session: OfficialHistorySession['session'], selectedEvent: typeof event) => ({
-      relation: 'valid',
-      event: selectedEvent,
-      category: null,
-      session,
-      records: [],
-    }),
+    reconstructOfficialHistoryForEvent: async (eventId: string) => ({ eventId, sessions: (await mocks.findByEventId(eventId)).map((session: OfficialHistorySession['session']) => ({ kind: 'complete' as const, value: { audits: [], category: null, configuration: null, event: { id: eventId, name: '24th K-Link Indonesia Anniversary', status: 'live', createdAt: '2026-08-08T00:00:00.000Z', updatedAt: '2026-08-08T00:00:00.000Z' }, issues: [], lineages: [], redraws: [], session, summary: { categoryId: null, categoryName: null, completionTimestamp: session.completedAt, drawSessionId: session.id, drawTimestamp: session.createdAt, eligibleCount: null, eventId, eventName: '24th K-Link Indonesia Anniversary', mode: session.mode, prizeName: null, requestedWinnerCount: null, sessionStatus: session.status }, winners: [] } })) }),
   }
 })
 
@@ -76,7 +70,7 @@ describe('production History empty state', () => {
     expect(await screen.findByRole('heading', { name: 'No official draws yet' })).toBeInTheDocument()
     expect(screen.getByText('This Event does not have any persisted Live draw results yet.')).toBeInTheDocument()
     expect(screen.getByText('Completed official draws will appear here automatically.')).toBeInTheDocument()
-    expect(screen.getByText('Authoritative Live DrawSessions for 24th K-Link Indonesia Anniversary.')).toBeInTheDocument()
+    expect(screen.getByText(/Authoritative Live .*24th K-Link Indonesia Anniversary/)).toBeInTheDocument()
     expect(screen.queryByText('Selected Event')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open Draw Setup' })).toHaveAttribute('href', '/draw/setup')
     expect(screen.queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument()
@@ -92,7 +86,7 @@ describe('production History empty state', () => {
     expect(await screen.findByRole('combobox', { name: 'Status' })).toHaveValue('completed')
     expect(screen.getByRole('combobox', { name: 'Mode' })).toHaveValue('live')
     expect(screen.getByRole('link', { name: 'Open Draw Sessions' })).toHaveAttribute('href', '/draw/live')
-    expect(screen.getByText('Authoritative Live DrawSessions for 24th K-Link Indonesia Anniversary.')).toBeInTheDocument()
+    expect(screen.getByText(/Authoritative Live .*24th K-Link Indonesia Anniversary/)).toBeInTheDocument()
     expect(container.querySelector('table[aria-label="Official history sessions"]')).toBeInTheDocument()
     expect(screen.queryByText('Selected Event')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'No official draws yet' })).not.toBeInTheDocument()

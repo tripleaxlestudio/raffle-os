@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { reconstructOfficialHistorySession, type HistoryReadRepositories } from './history-read-model.ts'
+import { reconstructOfficialHistoryForEvent, reconstructOfficialHistorySession, type HistoryReadRepositories } from './history-read-model.ts'
 import type { DrawConfiguration } from '../../domain/draws/draw-configuration.types.ts'
 import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
 import type { Event } from '../../domain/events/event.types.ts'
@@ -46,7 +46,7 @@ function repositories(overrides: Partial<{ event: Event | null; category: PrizeC
     configurations: { findById: async () => values.configuration },
     events: { findById: async () => values.event },
     redraws: { findByDrawSessionId: async () => values.redraws },
-    sessions: { findById: async () => session },
+    sessions: { findById: async () => session, findByEventId: async () => [session] },
     winners: { findByDrawSessionId: async () => values.winners },
   }
 }
@@ -89,5 +89,16 @@ describe('reconstructOfficialHistorySession', () => {
   it('does not call a write method while reconstructing', async () => {
     const result = await reconstructOfficialHistorySession(ids.session, repositories())
     expect(result?.value.session.id).toBe(ids.session)
+  })
+})
+
+describe('reconstructOfficialHistoryForEvent', () => {
+  it('aggregates only Live sessions in stable order through the reconstruction boundary', async () => {
+    const practice = { ...session, id: 'practice-session' as DrawSessionId, mode: 'practice' as const, updatedAt: '2026-08-03T00:00:00.000Z' as DrawSession['updatedAt'] }
+    const olderLive = { ...session, id: 'live-older' as DrawSessionId, updatedAt: '2026-08-02T00:00:00.000Z' as DrawSession['updatedAt'] }
+    const repos = repositories()
+    const result = await reconstructOfficialHistoryForEvent(ids.event, { ...repos, sessions: { findById: async (id) => id === practice.id ? practice : id === olderLive.id ? olderLive : session, findByEventId: async () => [olderLive, practice, session] } })
+    expect(result.sessions.map((item) => item.value.session.id)).toEqual([olderLive.id, ids.session])
+    expect(result.sessions.every((item) => item.value.session.mode === 'live')).toBe(true)
   })
 })

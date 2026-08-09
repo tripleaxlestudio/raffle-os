@@ -40,6 +40,7 @@ const operatorRoutes = {
     { path: 'draw/live', element: <DrawSessionQueuePage /> },
     { path: 'draw/pending', element: <ProductionPendingResultsLandingPage /> },
     { path: 'history', element: <ProductionHistoryPage /> },
+    { path: 'history/winners', element: <ProductionHistoryPage /> },
     { path: 'history/:drawSessionId', element: <ProductionHistoryPage /> },
     { path: 'settings', element: <ProductionSettingsPage /> },
   ],

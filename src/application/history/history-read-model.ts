@@ -3,7 +3,7 @@ import type { DrawConfiguration } from '../../domain/draws/draw-configuration.ty
 import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
 import type { Event } from '../../domain/events/event.types.ts'
 import type { PrizeCategory } from '../../domain/prizes/prize.types.ts'
-import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
+import type { DrawSessionId, EventId } from '../../domain/shared/identifiers.ts'
 import type { RedrawRecord } from '../../domain/winners/redraw.types.ts'
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
 import type { AuditRepository } from '../persistence/repositories/audit-repository.interface.ts'
@@ -114,12 +114,17 @@ export type HistoryReconstruction =
 
 export interface HistoryReadRepositories {
   readonly events: Pick<EventRepository, 'findById'>
-  readonly sessions: Pick<DrawSessionRepository, 'findById'>
+  readonly sessions: Pick<DrawSessionRepository, 'findById' | 'findByEventId'>
   readonly configurations: Pick<DrawConfigurationRepository, 'findById'>
   readonly categories: Pick<PrizeCategoryRepository, 'findById'>
   readonly winners: Pick<WinnerRepository, 'findByDrawSessionId'>
   readonly redraws: Pick<RedrawRepository, 'findByDrawSessionId'>
   readonly audits: Pick<AuditRepository, 'findByEventId'>
+}
+
+export interface OfficialHistoryEventProjection {
+  readonly eventId: EventId
+  readonly sessions: readonly HistoryReconstruction[]
 }
 
 function compareByTimestampAndId(left: { readonly timestamp: string; readonly id: string }, right: { readonly timestamp: string; readonly id: string }): number {
@@ -227,6 +232,26 @@ export async function reconstructOfficialHistorySession(
       winners: winners.slice().sort(compareWinners).map((winner) => ({ cancellationTimestamp: winner.cancelledAt, confirmationTimestamp: winner.confirmedAt, drawSessionId: winner.drawSessionId, participantId: winner.participantId, selectedTimestamp: winner.createdAt, sequence: winner.sequenceNumber, status: winner.status, ticketNumber: winner.ticketNumber, winnerRecordId: winner.id })),
     },
   }
+}
+
+function compareReconstructedSessions(left: HistoryReconstruction, right: HistoryReconstruction): number {
+  const leftSession = left.value.session
+  const rightSession = right.value.session
+  const unresolved = (status: DrawSession['status']): number => status === 'drawing' || status === 'pending-confirmation' ? 0 : 1
+  return unresolved(leftSession.status) - unresolved(rightSession.status) || rightSession.updatedAt.localeCompare(leftSession.updatedAt) || leftSession.id.localeCompare(rightSession.id)
+}
+
+/**
+ * The single event-scoped read boundary for official History consumers.
+ * Practice sessions are intentionally excluded before reconstruction.
+ */
+export async function reconstructOfficialHistoryForEvent(
+  eventId: EventId,
+  repositories: HistoryReadRepositories,
+): Promise<OfficialHistoryEventProjection> {
+  const sessions = (await repositories.sessions.findByEventId(eventId)).filter((session) => session.eventId === eventId && session.mode === 'live')
+  const reconstructed = (await Promise.all(sessions.map((session) => reconstructOfficialHistorySession(session.id, repositories)))).filter((result): result is HistoryReconstruction => result !== null)
+  return { eventId, sessions: reconstructed.slice().sort(compareReconstructedSessions) }
 }
 
 export function buildOfficialHistorySession(

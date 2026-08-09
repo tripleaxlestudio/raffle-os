@@ -25,6 +25,17 @@ describe('application routes', () => {
     expect(screen.queryByText(/Nusantara Tech Gala 2026/i)).not.toBeInTheDocument()
   })
 
+  it.each(['/events', '/dashboard', '/prize-categories', '/participants', '/settings', '/draw/setup', '/draw/live', '/draw/pending', '/history'])('does not render publisher diagnostics on production route %s', async (path) => {
+    renderRoute(path)
+    await waitFor(() => expect(screen.getByRole('main')).toBeInTheDocument())
+    expect(screen.queryByText('Audience publisher diagnostics')).not.toBeInTheDocument()
+  })
+
+  it('keeps publisher diagnostics available behind an explicit development debug flag', async () => {
+    renderRoute('/dashboard?debug=audience-transport')
+    expect(await screen.findByText('Audience publisher diagnostics')).toBeInTheDocument()
+  })
+
   it('keeps Operator and Audience production shells separated', () => {
     renderRoute('/dashboard')
     expect(document.querySelector('[data-operator-shell]')).toHaveAttribute('data-interface', 'operator')

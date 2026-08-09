@@ -133,6 +133,7 @@ function ProductionAudienceDiagnostics() {
   const audience = useProductionAudiencePublisher()
   const location = useLocation()
   const diagnostics = audience.getDiagnostics()
+  const diagnosticsDebugEnabled = import.meta.env.DEV && new URLSearchParams(location.search).get('debug') === 'audience-transport'
   useEffect(() => {
     if (!import.meta.env.DEV) return
     const base = diagnostics === undefined ? { side: 'Operator' as const, publisherControllerInstanceId: 'unavailable', route: () => location.pathname } : { side: 'Operator' as const, publisherControllerInstanceId: diagnostics.publisherInstanceId, scope: { eventId: diagnostics.channelName.split(':')[1] ?? 'unknown', displayId: diagnostics.channelName.split(':')[2] ?? 'unknown' }, route: () => location.pathname }
@@ -148,7 +149,7 @@ function ProductionAudienceDiagnostics() {
     if (location.pathname.includes('/draw/pending')) appendRuntimeTrace(base, { messageType: 'pending-results-mounted', direction: 'local' })
     return () => { if (location.pathname === '/settings') appendRuntimeTrace(base, { messageType: 'settings-unmounted', direction: 'local', cleanupDisposeReason: 'route-change' }) }
   }, [diagnostics, location.pathname])
-  if (!import.meta.env.DEV) return null
+  if (!diagnosticsDebugEnabled) return null
   return <RuntimeDiagnosticsPanel side="Operator" title="Audience publisher diagnostics" summary={<dl>
     <div><dt>Publisher owner</dt><dd>Production workspace shell</dd></div>
     <div><dt>Operator route</dt><dd>{location.pathname}</dd></div>

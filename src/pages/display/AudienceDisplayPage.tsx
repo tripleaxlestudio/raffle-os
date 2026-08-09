@@ -57,6 +57,7 @@ function safeStatusScenario(state: 'connecting' | 'disconnected-safe'): PublicAu
 
 function AudienceDevelopmentDiagnostics({ controller, renderedState }: { readonly controller: ReturnType<typeof createAudienceController>; readonly renderedState: string }) {
   const diagnostics = controller.getDiagnostics()
+  if (!import.meta.env.DEV) return null
   return <RuntimeDiagnosticsPanel side="Audience" title="Audience runtime diagnostics" renderedState={renderedState} summary={<dl>
     <div><dt>Resolved Event ID</dt><dd>{diagnostics.resolvedEventId}</dd></div>
     <div><dt>DisplayConfiguration ID</dt><dd>{diagnostics.displayConfigurationId}</dd></div>

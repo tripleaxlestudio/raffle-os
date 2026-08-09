@@ -201,7 +201,7 @@ describe('production Draw Run route shell', () => {
     expect(screen.getByText('You can retry the presentation from the same result or return to Draw Setup.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Back to Draw Setup' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Retry presentation' })).toBeInTheDocument()
-    expect(screen.getByRole('complementary', { name: 'Audience publisher diagnostics' })).toBeInTheDocument()
+    expect(document.querySelector('.production-recovery-diagnostics')).not.toBeInTheDocument()
     fireEvent.keyDown(dialog, { key: 'Escape' })
     expect(screen.getByRole('dialog', { name: 'Presentation needs attention' })).toBeInTheDocument()
     expect(sessionStorage.getItem(`raffle-os:practice-result:v1:${mocks.practiceSessionId}`)).toBe('{bad-json}')

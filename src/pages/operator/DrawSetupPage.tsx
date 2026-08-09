@@ -4,6 +4,9 @@ import { isDrawAuthoringDraftDirty, type DrawAuthoringDraft, type DrawAuthoringR
 import { isDrawSessionAuthoringLocked } from '../../domain/draws/draw-session.types.ts'
 import { normalizeDrawPresentationConfiguration, type DrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
 import type { DrawSetupProductionServices } from '../../application/draw/draw-setup-query.types.ts'
+import type { DrawConfiguration } from '../../domain/draws/draw-configuration.types.ts'
+import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
+import type { PrizeCategory } from '../../domain/prizes/prize.types.ts'
 import { queryDrawReadiness } from '../../application/draw/draw-readiness-query.ts'
 import type { DrawReadinessResult } from '../../application/draw/draw-readiness.types.ts'
 import { DrawAuthoringError } from '../../application/draw/draw-authoring-errors.ts'
@@ -30,6 +33,23 @@ type FormState = {
 
 const emptyForm: FormState = { eventId: '', prizeCategoryId: '', requestedWinners: '1', winningRule: 'once-per-event', requireCheckIn: false, eligibleGroupFilter: '', mode: 'practice', presentation: normalizeDrawPresentationConfiguration(undefined) }
 const QUICK_WINNER_COUNTS = [1, 3, 6, 10, 20, 50] as const
+type PrizeSelectorStatus = 'available' | 'ready' | 'active' | 'completed'
+const PRIZE_SELECTOR_STATUS_LABELS: Record<PrizeSelectorStatus, string> = { available: 'AVAILABLE', ready: 'READY', active: 'ACTIVE', completed: 'COMPLETED' }
+
+function getPrizeSelectorStatus(category: PrizeCategory, configurations: readonly DrawConfiguration[], sessions: readonly DrawSession[]): PrizeSelectorStatus {
+  const configurationIds = new Set(configurations.filter((configuration) => configuration.prizeCategoryId === category.id).map((configuration) => configuration.id))
+  const categorySessions = sessions.filter((session) => configurationIds.has(session.configurationId))
+  if (categorySessions.some((session) => session.mode === 'live' && (session.status === 'drawing' || session.status === 'pending-confirmation'))) return 'active'
+  if (categorySessions.some((session) => session.status === 'ready')) return 'ready'
+  if (categorySessions.some((session) => session.mode === 'live' && session.status === 'completed')) return 'completed'
+  return 'available'
+}
+
+function groupPrizeCategories(categories: readonly PrizeCategory[], configurations: readonly DrawConfiguration[], sessions: readonly DrawSession[]): Readonly<Record<PrizeSelectorStatus, readonly PrizeCategory[]>> {
+  const grouped: Record<PrizeSelectorStatus, PrizeCategory[]> = { available: [], ready: [], active: [], completed: [] }
+  for (const category of categories) grouped[getPrizeSelectorStatus(category, configurations, sessions)].push(category)
+  return grouped
+}
 
 function formFromRecord(record: DrawAuthoringRecord | null, eventId: string): FormState {
   if (record === null) return { ...emptyForm, eventId }
@@ -51,6 +71,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   const [form, setForm] = useState<FormState>(emptyForm)
   const [record, setRecord] = useState<DrawAuthoringRecord | null>(null)
   const [categories, setCategories] = useState<DrawAuthoringRecord['category'][]>([])
+  const [prizeStatuses, setPrizeStatuses] = useState<Readonly<Record<PrizeSelectorStatus, readonly PrizeCategory[]>>>({ available: [], ready: [], active: [], completed: [] })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<DrawAuthoringError | null>(null)
@@ -71,6 +92,12 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
       if (!result.ok) { setError(result.error); return }
       setEventMissing(result.event === null)
       setCategories(result.categories as DrawAuthoringRecord['category'][])
+      const eventId = result.event?.id ?? activeEventId
+      if (eventId === null) setPrizeStatuses({ available: [], ready: [], active: [], completed: [] })
+      else {
+        const [configurations, sessions] = await Promise.all([services.configurations.findByEventId(eventId), services.sessions.findByEventId(eventId)])
+        setPrizeStatuses(groupPrizeCategories(result.categories, configurations, sessions))
+      }
       setRecord(result.record)
       setForm(formFromRecord(result.record, result.event?.id ?? activeEventId ?? ''))
       if (result.record !== null && services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto }))
@@ -92,12 +119,13 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
     const draft = draftFromForm(form)
     if (services.authoringService === undefined) { setError(new DrawAuthoringError('persistence-unavailable', 'Draw authoring services are unavailable.', { retryable: true })); setSaving(false); return }
     const result = await services.authoringService.save(draft)
-    if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setSaved(true); signalProductionWorkspaceChanged(); if (services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })) }
+    if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setPrizeStatuses((current) => ({ ...current, ready: current.ready.some((category) => category.id === result.record.category.id) ? current.ready : [...current.ready, result.record.category], available: current.available.filter((category) => category.id !== result.record.category.id), active: current.active.filter((category) => category.id !== result.record.category.id), completed: current.completed.filter((category) => category.id !== result.record.category.id) })); setSaved(true); signalProductionWorkspaceChanged(); if (services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })) }
     else setError(result.error)
     setSaving(false)
   }
 
   const selectedCategory = categories.find((category) => category.id === form.prizeCategoryId)
+  const prizeGroups: readonly PrizeSelectorStatus[] = ['available', 'ready', 'active', 'completed']
   const refreshReadiness = async () => {
     if (record === null || services.checkStorage === undefined || services.checkCrypto === undefined) return
     setReadiness(await queryDrawReadiness(record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto }))
@@ -150,8 +178,8 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
               <div className="draw-setup-section__heading"><div><p className="operator-eyebrow">Draw identity</p><h2 id="draw-identity-title">Event and prize</h2></div><Badge variant={form.mode === 'live' ? 'live' : 'practice'}>{form.mode === 'live' ? 'LIVE' : 'PRACTICE'}</Badge></div>
               <div className="draw-field-grid">
                 <Select label="Event" value={form.eventId} onChange={(event) => update('eventId', event.target.value)} disabled><option value={form.eventId}>{record?.event.name ?? form.eventId}</option></Select>
-                <Select label="Prize category" value={form.prizeCategoryId} onChange={(event) => update('prizeCategoryId', event.target.value)} disabled={started}><option value="">Select a category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</Select>
-                <Input label="Prize name" value={selectedCategory?.prizeName ?? ''} readOnly description="Prize name belongs to the persisted PrizeCategory." />
+                <Select label="Prize" value={form.prizeCategoryId} onChange={(event) => update('prizeCategoryId', event.target.value)} disabled={started}><option value="">Select a prize</option>{prizeGroups.map((status) => prizeStatuses[status].length === 0 ? null : <optgroup key={status} label={PRIZE_SELECTOR_STATUS_LABELS[status]}>{prizeStatuses[status].map((category) => <option key={category.id} value={category.id}>{category.prizeName} · {category.name} · {PRIZE_SELECTOR_STATUS_LABELS[status]}</option>)}</optgroup>)}</Select>
+                <Input label="Category" value={selectedCategory?.name ?? ''} readOnly description="Category belongs to the persisted Prize." />
               </div>
             </section>
             <section className="draw-setup-section" aria-labelledby="winner-quantity-title">

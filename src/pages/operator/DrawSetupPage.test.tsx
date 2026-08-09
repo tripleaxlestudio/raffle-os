@@ -18,13 +18,15 @@ const participants = [
   { id: 'participant-2', eventId: event.id, ticketNumber: '00043', isCheckedIn: false, group: 'VIP', createdAt: event.createdAt, updatedAt: event.updatedAt },
 ] as const
 
-function services(overrides: { record?: DrawAuthoringRecord | null; recordRef?: { current: DrawAuthoringRecord | null }; event?: typeof event | null; categories?: readonly (typeof category | typeof alternateCategory)[]; participants?: readonly typeof participants[number][]; save?: DrawSetupProductionServices['authoringService'] extends infer S ? S extends { save: (...args: never[]) => unknown } ? S['save'] : never : never; conflict?: 'drawing' | 'pending-confirmation'; conflictAfterSave?: 'drawing' | 'pending-confirmation' } = {}) {
+function services(overrides: { record?: DrawAuthoringRecord | null; recordRef?: { current: DrawAuthoringRecord | null }; event?: typeof event | null; categories?: readonly (typeof category | typeof alternateCategory)[]; configurations?: readonly typeof configuration[]; participants?: readonly typeof participants[number][]; save?: DrawSetupProductionServices['authoringService'] extends infer S ? S extends { save: (...args: never[]) => unknown } ? S['save'] : never : never; sessions?: readonly typeof session[]; conflict?: 'drawing' | 'pending-confirmation'; conflictAfterSave?: 'drawing' | 'pending-confirmation' } = {}) {
   const current = overrides.record === undefined ? record : overrides.record
   const load = vi.fn(async () => ({ ok: true as const, event: overrides.event === undefined ? event : overrides.event, categories: overrides.categories ?? [category], record: overrides.recordRef === undefined ? current : overrides.recordRef.current }))
   let activeConflict = overrides.conflict
   const save = overrides.save ?? vi.fn(async () => { activeConflict = overrides.conflictAfterSave; return { ok: true as const, record: overrides.recordRef?.current ?? current ?? record } })
   const selectedParticipants = overrides.participants ?? participants
-  return { open: vi.fn(async () => undefined), checkStorage: vi.fn(async () => ({ ok: true as const })), checkCrypto: vi.fn(async () => ({ ok: true as const })), preferences: { get: vi.fn(async () => event.id) }, events: { findById: vi.fn(async () => event) }, configurations: { findById: vi.fn(async () => configuration) }, categories: { findById: vi.fn(async () => category) }, sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => activeConflict === undefined ? [session] : [session, { ...session, id: 'live-conflict', mode: 'live' as const, status: activeConflict }]) }, participants: { countByEventId: vi.fn(async () => selectedParticipants.length), findByEventId: vi.fn(async () => selectedParticipants) }, winners: { findByEventId: vi.fn(async () => []) }, authoringService: { load, save }, } as unknown as DrawSetupProductionServices
+  const persistedConfigurations = overrides.configurations ?? [configuration]
+  const persistedSessions = overrides.sessions ?? [session]
+  return { open: vi.fn(async () => undefined), checkStorage: vi.fn(async () => ({ ok: true as const })), checkCrypto: vi.fn(async () => ({ ok: true as const })), preferences: { get: vi.fn(async () => event.id) }, events: { findById: vi.fn(async () => event) }, configurations: { findById: vi.fn(async () => configuration), findByEventId: vi.fn(async () => persistedConfigurations) }, categories: { findById: vi.fn(async () => category) }, sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => activeConflict === undefined ? persistedSessions : [session, { ...session, id: 'live-conflict', mode: 'live' as const, status: activeConflict }]) }, participants: { countByEventId: vi.fn(async () => selectedParticipants.length), findByEventId: vi.fn(async () => selectedParticipants) }, winners: { findByEventId: vi.fn(async () => []) }, authoringService: { load, save }, } as unknown as DrawSetupProductionServices
 }
 
 function renderPage(value: DrawSetupProductionServices) { return render(<MemoryRouter><DrawSetupPage services={value} /></MemoryRouter>) }
@@ -34,9 +36,24 @@ describe('Draw Setup persisted authoring', () => {
     const user = userEvent.setup()
     renderPage(services({ categories: [category, alternateCategory] }))
     expect(await screen.findByDisplayValue('Persisted Gala')).toBeDisabled()
-    const categorySelect = screen.getByLabelText('Prize category')
+    const categorySelect = screen.getByLabelText('Prize')
     await user.selectOptions(categorySelect, alternateCategory.id)
-    expect(screen.getByDisplayValue('Travel Voucher')).toHaveAttribute('readonly')
+    expect(screen.getByDisplayValue('Second Prize')).toHaveAttribute('readonly')
+    expect(screen.getByRole('option', { name: 'Travel Voucher · Second Prize · AVAILABLE' })).toBeInTheDocument()
+  })
+
+  it('shows prize-first option identities and persisted draw status groups', async () => {
+    const completedCategory = { ...category, prizeName: 'K-Ion Nano Premium 5', name: 'Door Prize' } as unknown as typeof category
+    const availableCategory = { ...alternateCategory, prizeName: 'Smartphone Android', name: 'Door Prize' } as unknown as typeof alternateCategory
+    const completedConfiguration = { ...configuration, prizeCategoryId: completedCategory.id, id: 'completed-configuration' } as unknown as typeof configuration
+    const completedSession = { ...session, configurationId: completedConfiguration.id, mode: 'live' as const, status: 'completed' as const } as unknown as typeof session
+    const value = services({ categories: [completedCategory, availableCategory], configurations: [completedConfiguration], sessions: [completedSession], record: { ...record, category: completedCategory, configuration: completedConfiguration, session: completedSession } as unknown as DrawAuthoringRecord })
+    renderPage(value)
+    expect(await screen.findByRole('option', { name: 'K-Ion Nano Premium 5 · Door Prize · COMPLETED' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Smartphone Android · Door Prize · AVAILABLE' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'COMPLETED' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'AVAILABLE' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Category')).toHaveValue('Door Prize')
   })
 
   it('shows quick counts with pressed semantics and updates the same winner field', async () => {

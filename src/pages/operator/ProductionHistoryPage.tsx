@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useLocation, useParams, useSearchParams } from 'react-router'
 import { reconstructOfficialHistoryForEvent, type HistoryReadRepositories, type HistoryReconstruction, type ReconstructedHistorySession, type ReconstructedWinner } from '../../application/history/history-read-model.ts'
+import { canShowCompletedResultOnAudience, projectCompletedResultForAudience } from '../../application/history/completed-result-projection.ts'
 import { filterOfficialHistory, filterOfficialWinners, readHistoryQuery, writeHistoryQuery, HISTORY_STATUSES, type HistoryQuery } from '../../application/history/history-query.ts'
 import { projectAuditTimeline } from '../../application/history/audit-timeline.ts'
-import { useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
+import { useProductionAudiencePublisher, useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
@@ -36,6 +37,30 @@ function prizeName(item: ReconstructedHistorySession): string { return item.summ
 
 function readRepositories(services: ReturnType<typeof createDrawSetupProductionServices>): HistoryReadRepositories {
   return { audits: services.audits ?? { findByEventId: async () => [] }, categories: services.categories, configurations: services.configurations, events: services.events, redraws: services.redraws ?? { findByDrawSessionId: async () => [] }, sessions: services.sessions, winners: services.winners }
+}
+
+function ShowCompletedResultButton({ reconstruction }: { readonly reconstruction: HistoryReconstruction }) {
+  const workspace = useProductionWorkspace()
+  const audience = useProductionAudiencePublisher()
+  const [message, setMessage] = useState<string | null>(null)
+
+  function showResult(): void {
+    if (workspace.status !== 'ready') return
+    const result = projectCompletedResultForAudience({
+      reconstruction,
+      eventSettings: workspace.eventSettings,
+      displayConfiguration: workspace.displayConfiguration,
+      stageStartedAt: new Date().toISOString() as ReconstructedHistorySession['session']['createdAt'],
+    })
+    if (!result.ok) {
+      setMessage('This completed result is not available for public display.')
+      return
+    }
+    const published = audience.publish(result.source)
+    setMessage(published.ok ? 'The existing confirmed result is now shown on the Audience Display.' : 'The result could not be shown. Check the Audience Display connection and retry.')
+  }
+
+  return <div className="history-detail__audience-action"><Button icon={<Icon name="MonitorCheck" />} onClick={showResult}>Show on Audience Display</Button>{message ? <span role="status">{message}</span> : null}</div>
 }
 
 export function ProductionHistoryPage() {
@@ -104,7 +129,7 @@ function Metadata({ item }: { readonly item: ReconstructedHistorySession }) {
 function HistoryDetailContent({ reconstruction }: { readonly reconstruction: HistoryReconstruction }) {
   const item = reconstruction.value
   const lineageByOriginal = new Map(item.lineages.map((lineage) => [lineage.originalWinnerRecordId, lineage]))
-  return <div className="history-detail"><ButtonLink icon={<Icon name="ArrowLeft" />} to="/history" variant="quiet">Back to History</ButtonLink>{reconstruction.kind === 'incomplete' ? <StatusBanner badge="Incomplete record" title="Official record is incomplete or inconsistent" tone="warning">Trustworthy persisted evidence remains visible below. Missing relationships are not fabricated.</StatusBanner> : null}<Card className="history-detail__summary" padding="none"><div className="history-detail__audit-heading"><p>Official Live session · read-only evidence</p><h2>Session metadata</h2></div><Metadata item={item} /></Card><Card className="history-detail__winner-records" padding="none"><div className="history-detail__audit-heading"><h2>Winner records</h2><p>Every retained WinnerRecord is shown, including cancelled originals.</p></div><div className="history-detail__table-scroll"><Table caption="Official WinnerRecords"><thead><tr><th>Sequence</th><th>Ticket</th><th>Status</th><th>Confirmed</th><th>Cancelled</th><th>Replacement context</th></tr></thead><tbody>{item.winners.length === 0 ? <tr><td colSpan={6}>No WinnerRecords are associated with this session.</td></tr> : item.winners.map((winner) => <WinnerRow key={winner.winnerRecordId} winner={winner} lineage={lineageByOriginal.get(winner.winnerRecordId)} />)}</tbody></Table></div></Card>{item.session.status === 'pending-confirmation' ? <p><ButtonLink icon={<Icon name="ClipboardCheck" />} to={`/draw/pending/${item.session.id}`}>Review pending results</ButtonLink></p> : null}</div>
+  return <div className="history-detail"><ButtonLink icon={<Icon name="ArrowLeft" />} to="/history" variant="quiet">Back to History</ButtonLink>{reconstruction.kind === 'incomplete' ? <StatusBanner badge="Incomplete record" title="Official record is incomplete or inconsistent" tone="warning">Trustworthy persisted evidence remains visible below. Missing relationships are not fabricated.</StatusBanner> : null}<Card className="history-detail__summary" padding="none"><div className="history-detail__audit-heading"><p>Official Live session · read-only evidence</p><h2>Session metadata</h2></div><Metadata item={item} /></Card>{canShowCompletedResultOnAudience(reconstruction) ? <ShowCompletedResultButton reconstruction={reconstruction} /> : null}<Card className="history-detail__winner-records" padding="none"><div className="history-detail__audit-heading"><h2>Winner records</h2><p>Every retained WinnerRecord is shown, including cancelled originals.</p></div><div className="history-detail__table-scroll"><Table caption="Official WinnerRecords"><thead><tr><th>Sequence</th><th>Ticket</th><th>Status</th><th>Confirmed</th><th>Cancelled</th><th>Replacement context</th></tr></thead><tbody>{item.winners.length === 0 ? <tr><td colSpan={6}>No WinnerRecords are associated with this session.</td></tr> : item.winners.map((winner) => <WinnerRow key={winner.winnerRecordId} winner={winner} lineage={lineageByOriginal.get(winner.winnerRecordId)} />)}</tbody></Table></div></Card>{item.session.status === 'pending-confirmation' ? <p><ButtonLink icon={<Icon name="ClipboardCheck" />} to={`/draw/pending/${item.session.id}`}>Review pending results</ButtonLink></p> : null}</div>
 }
 
 export function HistoryDetail({ reconstruction }: { readonly reconstruction: HistoryReconstruction }) {

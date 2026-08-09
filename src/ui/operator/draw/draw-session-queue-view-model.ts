@@ -28,6 +28,8 @@ export interface DrawSessionQueueDeck {
   readonly defaultMode: AppMode
 }
 
+const operationalStatuses = new Set<DrawSessionQueueItem['session']['status']>(['draft', 'ready', 'drawing', 'pending-confirmation'])
+
 const lifecycleLabels: Record<DrawSessionQueueItem['session']['status'], string> = {
   draft: 'Draft', ready: 'Ready', drawing: 'Presentation in progress', 'pending-confirmation': 'Decision required', completed: 'Completed', cancelled: 'Cancelled',
 }
@@ -65,6 +67,38 @@ function preferredMode(items: readonly DrawSessionQueueItem[]): AppMode {
   return [...items].sort((left, right) => sessionPriority[left.session.status] - sessionPriority[right.session.status] || (left.session.mode === 'live' ? -1 : 1))[0]?.session.mode ?? 'practice'
 }
 
+function operationalRank(item: DrawSessionQueueItem): number {
+  if (item.session.status === 'drawing') return 0
+  if (item.session.status === 'pending-confirmation') return 1
+  if (item.session.status === 'ready') return 2
+  return 3
+}
+
+function queueDeckKey(item: DrawSessionQueueItem): string {
+  return `${item.session.eventId}:${item.session.configurationId}:${item.category?.id ?? 'missing-category'}:${item.winnerCount}`
+}
+
+/**
+ * Live Draw is a single operational workspace. Terminal sessions remain in
+ * the queue result for Pending/History consumers, but must not become Live
+ * Draw decks. A matching Practice session is retained only as the alternate
+ * mode for the selected current draw.
+ */
+export function selectCurrentOperationalQueueItems(items: readonly DrawSessionQueueItem[]): readonly DrawSessionQueueItem[] {
+  const operational = items.filter((item) => operationalStatuses.has(item.session.status))
+  const liveOperational = operational.filter((item) => item.session.mode === 'live')
+  const candidates = liveOperational.length > 0 ? liveOperational : operational
+  const current = [...candidates].sort((left, right) => operationalRank(left) - operationalRank(right) || right.session.updatedAt.localeCompare(left.session.updatedAt) || left.session.id.localeCompare(right.session.id))[0]
+  if (current === undefined) return []
+
+  const currentKey = queueDeckKey(current)
+  return [...new Set([current.session.mode, current.session.mode === 'live' ? 'practice' : 'live'])]
+    .map((mode) => operational
+      .filter((item) => item.session.mode === mode && queueDeckKey(item) === currentKey)
+      .sort((left, right) => operationalRank(left) - operationalRank(right) || right.session.updatedAt.localeCompare(left.session.updatedAt) || left.session.id.localeCompare(right.session.id))[0])
+    .filter((item): item is DrawSessionQueueItem => item !== undefined)
+}
+
 function priorityLabel(priority: DrawSessionQueuePriority): string {
   if (priority === 'action-required') return 'Action required'
   if (priority === 'historical') return 'Historical sessions'
@@ -100,7 +134,7 @@ export function groupDrawSessionQueueItems(items: readonly DrawSessionQueueItem[
 export function groupDrawSessionQueueDecks(items: readonly DrawSessionQueueItem[]): readonly DrawSessionQueueDeck[] {
   const decks = new Map<string, DrawSessionQueueItem[]>()
   for (const item of items) {
-    const key = `${item.session.eventId}:${item.session.configurationId}:${item.category?.id ?? 'missing-category'}:${item.winnerCount}`
+    const key = queueDeckKey(item)
     const current = decks.get(key)
     if (current === undefined) decks.set(key, [item])
     else current.push(item)

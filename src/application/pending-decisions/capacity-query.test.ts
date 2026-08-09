@@ -10,7 +10,12 @@ const winner = (id: string, ticketNumber: string, status: WinnerRecord['status']
 describe('replacement capacity query', () => {
   it('counts without consuming random source or exposing a replacement identity', () => {
     const result = calculateReplacementCapacity({ candidatePoolSnapshot: snapshot, requestedReplacementCount: 1, targetWinnerIds: ['w1'], winners: [winner('w1', '00042', 'pending'), winner('w2', '42', 'confirmed')] })
-    expect(result).toEqual({ eligibleCandidateCount: 2, requestedReplacementCount: 1, sufficient: true })
+    expect(result).toEqual({ eligibleCandidateCount: 1, requestedReplacementCount: 1, sufficient: true })
     expect(result).not.toHaveProperty('replacementTicket')
+  })
+
+  it('keeps cancelled winners from the same session out of later replacement capacity', () => {
+    const result = calculateReplacementCapacity({ candidatePoolSnapshot: snapshot, drawSessionId: 's', requestedReplacementCount: 1, targetWinnerIds: ['w3'], winners: [winner('w1', '00042', 'cancelled'), winner('w2', '42', 'pending'), winner('w3', '77', 'pending')] })
+    expect(result.eligibleCandidateCount).toBe(0)
   })
 })

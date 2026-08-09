@@ -52,6 +52,7 @@ export function Select({
         >
           {children}
         </select>
+        <span aria-hidden="true" className="ui-select__chevron" />
       </span>
       <FieldMessage
         description={description}

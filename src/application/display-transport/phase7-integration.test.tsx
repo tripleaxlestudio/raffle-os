@@ -85,7 +85,7 @@ describe('Phase 7 integration and automated acceptance', () => {
     act(() => { publisher.publish(source('countdown')) })
     expect(screen.getByRole('heading', { name: 'Get ready' })).toBeVisible()
     act(() => { publisher.publish(source('rolling')) })
-    expect(screen.getByRole('heading', { name: 'Drawing in progress' })).toBeVisible()
+    expect(screen.getByText('Rolling in progress')).toBeVisible()
     expect(screen.getByText('Door Prize')).toBeVisible()
     expect(screen.getByText('Sepeda')).toBeVisible()
     act(() => { publisher.publish(source('reveal')) })

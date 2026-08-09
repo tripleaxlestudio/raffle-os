@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CommandId } from '../../domain/shared/identifiers.ts'
 import type { RedrawPendingWinnersCommand, RedrawConfirmedWinnersCommand } from './command.types.ts'
 import { RedrawService } from './redraw-service.ts'
+import { projectLiveDrawRun } from '../workflow/presentation-projection.ts'
 import { DexieCommandReceiptRepository } from '../../infrastructure/persistence/repositories/command-receipt.repository.ts'
 import { DexieDrawPersistenceUnitOfWork } from '../../infrastructure/persistence/transactions/dexie-draw-persistence-unit-of-work.ts'
 import { cleanupTestDatabases, makeDrawHistoryFixture, makeWinner, openTestDatabase, seedStartedFixture } from '../../infrastructure/persistence/test/draw-history-test-helpers.ts'
@@ -45,7 +46,37 @@ async function setup(status: 'pending-confirmation' | 'completed' = 'pending-con
   return { database, fixture, original, other, service }
 }
 
+async function setupSixPendingWinners() {
+  const database = await openTestDatabase('redraw-six-winners')
+  const fixture = makeDrawHistoryFixture(['00001', '00002', '00003', '00004', '00005', '00006', '00007', '00008', '00009', '00010', '00011', '00012'])
+  await seedStartedFixture(database, fixture, 'pending-confirmation')
+  const originals = Array.from({ length: 6 }, (_, index) => makeWinner(fixture, index, index + 1))
+  await database.winner_records.bulkAdd(originals)
+  const persistence = new DexieDrawPersistenceUnitOfWork(database, { randomSource: { nextUint32: () => 0 } })
+  const service = new RedrawService(persistence, new DexieCommandReceiptRepository(database))
+  return { database, fixture, originals, service }
+}
+
 describe('Phase 8 Slice 5 redraw/replacement workflow', () => {
+  it.each([1, 3, 5, 6])('draws exactly %i replacement winner(s) for a partial six-winner selection', async (selectedCount) => {
+    const { database, fixture, originals, service } = await setupSixPendingWinners()
+    const result = await service.redraw(pendingCommand(fixture.session.id, originals.slice(0, selectedCount).map((winner) => winner.id), `redraw-six-${selectedCount}`))
+    expect(result.status).toBe('committed')
+    if (result.status !== 'committed') return
+    expect(result.outcome.replacementWinnerIds).toHaveLength(selectedCount)
+    expect(result.outcome.replacementTickets).toHaveLength(selectedCount)
+    expect(await database.redraw_records.count()).toBe(selectedCount)
+    const winners = await database.winner_records.where('drawSessionId').equals(fixture.session.id).toArray()
+    const redrawRecords = await database.redraw_records.where('drawSessionId').equals(fixture.session.id).toArray()
+    const selectedOriginalIds = new Set(originals.slice(0, selectedCount).map((winner) => winner.id))
+    expect(winners.filter((winner) => winner.status === 'pending')).toHaveLength(6)
+    expect(winners.filter((winner) => selectedOriginalIds.has(winner.id)).every((winner) => winner.status === 'cancelled')).toBe(true)
+    expect(new Set(winners.filter((winner) => !selectedOriginalIds.has(winner.id) && originals.some((original) => original.id === winner.id)).map((winner) => winner.ticketNumber))).toEqual(new Set(originals.slice(selectedCount).map((winner) => winner.ticketNumber)))
+    expect(new Set(result.outcome.replacementTickets).size).toBe(selectedCount)
+    expect(result.outcome.replacementTickets?.every((ticket) => !originals.some((winner) => winner.ticketNumber === ticket))).toBe(true)
+    expect(projectLiveDrawRun(fixture.session.id, winners, redrawRecords).result.winners).toHaveLength(6)
+  })
+
   it('replaces pending originals with distinct pending winners and preserves lineage', async () => {
     const { database, fixture, original, service } = await setup()
     const result = await service.redraw(pendingCommand(fixture.session.id, [original.id], 'redraw-pending', '  ticket was invalid  '))
@@ -61,6 +92,29 @@ describe('Phase 8 Slice 5 redraw/replacement workflow', () => {
     expect(await database.redraw_records.count()).toBe(1)
     expect((await database.redraw_records.toArray())[0]).toMatchObject({ originalWinnerRecordId: original.id, replacementWinnerRecordId: result.outcome.replacementWinnerIds?.[0], reason: 'other', reasonNote: 'ticket was invalid' })
     expect((await database.audit_records.toArray()).map((audit) => audit.action)).toEqual(expect.arrayContaining(['winner-cancelled', 'redraw-recorded']))
+  })
+
+  it('excludes every prior winner when quick redraws are chained in one session', async () => {
+    const { database, fixture, original, service } = await setup()
+    const first = await service.redraw(pendingCommand(fixture.session.id, [original.id], 'redraw-chain-first'))
+    expect(first.status).toBe('committed')
+    if (first.status !== 'committed') return
+    const firstReplacementId = first.outcome.replacementWinnerIds?.[0]
+    if (firstReplacementId === undefined) return
+
+    const second = await service.redraw(pendingCommand(fixture.session.id, [firstReplacementId], 'redraw-chain-second'))
+    expect(second.status).toBe('committed')
+    if (second.status !== 'committed') return
+    const winners = await database.winner_records.toArray()
+    const secondReplacementId = second.outcome.replacementWinnerIds?.[0]
+    const firstReplacement = winners.find((winner) => winner.id === firstReplacementId)
+    const secondReplacement = winners.find((winner) => winner.id === secondReplacementId)
+
+    expect(firstReplacement).toMatchObject({ status: 'cancelled' })
+    expect(secondReplacement).toMatchObject({ status: 'pending' })
+    expect(secondReplacement?.ticketNumber).not.toBe(original.ticketNumber)
+    expect(secondReplacement?.ticketNumber).not.toBe(firstReplacement?.ticketNumber)
+    expect(await database.redraw_records.count()).toBe(2)
   })
 
   it('redraws a confirmed original only through the dedicated command and reopens completed', async () => {

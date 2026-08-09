@@ -27,7 +27,7 @@ export function WinnerStage({ scenario }: { readonly scenario: PublicAudienceSce
   const values = scenario.ticketNumbers ?? []
   const displayedValues = sequential ? Array.from({ length: count }, (_, index) => index < lockedCount ? values[index] ?? '000000' : syntheticRollingNumber(seed, index, rollingFrame)) : values
   return <AudienceStage className="winner-stage" state={scenario.state}>
-    <AudienceDrawHeader context={scenario} className="winner-stage__header" />
+    <AudienceDrawHeader context={scenario} winnerCount={count} className="winner-stage__header" />
     <WinnerGrid confirmed={confirmed} winnerStatuses={scenario.winnerStatuses} count={count} ticketNumbers={displayedValues} lockedCount={lockedCount} rolling={sequential} revealEntrance={revealEntrance} />
     <DisplayStateLabel tone={confirmed ? 'confirmed' : 'verification'}>{scenario.statusMessage ?? 'Public result'}</DisplayStateLabel>
   </AudienceStage>

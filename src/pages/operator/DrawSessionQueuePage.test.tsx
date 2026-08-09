@@ -36,6 +36,22 @@ function renderDeck() {
 }
 
 describe('Production Draw control deck', () => {
+  it('renders ClipboardCheck for the pending-result action branch', () => {
+    const pendingDeck: DrawSessionQueueDeck = {
+      ...deck,
+      defaultMode: 'live',
+      sessions: {
+        live: { ...session('live'), action: { kind: 'pending', to: '/draw/pending/live-session' } },
+      },
+    }
+
+    render(<MemoryRouter><DrawControlDeck connection={{ acknowledged: true, acknowledgedAt: undefined, detail: 'Last public snapshot acknowledged.', label: 'Connected', tone: 'success' }} deck={pendingDeck} displayUrl="/display?eventId=event-1" selectedMode="live" setSelectedMode={() => undefined} /></MemoryRouter>)
+
+    const review = screen.getByRole('link', { name: 'Review Pending Results' })
+    expect(review).toBeInTheDocument()
+    expect(review.querySelector('.ui-icon')).toBeInTheDocument()
+  })
+
   it('uses one prominent mode switch with selected states and compact audience actions', () => {
     renderDeck()
     const modeGroup = screen.getByRole('group', { name: 'Acceptance Prize mode' })

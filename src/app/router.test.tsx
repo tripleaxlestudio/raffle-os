@@ -58,7 +58,7 @@ describe('application routes', () => {
     expect(navigation).toHaveTextContent('Pending Results')
     expect(navigation).toHaveTextContent('History')
     expect(navigation).toHaveTextContent('Display Settings')
-    expect(navigation.textContent).toBe('DBDashboardPRPrizePTParticipantsDVDisplay SettingsDSDraw SetupLDLive DrawPRPending ResultsHIHistory')
+    expect(navigation.textContent).toBe('DashboardPrizeParticipantsDisplay SettingsDraw SetupLive DrawPending ResultsHistory')
     expect(navigation).not.toHaveTextContent('Events')
     expect(navigation).not.toHaveTextContent('Prize Categories')
     expect(navigation).not.toHaveTextContent('Audience Display')

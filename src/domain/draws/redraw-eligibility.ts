@@ -31,6 +31,9 @@ export function buildRedrawCandidates(
   const sessionById = new Map(sessions.map((session) => [session.id, session]))
   const originalIds = new Set(originals.map((winner) => winner.participantId))
   const originalTickets = new Set(originals.map((winner) => winner.ticketNumber))
+  const sessionId = originals[0]?.drawSessionId
+  const sessionWinnerParticipants = new Set(winners.filter((winner) => winner.drawSessionId === sessionId).map((winner) => winner.participantId))
+  const sessionWinnerTickets = new Set(winners.filter((winner) => winner.drawSessionId === sessionId).map((winner) => winner.ticketNumber))
   const activeParticipants = new Set(winners.filter((winner) => winner.drawSessionId === originals[0]?.drawSessionId && winner.status !== 'cancelled').map((winner) => winner.participantId))
   const activeTickets = new Set(winners.filter((winner) => winner.drawSessionId === originals[0]?.drawSessionId && winner.status !== 'cancelled').map((winner) => winner.ticketNumber))
   const confirmed = new Set(winners.filter((winner) => winner.status === 'confirmed' && winner.eventId === event.id && (configuration.winningRule === 'once-per-event' || (configuration.winningRule === 'once-per-category' && winner.prizeCategoryId === category.id))).map((winner) => winner.participantId))
@@ -40,7 +43,7 @@ export function buildRedrawCandidates(
     if (participant === undefined || participant.eventId !== event.id || participant.ticketNumber !== entry.ticketNumber) return false
     if (configuration.requireCheckIn && !participant.isCheckedIn) return false
     if (configuration.eligibleGroupFilter !== null && participant.group !== configuration.eligibleGroupFilter) return false
-    if (confirmed.has(participant.id) || pendingInFlight.has(participant.id) || originalIds.has(participant.id) || originalTickets.has(entry.ticketNumber) || activeParticipants.has(participant.id) || activeTickets.has(entry.ticketNumber)) return false
+    if (confirmed.has(participant.id) || pendingInFlight.has(participant.id) || originalIds.has(participant.id) || originalTickets.has(entry.ticketNumber) || sessionWinnerParticipants.has(participant.id) || sessionWinnerTickets.has(entry.ticketNumber) || activeParticipants.has(participant.id) || activeTickets.has(entry.ticketNumber)) return false
     return true
   })
 }

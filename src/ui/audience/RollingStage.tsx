@@ -21,10 +21,10 @@ export function RollingStage({ scenario }: { readonly scenario: PublicAudienceSc
     return () => { if (handle !== undefined) globalThis['clearTimeout'](handle) }
   }, [reducedMotion, scenario.prototypeStatic, speed, startedAt])
   const values = scenario.prototypeStatic && scenario.ticketNumbers !== undefined ? scenario.ticketNumbers : Array.from({ length: slotCount }, (_, slot) => syntheticRollingNumber(seed, slot, frame))
+  const winnerCount = scenario.winnerCount ?? slotCount
   return <AudienceStage className="rolling-stage" state={scenario.state}>
-    <AudienceDrawHeader context={scenario} />
+    <AudienceDrawHeader context={scenario} winnerCount={winnerCount} className="rolling-stage__header"><p className="rolling-stage__status">Rolling in progress</p></AudienceDrawHeader>
     <div className="rolling-stage__content">
-      <h1>{scenario.message ?? 'Drawing in progress'}</h1>
       <WinnerGrid confirmed={false} count={slotCount} ticketNumbers={values} lockedCount={scenario.prototypeStatic ? slotCount : 0} rolling={!scenario.prototypeStatic} prototypeStatic={scenario.prototypeStatic} revealEntrance className="rolling-ticket-stream" ariaLabel={scenario.prototypeStatic ? 'Presentational ticket stream' : 'Synthetic rolling ticket numbers'} />
     </div>
     <DisplayStateLabel>Rolling</DisplayStateLabel>

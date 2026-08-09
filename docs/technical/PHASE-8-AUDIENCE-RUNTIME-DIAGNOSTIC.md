@@ -21,7 +21,7 @@ This development-only diagnostic records a bounded, in-memory trace for the prod
 14. Copy both traces.
 15. Do not refresh unless recording refresh recovery separately.
 
-The Operator panel is available from the development-only “Audience publisher diagnostics” disclosure. The Audience panel is available from “Audience runtime diagnostics”. Each panel shows the last 30 side-specific entries. The trace store is a per-window in-memory ring buffer capped at 200 entries; it is never written to IndexedDB.
+The Operator panel is available from the development-only “Audience publisher diagnostics” disclosure. The Audience panel is available only when the production display URL has the explicit development debug query `?debug=audience-transport`; it is never shown on the normal `/display` route. Each panel shows the last 30 side-specific entries. The trace store is a per-window in-memory ring buffer capped at 200 entries; it is never written to IndexedDB.
 
 ## Result table
 
@@ -43,4 +43,4 @@ The copied JSON contains only timestamp, side, route, instance identity, Event/d
 
 - `Copy trace as JSON` copies the current safe trace as JSON.
 - `Clear trace` clears the current window’s trace.
-- Diagnostics are gated by `import.meta.env.DEV` and are not rendered in production builds.
+- Diagnostics require `import.meta.env.DEV` and the explicit `debug=audience-transport` query; they are not rendered in production builds or on the normal `/display` route.

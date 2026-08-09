@@ -10,6 +10,7 @@ export { Checkbox } from './Checkbox.tsx'
 export { ConfirmationDialog } from './ConfirmationDialog.tsx'
 export { EmptyState } from './EmptyState.tsx'
 export { Input } from './Input.tsx'
+export { Icon, type IconName } from './Icon.tsx'
 export { Modal } from './Modal.tsx'
 export { Pagination } from './Pagination.tsx'
 export {

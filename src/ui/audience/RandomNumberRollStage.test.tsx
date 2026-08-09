@@ -18,7 +18,7 @@ describe('Random Number Roll presentation continuity', () => {
     const grid = view.container.querySelector('[data-testid="winner-grid"]')
     const slots = [...view.container.querySelectorAll('[data-ticket-tile]')]
     expect(view.container.querySelectorAll('[data-reveal-entrance="true"]')).toHaveLength(3)
-    expect(screen.getByText('Current draw')).toBeInTheDocument()
+    expect(screen.getByText('CURRENT DRAW')).toBeInTheDocument()
     expect(screen.getByText('Door Prize')).toBeInTheDocument()
     expect(screen.getByText('Sepeda')).toBeInTheDocument()
 
@@ -28,8 +28,8 @@ describe('Random Number Roll presentation continuity', () => {
     expect(view.container.querySelector('[data-testid="winner-grid"]')).toBe(grid)
     expect([...view.container.querySelectorAll('[data-ticket-tile]')]).toEqual(slots)
     expect(screen.getByText('Results under verification')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Winner' })).toBeInTheDocument()
-    expect(screen.getByText('Current draw')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Sepeda' })).toBeInTheDocument()
+    expect(screen.getByText('CURRENT DRAW')).toBeInTheDocument()
     expect(screen.getByText('Door Prize')).toBeInTheDocument()
     expect(screen.getByText('Sepeda')).toBeInTheDocument()
     expect(view.container.textContent).not.toContain('Â·')

@@ -18,6 +18,14 @@ describe('production setup readiness', () => {
     expect(deriveProductionSetupReadiness({ hasCurrentEvent: true, categories: [category], participants: [participant], displayConfiguration: { eventId: 'event' } as never, configurations: [configuration], sessions: [session] })).toEqual({ event: true, prize: true, participants: true, displaySettings: true, drawSetup: true })
   })
 
+  it.each(['drawing', 'pending-confirmation', 'completed'] as const)('keeps Draw Setup complete after a session progresses to %s', (status) => {
+    const category = { name: 'Door Prize', prizeName: 'Kipas Angin', eventId: 'event' } as never
+    const participant = { eventId: 'event', ticketNumber: '0001' } as never
+    const configuration = { id: 'configuration' } as never
+    const session = { configurationId: 'configuration', status } as never
+    expect(deriveProductionSetupReadiness({ hasCurrentEvent: true, categories: [category], participants: [participant], displayConfiguration: { eventId: 'event' } as never, configurations: [configuration], sessions: [session] }).drawSetup).toBe(true)
+  })
+
   it('does not unlock Participants when the persisted Current Event has zero categories', () => {
     const readiness = deriveProductionSetupReadiness({ hasCurrentEvent: true, categories: [], participants: [], displayConfiguration: null, configurations: [], sessions: [] })
     expect(readiness).toEqual({ event: true, prize: false, participants: false, displaySettings: false, drawSetup: false })

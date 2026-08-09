@@ -7,6 +7,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from './Button.tsx'
+import { Icon } from './Icon.tsx'
 
 const focusableSelector = [
   'a[href]',
@@ -143,6 +144,7 @@ export function SidePanel({
           </div>
           <Button
             aria-label="Close redraw panel"
+            icon={<Icon name="X" />}
             onClick={onClose}
             size="sm"
             variant="quiet"

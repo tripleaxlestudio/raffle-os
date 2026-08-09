@@ -13,6 +13,11 @@ interface ConfirmationDialogProps {
   tone?: 'warning' | 'danger'
   confirmDisabled?: boolean
   confirmLoading?: boolean
+  consequenceLabel?: string | null
+  confirmIcon?: ReactNode
+  cancelIcon?: ReactNode
+  headerIcon?: ReactNode
+  headerIconTone?: 'warning' | 'danger' | 'success' | 'info'
 }
 
 export function ConfirmationDialog({
@@ -26,6 +31,11 @@ export function ConfirmationDialog({
   tone = 'warning',
   confirmDisabled = false,
   confirmLoading = false,
+  consequenceLabel = 'Review the consequence',
+  confirmIcon,
+  cancelIcon,
+  headerIcon,
+  headerIconTone,
 }: ConfirmationDialogProps) {
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -34,6 +44,7 @@ export function ConfirmationDialog({
       footer={
         <>
           <Button
+            icon={cancelIcon}
             onClick={onCancel}
             ref={cancelButtonRef}
             variant="secondary"
@@ -41,6 +52,7 @@ export function ConfirmationDialog({
             {cancelLabel}
           </Button>
           <Button
+            icon={confirmIcon}
             disabled={confirmDisabled}
             isLoading={confirmLoading}
             onClick={onConfirm}
@@ -51,6 +63,8 @@ export function ConfirmationDialog({
         </>
       }
       initialFocusRef={cancelButtonRef}
+      headerIcon={headerIcon}
+      headerIconTone={headerIconTone}
       onClose={onCancel}
       open={open}
       title={title}
@@ -60,7 +74,7 @@ export function ConfirmationDialog({
           !
         </span>
         <div>
-          <strong>Review the consequence</strong>
+          {consequenceLabel === null ? null : <strong>{consequenceLabel}</strong>}
           <p>{consequence}</p>
         </div>
       </div>

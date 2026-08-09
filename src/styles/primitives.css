@@ -194,7 +194,7 @@
     padding: 0 var(--control-inline-padding);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-md);
-    background: var(--surface-muted);
+    background-color: var(--surface-muted);
     color: var(--text-primary);
     font-size: var(--font-size-sm);
   }
@@ -224,22 +224,43 @@
     display: block;
   }
 
-  .ui-select-wrap::after {
-    position: absolute;
-    top: 50%;
-    right: var(--space-3);
-    width: 0.45rem;
-    height: 0.45rem;
-    border-right: 1px solid var(--text-muted);
-    border-bottom: 1px solid var(--text-muted);
-    content: "";
-    pointer-events: none;
-    transform: translateY(-70%) rotate(45deg);
+  .ui-select {
+    padding-right: calc(var(--control-inline-padding) + var(--space-6));
+    appearance: none;
+    color-scheme: dark;
   }
 
-  .ui-select {
-    padding-right: var(--space-8);
-    appearance: none;
+  .ui-select__chevron {
+    position: absolute;
+    top: 50%;
+    right: var(--space-4);
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 0.125rem solid var(--text-secondary);
+    border-bottom: 0.125rem solid var(--text-secondary);
+    pointer-events: none;
+    transform: translateY(-70%) rotate(45deg);
+    transition: border-color 120ms ease;
+  }
+
+  .ui-select:hover:not(:disabled) ~ .ui-select__chevron,
+  .ui-select:focus-visible ~ .ui-select__chevron {
+    border-color: var(--accent-hover);
+  }
+
+  .ui-select:disabled ~ .ui-select__chevron {
+    border-color: var(--text-muted);
+    opacity: 0.52;
+  }
+
+  .ui-select option {
+    background-color: var(--surface-raised);
+    color: var(--text-primary);
+  }
+
+  .ui-select option:checked {
+    background-color: var(--accent);
+    color: var(--text-primary);
   }
 
   .ui-field__description,
@@ -847,6 +868,14 @@
     padding: var(--space-5);
     border-bottom: 1px solid var(--border-default);
   }
+
+  .ui-modal__title-group { display: flex; align-items: flex-start; gap: var(--space-3); min-width: 0; }
+  .ui-modal__semantic-icon { display: grid; width: 1.25rem; height: 1.25rem; flex: 0 0 1.25rem; place-items: center; margin-top: .1rem; }
+  .ui-modal__semantic-icon .ui-icon { width: 1.25rem; height: 1.25rem; }
+  .ui-modal__semantic-icon--warning { color: var(--status-warning); }
+  .ui-modal__semantic-icon--danger { color: var(--status-danger); }
+  .ui-modal__semantic-icon--success { color: var(--status-success); }
+  .ui-modal__semantic-icon--info { color: var(--accent-hover); }
 
   .ui-modal__eyebrow {
     margin: 0 0 var(--space-1);

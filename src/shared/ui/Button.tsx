@@ -28,6 +28,7 @@ function buttonClassName({
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ReactNode
+  iconAfter?: boolean
   isLoading?: boolean
   size?: ButtonSize
   variant?: ButtonVariant
@@ -40,6 +41,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       className,
       disabled,
       icon,
+      iconAfter = false,
       isLoading = false,
       size = 'md',
       type = 'button',
@@ -60,12 +62,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {isLoading ? (
           <span aria-hidden="true" className="ui-button__spinner" />
         ) : null}
-        {!isLoading && icon !== undefined ? (
+        {!isLoading && icon !== undefined && !iconAfter ? (
           <span aria-hidden="true" className="ui-button__icon">
             {icon}
           </span>
         ) : null}
         <span>{children}</span>
+        {!isLoading && icon !== undefined && iconAfter ? (
+          <span aria-hidden="true" className="ui-button__icon">
+            {icon}
+          </span>
+        ) : null}
       </button>
     )
   },
@@ -76,6 +83,7 @@ interface ButtonLinkProps
   children: ReactNode
   className?: string
   icon?: ReactNode
+  iconAfter?: boolean
   size?: ButtonSize
   variant?: ButtonVariant
 }
@@ -84,6 +92,7 @@ export function ButtonLink({
   children,
   className,
   icon,
+  iconAfter = false,
   size = 'md',
   variant = 'primary',
   ...props
@@ -93,12 +102,17 @@ export function ButtonLink({
       className={buttonClassName({ className, size, variant })}
       {...props}
     >
-      {icon === undefined ? null : (
+      {icon === undefined || iconAfter ? null : (
         <span aria-hidden="true" className="ui-button__icon">
           {icon}
         </span>
       )}
       <span>{children}</span>
+      {icon === undefined || !iconAfter ? null : (
+        <span aria-hidden="true" className="ui-button__icon">
+          {icon}
+        </span>
+      )}
     </Link>
   )
 }

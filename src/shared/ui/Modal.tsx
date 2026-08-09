@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from './Button.tsx'
+import { Icon } from './Icon.tsx'
 
 const focusableSelector = [
   'a[href]',
@@ -29,6 +30,8 @@ interface ModalProps {
   closeOnEscape?: boolean
   showCloseButton?: boolean
   title: string
+  headerIcon?: ReactNode
+  headerIconTone?: 'warning' | 'danger' | 'success' | 'info'
 }
 
 export function Modal({
@@ -42,6 +45,8 @@ export function Modal({
   closeOnEscape = true,
   showCloseButton = true,
   title,
+  headerIcon,
+  headerIconTone,
 }: ModalProps) {
   const titleId = useId()
   const descriptionId = useId()
@@ -117,6 +122,10 @@ export function Modal({
     return null
   }
 
+  const inferredHeader = inferHeaderSemantic(eyebrow, title)
+  const resolvedHeaderIcon = headerIcon ?? inferredHeader?.icon
+  const resolvedHeaderTone = headerIconTone ?? inferredHeader?.tone ?? 'warning'
+
   return createPortal(
     <div className="ui-modal-layer">
       <div aria-hidden="true" className="ui-modal-backdrop" />
@@ -131,13 +140,17 @@ export function Modal({
         tabIndex={-1}
       >
         <header className="ui-modal__header">
-          <div>
-            <p className="ui-modal__eyebrow">{eyebrow}</p>
-            <h2 id={titleId}>{title}</h2>
+          <div className="ui-modal__title-group">
+            {resolvedHeaderIcon === undefined ? null : <span aria-hidden="true" className={`ui-modal__semantic-icon ui-modal__semantic-icon--${resolvedHeaderTone}`}>{resolvedHeaderIcon}</span>}
+            <div>
+              <p className="ui-modal__eyebrow">{eyebrow}</p>
+              <h2 id={titleId}>{title}</h2>
+            </div>
           </div>
           {showCloseButton ? (
             <Button
               aria-label="Close dialog"
+              icon={<Icon name="X" />}
               onClick={onClose}
               size="sm"
               variant="quiet"
@@ -159,4 +172,18 @@ export function Modal({
     </div>,
     document.body,
   )
+}
+
+function inferHeaderSemantic(eyebrow: string, title: string): { readonly icon: ReactNode; readonly tone: 'warning' | 'danger' | 'success' | 'info' } | null {
+  const text = `${eyebrow} ${title}`.toLowerCase()
+  if (text.includes('redraw') || text.includes('replacement')) return { icon: <Icon name="RotateCcw" />, tone: 'danger' }
+  if (text.includes('delete')) return { icon: <Icon name="Trash2" />, tone: 'danger' }
+  if (text.includes('cancel')) return { icon: <Icon name="CircleX" />, tone: 'danger' }
+  if (text.includes('recovery') || text.includes('retry')) return { icon: <Icon name="RefreshCw" />, tone: 'info' }
+  if (text.includes('pending') || text.includes('action required') || text.includes('warning')) return { icon: <Icon name="TriangleAlert" />, tone: 'warning' }
+  if (text.includes('live') || text.includes('irreversible')) return { icon: <Icon name="ShieldAlert" />, tone: 'warning' }
+  if (text.includes('reset')) return { icon: <Icon name="RefreshCw" />, tone: 'warning' }
+  if (text.includes('confirm') || text.includes('winner')) return { icon: <Icon name="CircleCheck" />, tone: 'success' }
+  if (text.includes('activate')) return { icon: <Icon name="CircleAlert" />, tone: 'info' }
+  return null
 }

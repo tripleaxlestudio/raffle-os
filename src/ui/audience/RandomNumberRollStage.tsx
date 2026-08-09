@@ -35,9 +35,7 @@ export function RandomNumberRollStage({ scenario }: { readonly scenario: PublicA
   const authoritativeValues = scenario.ticketNumbers ?? []
   const values = isReveal ? Array.from({ length: count }, (_, index) => index < lockedCount ? authoritativeValues[index] ?? '000000' : syntheticRollingNumber(seed, index, rollingFrame)) : scenario.prototypeStatic && scenario.ticketNumbers !== undefined ? scenario.ticketNumbers : Array.from({ length: count }, (_, index) => syntheticRollingNumber(seed, index, frame))
   return <AudienceStage className="random-number-roll-stage" state={scenario.state}>
-    <AudienceDrawHeader context={scenario} className="random-number-roll-stage__header">
-      <h1 className="random-number-roll-stage__announcement">{isReveal ? 'Winner' : scenario.message ?? 'Drawing in progress'}</h1>
-    </AudienceDrawHeader>
+    <AudienceDrawHeader context={scenario} winnerCount={count} className="random-number-roll-stage__header" />
     <WinnerGrid confirmed={false} count={count} ticketNumbers={values} lockedCount={lockedCount} rolling={!isReveal || sequential} revealEntrance={!isReveal} ariaLabel="Random Number Roll ticket values" />
     <DisplayStateLabel tone={isReveal ? 'verification' : 'neutral'}>{isReveal ? 'Results under verification' : 'Rolling'}</DisplayStateLabel>
   </AudienceStage>

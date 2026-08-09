@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { OfficialHistorySession } from '../../application/history/history-read-model.ts'
 import { ProductionHistoryPage } from './ProductionHistoryPage.tsx'
@@ -62,7 +62,7 @@ function session(id: string, status: 'completed' | 'cancelled' = 'completed') {
 }
 
 function renderPage(path = '/history') {
-  return render(<MemoryRouter initialEntries={[path]}><ProductionHistoryPage /></MemoryRouter>)
+  return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/history" element={<ProductionHistoryPage />} /><Route path="/history/:drawSessionId" element={<ProductionHistoryPage />} /></Routes></MemoryRouter>)
 }
 
 beforeEach(() => {
@@ -92,8 +92,9 @@ describe('production History empty state', () => {
     expect(await screen.findByRole('combobox', { name: 'Status' })).toHaveValue('completed')
     expect(screen.getByRole('combobox', { name: 'Mode' })).toHaveValue('live')
     expect(screen.getByRole('link', { name: 'Open Draw Sessions' })).toHaveAttribute('href', '/draw/live')
-    expect(screen.getByText('Selected Event')).toBeInTheDocument()
-    expect(container.querySelector('[aria-label="Official history sessions"]')).toBeInTheDocument()
+    expect(screen.getByText('Authoritative Live DrawSessions for 24th K-Link Indonesia Anniversary.')).toBeInTheDocument()
+    expect(container.querySelector('table[aria-label="Official history sessions"]')).toBeInTheDocument()
+    expect(screen.queryByText('Selected Event')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'No official draws yet' })).not.toBeInTheDocument()
     expect(screen.queryByText('cancelled-1')).not.toBeInTheDocument()
   })
@@ -103,5 +104,14 @@ describe('production History empty state', () => {
 
     await screen.findByRole('heading', { name: 'No official draws yet' })
     expect(mocks.findByEventId).toHaveBeenCalledWith('event-selected')
+  })
+
+  it('renders an official result route without the history list', async () => {
+    mocks.findByEventId.mockResolvedValue([session('completed-1')])
+    renderPage('/history/completed-1')
+
+    expect(await screen.findByRole('heading', { name: 'Winner records' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Official history sessions')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to History' })).toHaveAttribute('href', '/history')
   })
 })

@@ -5,7 +5,7 @@ import type { Event } from '../../../domain/events/event.types.ts'
 import type { PrizeCategory } from '../../../domain/prizes/prize.types.ts'
 import type { IsoTimestamp } from '../../../domain/shared/timestamps.ts'
 import type { OperatorPublisherDiagnostics } from '../../../application/display-transport/operator-publisher.ts'
-import { formatQueueTimestamp, groupDrawSessionQueueDecks, groupDrawSessionQueueItems, presentDrawSessionQueueItem } from './draw-session-queue-view-model.ts'
+import { formatQueueTimestamp, groupDrawSessionQueueDecks, groupDrawSessionQueueItems, presentDrawSessionQueueItem, selectCurrentOperationalQueueItems } from './draw-session-queue-view-model.ts'
 import { presentAudienceConnection } from './audience-connection-view-model.ts'
 
 const event = { id: 'event', name: 'Event' } as Event
@@ -42,6 +42,20 @@ describe('production DrawSession queue view model', () => {
     expect(decks[0]?.sessions.practice?.session.id).toBe('session-ready-practice')
     expect(decks[0]?.sessions.live?.session.id).toBe('session-ready-live')
     expect(decks[0]?.defaultMode).toBe('live')
+  })
+  it('selects one current operational draw and excludes completed previous draws', () => {
+    const completed = item('completed')
+    const next = { ...item('ready'), session: { ...item('ready').session, id: 'next-live' as DrawSession['id'], configurationId: 'next-configuration' as DrawSession['configurationId'], updatedAt: '2026-08-07T16:42:00.000Z' as IsoTimestamp } }
+    const otherReady = { ...item('ready'), session: { ...item('ready').session, id: 'other-live' as DrawSession['id'], configurationId: 'other-configuration' as DrawSession['configurationId'] } }
+    const selected = selectCurrentOperationalQueueItems([completed, otherReady, next])
+    expect(selected.map((entry) => entry.session.id)).toEqual(['next-live'])
+    expect(groupDrawSessionQueueDecks(selected)).toHaveLength(1)
+  })
+
+  it('keeps an active or pending Live draw ahead of newer ready sessions', () => {
+    const ready = { ...item('ready'), session: { ...item('ready').session, id: 'newer-ready' as DrawSession['id'], configurationId: 'newer-configuration' as DrawSession['configurationId'], updatedAt: '2026-08-08T16:42:00.000Z' as IsoTimestamp } }
+    const pending = { ...item('pending-confirmation'), session: { ...item('pending-confirmation').session, id: 'active-pending' as DrawSession['id'], configurationId: 'active-configuration' as DrawSession['configurationId'], updatedAt: '2026-08-06T16:42:00.000Z' as IsoTimestamp } }
+    expect(selectCurrentOperationalQueueItems([ready, pending]).map((entry) => entry.session.id)).toEqual(['active-pending'])
   })
   it('distinguishes Audience presence from acknowledged publication', () => {
     expect(presentAudienceConnection({ kind: 'audience-presence', status: 'connected', subscriberCount: 1 }, undefined)).toMatchObject({ label: 'Waiting', acknowledged: false })

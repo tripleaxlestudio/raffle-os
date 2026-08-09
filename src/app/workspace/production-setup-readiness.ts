@@ -14,7 +14,7 @@ export function deriveProductionSetupReadiness(input: ProductionSetupReadinessIn
   const prize = event && input.categories.some((category) => category.name.trim() !== '' && category.prizeName.trim() !== '')
   const participants = prize && input.participants.length > 0
   const displaySettings = participants && input.displayConfiguration !== null
-  const drawSetup = displaySettings && input.configurations.some((configuration) => input.sessions.some((session) => session.configurationId === configuration.id && session.status === 'ready'))
+  const drawSetup = displaySettings && input.configurations.some((configuration) => input.sessions.some((session) => session.configurationId === configuration.id && ['ready', 'drawing', 'pending-confirmation', 'completed'].includes(session.status)))
   return { event, prize, participants, displaySettings, drawSetup }
 }
 export function productionSetupStageComplete(readiness: ProductionSetupReadiness, index: number): boolean { return [readiness.event, readiness.prize, readiness.participants, readiness.displaySettings, readiness.drawSetup][index] ?? false }

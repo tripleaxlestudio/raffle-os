@@ -40,6 +40,17 @@ describe('production sidebar Event gating', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/dashboard')
   })
 
+  it('uses semantic outline icons while keeping production labels visible', () => {
+    workspace.status = 'ready'
+    renderSidebar()
+
+    expect(document.querySelectorAll('.operator-nav__icon .ui-icon')).toHaveLength(8)
+    expect(document.querySelectorAll('.operator-nav__marker')).toHaveLength(0)
+    for (const label of ['Dashboard', 'Prize', 'Participants', 'Display Settings', 'Draw Setup', 'Live Draw', 'Pending Results', 'History']) {
+      expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
+    }
+  })
+
   it('treats a stale Event reference as unavailable', () => {
     workspace.status = 'invalid-reference'
     renderSidebar()

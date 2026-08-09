@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
@@ -337,15 +337,17 @@ describe('Draw Setup persisted authoring', () => {
   })
 
   it('keeps all presentation controls aligned with the active-session lock', async () => {
-    const activeRecord = { ...record, configuration: { ...record.configuration, presentation: { presentationMode: 'random-number-roll' as const, rollDurationSeconds: 8 as const, rollSpeedPerSecond: 12, revealMode: 'all-together' as const } }, session: { ...session, mode: 'live' as const, status: 'pending-confirmation' as const } } as unknown as DrawAuthoringRecord
+    const activeRecord = { ...record, category: { ...category, name: 'Door Prize', prizeName: 'Kipas Angin' }, configuration: { ...record.configuration, requestedWinners: 3, presentation: { presentationMode: 'random-number-roll' as const, rollDurationSeconds: 8 as const, rollSpeedPerSecond: 12, revealMode: 'all-together' as const } }, session: { ...session, mode: 'live' as const, status: 'pending-confirmation' as const } } as unknown as DrawAuthoringRecord
     renderPage(services({ record: activeRecord }))
-    await screen.findByRole('heading', { name: 'This DrawSession is not editable' })
-    expect(screen.getByRole('radio', { name: /Random Number Roll/ })).toBeDisabled()
-    expect(screen.getByRole('radio', { name: '5 sec' })).toBeDisabled()
-    expect(screen.getByRole('radio', { name: /Smooth/ })).toBeDisabled()
-    expect(screen.getByRole('radio', { name: 'Reveal Together' })).toBeDisabled()
+    const dialog = await screen.findByRole('dialog', { name: 'Winner review pending' })
+    expect(dialog).toHaveTextContent('ACTION REQUIRED')
+    expect(dialog).toHaveTextContent('Kipas Angin')
+    expect(dialog).toHaveTextContent('Door Prize · 3 winners')
+    expect(dialog).toHaveTextContent('Complete the winner review before preparing the next official draw.')
+    expect(within(dialog).getByRole('link', { name: 'Review Pending Results' })).toHaveAttribute('href', '/draw/pending/session-1')
+    expect(within(dialog).queryByRole('button', { name: 'Back' })).not.toBeInTheDocument()
+    expect(within(dialog).queryByRole('button', { name: 'Close dialog' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('Custom winner count')).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
   })
 
   it('allows a completed previous session to prepare the next presentation configuration', async () => {

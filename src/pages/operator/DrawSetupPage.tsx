@@ -13,7 +13,7 @@ import { DrawAuthoringError } from '../../application/draw/draw-authoring-errors
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
-import { Badge, Button, ButtonLink, Card, Checkbox, ConfirmationDialog, Input, Select } from '../../shared/ui/index.ts'
+import { Badge, Button, ButtonLink, Card, Checkbox, ConfirmationDialog, Icon, Input, Modal, Select } from '../../shared/ui/index.ts'
 import { signalProductionWorkspaceChanged } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 import { DrawPresentationSettings } from '../../ui/operator/draw/DrawPresentationSettings.tsx'
 import { ProductionLoadingState, ProductionSetupRequired } from '../../shared/components/ProductionWorkspaceState.tsx'
@@ -62,6 +62,17 @@ function errorText(error: DrawAuthoringError): string {
 
 function draftFromForm(form: FormState): DrawAuthoringDraft {
   return { ...form, eligibleGroupFilter: form.eligibleGroupFilter === '' ? null : form.eligibleGroupFilter, presentation: form.presentation }
+}
+
+function PendingReviewModal({ record, open }: { readonly record: DrawAuthoringRecord; readonly open: boolean }) {
+  const winnerLabel = `${record.configuration.requestedWinners} ${record.configuration.requestedWinners === 1 ? 'winner' : 'winners'}`
+  return <Modal open={open} closeOnEscape={false} showCloseButton={false} eyebrow="ACTION REQUIRED" title="Winner review pending" onClose={() => undefined} footer={<ButtonLink icon={<Icon name="ClipboardCheck" />} to={`/draw/pending/${record.session.id}`}>Review Pending Results</ButtonLink>}>
+    <div className="draw-setup-pending-modal__body">
+      <strong className="draw-setup-pending-modal__prize">{record.category.prizeName}</strong>
+      <p className="draw-setup-pending-modal__meta">{record.category.name} · <strong>{winnerLabel}</strong></p>
+      <p>Complete the winner review before preparing the next official draw.</p>
+    </div>
+  </Modal>
 }
 
 export function DrawSetupPage({ services: suppliedServices }: { services?: DrawSetupProductionServices } = {}) {
@@ -140,7 +151,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   }
 
   if (loading) return <section className="draw-setup" aria-busy="true"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="Loading persisted Event and configuration…" /><ProductionLoadingState description="Reading authoritative setup state…" /></section>
-  if (eventMissing || form.eventId === '') return <section className="draw-setup"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="No persisted Event is available" /><ProductionSetupRequired description="Select or create an Event before configuring a draw." />{error?.retryable ? <Button onClick={() => void load()}>Retry</Button> : null}</section>
+  if (eventMissing || form.eventId === '') return <section className="draw-setup"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="No persisted Event is available" /><ProductionSetupRequired description="Select or create an Event before configuring a draw." />{error?.retryable ? <Button icon={<Icon name="RefreshCw" />} onClick={() => void load()}>Retry</Button> : null}</section>
 
   const started = record !== null && isDrawSessionAuthoringLocked(record.session)
   const dirty = isDrawAuthoringDraftDirty(draftFromForm(form), record)
@@ -150,13 +161,14 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   const readinessTitle = readiness?.state === 'ready' ? 'Draw is ready for handoff' : readiness?.state === 'insufficient-capacity' ? 'Insufficient eligible capacity' : readiness?.state === 'session-conflict' ? 'Another Live session must be resolved' : readiness?.state === 'session-not-ready' ? 'Draw session is not ready' : readiness?.state === 'storage-unavailable' ? 'Local storage is unavailable' : readiness?.state === 'crypto-unavailable' ? 'Secure Web Crypto is unavailable' : readiness?.state === undefined ? 'Readiness has not been evaluated' : 'Draw handoff is blocked'
   const readinessBadge = readiness?.state === 'ready' ? 'Ready' : dirty ? 'Save required' : 'Blocked'
   const readinessTone = readiness?.state === 'ready' ? 'success' : dirty ? 'info' : 'warning'
+  const pendingReviewRequired = record?.session.mode === 'live' && record.session.status === 'pending-confirmation'
 
   return <section aria-labelledby="draw-setup-title" className="draw-setup">
     <PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description={record?.event.name ?? 'Create a persisted ready session'} />
     {saved ? <StatusBanner badge="Saved" title="Ready DrawSession persisted" tone="success">The values below were read back from local persistence. No winner, checkpoint, or started-draw audit was created.</StatusBanner> : null}
     {error ? <StatusBanner badge={error.retryable ? 'Retryable error' : 'Validation error'} title="Draw Setup could not be saved" tone="warning">{errorText(error)}{error.retryable ? ' You can retry without losing the form values.' : ''}</StatusBanner> : null}
     {started ? <StatusBanner badge="Locked" title="This DrawSession is not editable" tone="warning">The persisted session is {record?.session.status.replace('-', ' ')}. It was not reset to ready and its official data remains untouched.</StatusBanner> : null}
-    {categories.length === 0 ? <StatusBanner badge="Category required" title="Create a PrizeCategory before configuring a draw" tone="warning"><ButtonLink to="/prize-categories">Open PrizeCategory management</ButtonLink></StatusBanner> : null}
+    {categories.length === 0 ? <StatusBanner badge="Category required" title="Create a PrizeCategory before configuring a draw" tone="warning"><ButtonLink icon={<Icon name="Trophy" />} to="/prize-categories">Open PrizeCategory management</ButtonLink></StatusBanner> : null}
     <Card className="draw-panel" padding="md">
       <form onSubmit={(event) => { event.preventDefault(); void save() }}>
         <section className="draw-setup-capacity-section" aria-labelledby="capacity-summary-title">
@@ -204,16 +216,17 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
             </div></fieldset>
             <p>{form.mode === 'live' ? 'Live handoff leads to the official start gate. It does not start a draw here.' : 'Practice is rehearsal only and does not create official results.'} Mode is stored on the ready DrawSession; URL parameters cannot override it.</p>
             <div className="draw-setup-actions">
-              <Button type="submit" size="lg" variant={record === null || dirty ? 'primary' : 'secondary'} isLoading={saving} disabled={started || !dirty || form.prizeCategoryId === ''}>{record === null ? 'Save ready configuration' : 'Save changes'}</Button>
-              {saved ? <ButtonLink size="lg" variant="secondary" to="/draw/live">Open Draw Sessions</ButtonLink> : null}
-              {record !== null ? <Button ref={handoffTriggerRef} type="button" size="lg" variant={!dirty && !readinessBlocked && readiness !== null ? 'primary' : 'secondary'} disabled={saving || handoffBusy || dirty || readinessBlocked || readiness === null} isLoading={handoffBusy} onClick={() => { if (form.mode === 'live') setConfirmLive(true); else void handoff() }}>{form.mode === 'live' ? 'Continue to Live start gate' : 'Open Practice start gate'}</Button> : null}
-              {readiness?.retryable ? <Button type="button" variant="secondary" onClick={() => void refreshReadiness()}>Retry readiness</Button> : null}
+              <Button icon={<Icon name="Save" />} type="submit" size="lg" variant={record === null || dirty ? 'primary' : 'secondary'} isLoading={saving} disabled={started || !dirty || form.prizeCategoryId === ''}>{record === null ? 'Save ready configuration' : 'Save changes'}</Button>
+              {saved ? <ButtonLink icon={<Icon name="Radio" />} size="lg" variant="secondary" to="/draw/live">Open Draw Sessions</ButtonLink> : null}
+              {record !== null ? <Button icon={<Icon name="ArrowRight" />} iconAfter ref={handoffTriggerRef} type="button" size="lg" variant={!dirty && !readinessBlocked && readiness !== null ? 'primary' : 'secondary'} disabled={saving || handoffBusy || dirty || readinessBlocked || readiness === null} isLoading={handoffBusy} onClick={() => { if (form.mode === 'live') setConfirmLive(true); else void handoff() }}>{form.mode === 'live' ? 'Continue to Live start gate' : 'Open Practice start gate'}</Button> : null}
+              {readiness?.retryable ? <Button icon={<Icon name="RefreshCw" />} type="button" variant="secondary" onClick={() => void refreshReadiness()}>Retry readiness</Button> : null}
             </div>
             </Card>
           </div>
         </div>
       </form>
     </Card>
-    <ConfirmationDialog open={confirmLive} title="Confirm Live handoff" confirmLabel="Confirm Live handoff" onCancel={() => { setConfirmLive(false); handoffTriggerRef.current?.focus() }} onConfirm={() => { setConfirmLive(false); void handoff() }} consequence={record === null || readiness?.data === undefined ? 'The persisted Live session will be revalidated before handoff.' : <span>Event: {readiness.data?.event.name}. Prize: {readiness.data?.category.prizeName}. Winners: {readiness.data?.requestedWinnerCount}. Eligible: {readiness.data?.authoritativeEligibleCount}. Mode: Live. This only opens the start gate; it does not select winners.</span>} />
+    <ConfirmationDialog headerIcon={<Icon name="ShieldAlert" />} headerIconTone="warning" open={confirmLive} title="Confirm Live handoff" confirmLabel="Confirm Live handoff" onCancel={() => { setConfirmLive(false); handoffTriggerRef.current?.focus() }} onConfirm={() => { setConfirmLive(false); void handoff() }} consequence={record === null || readiness?.data === undefined ? 'The persisted Live session will be revalidated before handoff.' : <span>Event: {readiness.data?.event.name}. Prize: {readiness.data?.category.prizeName}. Winners: {readiness.data?.requestedWinnerCount}. Eligible: {readiness.data?.authoritativeEligibleCount}. Mode: Live. This only opens the start gate; it does not select winners.</span>} />
+    {record === null ? null : <PendingReviewModal record={record} open={pendingReviewRequired} />}
   </section>
 }

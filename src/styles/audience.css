@@ -19,6 +19,14 @@
     background: var(--app-bg);
   }
 
+  .audience-display-page {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   .audience-fullscreen-controls {
     position: fixed;
     right: 1rem;
@@ -183,46 +191,79 @@
   }
 
   .audience-draw-header {
-    display: flex;
+    display: grid;
+    justify-items: center;
     min-width: 0;
-    align-items: start;
-    justify-content: space-between;
-    gap: 2rem;
+    gap: clamp(0.75rem, 1.5vh, 1.25rem);
+    text-align: center;
   }
 
   .audience-draw-header__identity {
+    display: grid;
+    justify-items: center;
     min-width: 0;
-    max-width: min(42vw, 32rem);
-    text-align: right;
+    max-width: min(70rem, 86vw);
+    text-align: center;
   }
 
   .audience-draw-header__identity p { margin: 0; }
-  .audience-draw-header__category {
-    color: #c7b8ff;
-    font-size: clamp(0.65rem, 0.85vw, 0.9rem);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.12em;
-    line-height: var(--line-height-tight);
-    text-transform: uppercase;
-    overflow-wrap: anywhere;
-  }
   .audience-draw-header__prize {
-    margin-top: 0.2rem !important;
+    margin: 0;
     color: #ffffff;
-    font-size: clamp(1rem, 1.45vw, 1.65rem);
+    font-size: clamp(2rem, 4.5vw, 4.75rem);
     font-weight: var(--font-weight-bold);
-    line-height: var(--line-height-tight);
+    letter-spacing: -0.045em;
+    line-height: 0.95;
     overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+
+  .audience-draw-header__meta {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.35em 0.6em;
+    margin-top: clamp(0.65rem, 1.2vh, 1rem) !important;
+    color: var(--text-secondary);
+    font-size: clamp(0.9rem, 1.35vw, 1.35rem);
+  }
+
+  .audience-draw-header__meta strong {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
   }
 
   .standby-stage {
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1fr);
+    row-gap: clamp(0.75rem, 2vh, 1.5rem);
+    text-align: center;
+  }
+
+  .standby-stage > .event-brand {
+    grid-row: 2;
+    align-self: end;
+    justify-self: center;
+    text-align: center;
+  }
+
+  .standby-stage .event-brand__logo {
+    margin-inline: auto;
+    object-position: center;
   }
 
   .standby-stage__message {
+    grid-row: 3;
     align-self: center;
+    justify-self: center;
     max-width: min(70rem, 86vw);
-    padding-block: 2vh 8vh;
+    padding: 0;
+    text-align: center;
+  }
+
+  .standby-stage > .audience-safe-area-markers {
+    grid-row: 4;
+    align-self: end;
   }
 
   .standby-stage__message h1 {
@@ -239,8 +280,11 @@
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
+    justify-content: center;
+    width: fit-content;
+    max-width: 100%;
     gap: 0.4em 0.8em;
-    margin: clamp(1.5rem, 4vh, 3rem) 0 0;
+    margin: clamp(1.5rem, 4vh, 3rem) auto 0;
     color: var(--text-secondary);
     font-size: clamp(1rem, 1.65vw, 1.8rem);
   }
@@ -287,8 +331,7 @@
     text-align: center;
   }
 
-  .countdown-stage__content h1,
-  .rolling-stage__content h1 {
+  .countdown-stage__content h1 {
     margin: clamp(0.5rem, 1.4vh, 1rem) 0 0;
     color: var(--text-secondary);
     font-size: clamp(1.4rem, 2.2vw, 2.5rem);
@@ -309,8 +352,35 @@
   }
 
   .rolling-stage {
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto;
+    align-content: center;
     gap: clamp(0.75rem, 2vh, 1.5rem);
+  }
+
+  .rolling-stage__header {
+    display: grid;
+    justify-items: center;
+    gap: clamp(0.75rem, 1.5vh, 1.25rem);
+    min-width: 0;
+    text-align: center;
+  }
+
+  .rolling-stage__header .event-brand {
+    align-self: center;
+    max-width: min(44rem, 70vw);
+    text-align: center;
+  }
+
+  .rolling-stage__header .event-brand__logo {
+    margin-inline: auto;
+    object-position: center;
+  }
+
+  .rolling-stage__status {
+    margin: clamp(0.4rem, 0.8vh, 0.7rem) 0 0;
+    color: var(--text-secondary);
+    font-size: clamp(0.8rem, 1vw, 1.05rem);
+    letter-spacing: 0.04em;
   }
 
   .rolling-stage__content {
@@ -427,21 +497,22 @@
   }
 
   .winner-stage {
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto;
+    align-content: center;
     gap: clamp(0.65rem, 1.5vh, 1.35rem);
   }
 
   .random-number-roll-stage {
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto;
+    align-content: center;
     gap: clamp(0.65rem, 1.5vh, 1.35rem);
   }
 
   .random-number-roll-stage__header {
-    display: flex;
+    display: grid;
+    justify-items: center;
     min-width: 0;
-    align-items: start;
-    justify-content: space-between;
-    gap: 2rem;
+    text-align: center;
   }
 
   .random-number-roll-stage__announcement {
@@ -469,11 +540,10 @@
   }
 
   .winner-stage__header {
-    display: flex;
+    display: grid;
+    justify-items: center;
     min-width: 0;
-    align-items: start;
-    justify-content: space-between;
-    gap: 2rem;
+    text-align: center;
   }
 
   .winner-stage__prize {
@@ -781,10 +851,6 @@
   .winner-stage,
   .rolling-stage {
     gap: 0.55rem;
-  }
-
-  .winner-stage__header .event-brand__subtitle {
-    display: none;
   }
 
   .display-state-label {

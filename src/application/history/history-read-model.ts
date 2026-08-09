@@ -6,13 +6,13 @@ import type { PrizeCategory } from '../../domain/prizes/prize.types.ts'
 import type { DrawSessionId, EventId } from '../../domain/shared/identifiers.ts'
 import type { RedrawRecord } from '../../domain/winners/redraw.types.ts'
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
-import type { AuditRepository } from '../persistence/repositories/audit-repository.interface.ts'
+import type { AuditReadRepository } from '../persistence/repositories/audit-repository.interface.ts'
 import type { DrawConfigurationRepository } from '../persistence/repositories/draw-configuration-repository.interface.ts'
-import type { DrawSessionRepository } from '../persistence/repositories/draw-session-repository.interface.ts'
+import type { DrawSessionReadRepository } from '../persistence/repositories/draw-session-repository.interface.ts'
 import type { EventRepository } from '../persistence/repositories/event-repository.interface.ts'
 import type { PrizeCategoryRepository } from '../persistence/repositories/prize-category-repository.interface.ts'
-import type { RedrawRepository } from '../persistence/repositories/redraw-repository.interface.ts'
-import type { WinnerRepository } from '../persistence/repositories/winner-repository.interface.ts'
+import type { RedrawReadRepository } from '../persistence/repositories/redraw-repository.interface.ts'
+import type { WinnerReadRepository } from '../persistence/repositories/winner-repository.interface.ts'
 
 export interface OfficialHistoryRecord {
   readonly winner: WinnerRecord
@@ -114,12 +114,12 @@ export type HistoryReconstruction =
 
 export interface HistoryReadRepositories {
   readonly events: Pick<EventRepository, 'findById'>
-  readonly sessions: Pick<DrawSessionRepository, 'findById' | 'findByEventId'>
+  readonly sessions: Pick<DrawSessionReadRepository, 'findById' | 'findByEventId'>
   readonly configurations: Pick<DrawConfigurationRepository, 'findById'>
   readonly categories: Pick<PrizeCategoryRepository, 'findById'>
-  readonly winners: Pick<WinnerRepository, 'findByDrawSessionId'>
-  readonly redraws: Pick<RedrawRepository, 'findByDrawSessionId'>
-  readonly audits: Pick<AuditRepository, 'findByEventId'>
+  readonly winners: Pick<WinnerReadRepository, 'findByDrawSessionId'>
+  readonly redraws: Pick<RedrawReadRepository, 'findByDrawSessionId'>
+  readonly audits: Pick<AuditReadRepository, 'findByEventId'>
 }
 
 export interface OfficialHistoryEventProjection {

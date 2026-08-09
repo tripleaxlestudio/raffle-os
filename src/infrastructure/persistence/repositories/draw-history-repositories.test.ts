@@ -102,6 +102,11 @@ describe('DexieDrawSessionRepository', () => {
     expect(await database.draw_sessions.get(draft.id)).toEqual(draft)
 
     await expect(
+      repository.createDraft({ ...draft, updatedAt: TIME_2 }),
+    ).rejects.toBeInstanceOf(DuplicateRecordError)
+    expect(await database.draw_sessions.get(draft.id)).toEqual(draft)
+
+    await expect(
       repository.createDraft({
         ...draft,
         id: createDrawSessionId(),
@@ -352,6 +357,22 @@ describe('DexieWinnerRepository', () => {
     expect(await database.winner_records.toArray()).toEqual([original])
   })
 
+  it('retains terminal winner evidence when a conflicting record uses the same ID', async () => {
+    const database = await openTestDatabase('winner-terminal-immutability')
+    const fixture = makeDrawHistoryFixture()
+    await seedStartedFixture(database, fixture)
+    const repository = new DexieWinnerRepository(database)
+    const confirmed = makeWinner(fixture, 0, 1, { status: 'confirmed', confirmedAt: TIME_3, updatedAt: TIME_3 })
+    await database.winner_records.add(confirmed)
+    await expect(repository.append({ ...confirmed, ticketNumber: '99999' as typeof confirmed.ticketNumber })).rejects.toBeInstanceOf(ValidationError)
+    expect(await database.winner_records.get(confirmed.id)).toEqual(confirmed)
+
+    const cancelled = makeWinner(fixture, 1, 2, { status: 'cancelled', cancelledAt: TIME_4, updatedAt: TIME_4 })
+    await database.winner_records.add(cancelled)
+    await expect(repository.append({ ...cancelled, ticketNumber: '88888' as typeof cancelled.ticketNumber })).rejects.toBeInstanceOf(ValidationError)
+    expect(await database.winner_records.get(cancelled.id)).toEqual(cancelled)
+  })
+
   it('inserts a valid batch atomically and rejects empty, duplicate participant, duplicate ticket, and invalid batches', async () => {
     const database = await openTestDatabase('winner-batch')
     const fixture = makeDrawHistoryFixture()
@@ -518,10 +539,13 @@ describe('DexieRedrawRepository', () => {
     const redraw = makeRedraw(fixture, original, replacement)
 
     await repository.append(redraw)
+    const conflictingReplacement = makeWinner(fixture, 2, 3)
+    await database.winner_records.add(conflictingReplacement)
     await expect(
       repository.append({
         ...redraw,
         id: makeRedraw(fixture, original, replacement).id,
+        replacementWinnerRecordId: conflictingReplacement.id,
       }),
     ).rejects.toBeInstanceOf(DuplicateRecordError)
     expect(await database.redraw_records.toArray()).toEqual([redraw])
@@ -612,6 +636,9 @@ describe('DexieAuditRepository', () => {
     await expect(repository.append(audit)).rejects.toBeInstanceOf(
       DuplicateRecordError,
     )
+    await expect(repository.append({ ...audit, action: 'event-created' })).rejects.toBeInstanceOf(
+      DuplicateRecordError,
+    )
     await expect(
       repository.append(
         makeAudit(fixture, 'event-created', {
@@ -632,12 +659,14 @@ describe('DexieAuditRepository', () => {
   })
 
   it('exposes append-only capability without update or delete methods', () => {
-    const methods = Object.getOwnPropertyNames(
-      DexieAuditRepository.prototype,
-    )
-    expect(methods).toContain('append')
-    expect(methods).not.toContain('update')
-    expect(methods).not.toContain('delete')
+    for (const repository of [DexieDrawSessionRepository, DexieWinnerRepository, DexieRedrawRepository, DexieAuditRepository]) {
+      const methods = Object.getOwnPropertyNames(repository.prototype)
+      expect(methods, repository.name).not.toContain('put')
+      expect(methods, repository.name).not.toContain('update')
+      expect(methods, repository.name).not.toContain('delete')
+      expect(methods, repository.name).not.toContain('remove')
+    }
+    expect(Object.getOwnPropertyNames(DexieAuditRepository.prototype)).toContain('append')
   })
 })
 

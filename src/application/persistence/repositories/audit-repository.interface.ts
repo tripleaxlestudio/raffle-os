@@ -5,3 +5,6 @@ export interface AuditRepository {
   findByEventId(eventId: EventId): Promise<AuditRecord[]>
   append(audit: AuditRecord): Promise<void>
 }
+
+/** Read-only boundary for audit timeline projections. */
+export type AuditReadRepository = Pick<AuditRepository, 'findByEventId'>

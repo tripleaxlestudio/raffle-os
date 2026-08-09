@@ -31,3 +31,6 @@ export interface DrawSessionRepository {
     at: IsoTimestamp,
   ): Promise<void>
 }
+
+/** Read-only boundary for History and other query consumers. */
+export type DrawSessionReadRepository = Pick<DrawSessionRepository, 'findById' | 'findByEventId' | 'findLatestByEventId'>

@@ -29,3 +29,6 @@ export interface WinnerRepository {
     at: IsoTimestamp,
   ): Promise<void>
 }
+
+/** Read-only boundary for official-history projections. */
+export type WinnerReadRepository = Pick<WinnerRepository, 'findByEventId' | 'findByDrawSessionId' | 'findConfirmedByEventId' | 'findConfirmedByEventAndCategory'>

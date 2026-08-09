@@ -1,0 +1,12 @@
+import { describe, expect, it } from 'vitest'
+import { filterOfficialHistory, filterOfficialWinners, readHistoryQuery, writeHistoryQuery } from './history-query.ts'
+import type { HistoryReconstruction } from './history-read-model.ts'
+
+const session = (ticket: string, category = 'cat-1', status: 'completed' | 'cancelled' = 'completed', id = 'session-1'): HistoryReconstruction => ({ kind: 'complete', value: { audits: [], category: null, configuration: null, event: null, issues: [], lineages: [], redraws: [], session: { id, eventId: 'event-1', configurationId: 'config-1', mode: 'live', status, configurationSnapshot: null, candidatePoolSnapshot: null, createdAt: '2026-08-08T10:00:00.000Z', updatedAt: '2026-08-08T10:00:00.000Z' }, summary: { categoryId: category, categoryName: category === 'cat-1' ? 'Door Prize' : 'Grand Prize', completionTimestamp: undefined, drawSessionId: id, drawTimestamp: '2026-08-08T10:00:00.000Z', eligibleCount: 1, eventId: 'event-1', eventName: 'Annual Event', mode: 'live', prizeName: 'Scooter', requestedWinnerCount: 1, sessionStatus: status }, winners: [{ cancellationTimestamp: undefined, confirmationTimestamp: undefined, drawSessionId: id, participantId: 'participant-1', selectedTimestamp: '2026-08-08T10:00:00.000Z', sequence: 1, status: status === 'completed' ? 'confirmed' : 'cancelled', ticketNumber: ticket, winnerRecordId: `${id}-winner` }] } } as unknown as HistoryReconstruction)
+
+describe('official history query helpers', () => {
+  const items = [session('00042'), session('42', 'cat-2', 'cancelled', 'session-2')]
+  it('keeps exact ticket strings distinct', () => { expect(filterOfficialWinners(items, { category: '', from: '', search: '00042', status: 'all', to: '' })).toHaveLength(1); expect(filterOfficialWinners(items, { category: '', from: '', search: '42', status: 'all', to: '' })).toHaveLength(1) })
+  it('composes category and status filters without mutation', () => { const query = { category: 'cat-2', from: '', search: '', status: 'cancelled' as const, to: '' }; expect(filterOfficialHistory(items, query)).toHaveLength(1); expect(items).toHaveLength(2) })
+  it('normalizes invalid query values and serializes stable defaults', () => { expect(readHistoryQuery(new URLSearchParams('status=nope&from=tomorrow&mode=practice'))).toEqual({ category: '', from: '', search: '', status: 'all', to: '' }); expect(writeHistoryQuery({ category: 'cat-1', from: '', search: '00042', status: 'completed', to: '' })).toBe('q=00042&status=completed&category=cat-1') })
+})

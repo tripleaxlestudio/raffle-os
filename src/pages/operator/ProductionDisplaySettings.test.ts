@@ -15,6 +15,7 @@ describe('production Display settings UI contract', () => {
     expect(source).toContain('aria-hidden="true">px</span>')
     expect(source).not.toContain('Prefer fullscreen')
     expect(source).not.toContain('Disconnected-safe state')
+    expect(source).not.toContain('Return to Dashboard')
   })
 
   it('preserves the live preview, metadata strip, and desktop action order', () => {

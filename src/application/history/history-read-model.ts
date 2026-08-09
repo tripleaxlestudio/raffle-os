@@ -76,6 +76,7 @@ export interface ReconstructedWinner {
   readonly winnerRecordId: WinnerRecord['id']
   readonly drawSessionId: DrawSessionId
   readonly participantId: WinnerRecord['participantId']
+  readonly participantDisplayName?: WinnerRecord['participantDisplayName']
   readonly ticketNumber: WinnerRecord['ticketNumber']
   readonly sequence: number
   readonly status: WinnerRecord['status']
@@ -229,7 +230,7 @@ export async function reconstructOfficialHistorySession(
       redraws: redraws.slice().sort(compareRedraws),
       session,
       summary: buildSummary(session, event),
-      winners: winners.slice().sort(compareWinners).map((winner) => ({ cancellationTimestamp: winner.cancelledAt, confirmationTimestamp: winner.confirmedAt, drawSessionId: winner.drawSessionId, participantId: winner.participantId, selectedTimestamp: winner.createdAt, sequence: winner.sequenceNumber, status: winner.status, ticketNumber: winner.ticketNumber, winnerRecordId: winner.id })),
+      winners: winners.slice().sort(compareWinners).map((winner) => ({ cancellationTimestamp: winner.cancelledAt, confirmationTimestamp: winner.confirmedAt, drawSessionId: winner.drawSessionId, participantDisplayName: winner.participantDisplayName, participantId: winner.participantId, selectedTimestamp: winner.createdAt, sequence: winner.sequenceNumber, status: winner.status, ticketNumber: winner.ticketNumber, winnerRecordId: winner.id })),
     },
   }
 }

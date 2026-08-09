@@ -1,16 +1,22 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { OfficialHistorySession } from '../../application/history/history-read-model.ts'
+import type { PresentationProjectionSource } from '../../application/display-transport/public-projection.ts'
 import { ProductionHistoryPage } from './ProductionHistoryPage.tsx'
 
 const mocks = vi.hoisted(() => ({
   findByEventId: vi.fn(),
-  publish: vi.fn(() => ({ ok: true })),
+  retainedSnapshot: undefined as { drawSessionId: string; stage: string; verificationState?: string } | undefined,
+  snapshotListeners: new Set<() => void>(),
+  publish: vi.fn((source: PresentationProjectionSource) => { mocks.retainedSnapshot = { drawSessionId: source.drawSessionId, stage: source.stage, verificationState: source.verificationState }; mocks.snapshotListeners.forEach((listener) => listener()); return { ok: true } }),
+  downloadExport: vi.fn(),
+  serializeXlsx: vi.fn(async () => new ArrayBuffer(1)),
 }))
 
 const event = {
-  id: 'event-selected',
+  id: '123e4567-e89b-12d3-a456-426614174000',
   name: '24th K-Link Indonesia Anniversary',
   status: 'live',
   createdAt: '2026-08-08T00:00:00.000Z',
@@ -18,8 +24,8 @@ const event = {
 }
 
 vi.mock('../../app/workspace/ProductionWorkspaceContext.tsx', () => ({
-  useProductionWorkspace: () => ({ status: 'ready', event, eventSettings: { displayName: 'Current event', subtitle: '', primaryColor: '#111111', accentColor: '#222222' }, displayConfiguration: null }),
-  useProductionAudiencePublisher: () => ({ publish: mocks.publish }),
+  useProductionWorkspace: () => ({ status: 'ready', event, eventSettings: { displayName: 'Current event', subtitle: '', primaryColor: '#111111', accentColor: '#222222' }, displayConfiguration: { blackoutAppearance: 'pure-black', safeAreaMargin: 48 } }),
+  useProductionAudiencePublisher: () => ({ publish: mocks.publish, getSnapshot: () => mocks.retainedSnapshot, subscribeSnapshot: (listener: () => void) => { mocks.snapshotListeners.add(listener); return () => mocks.snapshotListeners.delete(listener) } }),
 }))
 
 vi.mock('../../infrastructure/composition/draw-command-production.ts', () => ({
@@ -33,6 +39,11 @@ vi.mock('../../infrastructure/composition/draw-command-production.ts', () => ({
     audits: { findByEventId: vi.fn(async () => []) },
   }),
 }))
+
+vi.mock('../../application/history/confirmed-results-export.ts', async () => {
+  const actual = await vi.importActual<typeof import('../../application/history/confirmed-results-export.ts')>('../../application/history/confirmed-results-export.ts')
+  return { ...actual, downloadExport: mocks.downloadExport, serializeConfirmedResultsXlsx: mocks.serializeXlsx }
+})
 
 vi.mock('../../application/history/history-read-model.ts', async () => {
   const actual = await vi.importActual<typeof import('../../application/history/history-read-model.ts')>('../../application/history/history-read-model.ts')
@@ -77,6 +88,10 @@ function renderPage(path = '/history') {
 beforeEach(() => {
   mocks.findByEventId.mockResolvedValue([])
   mocks.publish.mockClear()
+  mocks.retainedSnapshot = undefined
+  mocks.snapshotListeners.clear()
+  mocks.downloadExport.mockClear()
+  mocks.serializeXlsx.mockClear()
 })
 
 describe('production History empty state', () => {
@@ -113,7 +128,7 @@ describe('production History empty state', () => {
     renderPage()
 
     await screen.findByRole('heading', { name: 'No official draws yet' })
-    expect(mocks.findByEventId).toHaveBeenCalledWith('event-selected')
+    expect(mocks.findByEventId).toHaveBeenCalledWith(event.id)
   })
 
   it('shows and publishes from an eligible row while retaining the details action', async () => {
@@ -125,6 +140,23 @@ describe('production History empty state', () => {
     expect(screen.getAllByRole('button', { name: 'Show' })).toHaveLength(1)
     await screen.getByRole('button', { name: 'Show' }).click()
     expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ drawSessionId: 'completed-1', verificationState: 'verified', result: { drawSessionId: 'completed-1', winners: [{ sequence: 1, ticketNumber: '00042', status: 'confirmed' }] } }))
+    expect(await screen.findByRole('button', { name: 'Hide' })).toBeInTheDocument()
+  })
+
+  it('derives Hide from the retained Audience session and returns every row to Show on standby', async () => {
+    mocks.findByEventId.mockResolvedValue([session('completed-a'), session('completed-b'), session('cancelled-1', 'cancelled')])
+    renderPage()
+
+    expect(await screen.findAllByRole('button', { name: 'Show' })).toHaveLength(2)
+    await screen.getAllByRole('button', { name: 'Show' })[0].click()
+    expect(await screen.findByRole('button', { name: 'Hide' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Show' })).toHaveLength(1)
+    await screen.getByRole('button', { name: 'Show' }).click()
+    expect(await screen.findAllByRole('button', { name: 'Hide' })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'Show' })).toHaveLength(1)
+    await screen.getByRole('button', { name: 'Hide' }).click()
+    expect(await screen.findAllByRole('button', { name: 'Show' })).toHaveLength(2)
+    expect(mocks.publish).toHaveBeenLastCalledWith(expect.objectContaining({ stage: 'standby', eventName: 'Current event' }))
   })
 
   it('renders an official result route without the history list', async () => {
@@ -135,5 +167,55 @@ describe('production History empty state', () => {
     expect(screen.queryByLabelText('Official history sessions')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Back to History' })).toHaveAttribute('href', '/history')
     expect(screen.queryByRole('button', { name: 'Show' })).not.toBeInTheDocument()
+  })
+})
+
+describe('production History export menu', () => {
+  it('opens a contained menu without shifting the History filters', async () => {
+    const user = userEvent.setup()
+    mocks.findByEventId.mockResolvedValue([session('completed-1')])
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Export (1)' }))
+    expect(screen.getByRole('menu', { name: 'Export confirmed results' })).toHaveClass('history-export__menu')
+    expect(screen.getByRole('menuitem', { name: /CSV/ })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: /XLSX/ })).toBeVisible()
+    expect(screen.getByLabelText('History filters')).toBeInTheDocument()
+  })
+
+  it('triggers CSV export and closes the menu', async () => {
+    const user = userEvent.setup()
+    mocks.findByEventId.mockResolvedValue([session('completed-1')])
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Export (1)' }))
+    await user.click(screen.getByRole('menuitem', { name: /CSV/ }))
+    expect(mocks.downloadExport).toHaveBeenCalledWith(expect.any(String), 'text/csv;charset=utf-8', expect.stringContaining('.csv'))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('triggers XLSX export and closes the menu', async () => {
+    const user = userEvent.setup()
+    mocks.findByEventId.mockResolvedValue([session('completed-1')])
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Export (1)' }))
+    await user.click(screen.getByRole('menuitem', { name: /XLSX/ }))
+    await waitFor(() => expect(mocks.serializeXlsx).toHaveBeenCalled())
+    expect(mocks.downloadExport).toHaveBeenCalledWith(expect.any(ArrayBuffer), expect.stringContaining('spreadsheetml'), expect.stringContaining('.xlsx'))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('closes on outside click and Escape', async () => {
+    const user = userEvent.setup()
+    mocks.findByEventId.mockResolvedValue([session('completed-1')])
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Export (1)' }))
+    await user.click(document.body)
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Export (1)' }))
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 })

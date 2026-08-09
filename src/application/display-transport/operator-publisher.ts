@@ -35,6 +35,7 @@ export type OperatorPublisher = {
   readonly start: (initial: PresentationProjectionSource) => PublisherResult
   readonly publish: (source: PresentationProjectionSource) => PublisherResult
   readonly subscribe: (listener: (status: PublisherStatus) => void) => () => void
+  readonly subscribeSnapshot: (listener: () => void) => () => void
   readonly close: () => void
   readonly getSnapshot: () => PublicDisplaySnapshot | undefined
   readonly getDiagnostics: () => OperatorPublisherDiagnostics
@@ -127,6 +128,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   let lastEnvelopeSent: OperatorPublisherDiagnostics['lastEnvelopeSent']
   let lastAcknowledgement: OperatorPublisherDiagnostics['lastAcknowledgement']
   const statuses = new Set<(status: PublisherStatus) => void>()
+  const snapshotSubscribers = new Set<() => void>()
   const traceBase = { side: 'Operator' as const, publisherControllerInstanceId: options.senderId, scope: options.scope, channelName: `raffle-os-display:${options.scope.eventId}:${options.scope.displayId}`, route: options.route }
   const trace = (patch: Parameters<typeof appendRuntimeTrace>[1]) => appendRuntimeTrace(traceBase, patch)
   trace({ messageType: 'publisher-created', direction: 'local', acknowledgementStatus: 'not-applicable' })
@@ -169,6 +171,9 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       report({ kind: 'transport-error', error: result.error })
       return { ok: false, error: result.error }
     }
+    snapshotSubscribers.forEach((listener) => {
+      try { listener() } catch { /* snapshot observers must not affect presentation */ }
+    })
     return { ok: true, snapshot: next, published: true }
   }
 
@@ -311,6 +316,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       return projectAndPublish(source, false)
     },
     subscribe(listener) { statuses.add(listener); return () => statuses.delete(listener) },
+    subscribeSnapshot(listener) { snapshotSubscribers.add(listener); return () => snapshotSubscribers.delete(listener) },
     close() {
       if (closed) return
       closed = true
@@ -323,6 +329,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       snapshot = undefined
       report({ kind: 'closed' })
       statuses.clear()
+      snapshotSubscribers.clear()
     },
     getSnapshot: () => snapshot,
     getDiagnostics: () => ({

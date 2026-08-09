@@ -1,6 +1,9 @@
 # Phase 8 Product Integration Completion Plan
 
-Status: planning only. Phase 8 remains open and is not accepted.
+Status: historical completion plan. Phase 8 Slice 15 closeout is complete at
+`0e1185e86a9489eb4c8ebb2ccba9fc48971d0974`; see
+[`PHASE-8-SLICE-15-CLOSEOUT.md`](./PHASE-8-SLICE-15-CLOSEOUT.md) and
+[`PHASE-8-ACCEPTANCE.md`](./PHASE-8-ACCEPTANCE.md) for the current verdict.
 
 Baseline:
 

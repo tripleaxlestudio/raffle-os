@@ -41,6 +41,7 @@ type AudiencePublisherContextValue = {
   readonly status: PublisherStatus
   readonly publish: (source: PresentationProjectionSource) => PublisherResult
   readonly subscribe: (listener: (status: PublisherStatus) => void) => () => void
+  readonly subscribeSnapshot: (listener: () => void) => () => void
   readonly getSnapshot: () => PublicDisplaySnapshot | undefined
   readonly getDiagnostics: () => ReturnType<OperatorPublisher['getDiagnostics']> | undefined
 }
@@ -200,6 +201,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
     status: publisherStatus,
     publish: (source) => publisherRef.current === null ? { ok: false, error: { kind: 'transport-closed' } } : publisherRef.current.publish(source),
     subscribe: (listener) => publisherRef.current?.subscribe(listener) ?? (() => undefined),
+    subscribeSnapshot: (listener) => publisherRef.current?.subscribeSnapshot(listener) ?? (() => undefined),
     getSnapshot: () => publisherRef.current?.getSnapshot(),
     getDiagnostics: () => publisherRef.current?.getDiagnostics(),
   }), [publisher, publisherStatus])

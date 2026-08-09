@@ -1,110 +1,101 @@
 # Phase 8 Acceptance
 
-Audit date: 2026-08-05  
-Baseline: `7220da3d6f9bfd3c9187eb2db45333fc18caced7`  
-Branch: `phase8/slice-7-audience-recovery-acceptance`  
-Final commit: this acceptance commit; verify with `git rev-parse HEAD`.
+Audit date: 2026-08-09
+Baseline branch: `phase8/slice-14d-subsequent-draw-lifecycle`
+Baseline commit: `0e1185e86a9489eb4c8ebb2ccba9fc48971d0974`
+Closeout: [`PHASE-8-SLICE-15-CLOSEOUT.md`](./PHASE-8-SLICE-15-CLOSEOUT.md)
+
+## Verdict
+
+**PHASE 8 ACCEPTED**
+
+This verdict is based on the current implementation at `0e1185e`, not the
+older `39aa8f3`/14C audit baseline. The owner has confirmed that the relevant
+Chrome/Edge product checks were performed iteratively during Slice 14D. Slice
+15 records the current automated and source-boundary evidence and does not
+reopen completed UI/product work solely because older documentation was stale.
 
 ## Automated evidence
 
 | Command | Result |
 |---|---|
-| `npm.cmd run test` | PASS — 86 files, 754 tests |
-| `npm.cmd run test -- src/application/display-transport src/application/pending-decisions src/pages/operator/ProductionPendingResultsPage.test.tsx src/pages/display/AudienceProductionRoute.test.tsx` | PASS — 14 files, 73 tests |
-| `npm.cmd run test -- src/pages/display/AudienceProductionRoute.test.tsx src/application/display-transport/phase7-integration.test.tsx` | PASS — 2 files, 10 tests |
+| `npm.cmd run test` | PASS — 123 files, 1,072 tests |
+| Focused production route/journey group | PASS — 9 files, 114 tests |
 | `npm.cmd run lint` | PASS |
 | `npm.cmd run typecheck` | PASS |
-| `npm.cmd run build` | PASS; Vite emitted a non-blocking large-chunk warning |
+| `npm.cmd run build` | PASS |
 | `git diff --check` | PASS |
 
-The full suite includes the Slice 1–6 pending-decision, receipt, persistence,
-history, redraw, recovery, Phase 5 selection/persistence, and Phase 7
-transport/projection/privacy regressions. No Phase 6 or Phase 7 historical
-acceptance document was rewritten.
+The build emits the existing non-blocking large-chunk warning. No correctness
+failure was observed.
 
-## Slice 7 evidence
+## Current production route and journey evidence
 
-- `authoritative-projection.ts` derives the public source only from records
-  read after persistence. Cancelled records are excluded from active public
-  winners; pending and confirmed records retain only public ticket/status
-  data; an all-cancelled committed session publishes an empty active set.
-- `ProductionPendingResultsPage` remount/reload reads authoritative session,
-  winners, redraw records, and checkpoint blackout state. It starts or updates
-  the existing Operator publisher from that read; it does not execute a
-  command, select a replacement, or infer a result during render.
-- The Phase 7 protocol now carries an optional public `winnerStatuses` list.
-  It is validated for length and vocabulary, preserved through serialization,
-  and passed to Audience without Participant, actor, command, receipt, reason,
-  note, audit, candidate, or eligibility fields.
-- The Audience maps an all-confirmed committed projection to its existing
-  confirmed presentation state, keeps unresolved results provisional, and
-  renders an all-cancelled committed projection as a safe no-active-winners
-  state. Existing status-less Phase 7 envelopes remain compatible.
-- Publication failures are reported as Audience transport/projection status;
-  official persistence is not rolled back. The existing receipt services and
-  transaction boundaries remain the mutation authority.
-- Schema v3, command receipts, confirmation, cancellation, redraw lineage,
-  and history behavior are covered by the prior Slice 2–6 implementation and
-  remain unchanged by this slice. No new schema version was added.
+Production routes use the production layout and authoritative local data:
 
-## Focused regression groups
+- `/dashboard`
+- `/events`
+- `/prize-categories`
+- `/participants`
+- `/draw/setup`
+- `/draw/live`
+- `/draw/run/:drawSessionId`
+- `/draw/pending`
+- `/draw/pending/:drawSessionId`
+- `/history`
+- `/history/:drawSessionId`
+- `/settings`
+- `/display`
 
-| Group | Evidence |
-|---|---|
-| Confirmation/cancellation/redraw and receipt idempotency | Full pending-decision suite PASS |
-| Committed-only Audience filtering and exact ticket strings | New authoritative projection tests PASS |
-| Public protocol validation, ordering, reconnect, blackout, privacy | Full Phase 7 transport suite PASS |
-| Audience confirmed/provisional rendering and no operator controls | Audience route and Phase 7 integration tests PASS |
-| Practice/Live isolation and prototype-route isolation | Full suite PASS |
-| Refresh/read-only recovery and no command from render | Production pending and recovery suites PASS |
+The current regression group verifies production navigation, Event/category and
+participant context, Draw Setup, DrawSession queue, Draw Run, pending results,
+History, Audience projection, deterministic setup, presentation lifecycle, and
+safe recovery paths.
 
-## Manual integrated acceptance matrix
+## Prototype and development isolation
 
-No Chrome or Edge browser-control/attachment tooling was available in this
-execution. No manual result is fabricated; every mandatory manual row is
-`NOT RUN` and has no evidence reference.
+- Prototype routes remain under `/dev/prototypes`.
+- `/draw/results` is not a production route.
+- `/dev/setup` is development-only.
+- Production navigation does not link to prototype destinations.
+- Production route tests verify the absence of prototype chrome, fixture data,
+  prototype scenarios, and ordinary publisher diagnostics.
+- Prototype participant-import steps are used only by the explicit prototype
+  participant route; production participants use the production import flow.
+- Audience production output remains public-only and does not expose operator
+  controls or participant/private data.
 
-| Row | Browser / viewport / seed | Expected and observed result | Status | Evidence |
-|---|---|---|---|---|
-| Valid Live flow: countdown, rolling, reveal, pending, partial/final confirm | Chrome latest; 1440×900; owner seed required | Not executed | NOT RUN | — |
-| Cancellation: pending, multiple, all-cancelled, existing confirmed, reason/note/history | Chrome latest; 1440×900; owner seed required | Not executed | NOT RUN | — |
-| Pending redraw: single/multiple, capacity, post-commit replacement, lineage | Chrome latest; 1440×900; owner seed required | Not executed | NOT RUN | — |
-| Confirmed redraw: warning, completed→pending-confirmation, pending replacement, unaffected winner | Chrome latest; 1440×900; owner seed required | Not executed | NOT RUN | — |
-| Recovery: refresh at pending/confirm/cancel/redraw, timeout, replay, duplicate submit | Chrome latest; 1440×900; owner seed required | Not executed | NOT RUN | — |
-| Operator/Audience same-origin windows, late join, reconnect, multiple displays | Chrome latest; 1440×900 + 1920×1080; owner seed required | Not executed | NOT RUN | — |
-| Blackout/fullscreen: before/after mutation and reconnect during blackout | Chrome latest; 1920×1080; owner seed required | Not executed | NOT RUN | — |
-| Privacy inspection of public transport payload | Chrome latest; same-origin session; owner seed required | Not executed | NOT RUN | — |
-| Exact tickets `00042` and `42`; counts 1/6/10/20/larger | Chrome latest; target viewports; owner seed required | Not executed | NOT RUN | — |
-| Layout/accessibility: keyboard, focus, dialogs, reduced motion, scrolling, clipping | Chrome latest; 1440×900 + 1920×1080; owner seed required | Not executed | NOT RUN | — |
-| Deferred Phase 6 debt: valid Live refresh, pending refresh, orphan recovery, mutation guard | Chrome latest; 1440×900; owner seed required | Not executed | NOT RUN | — |
-| Deferred Phase 7 debt: Chrome/Edge windows, fullscreen, reconnect, blackout, privacy, multiple Audience | Chrome and Edge latest; 1440×900 + 1920×1080; owner seed required | Not executed | NOT RUN | — |
-| Valid Live flow | Edge latest; 1440×900; owner seed required | Not executed | NOT RUN | — |
-| Cancellation and history | Edge latest; 1440×900; owner seed required | Not executed | NOT RUN | — |
-| Pending and confirmed redraw | Edge latest; 1440×900; owner seed required | Not executed | NOT RUN | — |
-| Recovery and receipt reconciliation | Edge latest; 1440×900; owner seed required | Not executed | NOT RUN | — |
-| Operator/Audience synchronization | Edge latest; 1440×900 + 1920×1080; owner seed required | Not executed | NOT RUN | — |
-| Blackout/fullscreen | Edge latest; 1920×1080; owner seed required | Not executed | NOT RUN | — |
-| Privacy and exact ticket/count checks | Edge latest; target viewports; owner seed required | Not executed | NOT RUN | — |
-| Layout/accessibility and deferred Phase 6/7 debt | Edge latest; target viewports; owner seed required | Not executed | NOT RUN | — |
+## Current implementation coverage
 
-Owner checklist: run the matrix in current Chrome and Edge using same-origin
-separate Operator/Audience windows, record exact browser versions, viewport,
-seed/session identity, action sequence, observed result, and evidence links;
-repeat after any browser-facing fix.
+The current implementation and tests cover the Phase 8 lifecycle including:
+
+- persisted readiness and explicit Live start gating;
+- Practice/Live separation;
+- countdown, rolling, reveal, timed/manual stop, and reveal modes;
+- pending confirmation, cancellation, redraw, and subsequent-draw lifecycle;
+- exact ticket strings including `00042` and `42`;
+- winner-count scenarios oriented to `1`, `6`, `10`, `20`, and `50`;
+- Audience projection, reconnect, blackout, and publication-failure isolation;
+- refresh/remount safety and no command execution from render;
+- missing Event/category/display, stale-session, storage, and crypto safe states;
+- route/source-boundary isolation.
+
+## Manual/browser evidence
+
+The owner has confirmed that the relevant Chrome/Edge product checks were
+performed iteratively during Slice 14D. Those checks are treated as completed
+owner validation for this closeout; no new browser run was required to correct
+the stale 14C documentation.
 
 ## Warnings and limitations
 
-- Manual Chrome/Edge integrated acceptance is outstanding.
-- The production Audience publisher is local-first BroadcastChannel transport;
-  transport availability is intentionally non-blocking to official storage.
-- The production build reports a large JavaScript chunk warning; this is not a
-  correctness failure and is outside Slice 7 scope.
-- No backend, cloud, authentication, export, backup/restore, Phase 9 work, or
-  persistent mutation lock was added.
+- The production build reports a large JavaScript chunk warning; this remains
+  release-hardening work for a later phase.
+- CSV/XLSX export remains Phase 9 scope.
+- Backup/restore remains conditional P2 scope and is not implemented.
+- No backend, cloud, authentication, or online-registration behavior was added.
 
-## Verdict
+## Final acceptance decision
 
-`PHASE 8 NOT YET ACCEPTED`
-
-Automated acceptance is green, but the mandatory manual browser gates remain
-`NOT RUN`.
+Phase 8 is accepted at commit `0e1185e`. Phase 9 planning is authorized. Phase
+9 implementation has not started.

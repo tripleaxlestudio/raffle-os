@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useParams, useSearchParams } from 'react-router'
 import { reconstructOfficialHistoryForEvent, type HistoryReadRepositories, type HistoryReconstruction, type ReconstructedHistorySession, type ReconstructedWinner } from '../../application/history/history-read-model.ts'
 import { canShowCompletedResultOnAudience, projectCompletedResultForAudience } from '../../application/history/completed-result-projection.ts'
@@ -10,6 +10,8 @@ import { PageHeader } from '../../shared/components/PageHeader.tsx'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { Badge, Button, ButtonLink, Card, Icon, Select, Table, type IconName } from '../../shared/ui/index.ts'
 import { ProductionLoadingState, ProductionSetupRequired } from '../../shared/components/ProductionWorkspaceState.tsx'
+import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
+import { createConfirmedResultsFilename, downloadExport, projectConfirmedResults, serializeConfirmedResultsCsv, serializeConfirmedResultsXlsx } from '../../application/history/confirmed-results-export.ts'
 
 type LoadState = { readonly status: 'loading' } | { readonly status: 'ready'; readonly sessions: readonly HistoryReconstruction[] } | { readonly status: 'error'; readonly message: string }
 type SessionStatus = ReconstructedHistorySession['session']['status']
@@ -43,9 +45,34 @@ function ShowCompletedResultAction({ reconstruction }: { readonly reconstruction
   const workspace = useProductionWorkspace()
   const audience = useProductionAudiencePublisher()
   const [message, setMessage] = useState<string | null>(null)
+  const [, setAudienceRevision] = useState(0)
+  useEffect(() => audience.subscribeSnapshot?.(() => setAudienceRevision((revision) => revision + 1)) ?? (() => undefined), [audience])
+  const activeSnapshot = audience.getSnapshot?.()
+  const isShown = activeSnapshot?.stage === 'pending-handoff' && activeSnapshot.verificationState === 'verified' && activeSnapshot.drawSessionId === reconstruction.value.session.id
 
   function showResult(): void {
     if (workspace.status !== 'ready') return
+    if (isShown) {
+      const parsedEventId = parseDrawSessionId(workspace.event.id)
+      if (!parsedEventId.ok || workspace.displayConfiguration === null) return
+      const settings = workspace.eventSettings
+      audience.publish({
+        drawSessionId: parsedEventId.value,
+        stage: 'standby',
+        blackoutRequested: false,
+        displayTest: false,
+        eventName: settings.displayName,
+        eventSubtitle: settings.subtitle,
+        primaryColor: settings.primaryColor,
+        accentColor: settings.accentColor,
+        logo: settings.logo === undefined ? undefined : { type: settings.logo.type, blob: settings.logo.blob },
+        background: settings.background === undefined ? undefined : { type: settings.background.type, blob: settings.background.blob },
+        blackoutAppearance: workspace.displayConfiguration.blackoutAppearance,
+        safeAreaMargin: workspace.displayConfiguration.safeAreaMargin,
+      })
+      setMessage('The Audience Display returned to standby.')
+      return
+    }
     const result = projectCompletedResultForAudience({
       reconstruction,
       eventSettings: workspace.eventSettings,
@@ -60,7 +87,7 @@ function ShowCompletedResultAction({ reconstruction }: { readonly reconstruction
     setMessage(published.ok ? 'The existing confirmed result is now shown on the Audience Display.' : 'The result could not be shown. Check the Audience Display connection and retry.')
   }
 
-  return <div className="history-table__show-action"><Button className="history-table__action" icon={<Icon name="MonitorCheck" />} size="sm" variant="secondary" onClick={showResult}>Show</Button>{message ? <span role="status">{message}</span> : null}</div>
+  return <div className="history-table__show-action"><Button className={`history-table__action${isShown ? ' history-table__action--active' : ''}`} icon={<Icon name={isShown ? 'Monitor' : 'MonitorCheck'} />} size="sm" variant={isShown ? 'primary' : 'secondary'} onClick={showResult}>{isShown ? 'Hide' : 'Show'}</Button>{message ? <span role="status">{message}</span> : null}</div>
 }
 
 export function ProductionHistoryPage() {
@@ -102,8 +129,36 @@ export function ProductionHistoryPage() {
   }
   if (allWinners) return <AllWinners sessions={state.sessions} eventName={workspace.event.name} query={query} onQueryChange={updateQuery} />
 
-  const actions = state.sessions.length === 0 ? undefined : <><ButtonLink icon={<Icon name="Radio" />} variant="secondary" to="/draw/live">Open Draw Sessions</ButtonLink><ButtonLink icon={<Icon name="Trophy" />} variant="secondary" to="/history/winners">All Winners</ButtonLink></>
+  const actions = <>{state.sessions.length > 0 ? <><ButtonLink icon={<Icon name="Radio" />} variant="secondary" to="/draw/live">Open Draw Sessions</ButtonLink><ButtonLink icon={<Icon name="Trophy" />} variant="secondary" to="/history/winners">All Winners</ButtonLink></> : null}<ConfirmedResultsExport eventId={workspace.event.id} eventName={workspace.event.name} sessions={state.sessions} /></>
   return <section aria-labelledby="history-title" className="history-page"><PageHeader eyebrow="Official records" headingId="history-title" title="Session History" description={`Authoritative Live draw sessions for ${workspace.event.name}.`} actions={actions} />{state.sessions.length > 0 ? <HistoryFilters sessions={state.sessions} query={query} onChange={updateQuery} /> : null}{filtered.length === 0 ? <Card className="history-empty-state" padding="lg"><p>{state.sessions.length === 0 ? 'Official history' : 'Session history'}</p><div><h2>{state.sessions.length === 0 ? 'No official draws yet' : 'No official sessions'}</h2><p>{state.sessions.length === 0 ? 'This Event does not have any persisted Live draw results yet.' : 'No sessions match the active filters.'}</p>{state.sessions.length === 0 ? <p>Completed official draws will appear here automatically.</p> : null}</div>{state.sessions.length === 0 ? <ButtonLink icon={<Icon name="SlidersHorizontal" />} to="/draw/setup">Open Draw Setup</ButtonLink> : <Button onClick={() => setSearchParams('', { replace: true })} icon={<Icon name="SlidersHorizontal" />}>Reset filters</Button>}</Card> : <HistoryTable items={filtered} />}</section>
+}
+
+function ConfirmedResultsExport({ eventId, eventName, sessions }: { readonly eventId: string; readonly eventName: string; readonly sessions: readonly HistoryReconstruction[] }) {
+  const [open, setOpen] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const rows = useMemo(() => projectConfirmedResults({ eventId, sessions }), [eventId, sessions])
+  useEffect(() => {
+    if (!open) return undefined
+    const closeOnOutsidePointer = (event: PointerEvent) => { if (event.target instanceof Node && !containerRef.current?.contains(event.target)) setOpen(false) }
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
+    document.addEventListener('pointerdown', closeOnOutsidePointer)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => { document.removeEventListener('pointerdown', closeOnOutsidePointer); document.removeEventListener('keydown', closeOnEscape) }
+  }, [open])
+  const exportFile = async (format: 'csv' | 'xlsx') => {
+    setOpen(false)
+    try {
+      const exportedAt = new Date().toISOString()
+      const filename = createConfirmedResultsFilename(eventName, exportedAt, format)
+      if (format === 'csv') downloadExport(serializeConfirmedResultsCsv(rows), 'text/csv;charset=utf-8', filename)
+      else downloadExport(await serializeConfirmedResultsXlsx({ eventId, eventName, exportedAt, rows }), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename)
+      setMessage(`${rows.length} confirmed result${rows.length === 1 ? '' : 's'} exported as ${format.toUpperCase()}.`)
+    } catch (cause: unknown) {
+      setMessage(cause instanceof Error ? `Export failed: ${cause.message}` : 'Export failed. Retry the download.')
+    }
+  }
+  return <div ref={containerRef} className="history-export"><Button icon={<Icon name="ExternalLink" />} variant="secondary" aria-expanded={open} aria-haspopup="menu" onClick={() => { setOpen((current) => !current); setMessage(null) }}>Export <span className="history-export__count">({rows.length})</span></Button>{open ? <div className="history-export__menu" role="menu" aria-label="Export confirmed results"><p className="history-export__menu-note">Current Event · confirmed results only</p><button className="history-export__menu-item" role="menuitem" onClick={() => void exportFile('csv')}><Icon name="FileText" size={18} /><span className="history-export__menu-item-copy"><strong>CSV</strong><small>Comma-separated values</small></span></button><button className="history-export__menu-item" role="menuitem" onClick={() => void exportFile('xlsx')}><Icon name="FileSpreadsheet" size={18} /><span className="history-export__menu-item-copy"><strong>XLSX</strong><small>Excel workbook</small></span></button></div> : null}{message ? <span className="history-export__message" role="status">{message}</span> : null}</div>
 }
 
 function HistoryFilters({ sessions, query, onChange }: { readonly sessions: readonly HistoryReconstruction[]; readonly query: HistoryQuery; readonly onChange: (next: Partial<HistoryQuery>) => void }) {

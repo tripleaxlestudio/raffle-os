@@ -9,9 +9,12 @@ import { productionSetupStageIndexForRoute } from '../workspace/production-setup
 import { ProductionSetupContinuation } from '../../shared/components/ProductionSetupContinuation.tsx'
 import { createEventSetupProductionServices } from '../../infrastructure/composition/event-setup-production.ts'
 import type { Event as RaffleEvent } from '../../domain/events/event.types.ts'
+import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
+import { Icon } from '../../shared/ui/index.ts'
 
 function ProductionOperatorHeader() {
   const workspace = useProductionWorkspace()
+  const audience = useProductionAudiencePublisher()
   const eventServices = useMemo(() => createEventSetupProductionServices(), [])
   const [eventMenuOpen, setEventMenuOpen] = useState(false)
   const [availableEvents, setAvailableEvents] = useState<readonly RaffleEvent[]>([])
@@ -52,6 +55,33 @@ function ProductionOperatorHeader() {
     ? `/display?eventId=${encodeURIComponent(workspace.event.id)}&displayConfigurationId=${encodeURIComponent(workspace.displayConfiguration.id)}`
     : null
   const audienceDetail = audienceUrl === null ? 'Open Settings to configure the production display.' : 'Production display scope is ready; waiting for operator publication.'
+  const standbyUnavailableReason = workspace.status !== 'ready'
+    ? 'The active Event is not ready.'
+    : workspace.displayConfiguration === null
+      ? 'Configure the Audience Display in Settings first.'
+      : workspace.unresolvedSession !== null || workspace.sessionCounts.drawing > 0
+        ? 'Standby is unavailable while a draw is active or awaiting verification.'
+        : parseDrawSessionId(workspace.event.id).ok ? null : 'The active Event identifier is invalid.'
+  const publishStandby = () => {
+    if (standbyUnavailableReason !== null || workspace.status !== 'ready' || workspace.displayConfiguration === null) return
+    const parsedEventId = parseDrawSessionId(workspace.event.id)
+    if (!parsedEventId.ok) return
+    const settings = workspace.eventSettings
+    audience.publish({
+      drawSessionId: parsedEventId.value,
+      stage: 'standby',
+      blackoutRequested: false,
+      displayTest: false,
+      eventName: settings.displayName,
+      eventSubtitle: settings.subtitle,
+      primaryColor: settings.primaryColor,
+      accentColor: settings.accentColor,
+      logo: settings.logo === undefined ? undefined : { type: settings.logo.type, blob: settings.logo.blob },
+      background: settings.background === undefined ? undefined : { type: settings.background.type, blob: settings.background.blob },
+      blackoutAppearance: workspace.displayConfiguration.blackoutAppearance,
+      safeAreaMargin: workspace.displayConfiguration.safeAreaMargin,
+    })
+  }
   const selectEvent = async (event: RaffleEvent) => {
     if (eventSwitching) return
     setEventMenuError(null)
@@ -125,6 +155,7 @@ function ProductionOperatorHeader() {
     <div className="operator-header__status" aria-label="Operator utilities">
       {workspace.status === 'ready' && workspace.currentMode !== null ? <span className="mode-badge" data-mode={workspace.currentMode}>{workspace.currentMode === 'live' ? 'Live Mode' : 'Practice Mode'}</span> : null}
       {audienceUrl === null ? <Link className="operator-display-indicator" title={audienceDetail} aria-label="Audience: Setup required" to="/settings"><span aria-hidden="true" className="operator-status-marker" />Audience: Setup required</Link> : <button type="button" className="operator-display-indicator" title={audienceDetail} aria-label={`Audience: ${audienceState}`} onClick={openAudience}><span aria-hidden="true" className="operator-status-marker" />Audience: {audienceState}</button>}
+      <button type="button" className="operator-standby-control" title={standbyUnavailableReason ?? 'Return the Audience Display to the normal branded standby presentation.'} aria-label="Return Audience Display to Standby" disabled={standbyUnavailableReason !== null} onClick={publishStandby}><Icon name="StopCircle" size={16} />Standby</button>
     </div>
   </header>
 }

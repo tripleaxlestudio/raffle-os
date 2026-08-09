@@ -340,7 +340,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     }
     if (envelope.message.type !== 'display-state') return
     const isSafeNonDrawState = envelope.message.displayTest === true || envelope.message.stage === 'standby'
-    if (!isSafeNonDrawState && acceptedSession !== undefined && envelope.drawSessionId !== acceptedSession) { trace({ validationResult: 'rejected', rejectionReason: 'session-mismatch' }); diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'session-mismatch' }; return }
+    if (!isSafeNonDrawState && options.expectedSession !== undefined && envelope.drawSessionId !== options.expectedSession) { trace({ validationResult: 'rejected', rejectionReason: 'session-mismatch' }); diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'session-mismatch' }; return }
     if (acceptedMessageIds.has(envelope.messageId)) { trace({ validationResult: 'rejected', orderingResult: 'rejected', rejectionReason: 'duplicate-message' }); diagnostics = { ...diagnostics, validationResult: 'rejected', rejectionReason: 'duplicate-message' }; return }
     const message = envelope.message
     const isRestore = message.restore === true
@@ -382,11 +382,11 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         ...(message.ticketNumbers === undefined ? {} : { ticketNumbers: message.ticketNumbers }),
         ...(message.winnerStatuses === undefined ? {} : { winnerStatuses: message.winnerStatuses }),
         ...(message.verificationState === undefined ? {} : { verificationState: message.verificationState }),
-      }, isSafeNonDrawState ? undefined : acceptedSession)
+      }, options.expectedSession)
       acceptedMessageIds.add(envelope.messageId)
       acceptedOrdering = { epoch: envelope.epoch, sequence: envelope.sequence }
       acceptedOperator = sender
-      if (!isSafeNonDrawState) acceptedSession ??= snapshot.drawSessionId
+      if (!isSafeNonDrawState) acceptedSession = snapshot.drawSessionId
       restoreRequested = false
       connection = 'connected'
       retainedSnapshot = snapshot

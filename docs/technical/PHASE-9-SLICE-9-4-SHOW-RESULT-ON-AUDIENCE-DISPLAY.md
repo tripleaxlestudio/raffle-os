@@ -12,4 +12,8 @@ Result identity comes from persisted History. Branding, assets, safe-area margin
 
 The action performs zero official writes. It does not modify DrawSessions, WinnerRecords, RedrawRecords, AuditRecords, status, timestamps, lineage, eligibility, or the draw queue. Repeated publication and switching between sessions only replace retained Audience presentation state. Practice remains excluded from official History and this action.
 
+## Sequential publication bug fix
+
+The production Audience route does not provide a fixed `expectedSession`; it is scoped to the Event and DisplayConfiguration and must support switching between historical sessions. Previously, the Audience controller promoted the first accepted draw session into a permanent session guard. A later valid `confirmed` publication with a different `drawSessionId` was rejected as `session-mismatch`, even though the publisher correctly advanced its sequence and its payload identity differed. The fix applies the session guard only when `expectedSession` is explicitly configured, and updates the dynamic retained session to each accepted draw snapshot. Monotonic epoch/sequence ordering and duplicate/stale protection remain active.
+
 Focused tests cover eligibility, confirmed-only projection, cancelled/Pending exclusion, sequence order, exact ticket strings, and Practice/non-final rejection. Slice 9.5+ work such as export, backup/restore, recovery, repository immutability redesign, and new Audience protocol/lifecycle work remains deferred.

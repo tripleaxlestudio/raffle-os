@@ -13,6 +13,7 @@ import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { setDisplayConnectionStatus, syncAudiencePresenceConnectionStatus } from '../../application/display-transport/connection-status.ts'
 import { deriveProductionSetupReadiness, type ProductionSetupReadiness } from './production-setup-readiness.ts'
 import { evaluateStartupRecovery, type StartupRecoveryResult } from '../../application/workflow/startup-recovery-arbiter.ts'
+import { projectAudienceRecoverySource } from '../../application/display-transport/audience-recovery.ts'
 
 export type ProductionWorkspaceState =
   | { readonly status: 'loading' }
@@ -29,6 +30,7 @@ export type ProductionWorkspaceState =
       readonly sessionCounts: Readonly<Record<DrawSession['status'], number>>
       readonly unresolvedSession: DrawSession | null
       readonly startupRecovery: StartupRecoveryResult
+      readonly audienceRecoverySource: PresentationProjectionSource | null
       readonly currentMode: AppMode | null
       readonly displayConfiguration: DisplayConfiguration | null
       readonly eventSettings: EventSettings
@@ -125,6 +127,13 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
           return
         }
         if (active) {
+          const audienceRecoverySource = displayConfiguration === null
+            ? null
+            : projectAudienceRecoverySource({
+                recovery: startupRecovery,
+                eventSettings: eventSettings ?? { eventId: event.id, ...DEFAULT_EVENT_SETTINGS, displayName: event.name, updatedAt: new Date().toISOString() },
+                displayConfiguration,
+              })
           const setupReadiness = deriveProductionSetupReadiness({ hasCurrentEvent: true, categories, participants, displayConfiguration, configurations, sessions })
           const persistedReachedStep = setupJourneyReachedStepByEvent?.[event.id]
           const initialReachedStep = persistedReachedStep ?? (setupReadiness.drawSetup ? 5 : 1)
@@ -143,6 +152,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
             sessionCounts,
             unresolvedSession,
             startupRecovery,
+            audienceRecoverySource,
             currentMode,
             displayConfiguration,
             eventSettings: eventSettings ?? { eventId: event.id, ...DEFAULT_EVENT_SETTINGS, displayName: event.name, updatedAt: new Date().toISOString() },
@@ -200,7 +210,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
     })
     publisherStatusCleanupRef.current = unsubscribe
     const initial = state.eventSettings
-    publisher.start({
+    const standbySource: PresentationProjectionSource = {
       drawSessionId: parsed.value,
       stage: 'standby',
       blackoutRequested: false,
@@ -213,7 +223,8 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
       background: initial.background === undefined ? undefined : { type: initial.background.type, blob: initial.background.blob },
       blackoutAppearance: state.displayConfiguration?.blackoutAppearance,
       safeAreaMargin: state.displayConfiguration?.safeAreaMargin,
-    })
+    }
+    publisher.start(state.audienceRecoverySource ?? standbySource)
     queueMicrotask(() => { if (publisherRef.current === publisher) setPublisher(publisher) })
   }, [state])
 

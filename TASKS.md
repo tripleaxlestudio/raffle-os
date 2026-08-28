@@ -570,7 +570,7 @@ Recovery and operational-safety work is part of MVP hardening. Backup and restor
 
 - [ ] Add autosave-status feedback.
 - [ ] Restore an interrupted Pending session without reselection.
-- [ ] Restore the last safe Audience Display state.
+- [x] Restore the last safe Audience Display state.
 - [ ] Add protection against accidental event reset.
 - [ ] Add explicit confirmation to every destructive action.
 - [ ] Add storage-capacity warnings.

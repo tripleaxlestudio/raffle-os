@@ -611,6 +611,21 @@ Recovery and operational-safety work is part of MVP hardening. Backup and restor
 - [ ] Remove unnecessary animation.
 - [ ] Verify important states are not communicated through color alone.
 
+### Bahasa Indonesia localization
+
+- [ ] Define and approve the Indonesian terminology glossary.
+- [ ] Inventory all user-facing production Operator and Audience copy.
+- [ ] Make Bahasa Indonesia the default language for production navigation,
+  actions, statuses, validation, confirmations, errors, recovery guidance, and
+  accessibility labels.
+- [ ] Use `id-ID` presentation formats without translating stored timestamps,
+  ticket strings, IDs, domain enums, audit semantics, routes, protocol fields,
+  or storage keys.
+- [ ] Preserve versioned CSV/XLSX contracts or explicitly version any approved
+  localized export-header change.
+- [ ] Verify Indonesian copy fits every required Operator viewport and Audience
+  layout without hiding critical actions.
+
 ### Browser, viewport, and scale verification
 
 - [ ] Test the current desktop Chrome version.
@@ -629,6 +644,19 @@ Recovery and operational-safety work is part of MVP hardening. Backup and restor
 - [ ] Run all tests if a test script exists at that time.
 - [ ] Run `npm run build`.
 - [ ] Review the production bundle for unexpected assets or dependencies.
+- [ ] Approve the Windows local Host technology through an ADR and focused
+  spike. The product direction is an installed/portable `Raffle OS Host.exe`
+  that serves the production web build and opens normal Chrome/Edge.
+- [ ] Produce a reproducible local/offline release package with a version/build
+  manifest, checksums, third-party notices, and launch/update/rollback guidance.
+- [ ] Verify a clean Windows event laptop requires no Laragon, XAMPP, Node.js,
+  npm, Vite, PHP, external web server, or internet connection.
+- [ ] Verify the packaged artifact preserves same-origin Operator/Audience
+  behavior, SPA route fallback, offline launch, and IndexedDB data across the
+  approved update path.
+- [ ] Record Host security, signing, runtime, browser selection, canonical
+  origin, data-location, install/update/uninstall, license, and dependency
+  decisions before implementation.
 - [ ] Remove development-only seed data from production paths.
 - [ ] Remove debug output.
 - [ ] Complete the operator rehearsal checklist.
@@ -641,6 +669,10 @@ Recovery and operational-safety work is part of MVP hardening. Backup and restor
 - [ ] Core workflows pass manual acceptance testing.
 - [ ] No critical accessibility issue remains.
 - [ ] No critical data-integrity issue remains.
+- [ ] Production UI and operational guidance are complete in approved Bahasa
+  Indonesia without changing stored domain identities.
+- [ ] The approved release package is reproducible, identified by version and
+  checksum, and passes offline launch and update-persistence smoke tests.
 - [ ] Release limitations are documented.
 
 ## Deferred P2 Backlog

@@ -600,6 +600,19 @@ Recovery and operational-safety work is part of MVP hardening. Backup and restor
 
 ## Phase 11 — Accessibility, Performance, and Release Hardening
 
+### Slice 11.0 — baseline and acceptance control
+
+- [x] Fix stable filenames for Phase 11 evidence and release records.
+- [x] Inventory Phase 3, 4, 6, 7, and 10 acceptance debt without rewriting
+  historical evidence.
+- [x] Create the PRD acceptance evidence index and browser/viewport matrix.
+- [x] Record approved localization and Windows Host product direction.
+- [x] Create the initial release-blocker and known-limitation register.
+- [ ] Approve or defer the high-readability and large-number Audience options.
+- [ ] Approve the benchmark device and final-selection timing protocol.
+- [ ] Name the Beta/RC/Release acceptance authority and approve the pilot policy.
+- [x] Record fresh Slice 11.0 verification results.
+
 ### Accessibility and presentation
 
 - [ ] Review keyboard navigation across all operator workflows.

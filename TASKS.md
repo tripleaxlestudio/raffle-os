@@ -578,7 +578,7 @@ Recovery and operational-safety work is part of MVP hardening. Backup and restor
 - [ ] Add a Web Crypto API readiness diagnostic.
 - [ ] Add a BroadcastChannel readiness diagnostic.
 - [ ] Add a storage-availability diagnostic.
-- [ ] Add recovery tests for refresh and interrupted sessions.
+- [x] Add recovery tests for refresh and interrupted sessions.
 
 ### Conditional P2 backup and restore
 

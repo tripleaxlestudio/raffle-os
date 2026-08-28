@@ -2258,6 +2258,17 @@
   line-height: 1.5;
 }
 
+.operator-persistence-status { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-muted); }
+.operator-persistence-status__icon { display: grid; flex: 0 0 auto; width: 1.75rem; height: 1.75rem; place-items: center; border: 1px solid currentColor; border-radius: 50%; }
+.operator-persistence-status__copy { display: grid; flex: 1 1 auto; min-width: 0; gap: .15rem; }
+.operator-persistence-status__copy strong { color: var(--text-primary); font-size: var(--font-size-sm); }
+.operator-persistence-status__copy span { color: var(--text-secondary); font-size: var(--font-size-xs); line-height: 1.4; }
+.operator-persistence-status--saved { color: var(--status-success); }
+.operator-persistence-status--saving, .operator-persistence-status--recovery-required { color: var(--status-warning); }
+.operator-persistence-status--failed, .operator-persistence-status--blocked { color: var(--status-danger); border-color: color-mix(in srgb, var(--status-danger) 45%, var(--border-default)); }
+.operator-persistence-status .ui-button { flex: 0 0 auto; }
+@media (max-width: 42rem) { .operator-persistence-status { align-items: flex-start; flex-wrap: wrap; } .operator-persistence-status .ui-button { margin-left: 2.25rem; } }
+
 .ui-modal--production-surface .ui-modal__footer {
   gap: var(--space-3);
   padding-block: var(--space-5);

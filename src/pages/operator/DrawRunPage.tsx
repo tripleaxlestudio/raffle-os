@@ -22,8 +22,20 @@ import { presentationPolicyFromSettings } from '../../application/workflow/prese
 import { resolveDrawPresentationConfiguration, type DrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
 import { createDrawRunPreflight, type DrawRunPreflight } from '../../application/draw/draw-run-preflight.ts'
 import { calculateReplacementCapacity } from '../../application/pending-decisions/capacity-query.ts'
+import { evaluateLiveSessionRecovery } from '../../application/workflow/live-session-recovery.ts'
 
 type GateState = 'loading' | 'ready' | 'holding' | 'invoking' | 'locked' | 'error'
+
+type CheckpointRecoveryError = 'corrupt' | 'unsupported' | 'stale'
+
+function checkpointRecoveryError(cause: unknown): CheckpointRecoveryError | undefined {
+  if (!(cause instanceof Error)) return undefined
+  const code = 'code' in cause && typeof cause.code === 'string' ? cause.code : ''
+  if (code === 'unsupported-checkpoint-version' || cause.name === 'UnsupportedCheckpointVersionError') return 'unsupported'
+  if (code === 'stale-checkpoint' || cause.name === 'StaleCheckpointError') return 'stale'
+  if (code === 'invalid-checkpoint' || code === 'checkpoint-read-failed' || cause.name === 'InvalidCheckpointError' || cause.name === 'CheckpointReadError') return 'corrupt'
+  return undefined
+}
 
 function safeCommandError(result: Awaited<ReturnType<NonNullable<ReturnType<typeof createDrawSetupProductionServices>['command']>['execute']>>): LiveStartGateError {
   if (result.ok) return new LiveStartGateError('unexpected-failure', 'The draw entered an unexpected state.', 'retryable')
@@ -137,15 +149,34 @@ export function DrawRunPage() {
       const nextAudienceState = displayConfiguration === null ? 'setup-required' : presentAudienceConnection(currentAudience.status, currentAudience.getDiagnostics()).label === 'Connected' ? 'connected' : presentAudienceConnection(currentAudience.status, currentAudience.getDiagnostics()).label === 'Unavailable' || presentAudienceConnection(currentAudience.status, currentAudience.getDiagnostics()).label === 'Publication failed' ? 'unavailable' : 'waiting'
       const nextPreflight = createDrawRunPreflight(next, displayConfiguration, nextAudienceState)
       setPreflight(nextPreflight)
-      if (next.data?.session.status === 'pending-confirmation') {
+      if (next.data?.mode === 'live' && (next.data.session.status === 'drawing' || next.data.session.status === 'pending-confirmation')) {
         const winners = await services.winners.findByDrawSessionId(sessionId!)
-        if (winners.length > 0) {
-          const savedCheckpoint = services.presentationCheckpoints === undefined ? null : await services.presentationCheckpoints.findByDrawSessionId(sessionId!)
-          if (savedCheckpoint?.stage === 'pending-handoff' || savedCheckpoint === null) { navigate(`/draw/pending/${sessionId}`, { replace: true }); return }
+        const redraws = services.redraws === undefined ? [] : await services.redraws.findByDrawSessionId(sessionId!)
+        let savedCheckpoint: PresentationCheckpointRecord | null = null
+        let checkpointError: CheckpointRecoveryError | undefined
+        if (services.presentationCheckpoints !== undefined) {
+          try {
+            savedCheckpoint = await services.presentationCheckpoints.findByDrawSessionId(sessionId!)
+          } catch (cause: unknown) {
+            checkpointError = checkpointRecoveryError(cause)
+            if (checkpointError === undefined) throw cause
+          }
+        }
+        const recovery = evaluateLiveSessionRecovery({ session: next.data.session, winners, redraws, checkpoint: savedCheckpoint, checkpointError })
+        if (recovery.status === 'acknowledgement-required') {
+          navigate(recovery.recommendedRoute, { replace: true })
+          return
+        }
+        if (recovery.status === 'recovered-pending' || recovery.status === 'terminal-read-only') {
+          const requiresPendingHandoff = checkpointError !== undefined || savedCheckpoint === null || savedCheckpoint.stage === 'pending-handoff'
+          if (recovery.status === 'terminal-read-only' || requiresPendingHandoff) {
+            navigate(recovery.recommendedRoute, { replace: true })
+            return
+          }
           setCheckpoint(savedCheckpoint)
-          const projection = services.redraws === undefined ? null : projectLiveDrawRun(sessionId!, winners, await services.redraws.findByDrawSessionId(sessionId!))
-          setPresentationResult(projection?.result ?? projectLivePresentationResult(sessionId!, winners))
-          setRedrawLineage(projection?.lineage)
+          const projection = projectLiveDrawRun(sessionId!, recovery.winners, recovery.redraws)
+          setPresentationResult(projection.result)
+          setRedrawLineage(projection.lineage)
           setState('locked')
           return
         }

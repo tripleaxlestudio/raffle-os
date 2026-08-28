@@ -11,6 +11,7 @@ import { createEventSetupProductionServices } from '../../infrastructure/composi
 import type { Event as RaffleEvent } from '../../domain/events/event.types.ts'
 import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
 import { Icon } from '../../shared/ui/index.ts'
+import { StartupRecoveryGate } from '../workspace/StartupRecoveryGate.tsx'
 
 function ProductionOperatorHeader() {
   const workspace = useProductionWorkspace()
@@ -214,19 +215,22 @@ function statusLabel(status: ReturnType<typeof getDisplayConnectionStatus>): str
   return status === 'setup-required' ? 'Setup required' : status === 'publication-failed' ? 'Publication failed' : status.charAt(0).toUpperCase() + status.slice(1)
 }
 
-export function ProductionOperatorLayout() {
+function ProductionOperatorContent() {
   const location = useLocation()
+  const workspace = useProductionWorkspace()
+  return <div className="operator-layout" data-interface="operator" data-operator-shell>
+    <OperatorSidebar production />
+    <div className="operator-workspace">
+      <ProductionOperatorHeader />
+      <main className="operator-main operator-main--production" data-production-content-scroll="true"><StartupRecoveryGate recovery={workspace.status === 'ready' ? workspace.startupRecovery : undefined} /><Outlet /><ProductionAudienceDiagnostics />{productionSetupStageIndexForRoute(location.pathname) !== undefined ? <ProductionSetupContinuation /> : null}</main>
+    </div>
+  </div>
+}
+
+export function ProductionOperatorLayout() {
   useEffect(() => {
     appendRuntimeTrace({ side: 'Operator', publisherControllerInstanceId: 'operator-shell' }, { messageType: 'operator-shell-mount', direction: 'local' })
     return () => { appendRuntimeTrace({ side: 'Operator', publisherControllerInstanceId: 'operator-shell' }, { messageType: 'operator-shell-unmount', direction: 'local', cleanupDisposeReason: 'operator-shell-unmounted' }) }
   }, [])
-  return <ProductionWorkspaceProvider>
-    <div className="operator-layout" data-interface="operator" data-operator-shell>
-      <OperatorSidebar production />
-      <div className="operator-workspace">
-        <ProductionOperatorHeader />
-        <main className="operator-main operator-main--production" data-production-content-scroll="true"><Outlet /><ProductionAudienceDiagnostics />{productionSetupStageIndexForRoute(location.pathname) !== undefined ? <ProductionSetupContinuation /> : null}</main>
-      </div>
-    </div>
-  </ProductionWorkspaceProvider>
+  return <ProductionWorkspaceProvider><ProductionOperatorContent /></ProductionWorkspaceProvider>
 }

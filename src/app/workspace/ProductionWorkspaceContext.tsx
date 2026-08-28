@@ -12,6 +12,7 @@ import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { setDisplayConnectionStatus, syncAudiencePresenceConnectionStatus } from '../../application/display-transport/connection-status.ts'
 import { deriveProductionSetupReadiness, type ProductionSetupReadiness } from './production-setup-readiness.ts'
+import { evaluateStartupRecovery, type StartupRecoveryResult } from '../../application/workflow/startup-recovery-arbiter.ts'
 
 export type ProductionWorkspaceState =
   | { readonly status: 'loading' }
@@ -27,6 +28,7 @@ export type ProductionWorkspaceState =
       readonly liveSessionCount: number
       readonly sessionCounts: Readonly<Record<DrawSession['status'], number>>
       readonly unresolvedSession: DrawSession | null
+      readonly startupRecovery: StartupRecoveryResult
       readonly currentMode: AppMode | null
       readonly displayConfiguration: DisplayConfiguration | null
       readonly eventSettings: EventSettings
@@ -68,7 +70,12 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
     void (async () => {
       setState({ status: 'loading' })
       try {
-        await services.open()
+        const storageReadiness = services.checkStorage === undefined ? null : await services.checkStorage()
+        if (storageReadiness !== null && !storageReadiness.ok) {
+          if (active) setState({ status: 'error', message: storageReadiness.reason })
+          return
+        }
+        if (services.checkStorage === undefined) await services.open()
         const activeEventId = await services.preferences.get('activeEventId')
         if (activeEventId === null) {
           setupJourneyRef.current = null
@@ -81,7 +88,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
           if (active) setState({ status: 'invalid-reference', eventId: activeEventId })
           return
         }
-        const [participantCount, participants, categories, sessions, configurations, currentMode, setupJourneyReachedStepByEvent, displayConfiguration, eventSettings] = await Promise.all([
+        const [participantCount, participants, categories, sessions, configurations, currentMode, setupJourneyReachedStepByEvent, displayConfiguration, eventSettings, winners] = await Promise.all([
           services.participants.countByEventId(event.id),
           services.participants.findByEventId(event.id, { limit: 100_000, offset: 0 }),
           services.categories.findByEventId(event.id),
@@ -91,10 +98,32 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
           services.preferences.get('setupJourneyReachedStepByEvent'),
           services.displayConfigurations?.findByEventId(event.id) ?? Promise.resolve(null),
           services.eventSettings.findByEventId(event.id),
+          services.winners.findByEventId(event.id),
         ])
         const unresolvedSession = sessions
           .filter((session) => session.mode === 'live' && (session.status === 'drawing' || session.status === 'pending-confirmation'))
           .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] ?? null
+        const unresolvedSessions = sessions.filter((session) => session.mode === 'live' && (session.status === 'drawing' || session.status === 'pending-confirmation'))
+        const recoveryRecords = await Promise.all(unresolvedSessions.map(async (session) => {
+          const [redraws, receipts, checkpoint] = await Promise.all([
+            services.redraws?.findByDrawSessionId(session.id) ?? Promise.resolve([]),
+            services.pendingDecisions?.receipts.findBySession(session.id) ?? Promise.resolve([]),
+            services.presentationCheckpoints?.findByDrawSessionId(session.id) ?? Promise.resolve(null),
+          ])
+          return { redraws, receipts, checkpoint }
+        }))
+        const startupRecovery = evaluateStartupRecovery({
+          activeEvent: event,
+          sessions,
+          winners,
+          redraws: recoveryRecords.flatMap((record) => record.redraws),
+          receipts: recoveryRecords.flatMap((record) => record.receipts),
+          checkpoint: recoveryRecords.find((record) => record.checkpoint !== null)?.checkpoint ?? null,
+        })
+        if (startupRecovery.kind === 'storage-failure') {
+          if (active) setState({ status: 'error', message: startupRecovery.error })
+          return
+        }
         if (active) {
           const setupReadiness = deriveProductionSetupReadiness({ hasCurrentEvent: true, categories, participants, displayConfiguration, configurations, sessions })
           const persistedReachedStep = setupJourneyReachedStepByEvent?.[event.id]
@@ -113,6 +142,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
             liveSessionCount: sessions.filter((session) => session.mode === 'live').length,
             sessionCounts,
             unresolvedSession,
+            startupRecovery,
             currentMode,
             displayConfiguration,
             eventSettings: eventSettings ?? { eventId: event.id, ...DEFAULT_EVENT_SETTINGS, displayName: event.name, updatedAt: new Date().toISOString() },

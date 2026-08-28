@@ -168,6 +168,15 @@ export async function executeDraw(
   }
   if (!build.ok) return failure(build.error.kind === 'capacity' ? 'capacity' : build.error.kind === 'integrity' ? 'integrity' : build.error.kind === 'relationship' ? 'relationship' : 'eligibility', 'candidate-pool-failed', build.error.message, build.error)
 
+  if (input.mode === 'live' && dependencies.checkStorageHealth !== undefined) {
+    try {
+      const storage = await dependencies.checkStorageHealth()
+      if (!storage.ok) return failure('persistence', 'persistence-failed', `Live draw is blocked because local persistence is not safe: ${storage.reason}`, storage)
+    } catch (cause: unknown) {
+      return failure('persistence', 'persistence-failed', 'Live draw is blocked because local persistence could not be verified safely.', cause)
+    }
+  }
+
   const configurationSnapshot = makeConfigurationSnapshot(configuration, category, capturedAt)
   let selection: ReturnType<typeof selectWinners>
   try {

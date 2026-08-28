@@ -22,6 +22,7 @@ import { CancellationService } from '../../application/pending-decisions/cancell
 import { RedrawService } from '../../application/pending-decisions/redraw-service.ts'
 import { DexieDisplayConfigurationRepository } from '../persistence/repositories/display-configuration.repository.ts'
 import { DexieEventSettingsRepository } from '../persistence/repositories/event-settings.repository.ts'
+import { checkPersistenceHealth } from '../persistence/diagnostics/persistence-health.ts'
 
 export function createDrawSetupProductionServices(): DrawSetupProductionServices {
   const database = new RaffleOSDatabase()
@@ -41,5 +42,6 @@ export function createDrawSetupProductionServices(): DrawSetupProductionServices
   const audits = new DexieAuditRepository(database)
   const receipts = new DexieCommandReceiptRepository(database)
   const repositories = { events, configurations, categories, sessions, participants, winners, authoring }
-  return { ...repositories, audits, redraws, preferences, displayConfigurations, eventSettings, presentationCheckpoints, authoringService: createDrawAuthoringService(repositories), open: async () => { await database.openSupported() }, checkStorage: () => database.checkReadiness(), checkCrypto: async () => { try { createWebCryptoRandomSource(globalThis.crypto).nextUint32(); return { ok: true as const } } catch { return { ok: false as const, reason: 'Secure Web Crypto randomness is unavailable; this session cannot be handed off.' } } }, command: { execute: (input) => executeDraw(input, { ...repositories, randomSource: createWebCryptoRandomSource(globalThis.crypto), persistence, now: () => new Date().toISOString() as import('../../domain/shared/timestamps.ts').IsoTimestamp, createWinnerRecordId, createAuditRecordId }) }, pendingDecisions: { confirmation: new ConfirmationService(persistence, receipts), cancellation: new CancellationService(persistence, receipts), redraw: new RedrawService(persistence, receipts), persistence, receipts } }
+  const checkStorageHealth = async () => checkPersistenceHealth({ checkReadiness: () => database.checkReadiness() })
+  return { ...repositories, audits, redraws, preferences, displayConfigurations, eventSettings, presentationCheckpoints, authoringService: createDrawAuthoringService(repositories), open: async () => { await database.openSupported() }, checkStorage: async () => checkStorageHealth(), checkCrypto: async () => { try { createWebCryptoRandomSource(globalThis.crypto).nextUint32(); return { ok: true as const } } catch { return { ok: false as const, reason: 'Secure Web Crypto randomness is unavailable; this session cannot be handed off.' } } }, command: { execute: (input) => executeDraw(input, { ...repositories, checkStorageHealth, randomSource: createWebCryptoRandomSource(globalThis.crypto), persistence, now: () => new Date().toISOString() as import('../../domain/shared/timestamps.ts').IsoTimestamp, createWinnerRecordId, createAuditRecordId }) }, pendingDecisions: { confirmation: new ConfirmationService(persistence, receipts), cancellation: new CancellationService(persistence, receipts), redraw: new RedrawService(persistence, receipts), persistence, receipts } }
 }

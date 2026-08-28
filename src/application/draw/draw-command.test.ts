@@ -54,6 +54,23 @@ function input(fixture: ReturnType<typeof makeDrawHistoryFixture>, mode: 'live' 
 }
 
 describe('executeDraw', () => {
+  it('does not select winners when the Live storage preflight is unsafe', async () => {
+    const database = await openTestDatabase('command-storage-preflight-failure')
+    const fixture = makeDrawHistoryFixture(['00001', '00002'])
+    await seedReadyFixture(database, fixture)
+    const selectWinners = vi.fn(() => { throw new Error('selection must not run') })
+
+    const result = await executeDraw(input(fixture), {
+      ...dependencies(database),
+      checkStorageHealth: async () => ({ ok: false as const, code: 'storage-quota-exceeded', reason: 'Storage is full.' }),
+      selectWinners,
+    })
+
+    expect(result).toMatchObject({ ok: false, error: { kind: 'persistence', code: 'persistence-failed' } })
+    expect(selectWinners).not.toHaveBeenCalled()
+    expect((await database.draw_sessions.get(fixture.session.id))?.status).toBe('ready')
+  })
+
   it.each([1, 3, 6, 10])('runs a fresh 100-participant Practice Event with %s winner(s)', async (requestedWinners) => {
     const database = await openTestDatabase(`command-fresh-practice-${requestedWinners}`)
     const base = makeDrawHistoryFixture(Array.from({ length: 100 }, (_, index) => String(index + 1).padStart(5, '0')))

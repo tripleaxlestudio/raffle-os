@@ -3,14 +3,12 @@
 ## Decision and authorization
 
 Owner approval: 2026-08-31. The eight-slice migration is approved as a plan.
-Latest decision: owner accepted Slice 2 final checkpoint `c6e598a` on
-`redesign/kocokan-ui`, including upload/chevron refinements, and authorized
-[Slice 3](KOCOKAN-UI-SLICE-3-PLAN.md) only. Operator Draw Console is light-first;
-only frozen Audience-owned canvas may remain dark. The unchanged-failure policy
-continues; new/changed failures or regressions must be investigated. Slice 4 and
+Latest decision: owner accepted Slice 3 checkpoint `93f3785` on
+`redesign/kocokan-ui` and authorized [Slice 4](KOCOKAN-UI-SLICE-4-PLAN.md).
+Slice 4 Pending Results implementation/evidence are ready for owner review in
+the [Slice 4 report](KOCOKAN-UI-SLICE-4.md). The unchanged-failure policy
+continues; new/changed failures or regressions must be investigated. Slice 5 and
 Phase 11 reconciliation remain unauthorized. Earlier decisions below are historical.
-Slice 3 implementation/evidence are now ready for owner review:
-[Slice 3 report](KOCOKAN-UI-SLICE-3.md). This is not owner acceptance or Slice 4 approval.
 **Slice 0 is accepted. The owner separately authorized Slice 1 only on
 2026-08-31. The owner authorized proceeding to Slice 2 on 2026-08-31.
 Slice 2 is implemented for owner review under the revised regression gate below;

@@ -40,55 +40,90 @@ const reasonSelectStyles: StylesConfig<ReasonOption, false> = {
     ...base,
     minHeight: '2.75rem',
     height: '2.75rem',
-    borderColor: state.isFocused ? 'var(--accent-hover)' : 'var(--border-strong)',
-    borderRadius: 'var(--radius-md)',
-    backgroundColor: 'var(--surface-raised)',
+    borderWidth: '2px',
+    borderColor: state.isFocused ? 'var(--kc-primary)' : 'var(--kc-outline)',
+    borderRadius: 'var(--kc-radius-control)',
+    backgroundColor: 'var(--kc-surface)',
     boxShadow: state.isFocused
-      ? '0 0 0 0.15rem color-mix(in srgb, var(--accent-hover) 55%, transparent)'
-      : 'inset 0 0 0 1px rgb(255 255 255 / 4%)',
-    '&:hover': { borderColor: 'var(--accent-hover)' },
+      ? '0 0 0 var(--kc-focus-width) color-mix(in srgb, var(--kc-focus) 24%, transparent)'
+      : 'var(--kc-shadow-control)',
+    '&:hover': { borderColor: 'var(--kc-primary)' },
   }),
   valueContainer: (base) => ({ ...base, padding: '0 var(--control-inline-padding)' }),
-  singleValue: (base) => ({ ...base, color: 'var(--text-primary)' }),
-  placeholder: (base) => ({ ...base, color: 'var(--text-muted)' }),
+  singleValue: (base) => ({ ...base, color: 'var(--kc-text)', fontWeight: 650 }),
+  placeholder: (base) => ({ ...base, color: 'var(--kc-text-muted)' }),
   indicatorSeparator: () => ({ display: 'none' }),
   dropdownIndicator: (base, state) => ({
     ...base,
-    color: state.isFocused ? 'var(--accent-hover)' : 'var(--text-secondary)',
+    color: state.isFocused ? 'var(--kc-primary)' : 'var(--kc-text-muted)',
     padding: '0 var(--control-inline-padding) 0 var(--space-2)',
   }),
   menuPortal: (base) => ({ ...base, zIndex: 2000 }),
   menu: (base) => ({
     ...base,
     marginTop: 'var(--space-2)',
-    border: '1px solid #3a4150',
-    borderRadius: 'var(--radius-md)',
-    backgroundColor: '#1d212b',
-    boxShadow: '0 0.75rem 2rem rgb(0 0 0 / 45%)',
+    border: '2px solid var(--kc-outline)',
+    borderRadius: 'var(--kc-radius-control)',
+    backgroundColor: 'var(--kc-surface)',
+    boxShadow: 'var(--kc-shadow-card)',
     overflow: 'hidden',
   }),
   menuList: (base) => ({
     ...base,
-    backgroundColor: '#1d212b',
+    backgroundColor: 'var(--kc-surface)',
     padding: 'var(--space-1) 0',
   }),
   option: (base, state) => ({
     ...base,
     padding: 'var(--space-3) var(--space-3)',
     backgroundColor: state.isSelected
-      ? '#7567ff'
+      ? 'var(--kc-primary)'
       : state.isFocused
-        ? '#2b3140'
-        : '#1d212b',
-    color: '#f4f6fa',
+        ? 'var(--kc-selection)'
+        : 'var(--kc-surface)',
+    color: state.isSelected ? 'var(--kc-on-primary)' : 'var(--kc-text)',
     cursor: 'pointer',
-    '&:active': { backgroundColor: '#7567ff' },
+    fontWeight: state.isSelected ? 750 : 600,
+    '&:active': { backgroundColor: 'var(--kc-selection)' },
   }),
 }
 
-function ReasonSelect({ id, reason, busy, onChange }: { readonly id: string; readonly reason: RedrawReason; readonly busy: boolean; readonly onChange: (reason: RedrawReason) => void }) {
+export function ReasonSelect({ id, reason, busy, onChange }: { readonly id: string; readonly reason: RedrawReason; readonly busy: boolean; readonly onChange: (reason: RedrawReason) => void }) {
   const selected = reasons.find((option) => option.value === reason) ?? reasons[0]
   return <div className="ui-field pending-results__reason-field"><span className="ui-field__label" id={`${id}-label`}>Alasan</span><ReactSelect<ReasonOption, false> components={{ Menu: ThemedSelectMenu }} aria-labelledby={`${id}-label`} classNamePrefix="raffle-reason-select" inputId={id} isClearable={false} isDisabled={busy} isSearchable={false} menuPortalTarget={document.body} menuPosition="fixed" onChange={(option) => { if (option !== null) onChange(option.value) }} options={reasons} styles={reasonSelectStyles} value={selected} /></div>
+}
+
+type PendingWinnerRow = Pick<WinnerRecord, 'id' | 'sequenceNumber' | 'ticketNumber' | 'status'>
+
+export function PendingResultsSummary({ total, pending, confirmed, cancelled, replacements }: { readonly total: number; readonly pending: number; readonly confirmed: number; readonly cancelled: number; readonly replacements: number }) {
+  const metrics = [
+    ['Tertunda', pending, 'pending', 1],
+    ['Dikonfirmasi', confirmed, 'confirmed', 2],
+    ['Dibatalkan', cancelled, 'cancelled', 3],
+    ['Pengganti', replacements, 'replacements', 4],
+    ['Total pemenang', total, 'total', 5],
+  ] as const
+
+  return <div className="pending-results__summary" aria-label="Ringkasan hasil">
+    {metrics.map(([label, value, tone, priority]) => <div className={`pending-results__metric pending-results__metric--${tone}`} data-metric-priority={priority} key={label}><span>{label}</span><strong>{value}</strong></div>)}
+  </div>
+}
+
+export function PendingWinnerGrid({ winners, selected, busy, onToggle }: { readonly winners: readonly PendingWinnerRow[]; readonly selected: ReadonlySet<string>; readonly busy: boolean; readonly onToggle: (winnerId: string) => void }) {
+  return <ul aria-label="Pemenang tertunda" className="pending-results__winner-list">
+    {winners.map((winner) => {
+      const isSelected = selected.has(winner.id)
+      return <li className={`pending-results__winner-row${isSelected ? ' pending-results__winner-row--selected' : ''}`} data-result-status={winner.status} data-selected={isSelected ? 'true' : 'false'} key={winner.id}>
+        <label>
+          <input checked={isSelected} disabled={winner.status !== 'pending' || busy} onChange={() => onToggle(winner.id)} type="checkbox" />
+          <span className="pending-results__winner-sequence">#{winner.sequenceNumber}</span>
+          <code className="pending-results__winner-ticket">{winner.ticketNumber}</code>
+          <Badge variant={winner.status === 'pending' ? 'pending' : winner.status === 'confirmed' ? 'confirmed' : 'danger'}>{statusLabel(winner.status)}</Badge>
+          {winner.status === 'cancelled' ? <small>Dipertahankan dalam riwayat resmi</small> : null}
+        </label>
+      </li>
+    })}
+  </ul>
 }
 
 function commandId(): CommandId {
@@ -251,11 +286,9 @@ export function ProductionPendingResultsPage() {
     <PageHeader eyebrow={session.status === 'completed' ? 'UNDIAN SELESAI · LIVE' : 'Live · produksi resmi'} headingId="pending-title" title={session.status === 'completed' ? 'Hasil Akhir' : 'Tinjau Pemenang'} description={`${category.prizeName} · ${category.name}`} />
     {message === null || session.status === 'completed' ? null : <StatusBanner badge="Tindakan Operator" title="Rekonsiliasi diperlukan" tone="warning">{message}</StatusBanner>}
     {isReadOnly ? <StatusBanner badge="Dibatalkan" title="Hasil terselesaikan · hanya baca" tone="warning">Sesi ini tetap berada dalam riwayat resmi dan tidak dapat diubah di sini.</StatusBanner> : session.status === 'completed' ? <div className="pending-results__completion-state" role="status"><div className="pending-results__completion-copy"><span>UNDIAN SELESAI</span><strong>Peninjauan pemenang selesai</strong><p>Semua {confirmed.length} pemenang telah dikonfirmasi dan siap untuk undian berikutnya.</p></div><div className="pending-results__completion-actions"><ButtonLink icon={<Icon name="Play" />} size="lg" to="/draw/setup" variant="primary">Mulai Undian Berikutnya</ButtonLink><ButtonLink icon={<Icon name="History" />} to="/history" variant="secondary">Lihat Riwayat</ButtonLink></div></div> : null}
-    <div className="pending-results__summary" aria-label="Ringkasan hasil">
-      {([['Total pemenang', winners.length, ''], ['Tertunda', pending.length, 'pending'], ['Dikonfirmasi', confirmed.length, 'confirmed'], ['Dibatalkan', cancelled.length, 'cancelled'], ['Pengganti', replacements.length, 'replacements']] as const).map(([label, value, tone]) => <div className={`pending-results__metric ${tone === '' ? '' : `pending-results__metric--${tone}`}`} key={label}><span>{label}</span><strong>{value}</strong></div>)}
-    </div>
+    <PendingResultsSummary total={winners.length} pending={pending.length} confirmed={confirmed.length} cancelled={cancelled.length} replacements={replacements.length} />
     <div className="pending-results__workspace">
-      {!isReadOnly && pending.length > 0 ? <Card padding="none" tone="raised" className="pending-results__queue"><div className="pending-results__section-heading"><div><p className="operator-eyebrow">Keputusan pemenang</p><h2>Pilih pemenang</h2><p>Pilih pemenang, lalu konfirmasi, batalkan, atau undi ulang sesuai kebutuhan.</p></div><Button icon={selectedWinners.length === pending.length ? <Icon name="ListX" /> : <Icon name="ListChecks" />} onClick={toggleAllPending} variant="secondary" disabled={busy || pending.length === 0}>{bulkSelectionLabel}</Button></div><div className="pending-results__selection-status" aria-live="polite"><strong>{pending.length} pending</strong><span>{selectedWinners.length > 0 ? `${selectedWinners.length} dipilih` : 'Belum ada pemenang dipilih'}</span></div><ul aria-label="Pemenang tertunda" className="pending-results__winner-list">{winners.map((winner) => <li className="pending-results__winner-row" data-result-status={winner.status} key={winner.id}><label><input checked={selected.has(winner.id)} disabled={winner.status !== 'pending' || busy} onChange={() => toggle(winner.id)} type="checkbox" /><span className="pending-results__winner-sequence">#{winner.sequenceNumber}</span><code className="pending-results__winner-ticket">{winner.ticketNumber}</code><Badge variant={winner.status === 'pending' ? 'pending' : winner.status === 'confirmed' ? 'confirmed' : 'danger'}>{statusLabel(winner.status)}</Badge>{winner.status === 'cancelled' ? <small>Dipertahankan dalam riwayat resmi</small> : null}</label></li>)}</ul><div className="pending-results__action-bar"><div><strong>Tindakan keputusan</strong><span>{selectedWinners.length > 0 ? `Terapkan ke ${selectedWinners.length} pemenang yang dipilih.` : 'Pilih satu atau beberapa pemenang tertunda untuk melanjutkan.'}</span></div><div className="pending-results__actions"><Button className="pending-results__action pending-results__action--confirm" icon={<Icon name="CircleCheck" />} disabled={!canDecide} onClick={() => openDecision('confirm')}>Konfirmasi{selectedWinners.length > 0 ? ` ${selectedWinners.length}` : ''}</Button><Button className="pending-results__action pending-results__action--cancel" icon={<Icon name="CircleX" />} disabled={!canDecide} onClick={() => openDecision('cancel')} variant="danger">Batalkan{selectedWinners.length > 0 ? ` ${selectedWinners.length}` : ''}</Button><Button className="pending-results__action pending-results__action--redraw" icon={<Icon name="RotateCcw" />} disabled={!canDecide || !capacityEnough} onClick={() => openDecision('redraw-pending')} variant="secondary">Undi Ulang{selectedWinners.length > 0 ? ` ${selectedWinners.length}` : ''}</Button></div></div></Card> : null}
+      {!isReadOnly && pending.length > 0 ? <Card padding="none" tone="raised" className="pending-results__queue"><div className="pending-results__section-heading"><div><p className="operator-eyebrow">Keputusan pemenang</p><h2>Pilih pemenang</h2><p>Pilih pemenang, lalu konfirmasi, batalkan, atau undi ulang sesuai kebutuhan.</p></div><Button icon={allPendingSelected ? <Icon name="ListX" /> : <Icon name="ListChecks" />} onClick={toggleAllPending} variant="secondary" disabled={busy || pending.length === 0}>{bulkSelectionLabel}</Button></div><div className="pending-results__selection-status" aria-live="polite"><strong>{pending.length} pending</strong><span>{selectedWinners.length > 0 ? `${selectedWinners.length} dipilih` : 'Belum ada pemenang dipilih'}</span></div><PendingWinnerGrid winners={winners} selected={selected} busy={busy} onToggle={toggle} /><div className="pending-results__action-bar"><div><strong>Tindakan keputusan</strong><span>{selectedWinners.length > 0 ? `Terapkan ke ${selectedWinners.length} pemenang yang dipilih.` : 'Pilih satu atau beberapa pemenang tertunda untuk melanjutkan.'}</span></div><div className="pending-results__actions"><Button className="pending-results__action pending-results__action--confirm" icon={<Icon name="CircleCheck" />} disabled={!canDecide} onClick={() => openDecision('confirm')}>Konfirmasi{selectedWinners.length > 0 ? ` ${selectedWinners.length}` : ''}</Button><Button className="pending-results__action pending-results__action--cancel" icon={<Icon name="CircleX" />} disabled={!canDecide} onClick={() => openDecision('cancel')} variant="danger">Batalkan{selectedWinners.length > 0 ? ` ${selectedWinners.length}` : ''}</Button><Button className="pending-results__action pending-results__action--redraw" icon={<Icon name="RotateCcw" />} disabled={!canDecide || !capacityEnough} onClick={() => openDecision('redraw-pending')} variant="secondary">Undi Ulang{selectedWinners.length > 0 ? ` ${selectedWinners.length}` : ''}</Button></div></div></Card> : null}
       <Card padding="md" tone="raised" className="pending-results__details"><div className="pending-results__section-heading"><div><p className="operator-eyebrow">Konteks Operator</p><h2>Detail Hasil</h2></div><Badge variant="live">Live</Badge></div><dl className="pending-results__details-list"><div><dt>Acara</dt><dd>{event.name}</dd></div><div><dt>Kategori hadiah</dt><dd>{category.name}</dd></div><div><dt>Hadiah</dt><dd>{category.prizeName}</dd></div><div><dt>Jumlah pemenang</dt><dd>{winners.length}</dd></div><div><dt>Pool yang memenuhi syarat</dt><dd>{session.candidatePoolSnapshot?.eligibleSnapshotCount ?? '—'}</dd></div><div><dt>Waktu undian</dt><dd>{formatOperatorDateTime(session.createdAt)}</dd></div></dl><div className="pending-results__capacity"><span>Kapasitas undian ulang</span><strong>{displayedReplacementCapacity} pengganti yang memenuhi syarat tersedia</strong><small>Identitas pengganti tidak dipilih sampai undian ulang diminta.</small></div></Card>
     </div>
     {session.status === 'completed' && confirmed.length > 0 ? <Card padding="sm" tone="raised" className="pending-results__completed-actions"><div className="pending-results__correction-actions"><div><p className="operator-eyebrow">Koreksi / Pemulihan</p><h2>Perlu mengoreksi hasil ini?</h2></div><Button icon={<Icon name="RotateCcw" />} disabled={busy} onClick={() => { setSelected(new Set(confirmed.map((winner) => winner.id))); openDecision('redraw-confirmed') }} variant="danger">Undi ulang pemenang terkonfirmasi</Button></div></Card> : null}

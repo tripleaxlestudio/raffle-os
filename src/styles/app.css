@@ -9,6 +9,7 @@
 @import "./kocokan/dashboard.css";
 @import "./kocokan/preparation.css";
 @import "./kocokan/draw.css";
+@import "./kocokan/pending.css";
 
 @layer base {
   *,

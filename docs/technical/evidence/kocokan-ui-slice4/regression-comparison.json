@@ -1,0 +1,293 @@
+{
+  "focused": {
+    "beforePath": "node_modules/.tmp/kocokan-slice4-preflight-focused.json",
+    "afterPath": "node_modules/.tmp/kocokan-slice4-after-focused.json",
+    "beforeSha256": "026cecc93033bcb468f7a16064f171b7da6fee3c4a69315390fdd276b4f80376",
+    "afterSha256": "043c1d440e6e6e8e7407153df7b7f9e10b7006752e020079832ff323c1b6a161",
+    "before": {
+      "tests": 89,
+      "passed": 67,
+      "failed": 22
+    },
+    "after": {
+      "tests": 99,
+      "passed": 77,
+      "failed": 22
+    },
+    "exactStatusAndSignatureChanges": [],
+    "removed": [],
+    "added": [
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts orders the five existing metrics by approved operational priority without changing values",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps 1 exact ordered ticket rows reachable without pagination",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps 6 exact ordered ticket rows reachable without pagination",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps 10 exact ordered ticket rows reachable without pagination",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps 20 exact ordered ticket rows reachable without pagination",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps 50 exact ordered ticket rows reachable without pagination",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps 100 exact ordered ticket rows reachable without pagination",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps lavender selection state explicit through individual, multi, select-all, focus and clear changes",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps confirmed and cancelled rows visible but ineligible for selection",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts propagates the Kocokan light token boundary into the existing reason-select portal",
+        "status": "passed",
+        "signature": null
+      }
+    ]
+  },
+  "full": {
+    "beforePath": "node_modules/.tmp/kocokan-slice4-preflight-full.json",
+    "afterPath": "node_modules/.tmp/kocokan-slice4-after-full.json",
+    "beforeSha256": "43d436dff2a554b62336b1950c49c012304a5aee77532afdc92f6651326d26f6",
+    "afterSha256": "0e593a5f2390cff934d1ade14d9c7942fe4113d047e5b68af8addd7b2c597c35",
+    "before": {
+      "tests": 1214,
+      "passed": 1074,
+      "failed": 140
+    },
+    "after": {
+      "tests": 1224,
+      "passed": 1084,
+      "failed": 140
+    },
+    "exactStatusAndSignatureChanges": [],
+    "removed": [],
+    "added": [
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts orders the five existing metrics by approved operational priority without changing values",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps 1 exact ordered ticket rows reachable without pagination",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps 6 exact ordered ticket rows reachable without pagination",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps 10 exact ordered ticket rows reachable without pagination",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps 20 exact ordered ticket rows reachable without pagination",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps 50 exact ordered ticket rows reachable without pagination",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps 100 exact ordered ticket rows reachable without pagination",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps lavender selection state explicit through individual, multi, select-all, focus and clear changes",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts keeps confirmed and cancelled rows visible but ineligible for selection",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/KocokanPendingResults.test.tsx::Kocokan Pending Results visual contracts propagates the Kocokan light token boundary into the existing reason-select portal",
+        "status": "passed",
+        "signature": null
+      }
+    ]
+  },
+  "acceptedRegister": {
+    "overall": "FAIL",
+    "unchanged": [
+      "KB-001",
+      "KB-002",
+      "KB-003",
+      "KB-004",
+      "KB-005",
+      "KB-006",
+      "KB-007",
+      "KB-008",
+      "KB-009",
+      "KB-010",
+      "KB-011",
+      "KB-012",
+      "KB-013",
+      "KB-014",
+      "KB-015",
+      "KB-016",
+      "KB-017",
+      "KB-018",
+      "KB-019",
+      "KB-020",
+      "KB-021",
+      "KB-022",
+      "KB-023",
+      "KB-024",
+      "KB-025",
+      "KB-026",
+      "KB-027",
+      "KB-028",
+      "KB-029",
+      "KB-030",
+      "KB-031",
+      "KB-032",
+      "KB-033",
+      "KB-034",
+      "KB-035",
+      "KB-036",
+      "KB-037",
+      "KB-038",
+      "KB-039",
+      "KB-040",
+      "KB-041",
+      "KB-042",
+      "KB-045",
+      "KB-046",
+      "KB-047",
+      "KB-048",
+      "KB-049",
+      "KB-050",
+      "KB-051",
+      "KB-052",
+      "KB-053",
+      "KB-054",
+      "KB-055",
+      "KB-056",
+      "KB-057",
+      "KB-058",
+      "KB-059",
+      "KB-060",
+      "KB-061",
+      "KB-062",
+      "KB-063",
+      "KB-064",
+      "KB-065",
+      "KB-066",
+      "KB-067",
+      "KB-068",
+      "KB-069",
+      "KB-070",
+      "KB-071",
+      "KB-072",
+      "KB-073",
+      "KB-074",
+      "KB-075",
+      "KB-076",
+      "KB-077",
+      "KB-078",
+      "KB-079",
+      "KB-080",
+      "KB-081",
+      "KB-082",
+      "KB-083",
+      "KB-084",
+      "KB-085",
+      "KB-086",
+      "KB-087",
+      "KB-088",
+      "KB-089",
+      "KB-090",
+      "KB-091",
+      "KB-092",
+      "KB-093",
+      "KB-094",
+      "KB-095",
+      "KB-096",
+      "KB-097",
+      "KB-098",
+      "KB-099",
+      "KB-100",
+      "KB-101",
+      "KB-102",
+      "KB-103",
+      "KB-104",
+      "KB-105",
+      "KB-106",
+      "KB-107",
+      "KB-108",
+      "KB-109",
+      "KB-110",
+      "KB-111",
+      "KB-112",
+      "KB-113",
+      "KB-114",
+      "KB-115",
+      "KB-116",
+      "KB-117",
+      "KB-118",
+      "KB-119",
+      "KB-120",
+      "KB-121",
+      "KB-122",
+      "KB-123",
+      "KB-124",
+      "KB-125",
+      "KB-126",
+      "KB-127",
+      "KB-128",
+      "KB-129",
+      "KB-130",
+      "KB-131",
+      "KB-132",
+      "KB-133",
+      "KB-134",
+      "KB-135",
+      "KB-136",
+      "KB-137",
+      "KB-138",
+      "KB-139",
+      "KB-140",
+      "KB-141",
+      "KB-142"
+    ],
+    "changed": [],
+    "newFailures": [],
+    "resolved": [
+      "KB-043",
+      "KB-044"
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 # Kocokan UI Slice 3 — Draw Console
 
 Date: 2026-08-31–2026-09-01. Branch: `redesign/kocokan-ui`.
-Status: **implemented and verified for owner review, not owner accepted**.
+Status: **owner accepted on 2026-09-01; Slice 4 was subsequently authorized**.
 The focused Slice 3 commit containing this report follows accepted Slice 2
 `c6e598ac25653e6d9b4874425d2f39bd9f040ecd`. No push, Slice 4 work, or Phase 11
 reconciliation is included. [Approved scope](KOCOKAN-UI-SLICE-3-PLAN.md).
@@ -159,5 +159,6 @@ audits confirm no business/control-flow changes. Tests were neither deleted nor
 weakened. No new Skip/Pause/Resume action was added; the existing countdown
 `Lewati animasi` action was preserved.
 
-Stop here for owner visual review. Slice 3 is not accepted until the owner says
-so, and Slice 4 is not started. No release-ready or official-Live readiness claim.
+Owner accepted this Slice 3 checkpoint on 2026-09-01 and separately authorized
+Slice 4. This historical acceptance is not a release-ready or official-Live
+readiness claim.

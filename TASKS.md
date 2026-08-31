@@ -788,15 +788,21 @@ Do not renumber phases, broaden domain behavior, or change release gates.
   complete and accepted; no new/changed failures, no Phase 11 reconciliation.
   Focused: 45 pass / 18 unchanged fail. Full: 1,067 pass / 140 unchanged fail.
   See [Slice 2 report](docs/technical/KOCOKAN-UI-SLICE-2.md).
-- [ ] Slice 3 — Draw Console: [approved plan](docs/technical/KOCOKAN-UI-SLICE-3-PLAN.md).
+- [x] Slice 3 — Draw Console: [approved plan](docs/technical/KOCOKAN-UI-SLICE-3-PLAN.md).
   Owner authorized preflight, implementation, verification and one focused
   commit after accepting Slice 2 at `c6e598a`. Light-first Operator surfaces,
   frozen Audience, unchanged baseline failure policy; no Slice 4 or Phase 11 reconciliation.
   Implementation and verification complete for owner review (2026-09-01);
   [Slice 3 report](docs/technical/KOCOKAN-UI-SLICE-3.md). Focused 51 pass /
   58 identical baseline fail; 7 added tests pass. Full 1,074 pass / 140 identical
-  baseline fail, zero new/changed failures. Owner acceptance remains pending.
-- [ ] Slice 4 — Pending Results.
+  baseline fail, zero new/changed failures. Owner accepted Slice 3 and authorized
+  Slice 4 on 2026-09-01; focused commit `93f3785` is the Slice 4 base.
+- [ ] Slice 4 — Pending Results: [approved plan](docs/technical/KOCOKAN-UI-SLICE-4-PLAN.md).
+  Implementation and verification complete for owner review (2026-09-01);
+  [Slice 4 report](docs/technical/KOCOKAN-UI-SLICE-4.md). Focused 77 pass /
+  22 identical baseline fail, including 10 added passing tests. Full 1,084 pass /
+  140 identical baseline fail; zero new/changed failures or regressions. Slice 5
+  remains unauthorized until owner acceptance.
 - [ ] Slice 5 — History.
 - [ ] Slice 6 — Settings & Cross-App States.
 - [ ] Slice 7 — Integrated Visual Acceptance.

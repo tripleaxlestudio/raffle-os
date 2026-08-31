@@ -1,10 +1,11 @@
 # Plan Slice 3 — Draw Console Kocokan
 
-Tanggal: 2026-08-31. Status: **plan approved; eksekusi Slice 3 diizinkan**.
+Tanggal: 2026-08-31. Status: **implemented, verified, and owner accepted on
+2026-09-01**.
 
 Update 2026-09-01: implementasi dan verifikasi selesai untuk review owner;
 lihat [laporan Slice 3](KOCOKAN-UI-SLICE-3.md). Scope di bawah tetap otoritatif.
-Acceptance owner Slice 3 belum diberikan; Slice 4 tidak dimulai.
+Owner accepted Slice 3 and subsequently authorized Slice 4 on 2026-09-01.
 
 Owner menerima checkpoint akhir Slice 2 `c6e598a` pada `redesign/kocokan-ui`,
 termasuk refinement, dan menyetujui gate regresi yang dijelaskan di bawah.

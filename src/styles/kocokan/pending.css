@@ -1,0 +1,975 @@
+/* Slice 4: production Pending Results only. Audience, History and prototypes stay frozen. */
+[data-ui-theme="kocokan"] .pending-results {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+  color: var(--kc-text);
+}
+
+[data-ui-theme="kocokan"] .pending-results--production {
+  padding-bottom: 32px;
+}
+
+/* Landing: retain current states and routes, with compact operational cards. */
+[data-ui-theme="kocokan"] .pending-results__empty-state {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  width: min(100%, 860px);
+  margin-inline: auto;
+  border: 2px solid var(--kc-outline);
+  background: var(--kc-surface);
+  box-shadow: var(--kc-shadow-card);
+}
+
+[data-ui-theme="kocokan"] .pending-results__empty-state-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 2px solid var(--kc-success);
+  border-radius: 12px;
+  background: var(--kc-success-surface);
+  color: var(--kc-success);
+}
+
+[data-ui-theme="kocokan"] .pending-results__empty-state-copy {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__empty-state-copy :is(h2, p),
+[data-ui-theme="kocokan"] .pending-results__landing-card :is(h2, p),
+[data-ui-theme="kocokan"] .pending-results__landing-item :is(h2, p) {
+  margin: 0;
+}
+
+[data-ui-theme="kocokan"] .pending-results__empty-state-copy h2 {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+[data-ui-theme="kocokan"] .pending-results__empty-state-copy p,
+[data-ui-theme="kocokan"] .pending-results__landing-meta,
+[data-ui-theme="kocokan"] .pending-results__landing-supporting,
+[data-ui-theme="kocokan"] .pending-results__landing-item p:not(.operator-eyebrow) {
+  color: var(--kc-text-muted);
+  font-size: 14px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__empty-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__landing-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 24px;
+  border: 2px solid var(--kc-outline);
+  background: var(--kc-surface);
+  box-shadow: var(--kc-shadow-card);
+}
+
+[data-ui-theme="kocokan"] .pending-results__landing-heading {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--kc-divider);
+}
+
+[data-ui-theme="kocokan"] .pending-results__landing-heading .operator-eyebrow,
+[data-ui-theme="kocokan"] .pending-results__landing-item .operator-eyebrow {
+  margin: 0;
+  color: var(--kc-warning);
+}
+
+[data-ui-theme="kocokan"] .pending-results__landing-card h2,
+[data-ui-theme="kocokan"] .pending-results__landing-item h2 {
+  color: var(--kc-text);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+[data-ui-theme="kocokan"] .pending-results__landing-card > .kc-button {
+  grid-column: 2;
+  grid-row: 2 / span 3;
+  justify-self: end;
+}
+
+[data-ui-theme="kocokan"] .pending-results__landing-list {
+  display: grid;
+  gap: 12px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__landing-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  border: 2px solid var(--kc-outline);
+  background: var(--kc-surface);
+  box-shadow: var(--kc-shadow-control);
+}
+
+[data-ui-theme="kocokan"] .pending-results__landing-item > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__landing-item-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* One strip, not five dashboard cards. Priority follows the approved DOM order. */
+[data-ui-theme="kocokan"] .pending-results__summary {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1.35fr) repeat(4, minmax(7.5rem, 1fr));
+  overflow: hidden;
+  border: 2px solid var(--kc-outline);
+  border-radius: var(--kc-radius-card);
+  background: var(--kc-surface);
+  box-shadow: var(--kc-shadow-control);
+}
+
+[data-ui-theme="kocokan"] .pending-results__metric {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 0;
+  border-right: 1px solid var(--kc-divider);
+  background: var(--kc-surface);
+}
+
+[data-ui-theme="kocokan"] .pending-results__metric:last-child {
+  border-right: 0;
+}
+
+[data-ui-theme="kocokan"] .pending-results__metric::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--kc-divider);
+  content: "";
+}
+
+[data-ui-theme="kocokan"] .pending-results__metric span {
+  color: var(--kc-text-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+[data-ui-theme="kocokan"] .pending-results__metric strong {
+  color: var(--kc-text);
+  font: 800 24px/1.1 var(--kc-font-mono);
+}
+
+[data-ui-theme="kocokan"] .pending-results__metric--pending {
+  background: var(--kc-warning-surface);
+}
+
+[data-ui-theme="kocokan"] .pending-results__metric--pending::before {
+  background: var(--kc-warning);
+}
+
+[data-ui-theme="kocokan"] .pending-results__metric--pending strong {
+  color: var(--kc-warning);
+  font-size: 30px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__metric--confirmed::before {
+  background: var(--kc-success);
+}
+
+[data-ui-theme="kocokan"] .pending-results__metric--cancelled::before {
+  background: var(--kc-danger);
+}
+
+[data-ui-theme="kocokan"] .pending-results__metric--replacements::before {
+  background: var(--kc-primary);
+}
+
+[data-ui-theme="kocokan"] .pending-results__metric--total {
+  background: var(--kc-surface-muted);
+}
+
+/* Preserve decision -> context composition, including the right-side panel. */
+[data-ui-theme="kocokan"] .pending-results__workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(18rem, .82fr);
+  align-items: start;
+  gap: 20px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__queue,
+[data-ui-theme="kocokan"] .pending-results__details {
+  min-width: 0;
+  overflow: hidden;
+  border: 2px solid var(--kc-outline);
+  background: var(--kc-surface);
+}
+
+[data-ui-theme="kocokan"] .pending-results__queue {
+  box-shadow: var(--kc-shadow-card);
+}
+
+[data-ui-theme="kocokan"] .pending-results__details {
+  position: static;
+  order: initial;
+  border-color: var(--kc-divider);
+  background: color-mix(in srgb, var(--kc-surface) 72%, var(--kc-page));
+  box-shadow: none;
+}
+
+[data-ui-theme="kocokan"] .pending-results__section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--kc-divider);
+  background: var(--kc-surface);
+}
+
+[data-ui-theme="kocokan"] .pending-results__section-heading :is(h2, p) {
+  margin: 0;
+}
+
+[data-ui-theme="kocokan"] .pending-results__section-heading h2 {
+  margin-top: 3px;
+  color: var(--kc-text);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+[data-ui-theme="kocokan"] .pending-results__section-heading > div > p:last-child {
+  margin-top: 5px;
+  max-width: 42rem;
+  color: var(--kc-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+[data-ui-theme="kocokan"] .pending-results__selection-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--kc-divider);
+  background: var(--kc-page);
+  color: var(--kc-text-muted);
+  font-size: 12px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__selection-status strong {
+  color: var(--kc-warning);
+  font-family: var(--kc-font-mono);
+  font-weight: 800;
+}
+
+[data-ui-theme="kocokan"] .pending-results__winner-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 14px;
+  background: var(--kc-page);
+  list-style: none;
+}
+
+[data-ui-theme="kocokan"] .pending-results__winner-row {
+  min-width: 0;
+}
+
+[data-ui-theme="kocokan"] .pending-results__winner-row label {
+  display: grid;
+  grid-template-columns: 22px 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 2px solid var(--kc-divider);
+  border-radius: var(--kc-radius-control);
+  background: var(--kc-surface);
+  color: var(--kc-text);
+  cursor: pointer;
+  transition: border-color var(--kc-motion), background-color var(--kc-motion), box-shadow var(--kc-motion);
+}
+
+[data-ui-theme="kocokan"] .pending-results__winner-row label:hover:not(:has(input:disabled)) {
+  border-color: var(--kc-primary);
+  background: var(--kc-info-surface);
+}
+
+[data-ui-theme="kocokan"] .pending-results__winner-row label:focus-within {
+  outline: var(--kc-focus-width) solid var(--kc-focus);
+  outline-offset: 2px;
+}
+
+/* Keep selected rules after hover/focus so lavender cannot disappear. */
+[data-ui-theme="kocokan"] .pending-results__winner-row[data-selected="true"] label,
+[data-ui-theme="kocokan"] .pending-results__winner-row[data-selected="true"] label:hover,
+[data-ui-theme="kocokan"] .pending-results__winner-row[data-selected="true"] label:focus-within {
+  border-color: var(--kc-selection-outline);
+  background: var(--kc-selection);
+  box-shadow: inset 4px 0 0 var(--kc-primary);
+}
+
+[data-ui-theme="kocokan"] .pending-results__winner-row input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--kc-primary);
+  cursor: pointer;
+}
+
+[data-ui-theme="kocokan"] .pending-results__winner-row label:has(input:disabled) {
+  border-color: var(--kc-divider);
+  background: var(--kc-disabled-surface);
+  color: var(--kc-disabled-text);
+  cursor: default;
+  opacity: .78;
+}
+
+[data-ui-theme="kocokan"] .pending-results__winner-row input:disabled {
+  cursor: default;
+}
+
+[data-ui-theme="kocokan"] .pending-results__winner-sequence {
+  color: var(--kc-text-muted);
+  font: 750 11px/1.2 var(--kc-font-mono);
+}
+
+[data-ui-theme="kocokan"] .pending-results__winner-ticket {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kc-text);
+  font: 800 17px/1.2 var(--kc-font-mono);
+  letter-spacing: .055em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-ui-theme="kocokan"] .pending-results__winner-row small {
+  grid-column: 3 / -1;
+  color: var(--kc-text-muted);
+  font-size: 11px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--kc-divider);
+  background: var(--kc-surface);
+}
+
+[data-ui-theme="kocokan"] .pending-results__action-bar > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__action-bar > div:first-child strong {
+  font-size: 14px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__action-bar > div:first-child span {
+  color: var(--kc-text-muted);
+  font-size: 12px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__action--confirm:not(:disabled) {
+  border-color: var(--kc-success);
+  background: var(--kc-success);
+  color: var(--kc-on-primary);
+  box-shadow: 2px 2px 0 var(--kc-outline);
+}
+
+[data-ui-theme="kocokan"] .pending-results__action--cancel:not(:disabled) {
+  border-color: var(--kc-danger);
+  background: var(--kc-danger);
+  color: var(--kc-on-danger);
+}
+
+[data-ui-theme="kocokan"] .pending-results__action--redraw:not(:disabled) {
+  border-color: var(--kc-warning);
+  background: var(--kc-warning-surface);
+  color: var(--kc-warning);
+}
+
+[data-ui-theme="kocokan"] .pending-results__details-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin: 0;
+  padding: 6px 20px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__details-list > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--kc-divider);
+}
+
+[data-ui-theme="kocokan"] .pending-results__details-list > div:last-child {
+  border-bottom: 0;
+}
+
+[data-ui-theme="kocokan"] .pending-results__details-list dt,
+[data-ui-theme="kocokan"] .pending-results__capacity span {
+  color: var(--kc-text-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+[data-ui-theme="kocokan"] .pending-results__details-list dd {
+  margin: 0;
+  color: var(--kc-text);
+  font: 700 13px/1.4 var(--kc-font);
+  overflow-wrap: anywhere;
+}
+
+[data-ui-theme="kocokan"] .pending-results__capacity {
+  display: grid;
+  gap: 5px;
+  margin: 6px 14px 14px;
+  padding: 12px;
+  border: 1px solid var(--kc-warning);
+  border-radius: var(--kc-radius-control);
+  background: var(--kc-warning-surface);
+}
+
+[data-ui-theme="kocokan"] .pending-results__capacity span {
+  color: var(--kc-warning);
+}
+
+[data-ui-theme="kocokan"] .pending-results__capacity strong {
+  color: var(--kc-text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+[data-ui-theme="kocokan"] .pending-results__capacity small {
+  color: var(--kc-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* Completed becomes a next-action workspace; correction stays spatially separate. */
+[data-ui-theme="kocokan"] .pending-results__completion-state {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 22px 24px;
+  border: 2px solid var(--kc-success);
+  border-radius: var(--kc-radius-card);
+  background: var(--kc-success-surface);
+  box-shadow: var(--kc-shadow-card);
+}
+
+[data-ui-theme="kocokan"] .pending-results__completion-copy {
+  display: grid;
+  gap: 4px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__completion-copy > span {
+  color: var(--kc-success);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .07em;
+}
+
+[data-ui-theme="kocokan"] .pending-results__completion-copy strong {
+  color: var(--kc-text);
+  font-size: 22px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__completion-copy p {
+  margin: 2px 0 0;
+  color: var(--kc-text-muted);
+  font-size: 14px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__completion-actions {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 10px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__completed-actions {
+  border: 1px solid var(--kc-danger);
+  background: color-mix(in srgb, var(--kc-danger-surface) 56%, var(--kc-surface));
+  box-shadow: none;
+}
+
+[data-ui-theme="kocokan"] .pending-results--completed .pending-results__workspace {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+[data-ui-theme="kocokan"] .pending-results--completed .pending-results__details-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 20px;
+}
+
+[data-ui-theme="kocokan"] .pending-results--completed .pending-results__capacity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+[data-ui-theme="kocokan"] .pending-results--completed .pending-results__capacity small {
+  margin-left: auto;
+}
+
+[data-ui-theme="kocokan"] .pending-results__correction-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__correction-actions :is(h2, p) {
+  margin: 0;
+}
+
+[data-ui-theme="kocokan"] .pending-results__correction-actions h2 {
+  margin-top: 3px;
+  color: var(--kc-text);
+  font-size: 14px;
+}
+
+/* Audit remains explicitly secondary and collapsible. */
+[data-ui-theme="kocokan"] .pending-results__audit {
+  overflow: hidden;
+  border: 1px solid var(--kc-divider);
+  border-radius: var(--kc-radius-card);
+  background: var(--kc-surface-muted);
+  color: var(--kc-text);
+  box-shadow: none;
+}
+
+[data-ui-theme="kocokan"] .pending-results__audit summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  color: var(--kc-text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  list-style: none;
+}
+
+[data-ui-theme="kocokan"] .pending-results__audit summary::-webkit-details-marker {
+  display: none;
+}
+
+[data-ui-theme="kocokan"] .pending-results__audit summary::after {
+  color: var(--kc-primary);
+  content: "+";
+  font: 800 18px/1 var(--kc-font-mono);
+}
+
+[data-ui-theme="kocokan"] .pending-results__audit[open] summary::after {
+  content: "−";
+}
+
+[data-ui-theme="kocokan"] .pending-results__audit summary span {
+  margin-left: auto;
+  color: var(--kc-text-muted);
+  font: 600 11px var(--kc-font-mono);
+}
+
+[data-ui-theme="kocokan"] .pending-results__audit > div {
+  padding: 0 16px 14px;
+  border-top: 1px solid var(--kc-divider);
+  background: var(--kc-surface);
+}
+
+[data-ui-theme="kocokan"] .pending-results__audit ol {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  padding-left: 22px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__audit li,
+[data-ui-theme="kocokan"] .pending-results__audit p {
+  color: var(--kc-text-muted);
+  font-size: 12px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__audit code {
+  color: var(--kc-text);
+  font-family: var(--kc-font-mono);
+  font-weight: 750;
+}
+
+[data-ui-theme="kocokan"] .pending-results__navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+[data-ui-theme="kocokan"] .pending-results__navigation a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--kc-text-muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+[data-ui-theme="kocokan"] .pending-results__navigation a:hover,
+[data-ui-theme="kocokan"] .pending-results__navigation a:focus-visible {
+  color: var(--kc-primary);
+}
+
+/* Decision forms and the body-portal reason select stay light-first. */
+.kc-modal .pending-results__decision-content,
+.kc-modal .pending-results__decision-form,
+.kc-modal .pending-results__cancel-body {
+  display: grid;
+  gap: 16px;
+}
+
+.kc-modal .pending-results__decision-consequence p,
+.kc-modal .pending-results__cancel-consequence {
+  margin: 0;
+  color: var(--kc-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.kc-modal .pending-results__cancel-context {
+  color: var(--kc-text);
+  font-size: 16px;
+}
+
+.kc-modal .pending-results__reason-field,
+.kc-modal .pending-results__decision-form .ui-field,
+.kc-modal .pending-results__cancel-body .ui-field {
+  display: grid;
+  gap: 7px;
+  color: var(--kc-text);
+}
+
+.kc-modal .pending-results__reason-field .ui-field__label,
+.kc-modal .pending-results__decision-form .ui-field__label,
+.kc-modal .pending-results__cancel-body .ui-field__label {
+  color: var(--kc-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.kc-modal .pending-results__note,
+.kc-modal .pending-results__cancel-note {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  border: 2px solid var(--kc-outline);
+  border-radius: var(--kc-radius-control);
+  background: var(--kc-surface);
+  color: var(--kc-text);
+  font: 500 14px/1.45 var(--kc-font);
+  resize: vertical;
+}
+
+.kc-modal .pending-results__note:focus-visible,
+.kc-modal .pending-results__cancel-note:focus-visible {
+  border-color: var(--kc-primary);
+  outline: var(--kc-focus-width) solid var(--kc-focus);
+  outline-offset: var(--kc-focus-offset);
+}
+
+.raffle-reason-select__menu[data-ui-theme="kocokan"] {
+  color-scheme: light;
+}
+
+.raffle-reason-select__menu[data-ui-theme="kocokan"] .raffle-reason-select__option--is-focused:not(.raffle-reason-select__option--is-selected) {
+  box-shadow: inset 4px 0 0 var(--kc-primary);
+}
+
+/* Slice 4-owned quick-redraw selection. Other Draw Console chrome is untouched. */
+.kc-production-redraw-selection-dialog {
+  display: grid;
+  gap: 14px;
+}
+
+.kc-production-redraw-selection-dialog__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--kc-divider);
+  border-radius: var(--kc-radius-control);
+  background: var(--kc-page);
+}
+
+.kc-production-redraw-selection-dialog__toolbar p {
+  margin: 0;
+  color: var(--kc-text-muted);
+  font-size: 13px;
+}
+
+.kc-production-redraw-selection-dialog__toolbar p strong {
+  color: var(--kc-primary);
+  font-family: var(--kc-font-mono);
+  font-size: 16px;
+}
+
+.kc-production-redraw-selection-dialog__toolbar > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kc-production-redraw-selection-dialog__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 8px;
+  min-width: 0;
+  max-height: min(52vh, 30rem);
+  overflow: auto;
+  margin: 0;
+  padding: 2px;
+  border: 0;
+  scrollbar-color: var(--kc-divider) transparent;
+}
+
+.kc-production-redraw-selection-dialog__option {
+  display: grid;
+  grid-template-columns: 20px 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 2px solid var(--kc-divider);
+  border-radius: var(--kc-radius-control);
+  background: var(--kc-surface);
+  color: var(--kc-text);
+  cursor: pointer;
+}
+
+.kc-production-redraw-selection-dialog__option:hover {
+  border-color: var(--kc-primary);
+  background: var(--kc-info-surface);
+}
+
+.kc-production-redraw-selection-dialog__option:focus-within {
+  outline: var(--kc-focus-width) solid var(--kc-focus);
+  outline-offset: 2px;
+}
+
+.kc-production-redraw-selection-dialog__option[data-selected="true"],
+.kc-production-redraw-selection-dialog__option[data-selected="true"]:hover,
+.kc-production-redraw-selection-dialog__option[data-selected="true"]:focus-within {
+  border-color: var(--kc-selection-outline);
+  background: var(--kc-selection);
+  box-shadow: inset 4px 0 0 var(--kc-primary);
+}
+
+.kc-production-redraw-selection-dialog__option input {
+  width: 19px;
+  height: 19px;
+  margin: 0;
+  accent-color: var(--kc-primary);
+}
+
+.kc-production-redraw-selection-dialog__position {
+  color: var(--kc-text-muted);
+  font: 750 11px var(--kc-font-mono);
+}
+
+.kc-production-redraw-selection-dialog__ticket {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kc-text);
+  font: 800 16px var(--kc-font-mono);
+  letter-spacing: .05em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kc-production-redraw-selection-dialog__state {
+  color: var(--kc-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.kc-production-redraw-selection-dialog__option[data-selected="true"] .kc-production-redraw-selection-dialog__state {
+  color: var(--kc-primary);
+}
+
+@media (max-width: 90rem) {
+  [data-ui-theme="kocokan"] .pending-results__workspace {
+    grid-template-columns: minmax(0, 1.65fr) minmax(17rem, .8fr);
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__action-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__actions {
+    justify-content: stretch;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__actions .kc-button {
+    flex: 1 1 9rem;
+  }
+}
+
+@media (max-width: 72rem) {
+  [data-ui-theme="kocokan"] .pending-results__summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__metric:nth-child(3) {
+    border-right: 0;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__metric:nth-child(n + 4) {
+    border-top: 1px solid var(--kc-divider);
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__details {
+    order: initial;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__details-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0 16px;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__capacity {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 48rem) {
+  [data-ui-theme="kocokan"] .pending-results__empty-state,
+  [data-ui-theme="kocokan"] .pending-results__landing-card,
+  [data-ui-theme="kocokan"] .pending-results__landing-item,
+  [data-ui-theme="kocokan"] .pending-results__completion-state {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__empty-state-actions,
+  [data-ui-theme="kocokan"] .pending-results__landing-item-action {
+    justify-content: stretch;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__empty-state-actions .kc-button,
+  [data-ui-theme="kocokan"] .pending-results__landing-item-action .kc-button,
+  [data-ui-theme="kocokan"] .pending-results__landing-card > .kc-button {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__metric,
+  [data-ui-theme="kocokan"] .pending-results__metric:nth-child(3) {
+    border-right: 1px solid var(--kc-divider);
+    border-top: 1px solid var(--kc-divider);
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__metric:nth-child(-n + 2) {
+    border-top: 0;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__metric:nth-child(even) {
+    border-right: 0;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__metric--total {
+    grid-column: 1 / -1;
+    border-right: 0;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__section-heading,
+  [data-ui-theme="kocokan"] .pending-results__action-bar,
+  [data-ui-theme="kocokan"] .pending-results__correction-actions,
+  .kc-production-redraw-selection-dialog__toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__section-heading .kc-button,
+  [data-ui-theme="kocokan"] .pending-results__actions .kc-button,
+  [data-ui-theme="kocokan"] .pending-results__correction-actions .kc-button {
+    width: 100%;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__details-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  [data-ui-theme="kocokan"] .pending-results--completed .pending-results__details-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  [data-ui-theme="kocokan"] .pending-results--completed .pending-results__capacity {
+    display: grid;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results--completed .pending-results__capacity small {
+    margin-left: 0;
+  }
+
+  [data-ui-theme="kocokan"] .pending-results__completion-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-ui-theme="kocokan"] .pending-results__winner-row label {
+    transition: none;
+  }
+}

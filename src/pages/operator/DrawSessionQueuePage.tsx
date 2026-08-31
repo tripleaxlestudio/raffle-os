@@ -1,3 +1,4 @@
+import { useUiClass } from '../../shared/ui/ui-theme.ts'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, ButtonLink, Card, Icon } from '../../shared/ui/index.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
@@ -23,6 +24,7 @@ function formatAcknowledgedAt(value: string | undefined): string {
 }
 
 export function DrawSessionQueuePage() {
+  const uiClass = useUiClass()
   const workspace = useProductionWorkspace()
   const audience = useProductionAudiencePublisher()
   const services = useMemo(() => createDrawSetupProductionServices(), [])
@@ -54,14 +56,14 @@ export function DrawSessionQueuePage() {
   const displayUrl = workspace.displayConfiguration === null ? null : audienceUrl(workspace.event.id, workspace.displayConfiguration.id)
   const connection = presentAudienceConnection(audienceStatus, audience.getDiagnostics())
   const hasPersistedSessions = state.queue.items.length > 0
-  return <section aria-labelledby="draw-queue-title" className="draw-live-queue">
+  return <section aria-labelledby="draw-queue-title" className={uiClass("draw-live-queue")}>
     <PageHeader eyebrow="OPERASI LIVE" headingId="draw-queue-title" title="Undian" description="Jalankan sesi undian siap untuk Acara yang dipilih." />
     {decks.length === 0 ? (
-      <Card className="draw-live-queue__empty-state" padding="lg" tone="raised">
-        <div className="draw-live-queue__empty-icon" aria-hidden="true">
+      <Card className={uiClass("draw-live-queue__empty-state")} padding="lg" tone="raised">
+        <div className={uiClass("draw-live-queue__empty-icon")} aria-hidden="true">
           <Icon name="Radio" size={28} />
         </div>
-        <div className="draw-live-queue__empty-copy">
+        <div className={uiClass("draw-live-queue__empty-copy")}>
           <h2>{hasPersistedSessions ? 'Tidak ada Undian aktif' : 'Belum ada sesi undian'}</h2>
           <p>
             {hasPersistedSessions
@@ -69,7 +71,7 @@ export function DrawSessionQueuePage() {
               : 'Buat konfigurasi di Pengaturan Undian; sesi tersimpan akan langsung muncul di sini.'}
           </p>
         </div>
-        <div className="draw-live-queue__empty-actions">
+        <div className={uiClass("draw-live-queue__empty-actions")}>
           <ButtonLink to="/draw/setup" variant="primary">
             {hasPersistedSessions ? 'Mulai Undian Berikutnya' : 'Buat Sesi Undian'}
           </ButtonLink>
@@ -81,7 +83,7 @@ export function DrawSessionQueuePage() {
         </div>
       </Card>
     ) : (
-      <div className="draw-control-decks" aria-label="Panel kontrol undian">
+      <div className={uiClass("draw-control-decks")} aria-label="Panel kontrol undian">
         {decks.map((deck) => (
           <DrawControlDeck
             connection={connection}
@@ -100,6 +102,7 @@ export function DrawSessionQueuePage() {
 }
 
 export function DrawControlDeck({ connection, deck, displayUrl, selectedMode, setSelectedMode }: { readonly connection: ReturnType<typeof presentAudienceConnection>; readonly deck: DrawSessionQueueDeck; readonly displayUrl: string | null; readonly selectedMode: 'practice' | 'live'; readonly setSelectedMode: (mode: 'practice' | 'live') => void }) {
+  const uiClass = useUiClass()
   const selected = deck.sessions[selectedMode]
   const selectedPresentation = selected === undefined ? null : presentDrawSessionQueueItem(selected)
   const selectedAction = selected?.action ?? null
@@ -112,28 +115,28 @@ export function DrawControlDeck({ connection, deck, displayUrl, selectedMode, se
   const liveSelected = selectedMode === 'live'
   const unavailableReason = selectedMode === 'live' ? 'Tidak ada sesi Live tersimpan untuk undian ini.' : 'Tidak ada sesi Latihan tersimpan untuk undian ini.'
   const audienceWarning = liveSelected && connection.label !== 'Terhubung' ? <StatusBanner badge="Perhatian Tampilan Audiens" title="Konfirmasi Tampilan Audiens belum diterima" tone="warning">{connection.detail} Pastikan tampilan publik siap sebelum memulai undian Live resmi.</StatusBanner> : null
-  return <Card className={`draw-control-deck draw-control-deck--${liveSelected ? 'live' : 'practice'}`} padding="none" tone="raised">
-    <div className="draw-control-deck__header">
-      <div className="draw-control-deck__mode">
-        <div className="draw-control-deck__mode-heading"><span>Mode operasi</span></div>
-        <p className="draw-control-deck__mode-description">{selected === undefined ? unavailableReason : liveSelected ? 'Proses resmi — dapat membuat hasil resmi setelah konfirmasi.' : 'Proses latihan — hasil tidak disimpan sebagai hasil resmi.'}</p>
+  return <Card className={uiClass(`draw-control-deck draw-control-deck--${liveSelected ? 'live' : 'practice'}`)} padding="none" tone="raised">
+    <div className={uiClass("draw-control-deck__header")}>
+      <div className={uiClass("draw-control-deck__mode")}>
+        <div className={uiClass("draw-control-deck__mode-heading")}><span>Mode operasi</span></div>
+        <p className={uiClass("draw-control-deck__mode-description")}>{selected === undefined ? unavailableReason : liveSelected ? 'Proses resmi — dapat membuat hasil resmi setelah konfirmasi.' : 'Proses latihan — hasil tidak disimpan sebagai hasil resmi.'}</p>
       </div>
-      <div className="draw-mode-selector" role="group" aria-label={`Mode ${deck.categoryName}`}><button type="button" aria-pressed={!liveSelected} className={!liveSelected ? 'is-selected' : undefined} disabled={deck.sessions.practice === undefined} onClick={() => setSelectedMode('practice')}>Latihan</button><button type="button" aria-pressed={liveSelected} className={liveSelected ? 'is-selected' : undefined} disabled={deck.sessions.live === undefined} onClick={() => setSelectedMode('live')}>Live</button></div>
+      <div className={uiClass("draw-mode-selector")} role="group" aria-label={`Mode ${deck.categoryName}`}><button type="button" aria-pressed={!liveSelected} className={!liveSelected ? 'is-selected' : undefined} disabled={deck.sessions.practice === undefined} onClick={() => setSelectedMode('practice')}>Latihan</button><button type="button" aria-pressed={liveSelected} className={liveSelected ? 'is-selected' : undefined} disabled={deck.sessions.live === undefined} onClick={() => setSelectedMode('live')}>Live</button></div>
     </div>
-    <div className="draw-control-deck__body">
-      <div className="draw-control-deck__summary"><div><span>Acara</span><strong>{deck.eventName}</strong></div><div><span>Undian / hadiah</span><strong>{deck.categoryName}<small>{deck.prizeName}</small></strong></div><div><span>Pemenang</span><strong>{deck.winnerCount}</strong></div><div><span>Kesiapan</span><strong>{selectedPresentation?.checkpointLabel ?? unavailableReason}</strong></div></div>
+    <div className={uiClass("draw-control-deck__body")}>
+      <div className={uiClass("draw-control-deck__summary")}><div><span>Acara</span><strong>{deck.eventName}</strong></div><div><span>Undian / hadiah</span><strong>{deck.categoryName}<small>{deck.prizeName}</small></strong></div><div><span>Pemenang</span><strong>{deck.winnerCount}</strong></div><div><span>Kesiapan</span><strong>{selectedPresentation?.checkpointLabel ?? unavailableReason}</strong></div></div>
       {selectedPresentation?.relationLabel === null || selectedPresentation === null ? null : <StatusBanner badge="Diblokir" title={selectedPresentation.relationLabel} tone="warning">Sesi tersimpan tetap terlihat, tetapi tindakan tidak tersedia sampai relasi produksinya tersedia.</StatusBanner>}
       {selected === undefined ? <StatusBanner badge="Tidak tersedia" title={`Mode ${selectedMode === 'live' ? 'Live' : 'Latihan'} tidak tersedia`} tone="info">{unavailableReason}</StatusBanner> : null}
-      <div className="draw-control-deck__audience"><div className="draw-control-deck__audience-heading"><div><span>Tampilan Audiens</span><strong><span aria-hidden="true" className={`draw-control-deck__connection-dot draw-control-deck__connection-dot--${connection.tone}`} />{connection.label}</strong><p>{connection.acknowledged ? formatAcknowledgedAt(connection.acknowledgedAt) : connection.detail}</p></div></div><div className="draw-control-deck__audience-actions">{displayUrl === null ? <Button disabled icon={<Icon name="ExternalLink" />} iconAfter variant="secondary">Buka Tampilan Audiens</Button> : <AudienceDisplayButton displayUrl={displayUrl} variant="secondary" />}</div></div>
+      <div className={uiClass("draw-control-deck__audience")}><div className={uiClass("draw-control-deck__audience-heading")}><div><span>Tampilan Audiens</span><strong><span aria-hidden="true" className={uiClass(`draw-control-deck__connection-dot draw-control-deck__connection-dot--${connection.tone}`)} />{connection.label}</strong><p>{connection.acknowledged ? formatAcknowledgedAt(connection.acknowledgedAt) : connection.detail}</p></div></div><div className={uiClass("draw-control-deck__audience-actions")}>{displayUrl === null ? <Button disabled icon={<Icon name="ExternalLink" />} iconAfter variant="secondary">Buka Tampilan Audiens</Button> : <AudienceDisplayButton displayUrl={displayUrl} variant="secondary" />}</div></div>
       {audienceWarning}
-      <div className="draw-control-deck__actions">
-        <section className="draw-control-deck__action-panel draw-control-deck__action-panel--practice" aria-labelledby={`practice-action-${deck.key}`}>
-          <div><span className="operator-eyebrow">{liveSelected ? 'UNDIAN LIVE' : 'LATIHAN'}</span><h3 id={`practice-action-${deck.key}`}>{liveSelected ? 'Siap dimulai' : 'Siap untuk latihan'}</h3></div>
-          <div className="draw-control-deck__action-panel-button">{canAct ? <ButtonLink icon={selectedActionIcon} size="lg" variant={liveSelected ? 'danger' : 'primary'} to={selectedAction.to}>{liveSelected && selectedAction.kind === 'run' ? 'Mulai Undian' : selectedPresentation?.actionLabel}</ButtonLink> : null}{selectedAction !== null && selectedPresentation?.historical ? <ButtonLink to={`/history/${selected?.session.id}`} variant="quiet">Lihat detail sesi</ButtonLink> : null}</div>
+      <div className={uiClass("draw-control-deck__actions")}>
+        <section className={uiClass("draw-control-deck__action-panel draw-control-deck__action-panel--practice")} aria-labelledby={`practice-action-${deck.key}`}>
+          <div><span className={uiClass("operator-eyebrow")}>{liveSelected ? 'UNDIAN LIVE' : 'LATIHAN'}</span><h3 id={`practice-action-${deck.key}`}>{liveSelected ? 'Siap dimulai' : 'Siap untuk latihan'}</h3></div>
+          <div className={uiClass("draw-control-deck__action-panel-button")}>{canAct ? <ButtonLink icon={selectedActionIcon} size="lg" variant={liveSelected ? 'danger' : 'primary'} to={selectedAction.to}>{liveSelected && selectedAction.kind === 'run' ? 'Mulai Undian' : selectedPresentation?.actionLabel}</ButtonLink> : null}{selectedAction !== null && selectedPresentation?.historical ? <ButtonLink to={`/history/${selected?.session.id}`} variant="quiet">Lihat detail sesi</ButtonLink> : null}</div>
         </section>
-        <section className={`draw-control-deck__action-panel draw-control-deck__action-panel--official${liveSelected ? '' : ' draw-control-deck__action-panel--inactive'}`} aria-labelledby={`live-guidance-${deck.key}`}>
-          <div><span className="operator-eyebrow">LIVE RESMI</span><h3 id={`live-guidance-${deck.key}`}>{liveSelected ? 'Mode Live aktif' : 'Mode Live tidak aktif'}</h3></div>
-          <div className="draw-control-deck__action-panel-button"><ButtonLink className={!liveSelected ? 'draw-control-deck__live-setup-action' : undefined} size="lg" to="/draw/setup" variant="secondary">Buka Pengaturan Undian</ButtonLink></div>
+        <section className={uiClass(`draw-control-deck__action-panel draw-control-deck__action-panel--official${liveSelected ? '' : ' draw-control-deck__action-panel--inactive'}`)} aria-labelledby={`live-guidance-${deck.key}`}>
+          <div><span className={uiClass("operator-eyebrow")}>LIVE RESMI</span><h3 id={`live-guidance-${deck.key}`}>{liveSelected ? 'Mode Live aktif' : 'Mode Live tidak aktif'}</h3></div>
+          <div className={uiClass("draw-control-deck__action-panel-button")}><ButtonLink className={!liveSelected ? uiClass('draw-control-deck__live-setup-action') : undefined} size="lg" to="/draw/setup" variant="secondary">Buka Pengaturan Undian</ButtonLink></div>
         </section>
       </div>
     </div>

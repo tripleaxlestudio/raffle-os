@@ -1,3 +1,4 @@
+import { useUiClass } from '../../../shared/ui/ui-theme.ts'
 import { useRef } from 'react'
 import { Badge, Button, Modal } from '../../../shared/ui/index.ts'
 
@@ -8,6 +9,7 @@ interface PresentationRecoveryDialogProps {
 }
 
 export function PresentationRecoveryDialog({ onBackToSetup, onReviewPendingResults, reviewPendingResultsAvailable = false }: PresentationRecoveryDialogProps) {
+  const uiClass = useUiClass()
   const backButtonRef = useRef<HTMLButtonElement>(null)
   const reviewButtonRef = useRef<HTMLButtonElement>(null)
   const initialFocusRef = reviewPendingResultsAvailable ? reviewButtonRef : backButtonRef
@@ -32,13 +34,13 @@ export function PresentationRecoveryDialog({ onBackToSetup, onReviewPendingResul
       showCloseButton={false}
       title="Hasil pemenang tersimpan dengan aman"
     >
-      <div className="production-recovery-dialog__content">
-        <div className="production-recovery-dialog__safe-state">
+      <div className={uiClass("production-recovery-dialog__content")}>
+        <div className={uiClass("production-recovery-dialog__safe-state")}>
           <Badge variant="warning">STATUS AMAN</Badge>
-          <p className="production-recovery-dialog__explanation">
+          <p className={uiClass("production-recovery-dialog__explanation")}>
             Pemenang yang dipilih telah dicatat dengan aman.
           </p>
-          <p className="production-recovery-dialog__preservation">
+          <p className={uiClass("production-recovery-dialog__preservation")}>
             Lanjutkan peninjauan untuk mengonfirmasi hasil atau mengundi pengganti bila diperlukan.
           </p>
         </div>

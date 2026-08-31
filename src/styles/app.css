@@ -8,6 +8,7 @@
 @import "./kocokan/shell.css";
 @import "./kocokan/dashboard.css";
 @import "./kocokan/preparation.css";
+@import "./kocokan/draw.css";
 
 @layer base {
   *,

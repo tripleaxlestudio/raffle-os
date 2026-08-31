@@ -2,11 +2,20 @@
 
 Date: 2026-08-31. Branch: `redesign/kocokan-ui`.
 
-Status: implemented for owner review under the revised regression gate.
+Status: **owner accepted final checkpoint `c6e598ac25653e6d9b4874425d2f39bd9f040ecd`
+on branch `redesign/kocokan-ui`**, including the completed compact-upload and
+pagination-chevron refinements. Acceptance explicitly received on 2026-08-31.
+The implementation/review evidence below is historical; outstanding release,
+Chrome/Edge and assistive-technology gates and baseline FAIL debt remain open.
+The owner separately approved Slice 3 execution, light-first guard and unchanged
+baseline regression policy; Slice 4 and Phase 11 reconciliation are not authorized.
+
+Historical implementation status: implemented for owner review under the revised regression gate.
 The owner explicitly authorized proceeding with unchanged baseline failures,
 without Phase 11 reconciliation. The preflight below is retained as historical
 evidence; its former stop decision is superseded by that authorization.
-Slice 3 has not started and is not authorized.
+At that historical checkpoint Slice 3 had not started; the latest owner decision
+above supersedes the earlier execution restriction.
 
 ## Preservation checkpoint
 
@@ -207,4 +216,6 @@ Verification: lint and build pass (existing bundle-size warning remains);
 passes. No assertions or behavior changed. The broader baseline comparison
 above belongs to the completed Slice 2 run and was not rerun for this CSS-only
 refinement. No new passing tests are claimed; known baseline debt remains FAIL.
-Slice 3 remains unstarted and owner visual acceptance is still pending.
+At the refinement checkpoint Slice 3 remained unstarted and owner visual
+acceptance was pending. The owner subsequently accepted **all of Slice 2,
+including these refinements**, at `c6e598a`; see the acceptance record above.

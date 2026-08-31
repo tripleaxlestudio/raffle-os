@@ -1,0 +1,44 @@
+{
+  "baseline": "c6e598ac25653e6d9b4874425d2f39bd9f040ecd",
+  "method": "Whole TSX AST equality excluding className attributes and useUiClass import/local declarations only. All other code, JSX props, keys, text, handlers, effects and dependencies compared.",
+  "results": [
+    {
+      "path": "src/pages/operator/DrawSetupPage.tsx",
+      "before": "eac7b3637ff8c7da02072f717f41f0a8d9dfff4d85c96a4c9b710748ffd507da",
+      "after": "eac7b3637ff8c7da02072f717f41f0a8d9dfff4d85c96a4c9b710748ffd507da",
+      "unchanged": true
+    },
+    {
+      "path": "src/pages/operator/DrawSessionQueuePage.tsx",
+      "before": "63228d4bef257af3dd873fa5c655efc65756fbdb983a70f2c9fae23bf7dedcce",
+      "after": "63228d4bef257af3dd873fa5c655efc65756fbdb983a70f2c9fae23bf7dedcce",
+      "unchanged": true
+    },
+    {
+      "path": "src/pages/operator/DrawRunPage.tsx",
+      "before": "5db98a7d4817ba6006c587edf11b34d0ffaf013b6180e08377e80dc1f11ad7c0",
+      "after": "5db98a7d4817ba6006c587edf11b34d0ffaf013b6180e08377e80dc1f11ad7c0",
+      "unchanged": true
+    },
+    {
+      "path": "src/ui/operator/draw/DrawPresentationSettings.tsx",
+      "before": "36239a098342b1d41b71a99465e53479e03000c979cb4e5b62c7ec6f09eff303",
+      "after": "36239a098342b1d41b71a99465e53479e03000c979cb4e5b62c7ec6f09eff303",
+      "unchanged": true
+    },
+    {
+      "path": "src/ui/operator/draw/ProductionDrawPresentation.tsx",
+      "before": "3e4f00faf3002b9ee357f40f5042e6b95c4d2d5c981a93cde180c8ec06e825fd",
+      "after": "3e4f00faf3002b9ee357f40f5042e6b95c4d2d5c981a93cde180c8ec06e825fd",
+      "unchanged": true
+    },
+    {
+      "path": "src/ui/operator/draw/PresentationRecoveryDialog.tsx",
+      "before": "012528fce237c3df135916c20956e4b670335fa6d48b9d29981fa017fd131159",
+      "after": "012528fce237c3df135916c20956e4b670335fa6d48b9d29981fa017fd131159",
+      "unchanged": true
+    }
+  ],
+  "frozenChanges": "",
+  "existingTestChanges": ""
+}

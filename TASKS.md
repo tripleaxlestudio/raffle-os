@@ -780,13 +780,22 @@ Do not renumber phases, broaden domain behavior, or change release gates.
   recorded in the [refinement report](docs/technical/KOCOKAN-UI-SLICE-1-REFINEMENT.md).
   Separate execution approval received
   after Slice 0 acceptance. Full-suite baseline debt is not waived.
-- [ ] Slice 2 — Dashboard & Event Preparation: execution authorized on
+- [x] Slice 2 — Dashboard & Event Preparation: owner accepted final checkpoint
+  `c6e598a` on `redesign/kocokan-ui`, including compact-upload and chevron
+  refinements (2026-08-31). Historical execution authorized on
   2026-08-31; owner accepted the 18 unchanged preflight failures as pre-existing
   debt under the revised regression gate. Implementation and verification
-  complete for owner review; no new/changed failures, no Phase 11 reconciliation.
+  complete and accepted; no new/changed failures, no Phase 11 reconciliation.
   Focused: 45 pass / 18 unchanged fail. Full: 1,067 pass / 140 unchanged fail.
-  See [Slice 2 report](docs/technical/KOCOKAN-UI-SLICE-2.md). Slice 3 not started.
-- [ ] Slice 3 — Draw Console.
+  See [Slice 2 report](docs/technical/KOCOKAN-UI-SLICE-2.md).
+- [ ] Slice 3 — Draw Console: [approved plan](docs/technical/KOCOKAN-UI-SLICE-3-PLAN.md).
+  Owner authorized preflight, implementation, verification and one focused
+  commit after accepting Slice 2 at `c6e598a`. Light-first Operator surfaces,
+  frozen Audience, unchanged baseline failure policy; no Slice 4 or Phase 11 reconciliation.
+  Implementation and verification complete for owner review (2026-09-01);
+  [Slice 3 report](docs/technical/KOCOKAN-UI-SLICE-3.md). Focused 51 pass /
+  58 identical baseline fail; 7 added tests pass. Full 1,074 pass / 140 identical
+  baseline fail, zero new/changed failures. Owner acceptance remains pending.
 - [ ] Slice 4 — Pending Results.
 - [ ] Slice 5 — History.
 - [ ] Slice 6 — Settings & Cross-App States.

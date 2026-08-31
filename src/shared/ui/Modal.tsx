@@ -1,3 +1,4 @@
+import { useUiClass, useUiTheme } from './ui-theme.ts'
 import {
   useEffect,
   useId,
@@ -48,6 +49,8 @@ export function Modal({
   headerIcon,
   headerIconTone,
 }: ModalProps) {
+  const ui = useUiClass()
+  const theme = useUiTheme()
   const titleId = useId()
   const descriptionId = useId()
   const layerRef = useRef<HTMLDivElement>(null)
@@ -135,28 +138,29 @@ export function Modal({
     return null
   }
 
-  const inferredHeader = inferHeaderSemantic(eyebrow, title)
-  const resolvedHeaderIcon = headerIcon ?? inferredHeader?.icon
+  const inferredHeader = theme === 'legacy' ? inferHeaderSemantic(eyebrow, title) : null
+  const resolvedHeaderIcon = headerIcon ?? inferredHeader?.icon ?? (theme === 'kocokan' && headerIconTone !== undefined ? <Icon name={headerIconTone === 'danger' || headerIconTone === 'warning' ? 'TriangleAlert' : headerIconTone === 'success' ? 'CircleCheck' : 'CircleAlert'} /> : undefined)
   const resolvedHeaderTone = headerIconTone ?? inferredHeader?.tone ?? 'warning'
 
   return createPortal(
-    <div className="ui-modal-layer" data-interface="operator" ref={layerRef}>
-      <div aria-hidden="true" className="ui-modal-backdrop" />
+    <div className={ui("ui-modal-layer")} data-interface="operator"
+      data-ui-theme={theme === 'kocokan' ? theme : undefined} ref={layerRef}>
+      <div aria-hidden="true" className={ui("ui-modal-backdrop")} />
       <div
         aria-describedby={description === undefined ? undefined : descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="ui-modal ui-modal--production-surface"
+        className={ui("ui-modal ui-modal--production-surface")}
         onKeyDown={handleKeyDown}
         ref={dialogRef}
         role="dialog"
         tabIndex={-1}
       >
-        <header className="ui-modal__header">
-          <div className="ui-modal__title-group">
-            {resolvedHeaderIcon === undefined ? null : <span aria-hidden="true" className={`ui-modal__semantic-icon ui-modal__semantic-icon--${resolvedHeaderTone}`}>{resolvedHeaderIcon}</span>}
+        <header className={ui("ui-modal__header")}>
+          <div className={ui("ui-modal__title-group")}>
+            {resolvedHeaderIcon === undefined ? null : <span aria-hidden="true" className={ui(`ui-modal__semantic-icon ui-modal__semantic-icon--${resolvedHeaderTone}`)}>{resolvedHeaderIcon}</span>}
             <div>
-              <p className="ui-modal__eyebrow">{eyebrow}</p>
+              <p className={ui("ui-modal__eyebrow")}>{eyebrow}</p>
               <h2 id={titleId}>{title}</h2>
             </div>
           </div>
@@ -173,13 +177,13 @@ export function Modal({
           ) : null}
         </header>
         {description === undefined ? null : (
-          <p className="ui-modal__description" id={descriptionId}>
+          <p className={ui("ui-modal__description")} id={descriptionId}>
             {description}
           </p>
         )}
-        <div className="ui-modal__body">{children}</div>
+        <div className={ui("ui-modal__body")}>{children}</div>
         {footer === undefined ? null : (
-          <footer className="ui-modal__footer">{footer}</footer>
+          <footer className={ui("ui-modal__footer")}>{footer}</footer>
         )}
       </div>
     </div>,

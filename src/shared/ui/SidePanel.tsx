@@ -1,3 +1,4 @@
+import { useUiClass, useUiTheme } from './ui-theme.ts'
 import {
   useEffect,
   useId,
@@ -35,6 +36,8 @@ export function SidePanel({
   open,
   title,
 }: SidePanelProps) {
+  const ui = useUiClass()
+  const theme = useUiTheme()
   const titleId = useId()
   const descriptionId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
@@ -115,14 +118,15 @@ export function SidePanel({
 
   return createPortal(
     <div
-      className="ui-side-panel-layer"
+      className={ui("ui-side-panel-layer")}
       data-interface="operator"
+      data-ui-theme={theme === 'kocokan' ? theme : undefined}
       data-layer="drawer-root"
     >
       <button
         aria-hidden="true"
         aria-label="Close redraw panel"
-        className="ui-side-panel-backdrop"
+        className={ui("ui-side-panel-backdrop")}
         data-layer="drawer-backdrop"
         onClick={onClose}
         tabIndex={-1}
@@ -132,14 +136,14 @@ export function SidePanel({
         aria-describedby={descriptionId}
         aria-labelledby={titleId}
         aria-modal="true"
-        className="ui-side-panel"
+        className={ui("ui-side-panel")}
         data-layer="drawer-surface"
         onKeyDown={handleKeyDown}
         ref={panelRef}
         role="dialog"
         tabIndex={-1}
       >
-        <header className="ui-side-panel__header">
+        <header className={ui("ui-side-panel__header")}>
           <div>
             <p>Redraw review</p>
             <h2 id={titleId}>{title}</h2>
@@ -154,12 +158,12 @@ export function SidePanel({
             Close
           </Button>
         </header>
-        <p className="ui-side-panel__description" id={descriptionId}>
+        <p className={ui("ui-side-panel__description")} id={descriptionId}>
           {description}
         </p>
-        <div className="ui-side-panel__body">{children}</div>
+        <div className={ui("ui-side-panel__body")}>{children}</div>
         {footer === undefined ? null : (
-          <footer className="ui-side-panel__footer">{footer}</footer>
+          <footer className={ui("ui-side-panel__footer")}>{footer}</footer>
         )}
       </div>
     </div>,

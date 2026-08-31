@@ -1,0 +1,34 @@
+{
+  "date": "2026-08-31",
+  "branch": "redesign/kocokan-ui",
+  "commands": [
+    {
+      "command": "npm.cmd run lint",
+      "exitCode": 0,
+      "status": "PASS",
+      "output": "\r\n> raffle-os@0.0.0 lint\r\n> eslint .\r\n\r\n"
+    },
+    {
+      "command": "npm.cmd run typecheck",
+      "exitCode": 0,
+      "status": "PASS",
+      "output": "\r\n> raffle-os@0.0.0 typecheck\r\n> tsc -b\r\n\r\n"
+    },
+    {
+      "command": "npm.cmd run build",
+      "exitCode": 0,
+      "status": "PASS",
+      "output": "\r\n> raffle-os@0.0.0 build\r\n> tsc -b && vite build\r\n\r\nvite v8.1.5 building client environment for production...\r\n\u001b[2K\r\ntransforming...✓ 321 modules transformed.\r\nrendering chunks...\r\ncomputing gzip size...\r\ndist/index.html                     0.50 kB │ gzip:   0.30 kB\r\ndist/assets/index-IFtCNTJo.css    279.91 kB │ gzip:  40.51 kB\r\ndist/assets/xlsx-Cl_0CZaL.js      493.22 kB │ gzip: 160.65 kB\r\ndist/assets/index-BQFWlWhJ.js   1,086.56 kB │ gzip: 299.14 kB\r\n\r\n✓ built in 1.32s\r\n[plugin builtin:vite-reporter] \r\n(!) Some chunks are larger than 500 kB after minification. Consider:\r\n- Using dynamic import() to code-split the application\r\n- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting\r\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\r\n"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "status": "PASS",
+      "output": ""
+    }
+  ],
+  "fullSuite": "FAIL: see full-suite-comparison.json",
+  "focusedSuite": "FAIL: see focused-suite-comparison.json",
+  "ownerAcceptance": "pending",
+  "liveDrawRunBaseline": "open"
+}

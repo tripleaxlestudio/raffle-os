@@ -1,3 +1,4 @@
+import { useUiClass } from '../../../shared/ui/ui-theme.ts'
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { commitParticipantImport, PARTICIPANT_IMPORT_FIELDS, preventDuplicateSourceMappings, readParticipantImportFile, parseParticipantImportAsync, suggestColumnMappings } from '../../../application/participant-import/index.ts'
 import { parseParticipantImport } from '../../../application/participant-import/participant-import-parser.ts'
@@ -62,6 +63,7 @@ const FRIENDLY_ERRORS: Record<string, string> = {
 }
 
 export function ProductionParticipantImportPreview({ services: providedServices }: ProductionParticipantImportPreviewProps = {}) {
+  const ui = useUiClass()
   const servicesRef = useRef<ParticipantImportProductionServices | null>(null)
   if (servicesRef.current === null) servicesRef.current = providedServices ?? createParticipantImportProductionServices()
   const services = servicesRef.current ?? providedServices ?? createParticipantImportProductionServices()
@@ -233,9 +235,9 @@ export function ProductionParticipantImportPreview({ services: providedServices 
       : state.status === 'validation-ready' || state.status === 'commit-failure' || staged === null || staged.validation.summary.validRows === 0 || hasBlockingDiagnostics || strategy === null
         ? 'validation'
         : 'summary'
-  if (!eventLoading && event === null && (eventError?.includes('Tidak ada Acara aktif') === true || eventError?.includes('Acara aktif tidak dapat ditemukan') === true)) return <section className="participant-import production-import-preview" aria-labelledby="production-import-title"><header className="page-header production-import-preview__header"><div className="page-header__copy"><p className="page-header__eyebrow">Operasi Peserta</p><h1 id="production-import-title">Impor Peserta</h1><p className="page-header__description">Impor Peserta ke Acara aktif.</p></div></header><ProductionSetupRequired title="Acara diperlukan untuk impor Peserta" description="Pilih atau buat Acara sebelum mengimpor Peserta." /></section>
+  if (!eventLoading && event === null && (eventError?.includes('Tidak ada Acara aktif') === true || eventError?.includes('Acara aktif tidak dapat ditemukan') === true)) return <section className="participant-import production-import-preview" aria-labelledby="production-import-title"><header className={`${ui('page-header')} production-import-preview__header`}><div className={ui('page-header__copy')}><p className={ui('page-header__eyebrow')}>Operasi Peserta</p><h1 id="production-import-title">Impor Peserta</h1><p className={ui('page-header__description')}>Impor Peserta ke Acara aktif.</p></div></header><ProductionSetupRequired title="Acara diperlukan untuk impor Peserta" description="Pilih atau buat Acara sebelum mengimpor Peserta." /></section>
   return <section className="participant-import production-import-preview" aria-label="Impor file Peserta" data-workflow-state={state.status}>
-    <header className="page-header production-import-preview__header"><div className="page-header__copy"><p className="page-header__eyebrow">Operasi Peserta</p><div className="production-import-preview__title-row"><h1 id="production-import-title">Impor Peserta</h1></div><p className="page-header__description">Siapkan, validasi, dan impor Peserta secara atomik ke Acara aktif.</p></div></header>
+    <header className={`${ui('page-header')} production-import-preview__header`}><div className={ui('page-header__copy')}><p className={ui('page-header__eyebrow')}>Operasi Peserta</p><div className="production-import-preview__title-row"><h1 id="production-import-title">Impor Peserta</h1></div><p className={ui('page-header__description')}>Siapkan, validasi, dan impor Peserta secara atomik ke Acara aktif.</p></div></header>
     <ProgressStepper currentStep={progressStep} steps={productionImportProgressSteps} completed={state.status === 'commit-success'} locale="id" />
     {showPreparation ? <div className="production-import-preview__workspace" aria-label="Ruang kerja validasi">
       <div className="production-import-preview__main">

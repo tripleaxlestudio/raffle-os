@@ -187,7 +187,7 @@
   }
 
   .ui-field__label {
-    color: var(--text-secondary);
+    color: var(--kc-card-text-muted, var(--text-secondary));
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-semibold);
   }
@@ -275,7 +275,7 @@
   }
 
   .ui-field__description {
-    color: var(--text-muted);
+    color: var(--kc-card-text-muted, var(--text-muted));
   }
 
   .ui-field__error {
@@ -460,7 +460,7 @@
     align-items: center;
     gap: var(--space-4);
     padding: var(--space-6);
-    color: var(--text-secondary);
+    color: var(--kc-card-text-muted, var(--text-secondary));
     text-align: left;
   }
 
@@ -471,7 +471,7 @@
     place-items: center;
     border: 1px dashed var(--border-strong);
     border-radius: var(--radius-md);
-    color: var(--text-muted);
+    color: var(--kc-card-text-muted, var(--text-muted));
     font-family: var(--font-family-mono);
   }
 
@@ -481,13 +481,13 @@
   }
 
   .ui-empty-state__copy strong {
-    color: var(--text-primary);
+    color: var(--kc-card-text, var(--text-primary));
     font-size: var(--font-size-sm);
   }
 
   .ui-empty-state__copy p {
     margin: 0;
-    color: var(--text-muted);
+    color: var(--kc-card-text-muted, var(--text-muted));
     font-size: var(--font-size-xs);
   }
 

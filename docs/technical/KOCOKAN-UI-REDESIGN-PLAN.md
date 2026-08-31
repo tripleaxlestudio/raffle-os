@@ -3,8 +3,10 @@
 ## Decision and authorization
 
 Owner approval: 2026-08-31. The eight-slice migration is approved as a plan.
-**Only Slice 0 (preparation/baseline) is authorized for execution now. Slice 1
-must not start until a separate approval.** This is a dedicated visual
+**Slice 0 is accepted. The owner separately authorized Slice 1 only on
+2026-08-31. Slice 1 implementation is awaiting owner review; Slice 2 is not
+authorized.** See [Slice 1 evidence and limitations](KOCOKAN-UI-SLICE-1.md).
+This is a dedicated visual
 modernization workstream, not a new functional Phase 11 item or a Phase rename.
 
 The public product identity for the future Operator theme is **KOCOKAN**:
@@ -62,7 +64,7 @@ No fork of presentation CSS or replacement preview renderer is permitted.
 The existing Settings static preview is separately inventoried; do not silently
 turn it into another live publisher or a new presentation engine.
 
-## Theme isolation decision (proposed, not implemented)
+## Theme isolation decision (implemented in Slice 1; awaiting review)
 
 Use an explicit production opt-in, such as `data-ui-theme="kocokan"`, plus
 namespaced `--kc-*` tokens and `kc-*` presentation classes. Do not attach the

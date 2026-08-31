@@ -1,3 +1,4 @@
+import { useUiClass } from '../ui/ui-theme.ts'
 import type { ReactNode } from 'react'
 import { joinClassNames } from '../ui/class-names.ts'
 
@@ -37,19 +38,20 @@ export function SectionHeader({
   headingLevel = 2,
   title,
 }: SectionHeaderProps) {
+  const ui = useUiClass()
   return (
-    <div className={joinClassNames('section-header', className)}>
-      <div className="section-header__copy">
+    <div className={joinClassNames(ui('section-header'), className)}>
+      <div className={ui("section-header__copy")}>
         {eyebrow === undefined ? null : (
-          <p className="section-header__eyebrow">{eyebrow}</p>
+          <p className={ui("section-header__eyebrow")}>{eyebrow}</p>
         )}
         <SectionHeading level={headingLevel} title={title} />
         {description === undefined ? null : (
-          <p className="section-header__description">{description}</p>
+          <p className={ui("section-header__description")}>{description}</p>
         )}
       </div>
       {actions === undefined ? null : (
-        <div className="section-header__actions">{actions}</div>
+        <div className={ui("section-header__actions")}>{actions}</div>
       )}
     </div>
   )

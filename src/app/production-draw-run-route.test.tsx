@@ -190,7 +190,7 @@ describe('production Draw Run route shell', () => {
     sessionStorage.setItem(`raffle-os:practice-result:v1:${mocks.practiceSessionId}`, '{bad-json}')
     const { router } = renderRoute(`/draw/run/${mocks.practiceSessionId}`)
     const dialog = await screen.findByRole('dialog', { name: 'Hasil pemenang tersimpan dengan aman' })
-    expect(dialog).toHaveClass('ui-modal--production-surface')
+    expect(dialog).toHaveClass('kc-modal--production-surface')
     expect(screen.getByRole('heading', { name: 'Presentation recovery' })).toBeInTheDocument()
     expect(screen.getByText('Draw Run workspace')).toBeInTheDocument()
     expect(document.querySelector('.production-draw-run-shell')).toBeInTheDocument()

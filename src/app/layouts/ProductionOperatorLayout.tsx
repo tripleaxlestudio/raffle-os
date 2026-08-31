@@ -1,3 +1,4 @@
+import { UiThemeContext } from '../../shared/ui/ui-theme.ts'
 import { Link, Outlet, useLocation } from 'react-router'
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { getDisplayConnectionStatus, subscribeDisplayConnectionStatus, type DisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
@@ -144,33 +145,33 @@ function ProductionOperatorHeader() {
       menu.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
     }
   }, [availableEvents.length, eventMenuOpen, eventsLoading])
-  return <header className="operator-header">
-    <div ref={eventPopoverRef} className="operator-header__event">
-      <button ref={eventButtonRef} type="button" className="operator-header__event-control" aria-controls={eventMenuOpen ? eventMenuId : undefined} aria-haspopup="menu" aria-expanded={eventMenuOpen} onClick={() => { const nextOpen = !eventMenuOpen; setEventMenuOpen(nextOpen); if (nextOpen) void loadAvailableEvents() }}>
-        <span className="operator-header__label">Acara aktif</span>
+  return <header className="kc-operator-header">
+    <div ref={eventPopoverRef} className="kc-operator-header__event">
+      <button ref={eventButtonRef} type="button" className="kc-operator-header__event-control" aria-controls={eventMenuOpen ? eventMenuId : undefined} aria-haspopup="menu" aria-expanded={eventMenuOpen} onClick={() => { const nextOpen = !eventMenuOpen; setEventMenuOpen(nextOpen); if (nextOpen) void loadAvailableEvents() }}>
+        <span className="kc-operator-header__label">Acara aktif</span>
         <strong title={eventLabel}>{eventLabel}</strong>
-        <span className="operator-event-status">{eventStatus}</span>
-        <span className="operator-header__chevron" aria-hidden="true" />
+        <span className="kc-operator-event-status">{eventStatus}</span>
+        <span className="kc-operator-header__chevron" aria-hidden="true" />
       </button>
-      {eventMenuOpen ? <div ref={menuRef} id={eventMenuId} className="operator-header__menu" role="menu" aria-busy={eventsLoading || undefined} aria-label="Pemilih Acara aktif" tabIndex={-1}>
-        {eventsLoading ? <span className="operator-header__menu-status" role="status">Memuat Acara…</span> : null}
+      {eventMenuOpen ? <div ref={menuRef} id={eventMenuId} className="kc-operator-header__menu" role="menu" aria-busy={eventsLoading || undefined} aria-label="Pemilih Acara aktif" tabIndex={-1}>
+        {eventsLoading ? <span className="kc-operator-header__menu-status" role="status">Memuat Acara…</span> : null}
         {eventMenuError === null ? availableEvents.map((event) => {
           const isCurrent = workspace.status === 'ready' && workspace.event.id === event.id
-          return <div className={`operator-header__event-option${isCurrent ? ' operator-header__event-option--current' : ''}`} key={event.id}>
-            <button type="button" role="menuitem" className="operator-header__event-switch" aria-current={isCurrent ? 'true' : undefined} disabled={eventSwitching} onClick={() => void selectEvent(event)}>
-              <span className="operator-header__event-option-copy"><strong>{event.name}</strong><span>{statusLabel(event.status)}</span></span>
-              {isCurrent ? <span className="operator-header__event-current">Aktif</span> : null}
+          return <div className={`kc-operator-header__event-option${isCurrent ? ' kc-operator-header__event-option--current' : ''}`} key={event.id}>
+            <button type="button" role="menuitem" className="kc-operator-header__event-switch" aria-current={isCurrent ? 'true' : undefined} disabled={eventSwitching} onClick={() => void selectEvent(event)}>
+              <span className="kc-operator-header__event-option-copy"><strong>{event.name}</strong><span>{statusLabel(event.status)}</span></span>
+              {isCurrent ? <span className="kc-operator-header__event-current">Aktif</span> : null}
             </button>
-            <Link role="menuitem" className="operator-header__event-manage" aria-label={`Kelola ${event.name}`} to={`/events?eventId=${encodeURIComponent(event.id)}`} onClick={() => setEventMenuOpen(false)}><span aria-hidden="true">⚙</span></Link>
+            <Link role="menuitem" className="kc-operator-header__event-manage" aria-label={`Kelola ${event.name}`} to={`/events?eventId=${encodeURIComponent(event.id)}`} onClick={() => setEventMenuOpen(false)}><span aria-hidden="true">⚙</span></Link>
           </div>
-        }) : <span className="operator-header__menu-status" role="alert">{eventMenuError}</span>}
-        {!eventsLoading && eventMenuError === null && availableEvents.length === 0 ? <span className="operator-header__menu-status">Tidak ada Acara yang tersedia.</span> : null}
+        }) : <span className="kc-operator-header__menu-status" role="alert">{eventMenuError}</span>}
+        {!eventsLoading && eventMenuError === null && availableEvents.length === 0 ? <span className="kc-operator-header__menu-status">Tidak ada Acara yang tersedia.</span> : null}
       </div> : null}
     </div>
-    <div className="operator-header__status" aria-label="Utilitas Operator">
-      {workspace.status === 'ready' && workspace.currentMode !== null ? <span className="mode-badge" data-mode={workspace.currentMode}>{workspace.currentMode === 'live' ? 'Mode Live' : 'Mode Latihan'}</span> : null}
-      {audienceUrl === null ? <Link className="operator-display-indicator" title={audienceDetail} aria-label={`Tampilan Audiens: ${statusLabel(audienceState)}`} to="/settings"><AudienceConnectionStatus state={audienceState} prefix /></Link> : <button type="button" className="operator-display-indicator" title={audienceDetail} aria-label={`Tampilan Audiens: ${statusLabel(audienceState)}`} onClick={openAudience}><AudienceConnectionStatus state={audienceState} prefix /></button>}
-      <button type="button" className="operator-standby-control" title={standbyUnavailableReason ?? 'Kembalikan Tampilan Audiens ke presentasi siaga normal dengan branding.'} aria-label="Kembalikan Tampilan Audiens ke Siaga" disabled={standbyUnavailableReason !== null} onClick={publishStandby}><Icon name="StopCircle" size={16} />Siaga</button>
+    <div className="kc-operator-header__status" aria-label="Utilitas Operator">
+      {workspace.status === 'ready' && workspace.currentMode !== null ? <span className="kc-mode-badge" data-mode={workspace.currentMode}>{workspace.currentMode === 'live' ? 'Mode Live' : 'Mode Latihan'}</span> : null}
+      {audienceUrl === null ? <Link className="kc-operator-display-indicator" title={audienceDetail} aria-label={`Tampilan Audiens: ${statusLabel(audienceState)}`} to="/settings"><AudienceConnectionStatus state={audienceState} prefix /></Link> : <button type="button" className="kc-operator-display-indicator" title={audienceDetail} aria-label={`Tampilan Audiens: ${statusLabel(audienceState)}`} onClick={openAudience}><AudienceConnectionStatus state={audienceState} prefix /></button>}
+      <button type="button" className="kc-operator-standby-control" title={standbyUnavailableReason ?? 'Kembalikan Tampilan Audiens ke presentasi siaga normal dengan branding.'} aria-label="Kembalikan Tampilan Audiens ke Siaga" disabled={standbyUnavailableReason !== null} onClick={publishStandby}><Icon name="StopCircle" size={16} />Siaga</button>
     </div>
   </header>
 }
@@ -233,12 +234,12 @@ function statusLabel(status: string): string {
 function ProductionOperatorContent() {
   const location = useLocation()
   const workspace = useProductionWorkspace()
-  return <div className="operator-layout" data-interface="operator" data-operator-shell>
-    <a className="skip-link" href="#operator-main">Lewati ke konten utama</a>
+  return <div className="operator-layout kc-operator-layout" data-interface="operator" data-ui-theme="kocokan" data-operator-shell>
+    <a className="skip-link kc-skip-link" href="#operator-main">Lewati ke konten utama</a>
     <OperatorSidebar production />
-    <div className="operator-workspace">
+    <div className="operator-workspace kc-operator-workspace">
       <ProductionOperatorHeader />
-      <main className="operator-main operator-main--production" data-production-content-scroll="true" id="operator-main" tabIndex={-1}><StartupRecoveryGate recovery={workspace.status === 'ready' ? workspace.startupRecovery : undefined} /><Outlet /><ProductionAudienceDiagnostics />{productionSetupStageIndexForRoute(location.pathname) !== undefined ? <ProductionSetupContinuation /> : null}</main>
+      <main className="operator-main operator-main--production kc-operator-main" data-production-content-scroll="true" id="operator-main" tabIndex={-1}><StartupRecoveryGate recovery={workspace.status === 'ready' ? workspace.startupRecovery : undefined} /><Outlet /><ProductionAudienceDiagnostics />{productionSetupStageIndexForRoute(location.pathname) !== undefined ? <ProductionSetupContinuation /> : null}</main>
     </div>
   </div>
 }
@@ -248,5 +249,5 @@ export function ProductionOperatorLayout() {
     appendRuntimeTrace({ side: 'Operator', publisherControllerInstanceId: 'operator-shell' }, { messageType: 'operator-shell-mount', direction: 'local' })
     return () => { appendRuntimeTrace({ side: 'Operator', publisherControllerInstanceId: 'operator-shell' }, { messageType: 'operator-shell-unmount', direction: 'local', cleanupDisposeReason: 'operator-shell-unmounted' }) }
   }, [])
-  return <ProductionWorkspaceProvider><ProductionOperatorContent /></ProductionWorkspaceProvider>
+  return <ProductionWorkspaceProvider><UiThemeContext value="kocokan"><ProductionOperatorContent /></UiThemeContext></ProductionWorkspaceProvider>
 }

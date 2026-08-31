@@ -1,3 +1,4 @@
+import { useUiClass } from '../ui/ui-theme.ts'
 import { useId, type ReactNode } from 'react'
 import { Badge, type BadgeVariant } from '../ui/index.ts'
 
@@ -24,15 +25,16 @@ export function StatusBanner({
   title,
   tone,
 }: StatusBannerProps) {
+  const ui = useUiClass()
   const titleId = useId()
   return (
     <section
       aria-labelledby={titleId}
-      className={`status-banner status-banner--${tone}${className === undefined ? '' : ` ${className}`}`}
+      className={`${ui(`status-banner status-banner--${tone}`)}${className === undefined ? '' : ` ${className}`}`}
     >
-      <span aria-hidden="true" className="status-banner__marker" />
-      <div className="status-banner__copy">
-        <div className="status-banner__heading">
+      <span aria-hidden="true" className={ui("status-banner__marker")} />
+      <div className={ui("status-banner__copy")}>
+        <div className={ui("status-banner__heading")}>
           <h2 id={titleId}>{title}</h2>
           <Badge variant={badgeVariants[tone]}>{badge}</Badge>
         </div>

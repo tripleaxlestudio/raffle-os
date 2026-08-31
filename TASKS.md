@@ -774,7 +774,10 @@ Do not renumber phases, broaden domain behavior, or change release gates.
   inventory, theme/CSS proposal, tokens and browser/manual checklist.
   Full-suite baseline is FAIL (142 tests); this preparation checkbox does not
   imply application acceptance. See the dedicated baseline record.
-- [ ] Slice 1 — Visual System & App Shell (not started; approval required).
+- [ ] Slice 1 — Visual System & App Shell: implementation and verification
+  recorded in [Slice 1 report](docs/technical/KOCOKAN-UI-SLICE-1.md); owner
+  visual acceptance remains pending. Separate execution approval received
+  after Slice 0 acceptance. Full-suite baseline debt is not waived.
 - [ ] Slice 2 — Dashboard & Event Preparation.
 - [ ] Slice 3 — Draw Console.
 - [ ] Slice 4 — Pending Results.

@@ -19,12 +19,12 @@ const mocks = vi.hoisted(() => {
   }
   const workspace = {
     status: 'ready', event: { id: 'ui-event', name: 'UI test', status: 'draft' },
-    displayConfiguration: { id: 'ui-display' }, currentMode: null,
+    displayConfiguration: { id: 'ui-display' }, currentMode: null as 'live' | 'practice' | null,
     unresolvedSession: null, participantCount: 0, checkedInParticipantCount: 0,
     prizeCategoryCount: 0, liveSessionCount: 0,
     sessionCounts: { ready: 0, drawing: 0, 'pending-confirmation': 0 },
   }
-  return { audience, workspace, state, listeners, openAudience: vi.fn(), services: { open: vi.fn(async () => undefined) } }
+  return { audience, workspace, state, listeners, openAudience: vi.fn(), services: { open: vi.fn(async () => undefined), events: { findAll: vi.fn(async () => [workspace.event, { id: 'another-event', name: 'Another test event', status: 'draft' }]) }, service: { selectEvent: vi.fn(async () => undefined) } } }
 })
 
 vi.mock('../workspace/ProductionWorkspaceContext.tsx', () => ({
@@ -49,7 +49,51 @@ describe('production header and dashboard Audience indicators', () => {
     mocks.state.connected = false
     mocks.audience.status = { kind: 'waiting-for-display' }
     mocks.openAudience.mockClear()
+    mocks.services.service.selectEvent.mockClear()
+    mocks.workspace.currentMode = null
+    mocks.workspace.event.name = 'UI test'
     setDisplayConnectionStatus('ui-event:ui-display', 'waiting')
+  })
+
+  it('retains Event menu keyboard navigation, selection and Escape focus return', async () => {
+    const user = userEvent.setup()
+    renderDashboard()
+    const trigger = screen.getByRole('button', { name: /^Acara aktif\s*UI test\s*Draft$/ })
+    await user.click(trigger)
+    const menu = screen.getByRole('menu', { name: 'Pemilih Acara aktif' })
+    const first = await within(menu).findByRole('menuitem', { name: /^UI test\s*Draf\s*Aktif$/ })
+    await user.keyboard('{Home}')
+    expect(first).toHaveFocus()
+    await user.keyboard('{End}')
+    expect(within(menu).getByRole('menuitem', { name: 'Kelola Another test event' })).toHaveFocus()
+    await user.keyboard('{ArrowUp}')
+    expect(within(menu).getByRole('menuitem', { name: /^Another test event\s*Draf$/ })).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(trigger).toHaveFocus()
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(mocks.services.service.selectEvent).not.toHaveBeenCalled()
+    await user.click(trigger)
+    await user.click(await screen.findByRole('menuitem', { name: /^Another test event\s*Draf$/ }))
+    expect(mocks.services.service.selectEvent).toHaveBeenCalledWith('another-event')
+  })
+
+  it('retains the complete long Event name in its title and menu', async () => {
+    mocks.workspace.event.name = 'Perayaan tahunan perusahaan dan keluarga besar seluruh cabang Indonesia — fixture nama Acara panjang'
+    const user = userEvent.setup()
+    renderDashboard()
+    const header = within(screen.getByRole('banner'))
+    expect(header.getByText(mocks.workspace.event.name)).toHaveAttribute('title', mocks.workspace.event.name)
+    await user.click(header.getByRole('button', { name: /^Acara aktif/ }))
+    expect(await within(screen.getByRole('menu')).findByText(mocks.workspace.event.name)).toBeVisible()
+    await user.click(screen.getByRole('heading', { level: 1 }))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it.each([['live', 'Mode Live'], ['practice', 'Mode Latihan']] as const)('keeps %s mode explicit in production chrome', (mode, label) => {
+    mocks.workspace.currentMode = mode
+    renderDashboard()
+    expect(within(screen.getByRole('banner')).getByText(label)).toHaveAttribute('data-mode', mode)
+    expect(document.querySelector('[data-operator-shell]')).toHaveAttribute('data-ui-theme', 'kocokan')
   })
 
   it('keeps both visual indicators synchronized through waiting, connected, and waiting', async () => {

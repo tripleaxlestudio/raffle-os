@@ -44,8 +44,8 @@ describe('production sidebar Event gating', () => {
     workspace.status = 'ready'
     renderSidebar()
 
-    expect(document.querySelectorAll('.operator-nav__icon .ui-icon')).toHaveLength(8)
-    expect(document.querySelectorAll('.operator-nav__marker')).toHaveLength(0)
+    expect(document.querySelectorAll('.kc-operator-nav__icon .ui-icon')).toHaveLength(8)
+    expect(document.querySelectorAll('.kc-operator-nav__marker')).toHaveLength(0)
     for (const label of ['Dasbor', 'Hadiah', 'Peserta', 'Pengaturan Tampilan', 'Pengaturan Undian', 'Undian', 'Hasil', 'Riwayat']) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
@@ -81,7 +81,7 @@ describe('production sidebar Event gating', () => {
     workspace.status = 'ready'
     renderSidebar('/prize-categories')
 
-    expect(screen.getByRole('link', { name: 'Hadiah' })).toHaveClass('operator-nav__link--active')
+    expect(screen.getByRole('link', { name: 'Hadiah' })).toHaveClass('kc-operator-nav__link--active')
     expect(screen.getByRole('link', { name: 'Hadiah' })).toHaveAttribute('href', '/prize-categories')
   })
 
@@ -89,7 +89,7 @@ describe('production sidebar Event gating', () => {
     Object.assign(workspace, { status: 'ready', setupReadiness: { event: true, prize: true, participants: false, displaySettings: false, drawSetup: false }, setupJourneyReachedStep: 2 })
     renderSidebar('/prize-categories')
 
-    expect(screen.getByRole('link', { name: 'Hadiah' })).toHaveClass('operator-nav__link--active')
+    expect(screen.getByRole('link', { name: 'Hadiah' })).toHaveClass('kc-operator-nav__link--active')
     expect(screen.getByText('Peserta').closest('[aria-disabled]')).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByText('Pengaturan Tampilan').closest('[aria-disabled]')).toHaveAttribute('aria-disabled', 'true')
   })

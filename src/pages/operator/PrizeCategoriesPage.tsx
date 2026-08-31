@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, ButtonLink, Card, Icon, Input } from '../../shared/ui/index.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
+import { useUiClass } from '../../shared/ui/ui-theme.ts'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { createEventSetupProductionServices } from '../../infrastructure/composition/event-setup-production.ts'
 import { signalProductionWorkspaceChanged, useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
@@ -9,6 +10,7 @@ import type { PrizeCategory } from '../../domain/prizes/prize.types.ts'
 const empty = { name: '', prizeName: '', description: '', sponsorName: '', displayOrder: '0' }
 
 export function PrizeCategoriesPage() {
+  const ui = useUiClass()
   const services = useMemo(() => createEventSetupProductionServices(), [])
   const workspace = useProductionWorkspace()
   const selectedEvent = workspace.status === 'ready' ? workspace.event : null
@@ -48,7 +50,7 @@ export function PrizeCategoriesPage() {
 
   const isReadOnly = selectedEvent.status === 'archived'
   const isFormValid = form.name.trim().length > 0 && form.prizeName.trim().length > 0 && /^(0|[1-9]\d*)$/.test(form.displayOrder)
-  return <section className="prize-categories-page" aria-labelledby="categories-title"><div className="page-header"><div className="page-header__copy"><p className="page-header__eyebrow">Pengaturan produksi</p><h1 id="categories-title">Kategori Hadiah</h1><p className="page-header__description">Kelola kategori hadiah untuk {selectedEvent.name}.</p><p className="prize-categories-page__info">Perubahan hadiah berlaku untuk undian berikutnya. Record undian yang sudah ada tidak berubah.</p></div></div>
+  return <section className="prize-categories-page" aria-labelledby="categories-title"><div className={ui('page-header')}><div className={ui('page-header__copy')}><p className={ui('page-header__eyebrow')}>Pengaturan produksi</p><h1 id="categories-title">Kategori Hadiah</h1><p className={ui('page-header__description')}>Kelola kategori hadiah untuk {selectedEvent.name}.</p><p className="prize-categories-page__info">Perubahan hadiah berlaku untuk undian berikutnya. Record undian yang sudah ada tidak berubah.</p></div></div>
     {saved ? <StatusBanner badge="Tersimpan" title="Kategori hadiah tersimpan" tone="success">Kategori berhasil dibaca kembali dari IndexedDB dan tersedia di Pengaturan Undian.</StatusBanner> : null}
     {error ? <StatusBanner badge="Kesalahan penyimpanan atau validasi" title="Tindakan kategori hadiah tidak dapat diselesaikan" tone="warning">{error}</StatusBanner> : null}
     <div className="prize-categories-page__layout">

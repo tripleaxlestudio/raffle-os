@@ -5,6 +5,10 @@ This is source inspection, not a claim that all runtime states were exercised.
 See [browser evidence](KOCOKAN-UI-VISUAL-BASELINE.md) for actual observations.
 All future slice assignments refer to the [redesign plan](KOCOKAN-UI-REDESIGN-PLAN.md).
 
+Slice 1 implementation/verification is recorded separately in the
+[Slice 1 report](KOCOKAN-UI-SLICE-1.md). The tables below preserve the accepted
+Slice 0 inventory; they are not rewritten as broader page acceptance.
+
 ## Reading the tables
 
 Paths are repository-relative. To keep rows readable:

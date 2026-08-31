@@ -1,3 +1,4 @@
+import { useUiClass } from '../ui/ui-theme.ts'
 import type { DisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
 import { Icon, type IconName } from '../ui/Icon.tsx'
 
@@ -14,8 +15,9 @@ export function AudienceConnectionStatus({ state, prefix = false }: {
   readonly state: DisplayConnectionStatus
   readonly prefix?: boolean
 }) {
+  const ui = useUiClass()
   const { label, icon } = presentation[state]
-  return <span className="audience-connection-status" data-connection-state={state}>
+  return <span className={ui("audience-connection-status")} data-connection-state={state}>
     <Icon name={icon} size={20} />
     <span>{prefix ? 'Audiens: ' : ''}{label}</span>
   </span>

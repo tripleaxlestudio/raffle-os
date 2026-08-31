@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactSelect, { type StylesConfig } from 'react-select'
+import { ThemedSelectMenu } from '../../shared/ui/ThemedSelectMenu.tsx'
 import { Link, useParams } from 'react-router'
 import { useProductionAudiencePublisher } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
@@ -87,7 +88,7 @@ const reasonSelectStyles: StylesConfig<ReasonOption, false> = {
 
 function ReasonSelect({ id, reason, busy, onChange }: { readonly id: string; readonly reason: RedrawReason; readonly busy: boolean; readonly onChange: (reason: RedrawReason) => void }) {
   const selected = reasons.find((option) => option.value === reason) ?? reasons[0]
-  return <div className="ui-field pending-results__reason-field"><span className="ui-field__label" id={`${id}-label`}>Alasan</span><ReactSelect<ReasonOption, false> aria-labelledby={`${id}-label`} classNamePrefix="raffle-reason-select" inputId={id} isClearable={false} isDisabled={busy} isSearchable={false} menuPortalTarget={document.body} menuPosition="fixed" onChange={(option) => { if (option !== null) onChange(option.value) }} options={reasons} styles={reasonSelectStyles} value={selected} /></div>
+  return <div className="ui-field pending-results__reason-field"><span className="ui-field__label" id={`${id}-label`}>Alasan</span><ReactSelect<ReasonOption, false> components={{ Menu: ThemedSelectMenu }} aria-labelledby={`${id}-label`} classNamePrefix="raffle-reason-select" inputId={id} isClearable={false} isDisabled={busy} isSearchable={false} menuPortalTarget={document.body} menuPosition="fixed" onChange={(option) => { if (option !== null) onChange(option.value) }} options={reasons} styles={reasonSelectStyles} value={selected} /></div>
 }
 
 function commandId(): CommandId {

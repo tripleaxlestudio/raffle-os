@@ -1,3 +1,4 @@
+import { themeClass } from '../../shared/ui/ui-theme.ts'
 import { NavLink } from 'react-router'
 import { useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
 import { PRODUCTION_SETUP_JOURNEY } from '../../shared/components/production-setup-journey.ts'
@@ -57,39 +58,40 @@ function OperatorSidebarContent({
   readonly readiness?: ProductionSetupReadiness | null
   readonly reachedStep?: number
 }) {
+  const shellClass = (name: string) => themeClass(production ? 'kocokan' : 'legacy', name)
   return (
-    <aside className="operator-sidebar" aria-label="Bilah samping Operator">
-      <div className="operator-sidebar__brand">
-        <span aria-hidden="true" className="operator-sidebar__monogram">
-          RO
+    <aside className={shellClass("operator-sidebar")} aria-label="Bilah samping Operator">
+      <div className={shellClass("operator-sidebar__brand")}>
+        <span aria-hidden="true" className={shellClass("operator-sidebar__monogram")}>
+          {production ? 'K' : 'RO'}
         </span>
-        <p className="operator-sidebar__identity">
-          <strong>Raffle OS</strong>
+        <p className={shellClass("operator-sidebar__identity")}>
+          <strong>{production ? 'KOCOKAN' : 'Raffle OS'}</strong>
           <span>Kontrol Operator</span>
         </p>
       </div>
-      <p className="operator-sidebar__section-label">Ruang kerja</p>
+      <p className={shellClass("operator-sidebar__section-label")}>Ruang kerja</p>
       <nav aria-label="Navigasi Operator">
-        <ul className="operator-nav">
+        <ul className={shellClass("operator-nav")}>
           {navigationItems.map((item) => (
             <li key={item.to}>
-              {item.to !== '/dashboard' && ((readiness !== null && !isProductionNavigationUnlocked(item.to, readiness, reachedStep)) || (readiness === null && disabled)) ? <span aria-disabled="true" className="operator-nav__link operator-nav__link--disabled" title="Selesaikan langkah pengaturan sebelumnya terlebih dahulu">
-                <NavigationIcon item={item} />
+              {item.to !== '/dashboard' && ((readiness !== null && !isProductionNavigationUnlocked(item.to, readiness, reachedStep)) || (readiness === null && disabled)) ? <span aria-disabled="true" className={shellClass("operator-nav__link operator-nav__link--disabled")} title="Selesaikan langkah pengaturan sebelumnya terlebih dahulu">
+                <NavigationIcon item={item} production={production} />
                 <span>{item.label}</span>
               </span> : <NavLink
-                className={({ isActive }) => isActive ? 'operator-nav__link operator-nav__link--active' : 'operator-nav__link'}
+                className={({ isActive }) => shellClass(isActive ? 'operator-nav__link operator-nav__link--active' : 'operator-nav__link')}
                 end
                 to={item.to}
               >
-                <NavigationIcon item={item} />
+                <NavigationIcon item={item} production={production} />
                 <span>{item.label}</span>
               </NavLink>}
             </li>
           ))}
         </ul>
       </nav>
-      <div className="operator-sidebar__footer">
-        <span className="operator-sidebar__footer-label">
+      <div className={shellClass("operator-sidebar__footer")}>
+        <span className={shellClass("operator-sidebar__footer-label")}>
           {production ? 'Ruang kerja produksi' : 'Static prototype'}
         </span>
         <span>{production ? 'Berjalan lokal' : 'Phase 2 Prototype'}</span>
@@ -98,10 +100,11 @@ function OperatorSidebarContent({
   )
 }
 
-function NavigationIcon({ item }: { readonly item: NavigationItem }) {
+function NavigationIcon({ item, production }: { readonly item: NavigationItem; readonly production: boolean }) {
+  const shellClass = (name: string) => themeClass(production ? 'kocokan' : 'legacy', name)
   return item.icon === undefined
-    ? <span aria-hidden="true" className="operator-nav__marker">{item.marker}</span>
-    : <span className="operator-nav__icon"><Icon name={item.icon} size={20} /></span>
+    ? <span aria-hidden="true" className={shellClass("operator-nav__marker")}>{item.marker}</span>
+    : <span className={shellClass("operator-nav__icon")}><Icon name={item.icon} size={20} /></span>
 }
 
 function isProductionNavigationUnlocked(pathname: string, readiness: ProductionSetupReadiness, reachedStep = 0): boolean {

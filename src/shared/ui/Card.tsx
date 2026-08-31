@@ -1,3 +1,4 @@
+import { useUiClass } from './ui-theme.ts'
 import type { HTMLAttributes } from 'react'
 import { joinClassNames } from './class-names.ts'
 
@@ -22,12 +23,13 @@ export function Card({
   tone = 'default',
   ...props
 }: CardProps) {
+  const ui = useUiClass()
   return (
     <Component
       className={joinClassNames(
-        'ui-card',
-        `ui-card--${tone}`,
-        `ui-card--padding-${padding}`,
+        ui('ui-card'),
+        ui(`ui-card--${tone}`),
+        ui(`ui-card--padding-${padding}`),
         className,
       )}
       {...props}

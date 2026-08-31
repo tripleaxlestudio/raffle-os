@@ -1,0 +1,80 @@
+{
+  "settings": {
+    "elementsBefore": 12,
+    "elementsAfter": 12,
+    "differences": [
+      {
+        "elementIndex": 0,
+        "className": "audience-stage audience-preview-surface settings-display-preview",
+        "property": "height",
+        "before": "182.609px",
+        "after": "182.656px"
+      },
+      {
+        "elementIndex": 0,
+        "className": "audience-stage audience-preview-surface settings-display-preview",
+        "property": "width",
+        "before": "324.656px",
+        "after": "324.734px"
+      },
+      {
+        "elementIndex": 4,
+        "className": "audience-preview-surface__message",
+        "property": "width",
+        "before": "282.656px",
+        "after": "282.734px"
+      },
+      {
+        "elementIndex": 5,
+        "className": "audience-eyebrow",
+        "property": "width",
+        "before": "282.656px",
+        "after": "282.734px"
+      },
+      {
+        "elementIndex": 6,
+        "className": null,
+        "property": "width",
+        "before": "282.656px",
+        "after": "282.734px"
+      },
+      {
+        "elementIndex": 7,
+        "className": "audience-prize",
+        "property": "width",
+        "before": "282.656px",
+        "after": "282.734px"
+      },
+      {
+        "elementIndex": 10,
+        "className": "audience-safe-area-markers",
+        "property": "width",
+        "before": "282.656px",
+        "after": "282.734px"
+      }
+    ]
+  },
+  "prototype": {
+    "elementsBefore": 246,
+    "elementsAfter": 246,
+    "differences": [
+      {
+        "elementIndex": 57,
+        "className": null,
+        "property": "width",
+        "before": "0px",
+        "after": "368px"
+      }
+    ]
+  },
+  "audience": {
+    "elementsBefore": 11,
+    "elementsAfter": 11,
+    "differences": []
+  },
+  "notes": {
+    "settings": "Only seven fractional frame width/height differences under 0.079 CSS px. No other recorded property changed.",
+    "prototype": "Only width of nav hidden by a closed native details element differs. No visible pixels affected.",
+    "audience": "All recorded visual properties match. Live DrawRun remains an open baseline item."
+  }
+}

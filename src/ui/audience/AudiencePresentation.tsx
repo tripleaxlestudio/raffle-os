@@ -33,7 +33,7 @@ export function snapshotToAudienceScenario(snapshot: PublicDisplaySnapshot): Pub
     ...(snapshot.stage === 'reveal' || snapshot.stage === 'pending-handoff' ? { revealMode: snapshot.revealMode, revealStartedAt: snapshot.revealStartedAt ?? snapshot.stageStartedAt } : {}),
     state: committedState,
     nextDrawReady: committedState === 'standby' && snapshot.winnerCount !== undefined && snapshot.prizeName !== undefined,
-    message: committedState === 'standby' ? (snapshot.displayTest === false && snapshot.winnerCount === undefined ? 'Menunggu presentasi berikutnya' : snapshot.stage === 'pending-handoff' ? 'Tidak ada pemenang aktif' : 'Undian segera dimulai') : committedState === 'countdown' ? 'Bersiap' : committedState === 'rolling' ? 'Pengundian berlangsung' : undefined,
+    message: committedState === 'standby' ? (snapshot.displayTest === false && snapshot.winnerCount === undefined ? 'Menunggu undian berikutnya' : snapshot.stage === 'pending-handoff' ? 'Tidak ada pemenang aktif' : 'Undian segera dimulai') : committedState === 'countdown' ? 'Bersiap' : committedState === 'rolling' ? 'Pengundian berlangsung' : undefined,
     countdownValue: snapshot.stage === 'countdown' ? String(snapshot.countdownValue ?? '—') : undefined,
     ticketNumbers: snapshot.ticketNumbers,
     winnerStatuses: snapshot.winnerStatuses,

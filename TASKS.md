@@ -647,6 +647,72 @@ Chrome/Edge B11-021 acceptance are still outstanding. See
 - [ ] Verify Indonesian copy fits every required Operator viewport and Audience
   layout without hiding critical actions.
 
+### Slice 11.2A — UI improvements and bounded feature additions
+
+Owner update 2026-08-31: this slice is approved as a planning slot after 11.2,
+before performance and packaging work. Individual approvals are recorded below;
+this does not authorize unspecified features.
+
+- [x] Designate Slice 11.2A for UI improvements and bounded feature additions.
+- [ ] Collect proposed items and record purpose, affected screens, scope and
+  exclusions, domain/persistence impact, and acceptance checks for each.
+- [ ] Obtain owner approval for each item and synchronize affected requirements,
+  plans, and acceptance records before implementation.
+- [ ] Implement approved items in focused groups, verify, and commit each group.
+- [ ] Reconcile the recorded 11.2 full-suite failures before closing the next
+  development slice; keep required automated gates passing.
+- [ ] Complete affected manual UI/browser acceptance in the final session.
+
+Conditional Audience readability options remain in 11.1A. Changes affecting
+draw rules, eligibility, official History/audit, recovery, persistence, or
+dependencies require explicit impact review and approval, not an assumption
+that a small UI means a small feature.
+
+#### 11.2A-01 — Distinct Audience connection indicators
+
+Owner request 2026-08-31: make Waiting and Connected clearly distinguishable.
+Scope: shared visual treatment for the production header and Dashboard Operations
+card, with distinct static icons, semantic tinted badges, Indonesian labels,
+and locale-independent CSS state selectors. Both indicators use the existing
+presence status store; a stale snapshot acknowledgement must not leave the
+Dashboard connected after the Audience closes. Preserve existing open-display and
+Settings actions. No transport, heartbeat, draw, persistence, or audit changes.
+Acceptance: focused regressions for all indicator states and state changes;
+browser checks for Waiting/Connected, keyboard focus, and target Operator widths.
+Comprehensive Chrome/Edge release sign-off remains deferred.
+
+- [x] Approve the bounded UI fix described above.
+- [x] Implement the indicator fix and pass focused automated/browser checks;
+  evidence is recorded in Phase 11 acceptance. Full-suite/owner gates stay open.
+
+Execution order: **11.2A -> 11.4 profiling/hardening -> 11.5A-D packaging ->
+final acceptance (11.3 + 11.5E + final 11.4 benchmark) -> 11.6 RC closeout**.
+Only comprehensive manual acceptance is postponed. Focused tests and required
+automated gates continue per slice; pending acceptance remains pending and all
+release gates are unchanged.
+
+#### 11.2A-02 — Clean Audience standby and browser fullscreen
+
+Owner request 2026-08-31: widen the cramped standby waiting heading and remove
+the bottom fullscreen button/status so the Audience output stays clean.
+Use browser fullscreen (F11 on the supported Windows setup); do not add an
+in-page replacement control or intercept the browser shortcut. Preserve the
+waiting copy, branding, public state, safe areas, and winner selection/data.
+Scope: Audience standby layout and removal of the fullscreen overlay in all
+production Audience states. The existing protocol and standalone fullscreen
+utility remain unchanged. No new dependency or persisted setting.
+Acceptance: standby fits within the safe area at 1920 x 1080 and smaller
+desktop viewports; no fullscreen controls or status overlay in standby, draw,
+blackout, connecting, or disconnected states. Keep assistive state announcements.
+Real Chrome/Edge F11 entry/exit remains a final manual acceptance check.
+
+- [x] Approve the bounded Audience presentation fix described above.
+- [x] Implement and verify; record focused tests and browser observations in `PHASE-11-ACCEPTANCE.md` (full browser acceptance remains pending).
+
+Owner copy follow-up 2026-08-31 for 11.2A-02: replace the idle heading with
+"Menunggu undian berikutnya". Copy only; no layout or state changes. Custom
+messages/menu are deferred for a separate discussion, not approved for implementation.
+
 ### Browser, viewport, and scale verification
 
 - [ ] Test the current desktop Chrome version.

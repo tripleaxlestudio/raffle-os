@@ -27,38 +27,6 @@
     overflow: hidden;
   }
 
-  .audience-fullscreen-controls {
-    position: fixed;
-    right: 1rem;
-    bottom: 1rem;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    max-width: min(32rem, calc(100vw - 2rem));
-    padding: 0.35rem;
-    border: 1px solid rgb(255 255 255 / 0.18);
-    border-radius: var(--radius-md);
-    background: rgb(0 0 0 / 0.72);
-    color: var(--text-secondary);
-    font-size: 0.75rem;
-  }
-
-  .audience-fullscreen-controls button {
-    min-height: var(--interactive-min-size);
-    padding: 0.45rem 0.75rem;
-    border: 1px solid rgb(255 255 255 / 0.28);
-    border-radius: var(--radius-sm);
-    background: rgb(255 255 255 / 0.08);
-    color: var(--text-primary);
-    cursor: pointer;
-  }
-
-  .audience-fullscreen-controls button:disabled {
-    cursor: wait;
-    opacity: 0.7;
-  }
-
   .audience-stage {
     position: relative;
     isolation: isolate;
@@ -235,6 +203,7 @@
   }
 
   .standby-stage {
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto auto minmax(0, 1fr);
     row-gap: clamp(0.75rem, 2vh, 1.5rem);
     text-align: center;
@@ -256,7 +225,9 @@
     grid-row: 3;
     align-self: center;
     justify-self: center;
-    max-width: min(70rem, 86vw);
+    width: 100%;
+    max-width: 90rem;
+    min-width: 0;
     padding: 0;
     text-align: center;
   }
@@ -267,12 +238,13 @@
   }
 
   .standby-stage__message h1 {
-    max-width: 15ch;
-    margin: clamp(0.75rem, 2vh, 1.5rem) 0 0;
-    font-size: clamp(3rem, 7.2vw, 8rem);
+    max-width: 100%;
+    margin: clamp(0.75rem, 2vh, 1.5rem) auto 0;
+    font-size: clamp(3rem, 6vw, 7rem);
     font-weight: var(--font-weight-bold);
-    letter-spacing: -0.055em;
-    line-height: 0.95;
+    letter-spacing: -0.035em;
+    line-height: 1.12;
+    overflow-wrap: anywhere;
     text-wrap: balance;
   }
 

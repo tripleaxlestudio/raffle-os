@@ -4,6 +4,12 @@
 
 **Planning artifact only — pending owner review and implementation approval.**
 
+Owner update — 2026-08-31: Slice 11.2A is approved as the planning slot for UI
+improvements and bounded feature additions, with individual items still subject
+to scope approval. Comprehensive manual acceptance moves after packaging
+implementation, as recorded in section 11. This does not approve unspecified
+features or mark earlier slices accepted.
+
 This document audits the post-Phase-10 baseline and proposes the final MVP
 hardening slices. It creates no production behavior, schema, dependency, data,
 or acceptance claim. The release-stage policy is defined separately in
@@ -334,7 +340,41 @@ values or official records. Review long Indonesian labels at every target
 viewport and Audience layout. A language switcher and English fallback UI are
 not part of this slice.
 
+### Slice 11.2A — UI improvements and bounded feature additions
+
+Owner approved this slice designation on 2026-08-31. It is a planning slot,
+not blanket implementation approval. The owner-approved item register is in
+`TASKS.md`; 11.2A-01 covers the Audience connection indicator UI fix, and
+11.2A-02 covers wider standby text and a clean Audience surface without
+fullscreen controls. Browser fullscreen via F11 is the owner-approved Windows
+workflow; do not place fullscreen buttons, status overlays, or shortcut hints
+on the public stage. Existing protocol capability fields remain unchanged.
+
+Collect proposed UI refinements and small operator-facing features. Before
+implementing each item, record its purpose, affected screens, scope/exclusions,
+domain or persistence impact, acceptance checks, and explicit owner approval in
+the Phase 11 section of `TASKS.md`. Synchronize affected plans and acceptance
+records; amend product requirements only with explicit approval when needed.
+
+UI work may include layout, spacing, controls, tables, empty states, and
+navigation clarity. Feature size must be assessed by behavioral/data impact,
+not by the size of its UI. Changes to draw rules, eligibility, official History,
+audit, recovery, persistence, or dependencies require a separate explicit
+impact review and approval. Conditional Audience readability options remain
+in Slice 11.1A. Existing non-goals and product invariants still apply.
+
+Implement approved items in focused, reviewable groups: implement, verify, then
+commit before starting the next group. Keep Indonesian copy and accessibility
+consistent. Run focused regressions and the required automated slice gates;
+comprehensive Chrome/Edge manual sign-off is deferred to the final session,
+not replaced by automated tests. Reconcile the known 11.2 full-suite failures
+before closing the next development slice.
+
 ### Slice 11.3 — Browser, viewport, and cross-phase acceptance
+
+Execute in the final acceptance session after 11.5A-D, alongside 11.5E and
+the final packaged-build benchmark. The slice ID and evidence obligations do
+not change; deferral is not acceptance or a waiver.
 
 Run the critical workflow in current Chrome and Edge using disposable Events.
 Exercise 1366 x 768 and 1440 x 900 Operator layouts plus 1920 x 1080 Audience.
@@ -424,13 +464,16 @@ the impacted matrix plus full release commands to rerun.
 11.2 Indonesian localization
         |
         v
-11.3 Browser/viewport acceptance
+11.2A Approved UI improvements and bounded feature additions
         |
         v
 11.4 Scale/performance hardening
         |
         v
-11.5 Packaging, bundle, and cleanup
+11.5A-D Packaging implementation, bundle, and cleanup
+        |
+        v
+Final acceptance: 11.3 + 11.5E + final 11.4 benchmark
         |
         v
 11.6 Integrated rehearsal and RC closeout
@@ -439,10 +482,17 @@ the impacted matrix plus full release commands to rerun.
 Conditional Slice 11.1A follows 11.0 approval and must complete before the
 browser/viewport acceptance that certifies its presentation.
 
-Exploratory profiling in 11.4 may begin earlier when it does not bypass the
-approved slice gates, but final timings must be repeated after every
-performance-relevant 11.3/11.5 change. Packaging work may begin only after the
-11.0 distribution decision.
+This owner-directed execution order was recorded on 2026-08-31. Slice numbers
+remain stable. Manual acceptance for 11.1/11.2 remains pending until observed
+in the final session; this schedule does not close the recorded automated-test
+failures or waive any Beta/RC/Release gate.
+
+Slice 11.4 still requires early profiling to justify optimization. Final
+approved-device measurements run against the packaged build and must be
+repeated after every performance-relevant change. Focused tests and full
+automated slice gates remain required during development. Packaging work may
+begin only after the 11.0 distribution decision, with Host implementation
+subject to the 11.5A ADR/spike gate.
 
 ## 12. Automated verification requirements
 

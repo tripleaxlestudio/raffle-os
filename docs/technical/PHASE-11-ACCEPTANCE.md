@@ -113,6 +113,152 @@ Chrome/Edge and assistive-technology acceptance remain pending. The latest
 in-app browser check could not reach the History empty-state card because that
 browser profile had no active Event; no visual PASS is claimed for that check.
 
+## Owner planning update — 2026-08-31
+
+Slice 11.2A is designated for UI improvements and bounded feature additions.
+The planning slot is approved; individual item approvals are recorded in
+`TASKS.md`. Item 11.2A-01 is the approved Audience connection indicator UI fix.
+Approval alone does not imply implementation or acceptance PASS.
+
+The execution order is 11.2A, 11.4 profiling/hardening, 11.5A-D packaging,
+then the final acceptance session (11.3, 11.5E, and final 11.4 benchmark),
+followed by 11.6 RC closeout. Add approved 11.2A items to affected acceptance
+checks before the session. Earlier manual acceptance remains pending, and the
+checkpoint's full-suite failures remain unresolved by this documentation-only
+update. Required automated gates continue during development; all release
+criteria remain unchanged.
+
+## 11.2A-01 — Audience connection indicator clarity — 2026-08-31
+
+**Implemented; focused checks PASS. Full-suite gate FAIL; owner Chrome/Edge
+acceptance remains pending. Not a slice or release acceptance declaration.**
+
+Owner supplied screenshots showing Waiting and Connected were insufficiently
+distinct. The header's CSS depended on English accessible labels after the UI
+had been translated. The fix uses stable `data-connection-state` keys and one
+shared badge: amber/clock for Waiting, green/monitor-check for Connected, and
+distinct icons/text for setup, reconnecting, unavailable, and publication error.
+No animated status treatment was added.
+
+Browser testing also reproduced a stale Dashboard Connected badge after the
+last Audience tab closed: a historical snapshot acknowledgement was being
+presented as current connection state. The Dashboard now subscribes to the
+same existing presence store as the header. Transport, heartbeat timing, draw
+selection, persistence, and audit code are unchanged. Snapshot-application
+diagnostics elsewhere are not redefined by this UI fix.
+
+### Verification
+
+| Check | Result |
+|---|---|
+| Focused tests: `AudienceConnectionStatus.test.tsx`, `ProductionAudienceStatus.test.tsx`, `audience-presence.integration.test.ts`, `ProductionWorkspaceContext.test.ts` | PASS — 4 files / 14 tests; includes stale acknowledgement after disconnect |
+| `npm.cmd run lint` | PASS |
+| `npm.cmd run build` | PASS — existing large-chunk warning remains; index JS 1,086.83 kB |
+| `npm.cmd run typecheck` | PASS |
+| `npm.cmd run test -- --reporter=json --outputFile=node_modules/.tmp/phase11-2a-test-results.json` | FAIL — 33 files failed / 110 passed; 146 tests failed / 1,041 passed; both new test files pass |
+| `git diff --check` | PASS |
+
+Full-suite failures include stale pre-localization assertions (for example,
+English navigation and draw labels). The earlier checkpoint already records
+full-suite debt, but this run does not establish that every failure predates
+11.2A-01. Full failure reconciliation remains separate pending work.
+
+### Focused browser observations
+
+- Surface: Codex in-app browser, Windows, `http://localhost:5173`, development
+  working tree based on `81c645a`; not an immutable packaged candidate.
+- Disposable Event: `UJI UI 11.2A — Status Audiens`, ID
+  `24e47f28-dff7-4f33-ba7b-cfe8370df21c`; display configuration
+  `ac02b41b-4c56-4866-b5e2-3c4ce9fdf4e3`. No participants, draw sessions, or
+  official results were created. The Event remains in the isolated test profile.
+- Observed both Waiting and Connected badges at Operator 1440 x 900 and
+  1366 x 768 without clipping; screenshots inspected during the session.
+- Connected used green tint/border/text and a monitor-check icon in both
+  locations. Waiting used amber tint/border/text and a clock icon.
+- Opened a real same-origin Audience tab, observed both indicators Connected,
+  closed it, observed both return to Waiting after the existing liveness
+  timeout, reopened it, and repeated the close check successfully.
+- Header keyboard focus retained the visible 3px focus outline. Header Enter
+  and Dashboard open-button actions did not expose a popup in this browser;
+  popup launch is NOT accepted by this check. The separate tab was opened
+  using scope IDs observed in the existing development diagnostics UI.
+- Temporary viewport overrides were reset and test Audience tabs closed.
+  These observations support B11-014/B11-019/B11-021 only; they do not change
+  the full Chrome/Edge matrix rows from NOT RUN.
+
+### Changed files and scope
+
+- New: `src/shared/components/AudienceConnectionStatus.tsx` and its test;
+  `src/app/layouts/ProductionAudienceStatus.test.tsx`.
+- Modified: `src/app/layouts/ProductionOperatorLayout.tsx`,
+  `src/pages/operator/ProductionDashboardPage.tsx`, `src/styles/operator.css`.
+- Planning/evidence synchronized: `TASKS.md`, `PHASE-11-PLAN.md`, this record,
+  and `PHASE-11-BROWSER-MATRIX.md`; earlier uncommitted planning edits preserved.
+- Assumption: this item improves the existing connection indicator, not a new
+  connection protocol or a claim that a snapshot is currently visible onscreen.
+- No dependencies, schema changes, or automatic commit. Owner visual review,
+  supported-browser popup verification, and the full-suite gate remain open.
+
+## 11.2A-02 — Clean Audience standby (2026-08-31)
+
+Owner-approved changes: remove the narrow 15ch standby heading cap, use a wider
+responsive message area with more comfortable line spacing, and remove the
+fullscreen button and its status overlay from all production Audience states.
+Fullscreen is a browser operation (Windows F11), with no replacement control,
+hint, or shortcut interception on the public stage. Public copy, branding,
+safe-area configuration, assistive announcements, and draw data are unchanged.
+The standalone fullscreen utility and display protocol remain unchanged.
+
+### Focused verification
+
+- `npm.cmd run test -- src/pages/display/AudienceProductionRoute.test.tsx src/ui/audience/StandbyStage.test.tsx src/application/display-transport/fullscreen-controller.test.ts src/shared/components/AudienceConnectionStatus.test.tsx src/app/layouts/ProductionAudienceStatus.test.tsx --maxWorkers=2`: PASS, 5 files / 22 tests.
+- Route tests cover no fullscreen controls in connecting, disconnected,
+  standby, countdown, rolling, reveal, pending handoff, and blackout states,
+  including an environment with a supported Fullscreen API. Directly related
+  route assertions were aligned with existing Indonesian copy.
+- `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run typecheck`: PASS.
+  Existing large-chunk warning remains (main JS 1,084.87 kB).
+- `git diff --check`: PASS. Full suite was not rerun for this item; the prior
+  11.2A-01 full-suite failures above remain unresolved, not waived.
+- Codex in-app browser, localhost development build, same isolated disposable
+  Event recorded above: inspected standby screenshots at 1920 x 1080,
+  1366 x 768, and 1280 x 720. Text fits without horizontal overflow and no
+  fullscreen controls/status are visible. At 1920 the heading occupies two
+  lines (112px font, 1440px heading width); at smaller viewports it fits one
+  line (81.96px and 76.8px respectively). Wrapping depends on available width.
+- No participants, draws, or official results were created by this check.
+  Browser observations used default branding, not the owner's uploaded image.
+  Actual Chrome/Edge F11 entry/exit and owner branded-screen acceptance remain
+  NOT RUN; this focused check does not complete the final browser matrix.
+
+### Files and boundaries
+
+- Modified: `src/pages/display/AudienceDisplayPage.tsx`,
+  `src/pages/display/AudienceProductionRoute.test.tsx`, `src/styles/audience.css`.
+- Added: `src/ui/audience/StandbyStage.test.tsx`.
+- Updated: `TASKS.md`, `PHASE-11-PLAN.md`, `PHASE-11-BROWSER-MATRIX.md`, this record.
+- Assumption: clean output means removing both the button and the windowed/
+  fullscreen status, not replacing them with another public control.
+- No dependencies or persistence changes. Earlier 11.2A-01 edits are preserved;
+  no commit was requested or made.
+
+### 11.2A-02 copy follow-up (2026-08-31)
+
+Owner requested a simple wording correction: idle Audience heading is now
+"Menunggu undian berikutnya", replacing "Menunggu presentasi berikutnya".
+Only the string in `src/ui/audience/AudiencePresentation.tsx` and matching
+assertions/fixture in `AudienceProductionRoute.test.tsx` and
+`StandbyStage.test.tsx` changed; `TASKS.md` records this follow-up.
+Layout, public state, other messages, and persisted data are unchanged.
+Custom message settings/menu are explicitly deferred for discussion and are
+not implemented. This supersedes the earlier instruction to preserve this
+particular waiting copy; the earlier browser observations describe that prior copy.
+
+Verification: `npm.cmd run test -- src/pages/display/AudienceProductionRoute.test.tsx src/ui/audience/StandbyStage.test.tsx --maxWorkers=2`
+passed (2 files / 8 tests). `npm.cmd run lint`, `npm.cmd run build`, and
+`git diff --check` passed; the existing large-chunk build warning remains.
+No new browser or full-suite acceptance is claimed. No commit was made.
+
 ## Verdict
 
 **PHASE 11 NOT ACCEPTED.** Slice 11.0 establishes traceability and exposes the

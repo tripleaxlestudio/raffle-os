@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import { createAudienceController, type AudienceController, type AudienceRenderedState } from '../../application/display-transport/audience-controller.ts'
-import { createFullscreenController, type FullscreenState } from '../../application/display-transport/fullscreen-controller.ts'
 import { createAudienceTransport, type Transport } from '../../application/display-transport/transport.ts'
 import type { ProtocolScope } from '../../application/display-transport/protocol.ts'
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
@@ -59,17 +58,6 @@ function AudienceDevelopmentDiagnostics({ controller, renderedState, enabled }: 
   </dl>} />
 }
 
-function FullscreenControls({ controller, state }: { readonly controller: ReturnType<typeof createFullscreenController>; readonly state: FullscreenState }) {
-  if (!controller.isSupported()) return null
-  const active = state === 'fullscreen' || state === 'entering' || state === 'exiting'
-  return <div className="audience-fullscreen-controls" aria-label="Kontrol tampilan publik">
-    <button type="button" onClick={() => { void (state === 'fullscreen' ? controller.exit() : controller.enter()) }} disabled={state === 'entering' || state === 'exiting'}>
-      {state === 'fullscreen' ? 'Keluar dari layar penuh' : 'Masuk layar penuh'}
-    </button>
-    <span role="status">{state === 'denied' ? 'Layar penuh tidak diizinkan; tampilan berjendela tetap tersedia.' : state === 'failed' ? 'Layar penuh tidak tersedia; tampilan berjendela tetap tersedia.' : active ? (state === 'fullscreen' ? 'Layar penuh aktif' : 'Memperbarui mode tampilan') : 'Tampilan berjendela'}</span>
-  </div>
-}
-
 export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppliedScope, expectedSession, controller: suppliedController }: AudienceDisplayPageProps) {
   // Keep the production URL context stable for the lifetime of this route. The
   // previous implementation recreated these parse results on every render;
@@ -88,8 +76,6 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
   const transportFactory = useMemo(() => suppliedTransport === undefined ? () => createAudienceTransport('raffle-os-display', hookScope) : undefined, [hookScope, suppliedTransport])
   const controller = useMemo(() => suppliedController ?? createAudienceController({ transport, transportFactory, scope: hookScope, expectedSession, autoStartHandshake: suppliedController === undefined ? false : undefined }), [expectedSession, hookScope, suppliedController, transport, transportFactory])
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
-  const fullscreen = useMemo(() => createFullscreenController({ target: typeof document === 'undefined' ? undefined : document.documentElement }), [])
-  const fullscreenState = useSyncExternalStore(fullscreen.subscribe, fullscreen.getState, fullscreen.getState)
   const controllerLifecycleGeneration = useRef(0)
   useEffect(() => {
     const diagnostics = controller.getDiagnostics()
@@ -110,12 +96,10 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
     controller.startHandshake()
     return () => { queueMicrotask(() => { if (controllerLifecycleGeneration.current === generation) controller.close() }) }
   }, [controller])
-  useEffect(() => () => fullscreen.close(), [fullscreen])
 
   if (scope === undefined && suppliedTransport === undefined) return <><AudienceUnavailablePresentation state="connecting" /><p role="status">Tautan Tampilan Audiens tidak memiliki konteks produksi yang valid. Buka dari Pengaturan.</p></>
   if (scope === undefined) return <><AudienceUnavailablePresentation state="disconnected-safe" /><p role="status">Konteks Tampilan Audiens tidak tersedia.</p></>
 
-  const controls = <FullscreenControls controller={fullscreen} state={fullscreenState} />
-  if (state.kind === 'connecting' || state.kind === 'disconnected-safe' || state.kind === 'unavailable') return <><AudienceUnavailablePresentation state={state.kind === 'connecting' ? 'connecting' : 'disconnected-safe'} />{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={state.kind} enabled={audienceDiagnosticsDebugEnabled} /></>
-  return <><AudiencePresentation snapshot={state.snapshot} />{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={selectedRenderedState} enabled={audienceDiagnosticsDebugEnabled} /></>
+  if (state.kind === 'connecting' || state.kind === 'disconnected-safe' || state.kind === 'unavailable') return <><AudienceUnavailablePresentation state={state.kind === 'connecting' ? 'connecting' : 'disconnected-safe'} /><AudienceDevelopmentDiagnostics controller={controller} renderedState={state.kind} enabled={audienceDiagnosticsDebugEnabled} /></>
+  return <><AudiencePresentation snapshot={state.snapshot} /><AudienceDevelopmentDiagnostics controller={controller} renderedState={selectedRenderedState} enabled={audienceDiagnosticsDebugEnabled} /></>
 }

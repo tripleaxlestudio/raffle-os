@@ -13,6 +13,7 @@ import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
 import { Icon } from '../../shared/ui/index.ts'
 import { StartupRecoveryGate } from '../workspace/StartupRecoveryGate.tsx'
 import { openManagedAudienceDisplay } from '../../infrastructure/browser/managed-audience-display.ts'
+import { AudienceConnectionStatus } from '../../shared/components/AudienceConnectionStatus.tsx'
 
 function ProductionOperatorHeader() {
   const workspace = useProductionWorkspace()
@@ -51,13 +52,13 @@ function ProductionOperatorHeader() {
     : workspace.status === 'empty' ? 'Perlu pengaturan' : workspace.status === 'loading' ? 'Memuat' : 'Tidak tersedia'
   const audienceStatusKey = workspace.status === 'ready' && workspace.displayConfiguration !== null ? `${workspace.event.id}:${workspace.displayConfiguration.id}` : 'unconfigured'
   const subscribedAudienceState = useSyncExternalStore((listener) => subscribeDisplayConnectionStatus(audienceStatusKey, listener), (): DisplayConnectionStatus => getDisplayConnectionStatus(audienceStatusKey), (): DisplayConnectionStatus => 'waiting')
-  const audienceState = workspace.status !== 'ready'
-    ? workspace.status === 'error' ? 'Tidak tersedia' : 'Perlu pengaturan'
-    : workspace.displayConfiguration === null ? 'Perlu pengaturan' : statusLabel(subscribedAudienceState)
+  const audienceState: DisplayConnectionStatus = workspace.status !== 'ready'
+    ? workspace.status === 'error' ? 'unavailable' : 'setup-required'
+    : workspace.displayConfiguration === null ? 'setup-required' : subscribedAudienceState
   const audienceUrl = workspace.status === 'ready' && workspace.displayConfiguration !== null
     ? `/display?eventId=${encodeURIComponent(workspace.event.id)}&displayConfigurationId=${encodeURIComponent(workspace.displayConfiguration.id)}`
     : null
-  const audienceDetail = audienceUrl === null ? 'Buka Pengaturan untuk mengatur tampilan produksi.' : 'Lingkup tampilan produksi siap; menunggu publikasi Operator.'
+  const audienceDetail = audienceUrl === null ? 'Buka Pengaturan untuk mengatur tampilan produksi.' : 'Buka atau fokuskan jendela Tampilan Audiens.'
   const standbyUnavailableReason = workspace.status !== 'ready'
     ? 'Acara aktif belum siap.'
     : workspace.displayConfiguration === null
@@ -168,7 +169,7 @@ function ProductionOperatorHeader() {
     </div>
     <div className="operator-header__status" aria-label="Utilitas Operator">
       {workspace.status === 'ready' && workspace.currentMode !== null ? <span className="mode-badge" data-mode={workspace.currentMode}>{workspace.currentMode === 'live' ? 'Mode Live' : 'Mode Latihan'}</span> : null}
-      {audienceUrl === null ? <Link className="operator-display-indicator" title={audienceDetail} aria-label="Tampilan Audiens: Perlu pengaturan" to="/settings"><span aria-hidden="true" className="operator-status-marker" />Audiens: Perlu pengaturan</Link> : <button type="button" className="operator-display-indicator" title={audienceDetail} aria-label={`Tampilan Audiens: ${audienceState}`} onClick={openAudience}><span aria-hidden="true" className="operator-status-marker" />Audiens: {audienceState}</button>}
+      {audienceUrl === null ? <Link className="operator-display-indicator" title={audienceDetail} aria-label={`Tampilan Audiens: ${statusLabel(audienceState)}`} to="/settings"><AudienceConnectionStatus state={audienceState} prefix /></Link> : <button type="button" className="operator-display-indicator" title={audienceDetail} aria-label={`Tampilan Audiens: ${statusLabel(audienceState)}`} onClick={openAudience}><AudienceConnectionStatus state={audienceState} prefix /></button>}
       <button type="button" className="operator-standby-control" title={standbyUnavailableReason ?? 'Kembalikan Tampilan Audiens ke presentasi siaga normal dengan branding.'} aria-label="Kembalikan Tampilan Audiens ke Siaga" disabled={standbyUnavailableReason !== null} onClick={publishStandby}><Icon name="StopCircle" size={16} />Siaga</button>
     </div>
   </header>
@@ -225,7 +226,7 @@ function ProductionAudienceDiagnostics() {
 }
 
 function statusLabel(status: string): string {
-  const labels: Readonly<Record<string, string>> = { active: 'Aktif', archived: 'Diarsipkan', draft: 'Draf', waiting: 'Menunggu', connected: 'Terhubung', disconnected: 'Terputus' }
+  const labels: Readonly<Record<string, string>> = { active: 'Aktif', archived: 'Diarsipkan', draft: 'Draf', waiting: 'Menunggu', connected: 'Terhubung', disconnected: 'Terputus', reconnecting: 'Menghubungkan ulang', unavailable: 'Tidak tersedia' }
   return status === 'setup-required' ? 'Perlu pengaturan' : status === 'publication-failed' ? 'Publikasi gagal' : labels[status] ?? status
 }
 

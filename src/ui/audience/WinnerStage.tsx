@@ -6,12 +6,14 @@ import { DisplayStateLabel } from './DisplayStateLabel.tsx'
 import { WinnerGrid } from './WinnerGrid.tsx'
 import { SEQUENTIAL_REVEAL_INTERVAL_MS, visibleWinnerCount } from './sequential-reveal.ts'
 import { rollingFrameIndex, syntheticRollingNumber } from './rolling-number.ts'
+import { useReducedMotionPreference } from '../../shared/hooks/useReducedMotionPreference.ts'
 
 export function WinnerStage({ scenario }: { readonly scenario: PublicAudienceScenario }) {
   const confirmed = scenario.state === 'confirmed'
   const revealEntrance = scenario.presentationMode !== 'random-number-roll'
   const count = Math.max(1, scenario.layoutCount ?? scenario.ticketNumbers?.length ?? 1)
-  const sequential = scenario.state === 'reveal' && scenario.revealMode === 'sequential' && count > 1
+  const reducedMotion = useReducedMotionPreference()
+  const sequential = !reducedMotion && scenario.state === 'reveal' && scenario.revealMode === 'sequential' && count > 1
   const speed = scenario.rollSpeedPerSecond ?? 12
   const seed = scenario.presentationSeed ?? 'raffle-os-audience'
   const [now, setNow] = useState(() => globalThis['Date']['now']())
@@ -29,6 +31,6 @@ export function WinnerStage({ scenario }: { readonly scenario: PublicAudienceSce
   return <AudienceStage className="winner-stage" state={scenario.state}>
     <AudienceDrawHeader context={scenario} winnerCount={count} className="winner-stage__header" />
     <WinnerGrid confirmed={confirmed} winnerStatuses={scenario.winnerStatuses} count={count} ticketNumbers={displayedValues} lockedCount={lockedCount} rolling={sequential} revealEntrance={revealEntrance} />
-    <DisplayStateLabel tone={confirmed ? 'confirmed' : 'verification'}>{scenario.statusMessage ?? 'Public result'}</DisplayStateLabel>
+    <DisplayStateLabel tone={confirmed ? 'confirmed' : 'verification'}>{scenario.statusMessage ?? 'Hasil publik'}</DisplayStateLabel>
   </AudienceStage>
 }

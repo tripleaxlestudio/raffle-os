@@ -4,7 +4,7 @@ import type { DisplayConfiguration } from '../../domain/display/display-configur
 import { BlackoutStage, CountdownStage, DisconnectedStage, RandomNumberRollStage, RollingStage, StandbyStage, WinnerStage } from './index.ts'
 import type { PublicAudienceScenario } from './audience-view.types.ts'
 
-const publicContext = { eventName: 'HUT RI 81', eventSubtitle: 'Public event presentation', prizeCategory: 'Current draw', prizeLabel: 'Winner announcement' } as const
+const publicContext = { eventName: 'HUT RI 81', eventSubtitle: 'Presentasi Acara publik', prizeCategory: 'Undian aktif', prizeLabel: 'Pengumuman pemenang' } as const
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function snapshotToAudienceScenario(snapshot: PublicDisplaySnapshot): PublicAudienceScenario {
@@ -33,11 +33,11 @@ export function snapshotToAudienceScenario(snapshot: PublicDisplaySnapshot): Pub
     ...(snapshot.stage === 'reveal' || snapshot.stage === 'pending-handoff' ? { revealMode: snapshot.revealMode, revealStartedAt: snapshot.revealStartedAt ?? snapshot.stageStartedAt } : {}),
     state: committedState,
     nextDrawReady: committedState === 'standby' && snapshot.winnerCount !== undefined && snapshot.prizeName !== undefined,
-    message: committedState === 'standby' ? (snapshot.displayTest === false && snapshot.winnerCount === undefined ? 'Waiting for the next presentation' : snapshot.stage === 'pending-handoff' ? 'No active winners' : 'Draw will begin shortly') : committedState === 'countdown' ? 'Get ready' : committedState === 'rolling' ? 'Drawing in progress' : undefined,
+    message: committedState === 'standby' ? (snapshot.displayTest === false && snapshot.winnerCount === undefined ? 'Menunggu presentasi berikutnya' : snapshot.stage === 'pending-handoff' ? 'Tidak ada pemenang aktif' : 'Undian segera dimulai') : committedState === 'countdown' ? 'Bersiap' : committedState === 'rolling' ? 'Pengundian berlangsung' : undefined,
     countdownValue: snapshot.stage === 'countdown' ? String(snapshot.countdownValue ?? '—') : undefined,
     ticketNumbers: snapshot.ticketNumbers,
     winnerStatuses: snapshot.winnerStatuses,
-    statusMessage: committedState === 'confirmed' ? 'RESULTS CONFIRMED' : snapshot.stage === 'pending-handoff' ? (inProgress ? 'VERIFICATION IN PROGRESS' : 'RESULTS UNDER VERIFICATION') : snapshot.stage === 'reveal' ? 'RESULTS UNDER VERIFICATION' : undefined,
+    statusMessage: committedState === 'confirmed' ? 'HASIL DIKONFIRMASI' : snapshot.stage === 'pending-handoff' ? (inProgress ? 'VERIFIKASI BERLANGSUNG' : 'HASIL SEDANG DIVERIFIKASI') : snapshot.stage === 'reveal' ? 'HASIL SEDANG DIVERIFIKASI' : undefined,
     displayTest: snapshot.displayTest,
   }
 }
@@ -58,6 +58,7 @@ export function AudiencePresentation({ snapshot, displayConfiguration, className
   const [previewScale, setPreviewScale] = useState(0.5)
   const backgroundUrl = useAssetUrl(snapshot.background?.blob)
   const scenario = snapshotToAudienceScenario(snapshot)
+  const announcement = audienceStateAnnouncement(scenario)
   useEffect(() => {
     if (!preview) return
     const presentation = presentationRef.current
@@ -84,9 +85,34 @@ export function AudiencePresentation({ snapshot, displayConfiguration, className
       : scenario.state === 'countdown' ? <CountdownStage scenario={scenario} />
         : scenario.state === 'rolling' ? <RollingStage scenario={scenario} />
           : <WinnerStage scenario={scenario} />
-  return <div ref={presentationRef} aria-hidden={preview ? true : undefined} data-audience-preview={preview ? 'true' : undefined} className={['audience-display-page', preview && (snapshot.stage === 'reveal' || snapshot.stage === 'pending-handoff') ? 'production-preview__tickets production-preview__tickets--surface' : undefined, className].filter(Boolean).join(' ')} style={audienceStyle}>{rendered}</div>
+  return <div ref={presentationRef} aria-hidden={preview ? true : undefined} data-audience-preview={preview ? 'true' : undefined} className={['audience-display-page', preview && (snapshot.stage === 'reveal' || snapshot.stage === 'pending-handoff') ? 'production-preview__tickets production-preview__tickets--surface' : undefined, className].filter(Boolean).join(' ')} style={audienceStyle}><p aria-atomic="true" aria-live="polite" className="sr-only" role="status">{announcement}</p>{rendered}</div>
+}
+
+function audienceStateAnnouncement(scenario: PublicAudienceScenario): string {
+  switch (scenario.state) {
+    case 'standby':
+      return scenario.displayTest ? 'Tes Tampilan Audiens. Ini bukan undian resmi.' : 'Tampilan Audiens siap dan menunggu undian berikutnya.'
+    case 'countdown':
+      return `Hitung mundur undian ${scenario.countdownValue ?? ''}`.trim()
+    case 'rolling':
+      return 'Pengundian berlangsung. Presentasi putaran tidak menentukan hasil.'
+    case 'reveal':
+    case 'winner-reveal':
+      return 'Hasil pemenang ditampilkan dan sedang diverifikasi.'
+    case 'pending-handoff':
+      return 'Hasil pemenang menunggu verifikasi Operator.'
+    case 'confirmed':
+      return 'Hasil pemenang telah dikonfirmasi.'
+    case 'connecting':
+      return 'Tampilan Audiens sedang menghubungkan.'
+    case 'disconnected':
+    case 'disconnected-safe':
+      return 'Koneksi Tampilan Audiens terputus. Menunggu Operator dengan aman.'
+    case 'blackout':
+      return 'Layar hitam Tampilan Audiens aktif.'
+  }
 }
 
 export function AudienceUnavailablePresentation({ state }: { readonly state: 'connecting' | 'disconnected-safe' }) {
-  return <DisconnectedStage scenario={{ ...publicContext, state, message: state === 'connecting' ? 'Connecting to the operator' : 'Display connection interrupted', instruction: state === 'connecting' ? 'Waiting for a public presentation snapshot.' : 'Please wait for the operator.' }} />
+  return <DisconnectedStage scenario={{ ...publicContext, state, message: state === 'connecting' ? 'Menghubungkan ke Operator' : 'Koneksi tampilan terputus', instruction: state === 'connecting' ? 'Menunggu snapshot presentasi publik.' : 'Silakan tunggu Operator.' }} />
 }

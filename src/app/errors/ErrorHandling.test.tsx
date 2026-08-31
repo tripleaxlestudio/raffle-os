@@ -50,7 +50,7 @@ describe('AppErrorBoundary', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'Something went wrong',
+        name: 'Terjadi kesalahan',
       }),
     ).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent('RENDER_DETAIL_SENTINEL')
@@ -93,7 +93,7 @@ describe('RouteErrorPage', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Page not found',
+        name: 'Halaman tidak ditemukan',
       }),
     ).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent(
@@ -113,7 +113,7 @@ describe('RouteErrorPage', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Something went wrong',
+        name: 'Terjadi kesalahan',
       }),
     ).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent('ROUTE_DETAIL_SENTINEL')

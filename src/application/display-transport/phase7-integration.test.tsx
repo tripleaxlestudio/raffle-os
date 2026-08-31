@@ -83,7 +83,7 @@ describe('Phase 7 integration and automated acceptance', () => {
     expect(screen.queryByText('Connecting to the operator')).not.toBeInTheDocument()
 
     act(() => { publisher.publish(source('countdown')) })
-    expect(screen.getByRole('heading', { name: 'Get ready' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Bersiap' })).toBeVisible()
     act(() => { publisher.publish(source('rolling')) })
     expect(screen.getByText('Rolling in progress')).toBeVisible()
     expect(screen.getByText('Door Prize')).toBeVisible()

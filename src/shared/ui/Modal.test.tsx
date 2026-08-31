@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { Button } from './Button.tsx'
 import { ConfirmationDialog } from './ConfirmationDialog.tsx'
+import { SidePanel } from './SidePanel.tsx'
 
 function DialogHarness({ onConfirm = vi.fn() }) {
   const [open, setOpen] = useState(false)
@@ -29,7 +30,7 @@ function DialogHarness({ onConfirm = vi.fn() }) {
 describe('Modal and ConfirmationDialog', () => {
   it('has an accessible name and places initial focus on cancel', async () => {
     const user = userEvent.setup()
-    render(<DialogHarness />)
+    const { container } = render(<DialogHarness />)
 
     await user.click(
       screen.getByRole('button', { name: 'Open confirmation' }),
@@ -41,15 +42,17 @@ describe('Modal and ConfirmationDialog', () => {
     expect(screen.getByRole('dialog', { name: 'Advance static state?' })).toHaveClass(
       'ui-modal--production-surface',
     )
-    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Batal' })).toHaveFocus()
     expect(
       screen.getByRole('button', { name: 'Close dialog' }),
     ).toBeVisible()
+    expect(container).toHaveAttribute('inert')
+    expect(document.documentElement).toHaveAttribute('data-modal-open')
   })
 
   it('closes on Escape and returns focus to the trigger', async () => {
     const user = userEvent.setup()
-    render(<DialogHarness />)
+    const { container } = render(<DialogHarness />)
     const trigger = screen.getByRole('button', {
       name: 'Open confirmation',
     })
@@ -59,6 +62,8 @@ describe('Modal and ConfirmationDialog', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     await waitFor(() => expect(trigger).toHaveFocus())
+    expect(container).not.toHaveAttribute('inert')
+    expect(document.documentElement).not.toHaveAttribute('data-modal-open')
   })
 
   it('closes on cancel and returns focus without confirming', async () => {
@@ -70,7 +75,7 @@ describe('Modal and ConfirmationDialog', () => {
     })
 
     await user.click(trigger)
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await user.click(screen.getByRole('button', { name: 'Batal' }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(onConfirm).not.toHaveBeenCalled()
@@ -111,5 +116,16 @@ describe('Modal and ConfirmationDialog', () => {
 
     await user.tab()
     expect(close).toHaveFocus()
+  })
+})
+
+describe('SidePanel keyboard isolation', () => {
+  it('keeps the pointer-dismiss backdrop out of the keyboard and accessibility trees', () => {
+    render(<SidePanel description="Review replacement details." onClose={vi.fn()} open title="Redraw review"><Button>Continue review</Button></SidePanel>)
+
+    const backdrop = document.querySelector('.ui-side-panel-backdrop')
+    expect(backdrop).toHaveAttribute('aria-hidden', 'true')
+    expect(backdrop).toHaveAttribute('tabindex', '-1')
+    expect(screen.getByRole('dialog', { name: 'Redraw review' })).toBeInTheDocument()
   })
 })

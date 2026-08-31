@@ -120,10 +120,12 @@ export function SidePanel({
       data-layer="drawer-root"
     >
       <button
+        aria-hidden="true"
         aria-label="Close redraw panel"
         className="ui-side-panel-backdrop"
         data-layer="drawer-backdrop"
         onClick={onClose}
+        tabIndex={-1}
         type="button"
       />
       <div

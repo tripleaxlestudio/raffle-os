@@ -12,20 +12,20 @@ interface PaginationProps {
   readonly label?: string
 }
 
-export function Pagination({ label = 'Pagination', onPageChange, onPageSizeChange, page, pageSize, totalItems }: PaginationProps) {
+export function Pagination({ label = 'Paginasi', onPageChange, onPageSizeChange, page, pageSize, totalItems }: PaginationProps) {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
   const firstItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1
   const lastItem = Math.min(page * pageSize, totalItems)
 
   return <nav className="ui-pagination" aria-label={label}>
-    <span className="ui-pagination__range">{firstItem}–{lastItem} of {totalItems}</span>
+    <span className="ui-pagination__range">{firstItem}–{lastItem} dari {totalItems}</span>
     <div className="ui-pagination__controls">
-      <Select containerClassName="ui-pagination__page-size" id={`${label.toLowerCase().replaceAll(' ', '-')}-page-size`} label="Rows per page" value={pageSize} onChange={(event) => onPageSizeChange(Number(event.currentTarget.value))}>
+      <Select containerClassName="ui-pagination__page-size" id={`${label.toLowerCase().replaceAll(' ', '-')}-page-size`} label="Baris per halaman" value={pageSize} onChange={(event) => onPageSizeChange(Number(event.currentTarget.value))}>
         {PAGINATION_PAGE_SIZES.map((size) => <option key={size} value={size}>{size}</option>)}
       </Select>
-      <Button size="sm" variant="quiet" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Previous</Button>
-      <span className="ui-pagination__page-status" aria-live="polite">Page {page} of {totalPages}</span>
-      <Button size="sm" variant="quiet" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>Next</Button>
+      <Button size="sm" variant="quiet" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>Sebelumnya</Button>
+      <span className="ui-pagination__page-status" aria-live="polite">Halaman {page} dari {totalPages}</span>
+      <Button size="sm" variant="quiet" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>Berikutnya</Button>
     </div>
   </nav>
 }

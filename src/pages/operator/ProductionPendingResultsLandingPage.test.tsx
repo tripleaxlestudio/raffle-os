@@ -68,44 +68,45 @@ describe('production Pending Results landing state', () => {
   it('renders a bounded no-action empty state with event context and navigation', async () => {
     renderPage()
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Pending Results' })).toBeInTheDocument()
-    expect(screen.getByText('Summer Raffle · unresolved Live sessions')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 2, name: 'No pending results' })).toBeInTheDocument()
-    expect(screen.getByText('There are no Live draw results waiting for operator review.')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Hasil' })).toBeInTheDocument()
+    expect(screen.getByText('Summer Raffle · sesi Live belum selesai')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Tidak ada hasil menunggu konfirmasi' })).toBeInTheDocument()
+    expect(screen.getByText('Tidak ada hasil Undian yang menunggu peninjauan.')).toBeInTheDocument()
 
-    const emptyState = screen.getByRole('heading', { level: 2, name: 'No pending results' }).closest('.pending-results__empty-state')
+    const emptyState = screen.getByRole('heading', { level: 2, name: 'Tidak ada hasil menunggu konfirmasi' }).closest('.pending-results__empty-state')
     expect(emptyState).toBeInTheDocument()
     expect(emptyState).toHaveClass('ui-card')
     expect(emptyState).toHaveClass('pending-results__empty-state')
-    expect(within(emptyState as HTMLElement).getByLabelText('No action required')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Open Live Draw' })).toHaveAttribute('href', '/draw/live')
-    expect(screen.getByRole('link', { name: 'View History' })).toHaveAttribute('href', '/history')
-    expect(screen.queryByText('Review Pending Result')).not.toBeInTheDocument()
+    expect(within(emptyState as HTMLElement).getByLabelText('Tidak perlu tindakan')).toBeInTheDocument()
+    expect(screen.queryByText(/Undian Live|Hasil Menunggu Konfirmasi/)).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Buka Undian' })).toHaveAttribute('href', '/draw/live')
+    expect(screen.getByRole('link', { name: 'Lihat Riwayat' })).toHaveAttribute('href', '/history')
+    expect(screen.queryByText('Tinjau hasil ini')).not.toBeInTheDocument()
   })
 
   it('keeps practice and completed sessions out of the unresolved Live empty state', async () => {
     mocks.queue = { event, items: [sessionItem('pending-confirmation', 'practice'), sessionItem('completed')] }
     renderPage()
 
-    expect(await screen.findByRole('heading', { level: 2, name: 'No pending results' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 2, name: 'Tidak ada hasil menunggu konfirmasi' })).toBeInTheDocument()
   })
 
   it('preserves the operational pending-result card when a Live session is unresolved', async () => {
     mocks.queue = { event, items: [sessionItem('pending-confirmation')] }
     renderPage()
 
-    const review = await screen.findByRole('link', { name: 'Review Winners' })
+    const review = await screen.findByRole('link', { name: 'Tinjau Pemenang' })
     expect(review).toHaveAttribute('href', '/draw/pending/live-pending-confirmation')
-    expect(screen.getByText('PENDING REVIEW')).toBeInTheDocument()
+    expect(screen.getByText('MENUNGGU PENINJAUAN')).toBeInTheDocument()
     expect(screen.getByText('Travel Voucher')).toBeInTheDocument()
     const landingCard = document.querySelector('.pending-results__landing-card')
     expect(landingCard).toHaveTextContent('Grand Prize')
-    expect(landingCard).toHaveTextContent('1 winner')
-    expect(landingCard).toHaveTextContent('1 winner is waiting for a decision.')
-    expect(screen.getByText('PENDING')).toBeInTheDocument()
+    expect(landingCard).toHaveTextContent('1 pemenang')
+    expect(landingCard).toHaveTextContent('1 pemenang menunggu keputusan.')
+    expect(screen.getByText('MENUNGGU')).toBeInTheDocument()
     expect(screen.queryByText('Action required')).not.toBeInTheDocument()
     expect(screen.queryByText(/awaiting confirmation/)).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'No pending results' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Tidak ada hasil menunggu konfirmasi' })).not.toBeInTheDocument()
     expect(document.querySelector('.pending-results__landing-card')).toBeInTheDocument()
   })
 
@@ -113,7 +114,7 @@ describe('production Pending Results landing state', () => {
     const user = userEvent.setup()
     render(<MemoryRouter><ProductionPendingResultsLandingPage /><RuntimeDiagnosticsPanel side="Operator" title="Audience publisher diagnostics" summary={<p>Diagnostics summary</p>} /></MemoryRouter>)
 
-    const emptyState = await screen.findByRole('heading', { level: 2, name: 'No pending results' })
+    const emptyState = await screen.findByRole('heading', { level: 2, name: 'Tidak ada hasil menunggu konfirmasi' })
     const diagnostics = screen.getByTestId('operator-runtime-diagnostics')
     expect(emptyState.closest('.pending-results__empty-state')).not.toContainElement(diagnostics)
     expect(diagnostics).not.toHaveAttribute('open')

@@ -75,8 +75,8 @@ No row is marked PASS by assumption.
 
 | Gate | Status | Required evidence |
 |---|---|---|
-| Accessibility hardening | GAP | `PHASE-11-ACCESSIBILITY-AUDIT.md`, focused tests, B11-019/B11-020 |
-| Indonesian production localization | GAP | `INDONESIAN-LOCALIZATION.md`, coverage tests, B11-021 |
+| Accessibility hardening | IN PROGRESS | Slice 11.1 implementation and focused evidence are recorded in `PHASE-11-ACCESSIBILITY-AUDIT.md`; current Chrome/Edge B11-019/B11-020 and assistive-technology sign-off remain pending |
+| Indonesian production localization | IN PROGRESS | `INDONESIAN-LOCALIZATION.md`, typed message catalog, formatters, production copy migration, and focused UI regressions are checkpointed; full-suite reconciliation and B11-021 remain pending |
 | Browser and viewport acceptance | MANUAL-PENDING | Completed `PHASE-11-BROWSER-MATRIX.md` |
 | Scale and performance | GAP | Approved `PHASE-11-PERFORMANCE.md` and B11-022 |
 | Bundle/prototype/debug cleanup | GAP | Build manifest/source audit and accepted large-chunk disposition |
@@ -85,15 +85,33 @@ No row is marked PASS by assumption.
 | Known limitations | IN PROGRESS | Initial register in `PHASE-11-BASELINE.md`; publish final product record |
 | RC decision | GAP | Immutable candidate evidence and explicit approver decision |
 
-## Fresh verification
+## Slice 11.1 verification (historical)
 
 | Command | Result |
 |---|---|
-| `npm run lint` | PASS |
-| `npm run typecheck` | PASS |
-| `npm run test` | PASS — 139 files, 1,165 tests |
-| `npm run build` | PASS — Vite 8.1.5; `index` 1,081.11 kB and the inherited large-chunk warning remains open as P11-006; `xlsx` is a separate 493.22 kB chunk |
-| `git diff --check` | PASS after Slice 11.0 edits |
+| `npm run lint` | PASS — Slice 11.1 candidate |
+| `npm run typecheck` | PASS — Slice 11.1 candidate |
+| `npm run test` | PASS — 139 files, 1,170 tests |
+| `npm run build` | PASS — Vite 8.1.5; `index` 1,083.87 kB and the inherited large-chunk warning remains open as P11-006; `xlsx` is a separate 493.22 kB chunk |
+| `git diff --check` | PASS after Slice 11.1 edits |
+
+## Combined 11.1–11.2 checkpoint — 2026-08-31
+
+This checkpoint saves accessibility hardening, the in-progress Indonesian
+production localization, the approved Undian/Hasil labels, and the empty-state
+layout fixes for Hasil and Riwayat. It is not acceptance of either slice.
+
+The latest pre-checkpoint UI fix passed `npm run lint`, `npm run build` (including
+the TypeScript build), its focused History empty-state test, and `git diff --check`.
+The inherited large-chunk warning remains open. Earlier focused sidebar,
+pending-results, and locale tests also passed.
+
+The full suite has not returned to green after localization: outstanding test
+failures and remaining copy review must be reconciled before slice completion.
+The historical 11.1 full-suite PASS above does not apply to this checkpoint.
+Chrome/Edge and assistive-technology acceptance remain pending. The latest
+in-app browser check could not reach the History empty-state card because that
+browser profile had no active Event; no visual PASS is claimed for that check.
 
 ## Verdict
 

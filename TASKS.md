@@ -616,15 +616,23 @@ Recovery and operational-safety work is part of MVP hardening. Backup and restor
 ### Accessibility and presentation
 
 - [ ] Review keyboard navigation across all operator workflows.
-- [ ] Verify visible focus states.
-- [ ] Complete a color-contrast review.
-- [ ] Add reduced-motion support.
+- [x] Verify visible focus states in source, focused regressions, and sampled
+  browser surfaces; full Chrome/Edge journey sign-off remains B11-019.
+- [x] Complete the default-token color-contrast review; target-display branding
+  combinations remain part of B11-016/B11-020.
+- [x] Add reduced-motion support.
 - [ ] Add a high-readability Audience Display option if approved.
 - [ ] Add a large-number display option if approved.
-- [ ] Remove unnecessary animation.
-- [ ] Verify important states are not communicated through color alone.
+- [x] Remove unnecessary animation.
+- [x] Verify important states are not communicated through color alone.
 
 ### Bahasa Indonesia localization
+
+Checkpoint 2026-08-31: the glossary, typed locale boundary, production copy
+migration, and Undian/Hasil/empty-state UI refinements are saved with Slice 11.1.
+Slice 11.2 remains in progress: full-suite failures, final copy review, and
+Chrome/Edge B11-021 acceptance are still outstanding. See
+`docs/technical/PHASE-11-ACCEPTANCE.md` for checkpoint evidence.
 
 - [ ] Define and approve the Indonesian terminology glossary.
 - [ ] Inventory all user-facing production Operator and Audience copy.

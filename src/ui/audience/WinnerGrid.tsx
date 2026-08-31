@@ -39,7 +39,7 @@ export function WinnerGrid({
   return (
     <div
       role="list"
-      aria-label={ariaLabel ?? `${count} ticket ${confirmed ? 'confirmed results' : 'results'}`}
+      aria-label={ariaLabel ?? `${count} tiket ${confirmed ? 'hasil dikonfirmasi' : 'hasil'}`}
       className={`winner-grid winner-grid--${count}${className === undefined ? '' : ` ${className}`}`}
       data-columns={metadata.columns}
       data-grid-layout={metadata.layout}

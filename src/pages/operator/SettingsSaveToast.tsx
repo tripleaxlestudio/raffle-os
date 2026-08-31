@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Icon } from '../../shared/ui/Icon.tsx'
+import { useReducedMotionPreference } from '../../shared/hooks/useReducedMotionPreference.ts'
 
 export interface SettingsSaveToastProps {
   readonly kind: 'success' | 'error'
@@ -9,13 +10,13 @@ export interface SettingsSaveToastProps {
 
 export function SettingsSaveToast({ kind, message, onDismiss }: SettingsSaveToastProps) {
   const [exiting, setExiting] = useState(false)
+  const reducedMotion = useReducedMotionPreference()
 
   const dismiss = useCallback(() => {
-    const reducedMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     if (reducedMotion) { onDismiss(); return }
     setExiting(true)
     window.setTimeout(onDismiss, 180)
-  }, [onDismiss])
+  }, [onDismiss, reducedMotion])
 
   useEffect(() => {
     if (kind === 'error') return

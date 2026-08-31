@@ -5,13 +5,14 @@ import { AudienceDrawHeader } from './AudienceDrawHeader.tsx'
 import { DisplayStateLabel } from './DisplayStateLabel.tsx'
 import { rollingFrameIndex, syntheticRollingNumber } from './rolling-number.ts'
 import { WinnerGrid } from './WinnerGrid.tsx'
+import { useReducedMotionPreference } from '../../shared/hooks/useReducedMotionPreference.ts'
 
 export function RollingStage({ scenario }: { readonly scenario: PublicAudienceScenario }) {
   const speed = scenario.rollSpeedPerSecond ?? 12
   const startedAt = scenario.rollingStartedAt
   const slotCount = Math.min(100, Math.max(1, scenario.rollingSlotCount ?? scenario.ticketNumbers?.length ?? 1))
   const seed = scenario.presentationSeed ?? 'raffle-os-audience'
-  const reducedMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+  const reducedMotion = useReducedMotionPreference()
   const [frame, setFrame] = useState(0)
   useEffect(() => {
     if (scenario.prototypeStatic) return
@@ -23,10 +24,10 @@ export function RollingStage({ scenario }: { readonly scenario: PublicAudienceSc
   const values = scenario.prototypeStatic && scenario.ticketNumbers !== undefined ? scenario.ticketNumbers : Array.from({ length: slotCount }, (_, slot) => syntheticRollingNumber(seed, slot, frame))
   const winnerCount = scenario.winnerCount ?? slotCount
   return <AudienceStage className="rolling-stage" state={scenario.state}>
-    <AudienceDrawHeader context={scenario} winnerCount={winnerCount} className="rolling-stage__header"><p className="rolling-stage__status">Rolling in progress</p></AudienceDrawHeader>
+    <AudienceDrawHeader context={scenario} winnerCount={winnerCount} className="rolling-stage__header"><p className="rolling-stage__status">Putaran berlangsung</p></AudienceDrawHeader>
     <div className="rolling-stage__content">
-      <WinnerGrid confirmed={false} count={slotCount} ticketNumbers={values} lockedCount={scenario.prototypeStatic ? slotCount : 0} rolling={!scenario.prototypeStatic} prototypeStatic={scenario.prototypeStatic} revealEntrance className="rolling-ticket-stream" ariaLabel={scenario.prototypeStatic ? 'Presentational ticket stream' : 'Synthetic rolling ticket numbers'} />
+      <WinnerGrid confirmed={false} count={slotCount} ticketNumbers={values} lockedCount={scenario.prototypeStatic ? slotCount : 0} rolling={!scenario.prototypeStatic} prototypeStatic={scenario.prototypeStatic} revealEntrance className="rolling-ticket-stream" ariaLabel={scenario.prototypeStatic ? 'Aliran tiket presentasi' : 'Nomor tiket putaran sintetis'} />
     </div>
-    <DisplayStateLabel>Rolling</DisplayStateLabel>
+    <DisplayStateLabel>Berputar</DisplayStateLabel>
   </AudienceStage>
 }

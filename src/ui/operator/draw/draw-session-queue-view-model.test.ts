@@ -20,17 +20,17 @@ describe('production DrawSession queue view model', () => {
     expect(formatted).not.toContain('T16:42:00')
   })
   it('uses explicit mode and lifecycle labels', () => {
-    expect(presentDrawSessionQueueItem(item('ready', 'practice'))).toMatchObject({ modeLabel: 'Practice', lifecycleLabel: 'Ready', lifecycleTone: 'success', actionLabel: 'Start Practice' })
+    expect(presentDrawSessionQueueItem(item('ready', 'practice'))).toMatchObject({ modeLabel: 'Latihan', lifecycleLabel: 'Ready', lifecycleTone: 'success', actionLabel: 'Start Practice' })
     expect(presentDrawSessionQueueItem(item('ready', 'live'))).toMatchObject({ modeLabel: 'Live', lifecycleLabel: 'Ready', actionLabel: 'Start Live' })
-    expect(presentDrawSessionQueueItem(item('pending-confirmation'))).toMatchObject({ lifecycleLabel: 'Decision required', actionLabel: 'Review Pending Results', priority: 'action-required' })
+    expect(presentDrawSessionQueueItem(item('pending-confirmation'))).toMatchObject({ lifecycleLabel: 'Decision required', actionLabel: 'Tinjau Hasil Tertunda', priority: 'action-required' })
   })
   it('formats drawing recovery without raw checkpoint values', () => {
     expect(presentDrawSessionQueueItem(item('drawing'))).toMatchObject({ lifecycleLabel: 'Presentation in progress', checkpointLabel: 'Presentation in progress; resume available', actionLabel: 'Resume presentation' })
     expect(presentDrawSessionQueueItem(item('drawing')).checkpointLabel).not.toBe('No checkpoint')
   })
   it('classifies completed and cancelled sessions as historical', () => {
-    expect(presentDrawSessionQueueItem(item('completed'))).toMatchObject({ priority: 'historical', historical: true, lifecycleLabel: 'Completed' })
-    expect(presentDrawSessionQueueItem(item('cancelled'))).toMatchObject({ priority: 'historical', historical: true, lifecycleLabel: 'Cancelled' })
+    expect(presentDrawSessionQueueItem(item('completed'))).toMatchObject({ priority: 'historical', historical: true, lifecycleLabel: 'Selesai' })
+    expect(presentDrawSessionQueueItem(item('cancelled'))).toMatchObject({ priority: 'historical', historical: true, lifecycleLabel: 'Dibatalkan' })
     expect(groupDrawSessionQueueItems([item('pending-confirmation'), item('ready', 'practice'), item('completed'), item('cancelled')])['action-required']).toHaveLength(1)
   })
   it('keeps relationship failures visible and non-actionable', () => {
@@ -58,7 +58,7 @@ describe('production DrawSession queue view model', () => {
     expect(selectCurrentOperationalQueueItems([ready, pending]).map((entry) => entry.session.id)).toEqual(['active-pending'])
   })
   it('distinguishes Audience presence from acknowledged publication', () => {
-    expect(presentAudienceConnection({ kind: 'audience-presence', status: 'connected', subscriberCount: 1 }, undefined)).toMatchObject({ label: 'Waiting', acknowledged: false })
-    expect(presentAudienceConnection({ kind: 'snapshot-applied', epoch: 1, sequence: 2, publicState: 'standby' }, { lastAcknowledgement: { epoch: 1, sequence: 2, publicState: 'standby' } } as unknown as OperatorPublisherDiagnostics)).toMatchObject({ label: 'Connected', acknowledged: true })
+    expect(presentAudienceConnection({ kind: 'audience-presence', status: 'connected', subscriberCount: 1 }, undefined)).toMatchObject({ label: 'Menunggu', acknowledged: false })
+    expect(presentAudienceConnection({ kind: 'snapshot-applied', epoch: 1, sequence: 2, publicState: 'standby' }, { lastAcknowledgement: { epoch: 1, sequence: 2, publicState: 'standby' } } as unknown as OperatorPublisherDiagnostics)).toMatchObject({ label: 'Terhubung', acknowledged: true })
   })
 })

@@ -15,14 +15,14 @@ export function StandbyStage({ scenario }: StandbyStageProps) {
         logo={scenario.logo}
       />
       <div className="standby-stage__message">
-        {scenario.displayTest ? <p className="audience-test-badge" role="status">DISPLAY TEST · NOT AN OFFICIAL DRAW</p> : null}
-        <p className="audience-eyebrow">{scenario.nextDrawReady ? 'Next draw' : scenario.displayTest === false ? 'Display ready' : 'Next draw'}</p>
-        {scenario.nextDrawReady ? <h1>{scenario.prizeLabel}</h1> : <h1>{scenario.message ?? 'Draw will begin shortly'}</h1>}
+        {scenario.displayTest ? <p className="audience-test-badge" role="status">TES TAMPILAN · BUKAN UNDIAN RESMI</p> : null}
+        <p className="audience-eyebrow">{scenario.nextDrawReady ? 'Undian berikutnya' : scenario.displayTest === false ? 'Tampilan siap' : 'Undian berikutnya'}</p>
+        {scenario.nextDrawReady ? <h1>{scenario.prizeLabel}</h1> : <h1>{scenario.message ?? 'Undian segera dimulai'}</h1>}
         <p className="audience-prize">
           <span>{scenario.prizeCategory}</span>
-          {scenario.nextDrawReady ? <strong>{scenario.winnerCount} Winners</strong> : <strong>{scenario.prizeLabel}</strong>}
+          {scenario.nextDrawReady ? <strong>{scenario.winnerCount} Pemenang</strong> : <strong>{scenario.prizeLabel}</strong>}
         </p>
-        {scenario.nextDrawReady ? <p className="standby-stage__next-draw-message">{scenario.message ?? 'Draw will begin shortly'}</p> : null}
+        {scenario.nextDrawReady ? <p className="standby-stage__next-draw-message">{scenario.message ?? 'Undian segera dimulai'}</p> : null}
       </div>
       <div aria-hidden="true" className="audience-safe-area-markers" />
     </AudienceStage>

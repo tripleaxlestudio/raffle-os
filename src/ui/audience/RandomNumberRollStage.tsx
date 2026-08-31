@@ -6,16 +6,17 @@ import { DisplayStateLabel } from './DisplayStateLabel.tsx'
 import { rollingFrameIndex, syntheticRollingNumber } from './rolling-number.ts'
 import { SEQUENTIAL_REVEAL_INTERVAL_MS, visibleWinnerCount } from './sequential-reveal.ts'
 import { WinnerGrid } from './WinnerGrid.tsx'
+import { useReducedMotionPreference } from '../../shared/hooks/useReducedMotionPreference.ts'
 
 export function RandomNumberRollStage({ scenario }: { readonly scenario: PublicAudienceScenario }) {
   const count = Math.max(1, scenario.layoutCount ?? scenario.ticketNumbers?.length ?? scenario.rollingSlotCount ?? 1)
   const speed = scenario.rollSpeedPerSecond ?? 12
   const seed = scenario.presentationSeed ?? 'raffle-os-audience'
   const isReveal = scenario.state === 'reveal'
-  const sequential = isReveal && scenario.revealMode === 'sequential' && count > 1
+  const reducedMotion = useReducedMotionPreference()
+  const sequential = !reducedMotion && isReveal && scenario.revealMode === 'sequential' && count > 1
   const [frame, setFrame] = useState(0)
   const [now, setNow] = useState(() => globalThis['Date']['now']())
-  const reducedMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
   useEffect(() => {
     if (isReveal || scenario.prototypeStatic) return
     let handle: number | undefined
@@ -36,7 +37,7 @@ export function RandomNumberRollStage({ scenario }: { readonly scenario: PublicA
   const values = isReveal ? Array.from({ length: count }, (_, index) => index < lockedCount ? authoritativeValues[index] ?? '000000' : syntheticRollingNumber(seed, index, rollingFrame)) : scenario.prototypeStatic && scenario.ticketNumbers !== undefined ? scenario.ticketNumbers : Array.from({ length: count }, (_, index) => syntheticRollingNumber(seed, index, frame))
   return <AudienceStage className="random-number-roll-stage" state={scenario.state}>
     <AudienceDrawHeader context={scenario} winnerCount={count} className="random-number-roll-stage__header" />
-    <WinnerGrid confirmed={false} count={count} ticketNumbers={values} lockedCount={lockedCount} rolling={!isReveal || sequential} revealEntrance={!isReveal} ariaLabel="Random Number Roll ticket values" />
-    <DisplayStateLabel tone={isReveal ? 'verification' : 'neutral'}>{isReveal ? 'Results under verification' : 'Rolling'}</DisplayStateLabel>
+    <WinnerGrid confirmed={false} count={count} ticketNumbers={values} lockedCount={lockedCount} rolling={!isReveal || sequential} revealEntrance={!isReveal} ariaLabel="Nilai tiket Putar Nomor Acak" />
+    <DisplayStateLabel tone={isReveal ? 'verification' : 'neutral'}>{isReveal ? 'Hasil sedang diverifikasi' : 'Berputar'}</DisplayStateLabel>
   </AudienceStage>
 }

@@ -9,18 +9,20 @@ interface ProgressStepperProps {
   currentStep: PrototypeImportStep
   steps: readonly ProgressStep[]
   completed?: boolean
+  locale?: 'en' | 'id'
 }
 
 export function ProgressStepper({
   currentStep,
   steps,
   completed = false,
+  locale = 'en',
 }: ProgressStepperProps) {
   const matchedIndex = steps.findIndex((step) => step.id === currentStep)
   const currentIndex = matchedIndex < 0 ? 0 : matchedIndex
 
   return (
-    <nav aria-label="Participant Import progress" className="progress-stepper">
+    <nav aria-label={locale === 'id' ? 'Progres Impor Peserta' : 'Participant Import progress'} className="progress-stepper">
       <ol>
         {steps.map((step, index) => {
           const state = completed || index < currentIndex
@@ -28,12 +30,9 @@ export function ProgressStepper({
             : index === currentIndex
               ? 'active'
               : 'upcoming'
-          const stateLabel =
-            state === 'complete'
-              ? 'Complete'
-              : state === 'active'
-                ? 'Current'
-                : 'Upcoming'
+          const stateLabel = locale === 'id'
+            ? state === 'complete' ? 'Selesai' : state === 'active' ? 'Aktif' : 'Berikutnya'
+            : state === 'complete' ? 'Complete' : state === 'active' ? 'Current' : 'Upcoming'
 
           return (
             <li

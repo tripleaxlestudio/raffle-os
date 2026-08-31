@@ -17,12 +17,12 @@ function renderResults(path = '/dev/prototypes/draw/results') {
   return { router, ...view }
 }
 
-describe('Pending Results static prototype', () => {
+describe('Hasil Pending static prototype', () => {
   it('renders the pending summary and exact leading-zero tickets', () => {
     renderResults()
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Pending Results' }),
+      screen.getByRole('heading', { level: 1, name: 'Hasil Pending' }),
     ).toBeInTheDocument()
     const table = screen.getByRole('table', {
       name: 'Prototype winner records for pending scenario',
@@ -51,7 +51,7 @@ describe('Pending Results static prototype', () => {
     const partialTable = screen.getByRole('table', {
       name: 'Prototype winner records for partial scenario',
     })
-    for (const status of ['Pending', 'Confirmed', 'Cancelled', 'Replaced']) {
+    for (const status of ['Tertunda', 'Dikonfirmasi', 'Dibatalkan', 'Replaced']) {
       expect(within(partialTable).getAllByText(status).length).toBeGreaterThan(0)
     }
     expect(screen.getByText(/Mixed statuses shown/i)).toBeVisible()
@@ -63,7 +63,7 @@ describe('Pending Results static prototype', () => {
         name: 'Prototype winner records for confirmed scenario',
       }),
     ).toBeInTheDocument()
-    expect(screen.getAllByText('Confirmed').length).toBeGreaterThanOrEqual(10)
+    expect(screen.getAllByText('Dikonfirmasi').length).toBeGreaterThanOrEqual(10)
     expect(
       screen.getByRole('link', { name: 'Review static history' }),
     ).toHaveAttribute('href', '/dev/prototypes/history?view=session-detail')
@@ -105,9 +105,9 @@ describe('Pending Results static prototype', () => {
       within(summary).getByText('Total result records').parentElement,
     ).toHaveTextContent('10')
     for (const [label, value] of [
-      ['Pending', '4'],
-      ['Confirmed', '4'],
-      ['Cancelled', '1'],
+      ['Tertunda', '4'],
+      ['Dikonfirmasi', '4'],
+      ['Dibatalkan', '1'],
       ['Replaced', '1'],
     ] as const) {
       expect(

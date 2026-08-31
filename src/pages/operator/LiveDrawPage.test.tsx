@@ -60,7 +60,7 @@ describe('Live Draw static prototype', () => {
         name: 'Advance Practice Mode prototype?',
       }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Batal' })).toHaveFocus()
     expect(
       screen.getByText(/No random selection will occur/i),
     ).toBeVisible()
@@ -137,7 +137,7 @@ describe('Live Draw static prototype', () => {
     expect(screen.queryByText('Alya Pranoto')).not.toBeInTheDocument()
     expect(screen.queryByText('Bima Raharja')).not.toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'Review Pending Results' }),
+      screen.getByRole('link', { name: 'Tinjau Hasil Tertunda' }),
     ).toHaveAttribute('href', '/dev/prototypes/draw/results')
   })
 })

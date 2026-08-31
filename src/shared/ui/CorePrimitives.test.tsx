@@ -166,7 +166,7 @@ describe('core UI primitives', () => {
     expect(screen.getByLabelText('Readiness')).toHaveClass(
       'ui-card--raised',
     )
-    expect(screen.getByText('Confirmed')).toHaveClass(
+    expect(screen.getByText('Dikonfirmasi')).toHaveClass(
       'ui-badge--confirmed',
     )
   })

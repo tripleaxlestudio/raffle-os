@@ -22,7 +22,7 @@ describe('Draw Run production preflight', () => {
   it('composes a complete ready checklist with Practice context and presentation summary', () => {
     const result = createDrawRunPreflight(ready(), display, 'connected')
     expect(result).toMatchObject({ state: 'ready', canStart: true, mode: 'practice' })
-    expect(result.checks.map((check) => check.label)).toEqual(['Event', 'Prize', 'Eligible pool', 'Audience Display', 'Presentation', 'Session'])
+    expect(result.checks.map((check) => check.label)).toEqual(['Event', 'Prize', 'Pool yang memenuhi syarat', 'Audience Display', 'Presentasi', 'Session'])
     expect(result.checks.find((check) => check.key === 'eligibility')?.value).toBe('100 eligible')
     expect(result.checks.find((check) => check.key === 'presentation')?.value).toBe('Random Number Roll · Manual Stop')
   })
@@ -38,13 +38,13 @@ describe('Draw Run production preflight', () => {
     const result = createDrawRunPreflight(ready(), null, 'setup-required')
     const audience = result.checks.find((check) => check.key === 'audience')
     expect(result.canStart).toBe(false)
-    expect(audience).toMatchObject({ state: 'blocked', value: 'Setup required', recoveryPath: '/settings' })
+    expect(audience).toMatchObject({ state: 'blocked', value: 'Perlu pengaturan', recoveryPath: '/settings' })
   })
 
   it('distinguishes configured waiting, connected, and unavailable Audience states', () => {
     expect(createDrawRunPreflight(ready(), display, 'waiting').checks.find((check) => check.key === 'audience')).toMatchObject({ state: 'waiting', value: 'Waiting for Audience' })
-    expect(createDrawRunPreflight(ready(), display, 'connected').checks.find((check) => check.key === 'audience')).toMatchObject({ state: 'ready', value: 'Connected' })
-    expect(createDrawRunPreflight(ready(), display, 'unavailable').checks.find((check) => check.key === 'audience')).toMatchObject({ state: 'waiting', value: 'Unavailable' })
+    expect(createDrawRunPreflight(ready(), display, 'connected').checks.find((check) => check.key === 'audience')).toMatchObject({ state: 'ready', value: 'Terhubung' })
+    expect(createDrawRunPreflight(ready(), display, 'unavailable').checks.find((check) => check.key === 'audience')).toMatchObject({ state: 'waiting', value: 'Tidak tersedia' })
   })
 
   it('keeps stale or conflicting sessions blocked without selecting winners', () => {

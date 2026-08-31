@@ -24,9 +24,9 @@ export function DisconnectedStage({
           aria-hidden="true"
           className="disconnected-stage__marker"
         />
-        <p className="audience-eyebrow">Display status</p>
-        <h1>{scenario.message ?? 'Display connection interrupted'}</h1>
-        <p>{scenario.instruction ?? 'Please wait for the operator.'}</p>
+        <p className="audience-eyebrow">Status tampilan</p>
+        <h1>{scenario.message ?? 'Koneksi tampilan terputus'}</h1>
+        <p>{scenario.instruction ?? 'Silakan tunggu Operator.'}</p>
       </div>
     </AudienceStage>
   )

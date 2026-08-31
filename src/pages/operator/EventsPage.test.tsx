@@ -40,9 +40,9 @@ describe('EventsPage activation flow', () => {
     const user = userEvent.setup()
     renderPage()
 
-    expect(await screen.findByText('CURRENT')).toBeInTheDocument()
+    expect(await screen.findByText('SAAT INI')).toBeInTheDocument()
     expect(screen.getByText('DRAFT')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Activate Event' }))
+    await user.click(screen.getByRole('button', { name: 'Aktifkan Acara' }))
 
     expect(screen.getByRole('dialog')).toHaveTextContent('Activate Uji Coba Event?')
     expect(screen.getByText('Verify the Event setup before continuing.')).toBeInTheDocument()
@@ -52,17 +52,17 @@ describe('EventsPage activation flow', () => {
   it('cancels without changing Draft, then activates to Ready while remaining Current', async () => {
     const user = userEvent.setup()
     renderPage()
-    await user.click(await screen.findByRole('button', { name: 'Activate Event' }))
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await user.click(await screen.findByRole('button', { name: 'Aktifkan Acara' }))
+    await user.click(screen.getByRole('button', { name: 'Batal' }))
     expect(screen.getByText('DRAFT')).toBeInTheDocument()
     expect(service.activateEvent).not.toHaveBeenCalled()
 
-    await user.click(screen.getByRole('button', { name: 'Activate Event' }))
-    const activationButtons = screen.getAllByRole('button', { name: 'Activate Event' })
+    await user.click(screen.getByRole('button', { name: 'Aktifkan Acara' }))
+    const activationButtons = screen.getAllByRole('button', { name: 'Aktifkan Acara' })
     await user.click(activationButtons[activationButtons.length - 1])
     expect(await screen.findByText('READY')).toBeInTheDocument()
-    expect(screen.getByText('CURRENT')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Activate Event' })).not.toBeInTheDocument()
+    expect(screen.getByText('SAAT INI')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aktifkan Acara' })).not.toBeInTheDocument()
   })
 
   it('does not offer activation for a Live Event', async () => {
@@ -70,7 +70,7 @@ describe('EventsPage activation flow', () => {
     renderPage()
 
     await screen.findByText('LIVE')
-    expect(screen.queryByRole('button', { name: 'Activate Event' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aktifkan Acara' })).not.toBeInTheDocument()
     expect(screen.getByText('Protected')).toBeInTheDocument()
   })
 })

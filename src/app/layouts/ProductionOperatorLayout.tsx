@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router'
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { getDisplayConnectionStatus, subscribeDisplayConnectionStatus, type DisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
 import { ProductionWorkspaceProvider, signalProductionWorkspaceChanged, useProductionAudiencePublisher, useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
 import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
@@ -12,6 +12,7 @@ import type { Event as RaffleEvent } from '../../domain/events/event.types.ts'
 import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
 import { Icon } from '../../shared/ui/index.ts'
 import { StartupRecoveryGate } from '../workspace/StartupRecoveryGate.tsx'
+import { openManagedAudienceDisplay } from '../../infrastructure/browser/managed-audience-display.ts'
 
 function ProductionOperatorHeader() {
   const workspace = useProductionWorkspace()
@@ -22,6 +23,7 @@ function ProductionOperatorHeader() {
   const [eventsLoading, setEventsLoading] = useState(false)
   const [eventSwitching, setEventSwitching] = useState(false)
   const [eventMenuError, setEventMenuError] = useState<string | null>(null)
+  const eventMenuId = useId()
   const eventButtonRef = useRef<HTMLButtonElement>(null)
   const eventPopoverRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -32,37 +34,37 @@ function ProductionOperatorHeader() {
       setAvailableEvents((await eventServices.events.findAll()).filter((event) => event.status !== 'archived'))
       setEventMenuError(null)
     } catch (cause: unknown) {
-      setEventMenuError(cause instanceof Error ? cause.message : 'Events could not be read safely.')
+      setEventMenuError(cause instanceof Error ? cause.message : 'Acara tidak dapat dibaca dengan aman.')
     } finally {
       setEventsLoading(false)
     }
   }, [eventServices])
   const eventLabel = workspace.status === 'loading'
-    ? 'Reading active Event'
+    ? 'Membaca Acara aktif'
     : workspace.status === 'ready'
       ? workspace.event.name
       : workspace.status === 'empty'
-        ? 'No active Event'
-        : 'Workspace unavailable'
+        ? 'Tidak ada Acara aktif'
+        : 'Ruang kerja tidak tersedia'
   const eventStatus = workspace.status === 'ready'
     ? workspace.event.status.charAt(0).toUpperCase() + workspace.event.status.slice(1)
-    : workspace.status === 'empty' ? 'Setup required' : workspace.status === 'loading' ? 'Loading' : 'Unavailable'
+    : workspace.status === 'empty' ? 'Perlu pengaturan' : workspace.status === 'loading' ? 'Memuat' : 'Tidak tersedia'
   const audienceStatusKey = workspace.status === 'ready' && workspace.displayConfiguration !== null ? `${workspace.event.id}:${workspace.displayConfiguration.id}` : 'unconfigured'
   const subscribedAudienceState = useSyncExternalStore((listener) => subscribeDisplayConnectionStatus(audienceStatusKey, listener), (): DisplayConnectionStatus => getDisplayConnectionStatus(audienceStatusKey), (): DisplayConnectionStatus => 'waiting')
   const audienceState = workspace.status !== 'ready'
-    ? workspace.status === 'error' ? 'Unavailable' : 'Setup required'
-    : workspace.displayConfiguration === null ? 'Setup required' : statusLabel(subscribedAudienceState)
+    ? workspace.status === 'error' ? 'Tidak tersedia' : 'Perlu pengaturan'
+    : workspace.displayConfiguration === null ? 'Perlu pengaturan' : statusLabel(subscribedAudienceState)
   const audienceUrl = workspace.status === 'ready' && workspace.displayConfiguration !== null
     ? `/display?eventId=${encodeURIComponent(workspace.event.id)}&displayConfigurationId=${encodeURIComponent(workspace.displayConfiguration.id)}`
     : null
-  const audienceDetail = audienceUrl === null ? 'Open Settings to configure the production display.' : 'Production display scope is ready; waiting for operator publication.'
+  const audienceDetail = audienceUrl === null ? 'Buka Pengaturan untuk mengatur tampilan produksi.' : 'Lingkup tampilan produksi siap; menunggu publikasi Operator.'
   const standbyUnavailableReason = workspace.status !== 'ready'
-    ? 'The active Event is not ready.'
+    ? 'Acara aktif belum siap.'
     : workspace.displayConfiguration === null
-      ? 'Configure the Audience Display in Settings first.'
+      ? 'Atur Tampilan Audiens di Pengaturan terlebih dahulu.'
       : workspace.unresolvedSession !== null || workspace.sessionCounts.drawing > 0
-        ? 'Standby is unavailable while a draw is active or awaiting verification.'
-        : parseDrawSessionId(workspace.event.id).ok ? null : 'The active Event identifier is invalid.'
+        ? 'Siaga tidak tersedia saat undian sedang aktif atau menunggu verifikasi.'
+        : parseDrawSessionId(workspace.event.id).ok ? null : 'Identitas Acara aktif tidak valid.'
   const publishStandby = () => {
     if (standbyUnavailableReason !== null || workspace.status !== 'ready' || workspace.displayConfiguration === null) return
     const parsedEventId = parseDrawSessionId(workspace.event.id)
@@ -96,27 +98,31 @@ function ProductionOperatorHeader() {
       signalProductionWorkspaceChanged()
       setEventMenuOpen(false)
     } catch (cause: unknown) {
-      setEventMenuError(cause instanceof Error ? cause.message : 'The Event could not be selected.')
+      setEventMenuError(cause instanceof Error ? cause.message : 'Acara tidak dapat dipilih.')
     } finally {
       setEventSwitching(false)
     }
   }
   const openAudience = () => {
     if (audienceUrl === null) return
-    window.open(audienceUrl, '_blank', 'noopener,noreferrer')
+    openManagedAudienceDisplay(audienceUrl)
   }
   useEffect(() => {
     if (!eventMenuOpen) return
-    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+    queueMicrotask(() => {
+      const firstItem = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')
+      ;(firstItem ?? menuRef.current)?.focus()
+    })
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setEventMenuOpen(false)
         eventButtonRef.current?.focus()
-      } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End') {
         event.preventDefault()
         const items = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
+        if (items.length === 0) return
         const current = items.indexOf(document.activeElement as HTMLElement)
-        const next = event.key === 'ArrowDown' ? (current + 1) % items.length : (current - 1 + items.length) % items.length
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : event.key === 'ArrowDown' ? (current + 1) % items.length : (current - 1 + items.length) % items.length
         items[next]?.focus()
       }
     }
@@ -130,33 +136,40 @@ function ProductionOperatorHeader() {
       document.removeEventListener('pointerdown', onPointerDown)
     }
   }, [eventMenuOpen])
+  useEffect(() => {
+    if (!eventMenuOpen || eventsLoading || availableEvents.length === 0) return
+    const menu = menuRef.current
+    if (menu !== null && document.activeElement === menu) {
+      menu.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+    }
+  }, [availableEvents.length, eventMenuOpen, eventsLoading])
   return <header className="operator-header">
     <div ref={eventPopoverRef} className="operator-header__event">
-      <button ref={eventButtonRef} type="button" className="operator-header__event-control" aria-haspopup="menu" aria-expanded={eventMenuOpen} onClick={() => { const nextOpen = !eventMenuOpen; setEventMenuOpen(nextOpen); if (nextOpen) void loadAvailableEvents() }}>
-        <span className="operator-header__label">Current Event</span>
+      <button ref={eventButtonRef} type="button" className="operator-header__event-control" aria-controls={eventMenuOpen ? eventMenuId : undefined} aria-haspopup="menu" aria-expanded={eventMenuOpen} onClick={() => { const nextOpen = !eventMenuOpen; setEventMenuOpen(nextOpen); if (nextOpen) void loadAvailableEvents() }}>
+        <span className="operator-header__label">Acara aktif</span>
         <strong title={eventLabel}>{eventLabel}</strong>
         <span className="operator-event-status">{eventStatus}</span>
         <span className="operator-header__chevron" aria-hidden="true" />
       </button>
-      {eventMenuOpen ? <div ref={menuRef} className="operator-header__menu" role="menu" aria-label="Current Event switcher">
-        {eventsLoading ? <span className="operator-header__menu-status" role="status">Loading Events…</span> : null}
+      {eventMenuOpen ? <div ref={menuRef} id={eventMenuId} className="operator-header__menu" role="menu" aria-busy={eventsLoading || undefined} aria-label="Pemilih Acara aktif" tabIndex={-1}>
+        {eventsLoading ? <span className="operator-header__menu-status" role="status">Memuat Acara…</span> : null}
         {eventMenuError === null ? availableEvents.map((event) => {
           const isCurrent = workspace.status === 'ready' && workspace.event.id === event.id
           return <div className={`operator-header__event-option${isCurrent ? ' operator-header__event-option--current' : ''}`} key={event.id}>
             <button type="button" role="menuitem" className="operator-header__event-switch" aria-current={isCurrent ? 'true' : undefined} disabled={eventSwitching} onClick={() => void selectEvent(event)}>
-              <span className="operator-header__event-option-copy"><strong>{event.name}</strong><span>{event.status}</span></span>
-              {isCurrent ? <span className="operator-header__event-current">Current</span> : null}
+              <span className="operator-header__event-option-copy"><strong>{event.name}</strong><span>{statusLabel(event.status)}</span></span>
+              {isCurrent ? <span className="operator-header__event-current">Aktif</span> : null}
             </button>
-            <Link role="menuitem" className="operator-header__event-manage" aria-label={`Manage ${event.name}`} to={`/events?eventId=${encodeURIComponent(event.id)}`} onClick={() => setEventMenuOpen(false)}><span aria-hidden="true">⚙</span></Link>
+            <Link role="menuitem" className="operator-header__event-manage" aria-label={`Kelola ${event.name}`} to={`/events?eventId=${encodeURIComponent(event.id)}`} onClick={() => setEventMenuOpen(false)}><span aria-hidden="true">⚙</span></Link>
           </div>
         }) : <span className="operator-header__menu-status" role="alert">{eventMenuError}</span>}
-        {!eventsLoading && eventMenuError === null && availableEvents.length === 0 ? <span className="operator-header__menu-status">No available Events.</span> : null}
+        {!eventsLoading && eventMenuError === null && availableEvents.length === 0 ? <span className="operator-header__menu-status">Tidak ada Acara yang tersedia.</span> : null}
       </div> : null}
     </div>
-    <div className="operator-header__status" aria-label="Operator utilities">
-      {workspace.status === 'ready' && workspace.currentMode !== null ? <span className="mode-badge" data-mode={workspace.currentMode}>{workspace.currentMode === 'live' ? 'Live Mode' : 'Practice Mode'}</span> : null}
-      {audienceUrl === null ? <Link className="operator-display-indicator" title={audienceDetail} aria-label="Audience: Setup required" to="/settings"><span aria-hidden="true" className="operator-status-marker" />Audience: Setup required</Link> : <button type="button" className="operator-display-indicator" title={audienceDetail} aria-label={`Audience: ${audienceState}`} onClick={openAudience}><span aria-hidden="true" className="operator-status-marker" />Audience: {audienceState}</button>}
-      <button type="button" className="operator-standby-control" title={standbyUnavailableReason ?? 'Return the Audience Display to the normal branded standby presentation.'} aria-label="Return Audience Display to Standby" disabled={standbyUnavailableReason !== null} onClick={publishStandby}><Icon name="StopCircle" size={16} />Standby</button>
+    <div className="operator-header__status" aria-label="Utilitas Operator">
+      {workspace.status === 'ready' && workspace.currentMode !== null ? <span className="mode-badge" data-mode={workspace.currentMode}>{workspace.currentMode === 'live' ? 'Mode Live' : 'Mode Latihan'}</span> : null}
+      {audienceUrl === null ? <Link className="operator-display-indicator" title={audienceDetail} aria-label="Tampilan Audiens: Perlu pengaturan" to="/settings"><span aria-hidden="true" className="operator-status-marker" />Audiens: Perlu pengaturan</Link> : <button type="button" className="operator-display-indicator" title={audienceDetail} aria-label={`Tampilan Audiens: ${audienceState}`} onClick={openAudience}><span aria-hidden="true" className="operator-status-marker" />Audiens: {audienceState}</button>}
+      <button type="button" className="operator-standby-control" title={standbyUnavailableReason ?? 'Kembalikan Tampilan Audiens ke presentasi siaga normal dengan branding.'} aria-label="Kembalikan Tampilan Audiens ke Siaga" disabled={standbyUnavailableReason !== null} onClick={publishStandby}><Icon name="StopCircle" size={16} />Siaga</button>
     </div>
   </header>
 }
@@ -211,18 +224,20 @@ function ProductionAudienceDiagnostics() {
   </dl>} />
 }
 
-function statusLabel(status: ReturnType<typeof getDisplayConnectionStatus>): string {
-  return status === 'setup-required' ? 'Setup required' : status === 'publication-failed' ? 'Publication failed' : status.charAt(0).toUpperCase() + status.slice(1)
+function statusLabel(status: string): string {
+  const labels: Readonly<Record<string, string>> = { active: 'Aktif', archived: 'Diarsipkan', draft: 'Draf', waiting: 'Menunggu', connected: 'Terhubung', disconnected: 'Terputus' }
+  return status === 'setup-required' ? 'Perlu pengaturan' : status === 'publication-failed' ? 'Publikasi gagal' : labels[status] ?? status
 }
 
 function ProductionOperatorContent() {
   const location = useLocation()
   const workspace = useProductionWorkspace()
   return <div className="operator-layout" data-interface="operator" data-operator-shell>
+    <a className="skip-link" href="#operator-main">Lewati ke konten utama</a>
     <OperatorSidebar production />
     <div className="operator-workspace">
       <ProductionOperatorHeader />
-      <main className="operator-main operator-main--production" data-production-content-scroll="true"><StartupRecoveryGate recovery={workspace.status === 'ready' ? workspace.startupRecovery : undefined} /><Outlet /><ProductionAudienceDiagnostics />{productionSetupStageIndexForRoute(location.pathname) !== undefined ? <ProductionSetupContinuation /> : null}</main>
+      <main className="operator-main operator-main--production" data-production-content-scroll="true" id="operator-main" tabIndex={-1}><StartupRecoveryGate recovery={workspace.status === 'ready' ? workspace.startupRecovery : undefined} /><Outlet /><ProductionAudienceDiagnostics />{productionSetupStageIndexForRoute(location.pathname) !== undefined ? <ProductionSetupContinuation /> : null}</main>
     </div>
   </div>
 }

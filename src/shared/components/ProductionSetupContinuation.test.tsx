@@ -23,7 +23,7 @@ describe('ProductionSetupContinuation', () => {
     expect(screen.getByRole('region', { name: 'Event setup' })).toHaveAttribute('data-setup-journey-surface', 'sticky')
     expect(screen.getByText(/SETUP JOURNEY · STEP 1 OF 5 · EVENT IN PROGRESS/)).toBeVisible()
     expect(screen.getByRole('list', { name: 'Production setup steps' })).toHaveTextContent('EventPrizeParticipantsDisplay SettingsDraw Setup')
-    expect(PRODUCTION_SETUP_JOURNEY.map((step) => step.label)).toEqual(['Event', 'Prize', 'Participants', 'Display Settings', 'Draw Setup'])
+    expect(PRODUCTION_SETUP_JOURNEY.map((step) => step.label)).toEqual(['Event', 'Prize', 'Peserta', 'Pengaturan Tampilan', 'Pengaturan Undian'])
   })
 
   it.each([
@@ -82,7 +82,7 @@ describe('ProductionSetupContinuation', () => {
 
   it('keeps the Dashboard back action on the first stage', async () => {
     const { router } = renderContinuation()
-    await userEvent.setup().click(screen.getByRole('link', { name: 'Back to Dashboard' }))
+    await userEvent.setup().click(screen.getByRole('link', { name: 'Kembali ke Dasbor' }))
     expect(router.state.location.pathname).toBe('/dashboard')
   })
 

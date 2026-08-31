@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SettingsSaveToast } from './SettingsSaveToast.tsx'
 
 describe('SettingsSaveToast', () => {
-  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
   it('renders an accessible success toast with title and tab detail', () => {
     const view = render(<SettingsSaveToast kind="success" message="Branding settings saved" onDismiss={vi.fn()} />)
@@ -34,12 +34,12 @@ describe('SettingsSaveToast', () => {
   })
 
   it('replaces the active toast and dismisses immediately when reduced motion is preferred', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })))
     const onDismiss = vi.fn()
     const view = render(<SettingsSaveToast kind="success" message="Branding settings saved" onDismiss={onDismiss} />)
     view.rerender(<SettingsSaveToast kind="success" message="Audio settings saved" onDismiss={onDismiss} />)
     expect(screen.getAllByRole('status')).toHaveLength(1)
     expect(screen.getByText('Audio settings saved')).toBeInTheDocument()
-    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true })))
     screen.getByRole('button', { name: 'Close notification' }).click()
     expect(onDismiss).toHaveBeenCalledOnce()
   })

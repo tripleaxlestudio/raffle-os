@@ -93,9 +93,9 @@ describe('Audience Display static states', () => {
     const { container } = renderDisplay('/display?state=countdown')
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Get ready' }),
+      screen.getByRole('heading', { level: 1, name: 'Bersiap' }),
     ).toBeVisible()
-    expect(screen.getByLabelText('Static countdown value: 3')).toHaveTextContent(
+    expect(screen.getByLabelText('Countdown: 3')).toHaveTextContent(
       '3',
     )
     expect(
@@ -155,7 +155,7 @@ describe('Audience winner grids', () => {
       expect(
         screen.getByRole('status'),
       ).toHaveTextContent('Results under verification')
-      expect(screen.queryByText('Confirmed')).not.toBeInTheDocument()
+      expect(screen.queryByText('Dikonfirmasi')).not.toBeInTheDocument()
     },
   )
 
@@ -173,7 +173,7 @@ describe('Audience winner grids', () => {
       expect(grid?.querySelectorAll('[data-ticket-tile]')).toHaveLength(
         count,
       )
-      expect(screen.getByRole('status')).toHaveTextContent('Confirmed')
+      expect(screen.getByRole('status')).toHaveTextContent('Dikonfirmasi')
       for (const tile of grid?.querySelectorAll('[data-ticket-tile]') ?? []) {
         expect(tile).toHaveAttribute('data-confirmed', 'true')
       }
@@ -192,15 +192,15 @@ describe('Audience winner grids', () => {
 })
 
 describe('Audience safety and privacy', () => {
-  it('renders blackout as an empty, non-interactive public surface', () => {
+  it('renders blackout as a non-interactive public surface with an assistive status', () => {
     const { container } = renderDisplay('/display?state=blackout')
     const blackout = container.querySelector(
       '[data-audience-state="blackout"]',
     )
 
     expect(blackout).toBeInTheDocument()
-    expect(blackout).toBeEmptyDOMElement()
-    expect(blackout).toHaveTextContent('')
+    expect(blackout).toHaveAttribute('role', 'status')
+    expect(blackout).toHaveAccessibleName('Audience Display blackout is active')
     expect(screen.queryByRole('heading')).not.toBeInTheDocument()
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
@@ -223,7 +223,7 @@ describe('Audience safety and privacy', () => {
     expect(
       screen.queryByText('Results under verification'),
     ).not.toBeInTheDocument()
-    expect(screen.queryByText('Confirmed')).not.toBeInTheDocument()
+    expect(screen.queryByText('Dikonfirmasi')).not.toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 

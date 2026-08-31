@@ -29,8 +29,8 @@ describe('production sidebar Event gating', () => {
     const user = userEvent.setup()
     renderSidebar()
 
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/dashboard')
-    for (const label of ['Prize', 'Participants', 'Display Settings', 'Draw Setup', 'Live Draw', 'Pending Results', 'History']) {
+    expect(screen.getByRole('link', { name: 'Dasbor' })).toHaveAttribute('href', '/dashboard')
+    for (const label of ['Hadiah', 'Peserta', 'Pengaturan Tampilan', 'Pengaturan Undian', 'Undian', 'Hasil', 'Riwayat']) {
       const item = screen.getByText(label).closest('[aria-disabled]') as HTMLElement
       expect(item).toHaveAttribute('aria-disabled', 'true')
       expect(item).not.toHaveAttribute('tabindex')
@@ -46,7 +46,7 @@ describe('production sidebar Event gating', () => {
 
     expect(document.querySelectorAll('.operator-nav__icon .ui-icon')).toHaveLength(8)
     expect(document.querySelectorAll('.operator-nav__marker')).toHaveLength(0)
-    for (const label of ['Dashboard', 'Prize', 'Participants', 'Display Settings', 'Draw Setup', 'Live Draw', 'Pending Results', 'History']) {
+    for (const label of ['Dasbor', 'Hadiah', 'Peserta', 'Pengaturan Tampilan', 'Pengaturan Undian', 'Undian', 'Hasil', 'Riwayat']) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
   })
@@ -63,7 +63,7 @@ describe('production sidebar Event gating', () => {
     workspace.status = 'ready'
     view.rerender(<MemoryRouter initialEntries={['/dashboard']}><OperatorSidebar production /><LocationProbe /></MemoryRouter>)
 
-    for (const label of ['Dashboard', 'Prize', 'Participants', 'Display Settings', 'Draw Setup', 'Live Draw', 'Pending Results', 'History']) {
+    for (const label of ['Dasbor', 'Hadiah', 'Peserta', 'Pengaturan Tampilan', 'Pengaturan Undian', 'Undian', 'Hasil', 'Riwayat']) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
     expect(screen.queryAllByText('Select an Event first')).toHaveLength(0)
@@ -81,32 +81,32 @@ describe('production sidebar Event gating', () => {
     workspace.status = 'ready'
     renderSidebar('/prize-categories')
 
-    expect(screen.getByRole('link', { name: 'Prize' })).toHaveClass('operator-nav__link--active')
-    expect(screen.getByRole('link', { name: 'Prize' })).toHaveAttribute('href', '/prize-categories')
+    expect(screen.getByRole('link', { name: 'Hadiah' })).toHaveClass('operator-nav__link--active')
+    expect(screen.getByRole('link', { name: 'Hadiah' })).toHaveAttribute('href', '/prize-categories')
   })
 
   it('keeps the next stage disabled when the current stage is complete but not admitted', () => {
     Object.assign(workspace, { status: 'ready', setupReadiness: { event: true, prize: true, participants: false, displaySettings: false, drawSetup: false }, setupJourneyReachedStep: 2 })
     renderSidebar('/prize-categories')
 
-    expect(screen.getByRole('link', { name: 'Prize' })).toHaveClass('operator-nav__link--active')
-    expect(screen.getByText('Participants').closest('[aria-disabled]')).toHaveAttribute('aria-disabled', 'true')
-    expect(screen.getByText('Display Settings').closest('[aria-disabled]')).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('link', { name: 'Hadiah' })).toHaveClass('operator-nav__link--active')
+    expect(screen.getByText('Peserta').closest('[aria-disabled]')).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByText('Pengaturan Tampilan').closest('[aria-disabled]')).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('admits the next stage without revoking it when navigating back', () => {
     Object.assign(workspace, { status: 'ready', setupReadiness: { event: true, prize: true, participants: false, displaySettings: false, drawSetup: false }, setupJourneyReachedStep: 3 })
     renderSidebar('/prize-categories')
 
-    expect(screen.getByRole('link', { name: 'Participants' })).toBeInTheDocument()
-    expect(screen.getByText('Display Settings').closest('[aria-disabled]')).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('link', { name: 'Peserta' })).toBeInTheDocument()
+    expect(screen.getByText('Pengaturan Tampilan').closest('[aria-disabled]')).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('restores normal production navigation after authoritative setup completion', () => {
     Object.assign(workspace, { status: 'ready', setupReadiness: { event: true, prize: true, participants: true, displaySettings: true, drawSetup: true }, setupJourneyReachedStep: 5 })
     renderSidebar('/draw/setup')
 
-    for (const label of ['Prize', 'Participants', 'Display Settings', 'Draw Setup', 'Live Draw', 'Pending Results', 'History']) {
+    for (const label of ['Hadiah', 'Peserta', 'Pengaturan Tampilan', 'Pengaturan Undian', 'Undian', 'Hasil', 'Riwayat']) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
     expect(screen.queryAllByLabelText('Complete the previous setup step first')).toHaveLength(0)

@@ -6,9 +6,9 @@ export function AudienceDrawHeader({ context, winnerCount, children, className =
   return <header className={['audience-draw-header', className].filter(Boolean).join(' ')}>
     <EventBrand eventName={context.eventName} eventSubtitle={context.eventSubtitle} logo={context.logo} />
     <div className="audience-draw-header__identity">
-      <p className="audience-eyebrow">CURRENT DRAW</p>
+      <p className="audience-eyebrow">UNDIAN AKTIF</p>
       <h1 className="audience-draw-header__prize">{context.prizeLabel}</h1>
-      <p className="audience-draw-header__meta"><span>{context.prizeCategory}</span>{winnerCount === undefined ? null : <><span aria-hidden="true">·</span><strong>{winnerCount} Winners</strong></>}</p>
+      <p className="audience-draw-header__meta"><span>{context.prizeCategory}</span>{winnerCount === undefined ? null : <><span aria-hidden="true">·</span><strong>{winnerCount} Pemenang</strong></>}</p>
       {children}
     </div>
   </header>

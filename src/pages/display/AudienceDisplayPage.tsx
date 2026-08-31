@@ -62,11 +62,11 @@ function AudienceDevelopmentDiagnostics({ controller, renderedState, enabled }: 
 function FullscreenControls({ controller, state }: { readonly controller: ReturnType<typeof createFullscreenController>; readonly state: FullscreenState }) {
   if (!controller.isSupported()) return null
   const active = state === 'fullscreen' || state === 'entering' || state === 'exiting'
-  return <div className="audience-fullscreen-controls" aria-label="Public display controls">
+  return <div className="audience-fullscreen-controls" aria-label="Kontrol tampilan publik">
     <button type="button" onClick={() => { void (state === 'fullscreen' ? controller.exit() : controller.enter()) }} disabled={state === 'entering' || state === 'exiting'}>
-      {state === 'fullscreen' ? 'Exit fullscreen' : 'Enter fullscreen'}
+      {state === 'fullscreen' ? 'Keluar dari layar penuh' : 'Masuk layar penuh'}
     </button>
-    <span role="status">{state === 'denied' ? 'Fullscreen was not allowed; windowed display remains available.' : state === 'failed' ? 'Fullscreen is unavailable; windowed display remains available.' : active ? (state === 'fullscreen' ? 'Fullscreen active' : 'Updating display mode') : 'Windowed display'}</span>
+    <span role="status">{state === 'denied' ? 'Layar penuh tidak diizinkan; tampilan berjendela tetap tersedia.' : state === 'failed' ? 'Layar penuh tidak tersedia; tampilan berjendela tetap tersedia.' : active ? (state === 'fullscreen' ? 'Layar penuh aktif' : 'Memperbarui mode tampilan') : 'Tampilan berjendela'}</span>
   </div>
 }
 
@@ -112,8 +112,8 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
   }, [controller])
   useEffect(() => () => fullscreen.close(), [fullscreen])
 
-  if (scope === undefined && suppliedTransport === undefined) return <><AudienceUnavailablePresentation state="connecting" /><p role="status">This Audience Display link is missing valid production context. Open it from Settings.</p></>
-  if (scope === undefined) return <><AudienceUnavailablePresentation state="disconnected-safe" /><p role="status">Audience Display context is unavailable.</p></>
+  if (scope === undefined && suppliedTransport === undefined) return <><AudienceUnavailablePresentation state="connecting" /><p role="status">Tautan Tampilan Audiens tidak memiliki konteks produksi yang valid. Buka dari Pengaturan.</p></>
+  if (scope === undefined) return <><AudienceUnavailablePresentation state="disconnected-safe" /><p role="status">Konteks Tampilan Audiens tidak tersedia.</p></>
 
   const controls = <FullscreenControls controller={fullscreen} state={fullscreenState} />
   if (state.kind === 'connecting' || state.kind === 'disconnected-safe' || state.kind === 'unavailable') return <><AudienceUnavailablePresentation state={state.kind === 'connecting' ? 'connecting' : 'disconnected-safe'} />{controls}<AudienceDevelopmentDiagnostics controller={controller} renderedState={state.kind} enabled={audienceDiagnosticsDebugEnabled} /></>

@@ -89,9 +89,14 @@
   }
 
   .ui-button--danger {
-    border-color: var(--status-danger);
-    background: var(--status-danger);
+    border-color: var(--action-danger, #b93642);
+    background: var(--action-danger, #b93642);
     color: #ffffff;
+  }
+
+  .ui-button--danger:hover:not(:disabled) {
+    border-color: var(--action-danger-hover, #c83f4d);
+    background: var(--action-danger-hover, #c83f4d);
   }
 
   .ui-button__spinner {
@@ -778,6 +783,10 @@
   .ui-toggle__track,
   .ui-toggle__thumb {
     transition: none;
+  }
+
+  .ui-button:hover:not(:disabled) {
+    transform: none;
   }
 }
 

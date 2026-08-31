@@ -34,7 +34,7 @@ type FormState = {
 const emptyForm: FormState = { eventId: '', prizeCategoryId: '', requestedWinners: '1', winningRule: 'once-per-event', requireCheckIn: false, eligibleGroupFilter: '', mode: 'practice', presentation: normalizeDrawPresentationConfiguration(undefined) }
 const QUICK_WINNER_COUNTS = [1, 3, 6, 10, 20, 50] as const
 type PrizeSelectorStatus = 'available' | 'ready' | 'active' | 'completed'
-const PRIZE_SELECTOR_STATUS_LABELS: Record<PrizeSelectorStatus, string> = { available: 'AVAILABLE', ready: 'READY', active: 'ACTIVE', completed: 'COMPLETED' }
+const PRIZE_SELECTOR_STATUS_LABELS: Record<PrizeSelectorStatus, string> = { available: 'TERSEDIA', ready: 'SIAP', active: 'AKTIF', completed: 'SELESAI' }
 
 function getPrizeSelectorStatus(category: PrizeCategory, configurations: readonly DrawConfiguration[], sessions: readonly DrawSession[]): PrizeSelectorStatus {
   const configurationIds = new Set(configurations.filter((configuration) => configuration.prizeCategoryId === category.id).map((configuration) => configuration.id))
@@ -65,12 +65,12 @@ function draftFromForm(form: FormState): DrawAuthoringDraft {
 }
 
 function PendingReviewModal({ record, open }: { readonly record: DrawAuthoringRecord; readonly open: boolean }) {
-  const winnerLabel = `${record.configuration.requestedWinners} ${record.configuration.requestedWinners === 1 ? 'winner' : 'winners'}`
-  return <Modal open={open} closeOnEscape={false} showCloseButton={false} eyebrow="ACTION REQUIRED" title="Winner review pending" onClose={() => undefined} footer={<ButtonLink icon={<Icon name="ClipboardCheck" />} to={`/draw/pending/${record.session.id}`}>Review Pending Results</ButtonLink>}>
+  const winnerLabel = `${record.configuration.requestedWinners} pemenang`
+  return <Modal open={open} closeOnEscape={false} showCloseButton={false} eyebrow="PERLU TINDAKAN" title="Pemenang menunggu peninjauan" onClose={() => undefined} footer={<ButtonLink icon={<Icon name="ClipboardCheck" />} to={`/draw/pending/${record.session.id}`}>Tinjau Hasil</ButtonLink>}>
     <div className="draw-setup-pending-modal__body">
       <strong className="draw-setup-pending-modal__prize">{record.category.prizeName}</strong>
       <p className="draw-setup-pending-modal__meta">{record.category.name} · <strong>{winnerLabel}</strong></p>
-      <p>Complete the winner review before preparing the next official draw.</p>
+      <p>Selesaikan peninjauan pemenang sebelum menyiapkan undian resmi berikutnya.</p>
     </div>
   </Modal>
 }
@@ -97,7 +97,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
     setError(null)
     try {
       await services.open()
-      if (services.authoringService === undefined) { setError(new DrawAuthoringError('persistence-unavailable', 'Draw authoring services are unavailable.', { retryable: true })); return }
+      if (services.authoringService === undefined) { setError(new DrawAuthoringError('persistence-unavailable', 'Layanan penyusunan undian tidak tersedia.', { retryable: true })); return }
       const activeEventId = await services.preferences.get('activeEventId')
       const result = await services.authoringService.load({ eventId: activeEventId ?? undefined })
       if (!result.ok) { setError(result.error); return }
@@ -114,7 +114,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
       if (result.record !== null && services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto }))
       else setReadiness(null)
     } catch (cause: unknown) {
-      setError(new DrawAuthoringError('read-failure', 'Authoritative Draw Setup data could not be read.', { retryable: true, cause }))
+      setError(new DrawAuthoringError('read-failure', 'Data resmi Pengaturan Undian tidak dapat dibaca.', { retryable: true, cause }))
     } finally { setLoading(false) }
   }, [services])
 
@@ -128,7 +128,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
     if (saving) return
     setSaving(true); setSaved(false); setError(null)
     const draft = draftFromForm(form)
-    if (services.authoringService === undefined) { setError(new DrawAuthoringError('persistence-unavailable', 'Draw authoring services are unavailable.', { retryable: true })); setSaving(false); return }
+    if (services.authoringService === undefined) { setError(new DrawAuthoringError('persistence-unavailable', 'Layanan penyusunan undian tidak tersedia.', { retryable: true })); setSaving(false); return }
     const result = await services.authoringService.save(draft)
     if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setPrizeStatuses((current) => ({ ...current, ready: current.ready.some((category) => category.id === result.record.category.id) ? current.ready : [...current.ready, result.record.category], available: current.available.filter((category) => category.id !== result.record.category.id), active: current.active.filter((category) => category.id !== result.record.category.id), completed: current.completed.filter((category) => category.id !== result.record.category.id) })); setSaved(true); signalProductionWorkspaceChanged(); if (services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })) }
     else setError(result.error)
@@ -150,83 +150,83 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
     setHandoffBusy(false)
   }
 
-  if (loading) return <section className="draw-setup" aria-busy="true"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="Loading persisted Event and configuration…" /><ProductionLoadingState description="Reading authoritative setup state…" /></section>
-  if (eventMissing || form.eventId === '') return <section className="draw-setup"><PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description="No persisted Event is available" /><ProductionSetupRequired description="Select or create an Event before configuring a draw." />{error?.retryable ? <Button icon={<Icon name="RefreshCw" />} onClick={() => void load()}>Retry</Button> : null}</section>
+  if (loading) return <section className="draw-setup" aria-busy="true"><PageHeader eyebrow="Penyusunan undian" headingId="draw-setup-title" title="Pengaturan Undian" description="Memuat Acara dan konfigurasi tersimpan…" /><ProductionLoadingState description="Membaca status pengaturan resmi…" /></section>
+  if (eventMissing || form.eventId === '') return <section className="draw-setup"><PageHeader eyebrow="Penyusunan undian" headingId="draw-setup-title" title="Pengaturan Undian" description="Tidak ada Acara tersimpan" /><ProductionSetupRequired description="Pilih atau buat Acara sebelum mengatur undian." />{error?.retryable ? <Button icon={<Icon name="RefreshCw" />} onClick={() => void load()}>Coba lagi</Button> : null}</section>
 
   const started = record !== null && isDrawSessionAuthoringLocked(record.session)
   const dirty = isDrawAuthoringDraftDirty(draftFromForm(form), record)
   const readinessBlocked = readiness !== null && readiness.state !== 'ready'
   const eligibilityNotEvaluated = readiness?.state === 'session-conflict'
   const capacity = dirty ? undefined : readiness?.data
-  const readinessTitle = readiness?.state === 'ready' ? 'Draw is ready for handoff' : readiness?.state === 'insufficient-capacity' ? 'Insufficient eligible capacity' : readiness?.state === 'session-conflict' ? 'Another Live session must be resolved' : readiness?.state === 'session-not-ready' ? 'Draw session is not ready' : readiness?.state === 'storage-unavailable' ? 'Local storage is unavailable' : readiness?.state === 'crypto-unavailable' ? 'Secure Web Crypto is unavailable' : readiness?.state === undefined ? 'Readiness has not been evaluated' : 'Draw handoff is blocked'
-  const readinessBadge = readiness?.state === 'ready' ? 'Ready' : dirty ? 'Save required' : 'Blocked'
+  const readinessTitle = readiness?.state === 'ready' ? 'Undian siap dilanjutkan' : readiness?.state === 'insufficient-capacity' ? 'Jumlah peserta memenuhi syarat tidak cukup' : readiness?.state === 'session-conflict' ? 'Sesi Live lain harus diselesaikan' : readiness?.state === 'session-not-ready' ? 'Sesi undian belum siap' : readiness?.state === 'storage-unavailable' ? 'Penyimpanan lokal tidak tersedia' : readiness?.state === 'crypto-unavailable' ? 'Web Crypto aman tidak tersedia' : readiness?.state === undefined ? 'Kesiapan belum dievaluasi' : 'Kelanjutan undian diblokir'
+  const readinessBadge = readiness?.state === 'ready' ? 'Siap' : dirty ? 'Perlu disimpan' : 'Diblokir'
   const readinessTone = readiness?.state === 'ready' ? 'success' : dirty ? 'info' : 'warning'
   const pendingReviewRequired = record?.session.mode === 'live' && record.session.status === 'pending-confirmation'
 
   return <section aria-labelledby="draw-setup-title" className="draw-setup">
-    <PageHeader eyebrow="Draw authoring" headingId="draw-setup-title" title="Draw Setup" description={record?.event.name ?? 'Create a persisted ready session'} />
-    {saved ? <StatusBanner badge="Saved" title="Ready DrawSession persisted" tone="success">The values below were read back from local persistence. No winner, checkpoint, or started-draw audit was created.</StatusBanner> : null}
-    {error ? <StatusBanner badge={error.retryable ? 'Retryable error' : 'Validation error'} title="Draw Setup could not be saved" tone="warning">{errorText(error)}{error.retryable ? ' You can retry without losing the form values.' : ''}</StatusBanner> : null}
-    {started ? <StatusBanner badge="Locked" title="This DrawSession is not editable" tone="warning">The persisted session is {record?.session.status.replace('-', ' ')}. It was not reset to ready and its official data remains untouched.</StatusBanner> : null}
-    {categories.length === 0 ? <StatusBanner badge="Category required" title="Create a PrizeCategory before configuring a draw" tone="warning"><ButtonLink icon={<Icon name="Trophy" />} to="/prize-categories">Open PrizeCategory management</ButtonLink></StatusBanner> : null}
+    <PageHeader eyebrow="Penyusunan undian" headingId="draw-setup-title" title="Pengaturan Undian" description={record?.event.name ?? 'Buat sesi siap yang tersimpan'} />
+    {saved ? <StatusBanner badge="Tersimpan" title="Sesi undian siap telah disimpan" tone="success">Nilai di bawah berhasil dibaca kembali dari penyimpanan lokal. Tidak ada pemenang, checkpoint, atau audit mulai-undian yang dibuat.</StatusBanner> : null}
+    {error ? <StatusBanner badge={error.retryable ? 'Dapat dicoba lagi' : 'Kesalahan validasi'} title="Pengaturan Undian tidak dapat disimpan" tone="warning">{errorText(error)}{error.retryable ? ' Anda dapat mencoba lagi tanpa kehilangan nilai formulir.' : ''}</StatusBanner> : null}
+    {started ? <StatusBanner badge="Terkunci" title="Sesi undian ini tidak dapat diedit" tone="warning">Sesi tersimpan berstatus {record?.session.status.replace('-', ' ')}. Sesi tidak direset ke siap dan data resminya tetap tidak berubah.</StatusBanner> : null}
+    {categories.length === 0 ? <StatusBanner badge="Kategori diperlukan" title="Buat Kategori Hadiah sebelum mengatur undian" tone="warning"><ButtonLink icon={<Icon name="Trophy" />} to="/prize-categories">Buka pengelolaan Kategori Hadiah</ButtonLink></StatusBanner> : null}
     <Card className="draw-panel" padding="md">
       <form onSubmit={(event) => { event.preventDefault(); void save() }}>
         <section className="draw-setup-capacity-section" aria-labelledby="capacity-summary-title">
-          <div className="draw-setup-section__heading"><div><p className="operator-eyebrow">Capacity</p><h2 id="capacity-summary-title">Eligible pool summary</h2></div></div>
-          <dl aria-label="Eligible pool metrics" className="eligible-pool-metrics draw-setup-capacity-metrics">
-            <div><dt>Total participants</dt><dd>{capacity?.totalParticipantCount ?? '—'}</dd></div>
-            <div><dt>Checked-in participants</dt><dd>{capacity?.checkedInParticipantCount ?? '—'}</dd></div>
-            <div><dt>Previous winners excluded</dt><dd>{capacity?.previousWinnerExcludedCount ?? '—'}</dd></div>
-            <div className="eligible-pool-metrics__highlight"><dt>Eligible pool</dt><dd>{capacity?.authoritativeEligibleCount ?? '—'}</dd></div>
-            <div className="eligible-pool-metrics__highlight eligible-pool-metrics__highlight--secondary"><dt>Requested winners</dt><dd>{capacity?.requestedWinnerCount ?? '—'}</dd></div>
+          <div className="draw-setup-section__heading"><div><p className="operator-eyebrow">Kapasitas</p><h2 id="capacity-summary-title">Ringkasan peserta memenuhi syarat</h2></div></div>
+          <dl aria-label="Metrik peserta memenuhi syarat" className="eligible-pool-metrics draw-setup-capacity-metrics">
+            <div><dt>Total peserta</dt><dd>{capacity?.totalParticipantCount ?? '—'}</dd></div>
+            <div><dt>Peserta sudah check-in</dt><dd>{capacity?.checkedInParticipantCount ?? '—'}</dd></div>
+            <div><dt>Pemenang sebelumnya dikecualikan</dt><dd>{capacity?.previousWinnerExcludedCount ?? '—'}</dd></div>
+            <div className="eligible-pool-metrics__highlight"><dt>Memenuhi syarat</dt><dd>{capacity?.authoritativeEligibleCount ?? '—'}</dd></div>
+            <div className="eligible-pool-metrics__highlight eligible-pool-metrics__highlight--secondary"><dt>Pemenang diminta</dt><dd>{capacity?.requestedWinnerCount ?? '—'}</dd></div>
           </dl>
           <div className="draw-setup-capacity-readiness">
-            <StatusBanner badge={readinessBadge} title={readinessTitle} tone={readinessTone}>{dirty ? 'Save changes to evaluate eligibility and readiness.' : readiness?.state === 'ready' ? `Storage and secure Web Crypto are ready. ${readiness.data?.authoritativeEligibleCount} eligible participants are available for ${readiness.data?.requestedWinnerCount} requested winners.` : readiness?.reason ?? 'Readiness is being checked.'}{eligibilityNotEvaluated ? ' Eligibility was not evaluated because an active or pending Live session must be resolved first.' : null}{!dirty && readiness?.retryable ? ' Retry readiness after the underlying issue is corrected.' : null}</StatusBanner>
+            <StatusBanner badge={readinessBadge} title={readinessTitle} tone={readinessTone}>{dirty ? 'Simpan perubahan untuk mengevaluasi kelayakan dan kesiapan.' : readiness?.state === 'ready' ? `Penyimpanan dan Web Crypto aman siap. Tersedia ${readiness.data?.authoritativeEligibleCount} peserta memenuhi syarat untuk ${readiness.data?.requestedWinnerCount} pemenang yang diminta.` : readiness?.reason ?? 'Kesiapan sedang diperiksa.'}{eligibilityNotEvaluated ? ' Kelayakan tidak dievaluasi karena sesi Live aktif atau menunggu konfirmasi harus diselesaikan terlebih dahulu.' : null}{!dirty && readiness?.retryable ? ' Coba periksa kesiapan lagi setelah masalah diperbaiki.' : null}</StatusBanner>
           </div>
         </section>
         <div className="draw-setup__layout">
           <div className="draw-setup__main">
             <section className="draw-setup-section" aria-labelledby="draw-identity-title">
-              <div className="draw-setup-section__heading"><div><p className="operator-eyebrow">Draw identity</p><h2 id="draw-identity-title">Event and prize</h2></div><Badge variant={form.mode === 'live' ? 'live' : 'practice'}>{form.mode === 'live' ? 'LIVE' : 'PRACTICE'}</Badge></div>
+              <div className="draw-setup-section__heading"><div><p className="operator-eyebrow">Identitas undian</p><h2 id="draw-identity-title">Acara dan hadiah</h2></div><Badge variant={form.mode === 'live' ? 'live' : 'practice'}>{form.mode === 'live' ? 'LIVE' : 'LATIHAN'}</Badge></div>
               <div className="draw-field-grid">
-                <Select label="Event" value={form.eventId} onChange={(event) => update('eventId', event.target.value)} disabled><option value={form.eventId}>{record?.event.name ?? form.eventId}</option></Select>
-                <Select label="Prize" value={form.prizeCategoryId} onChange={(event) => update('prizeCategoryId', event.target.value)} disabled={started}><option value="">Select a prize</option>{prizeGroups.map((status) => prizeStatuses[status].length === 0 ? null : <optgroup key={status} label={PRIZE_SELECTOR_STATUS_LABELS[status]}>{prizeStatuses[status].map((category) => <option key={category.id} value={category.id}>{category.prizeName} · {category.name} · {PRIZE_SELECTOR_STATUS_LABELS[status]}</option>)}</optgroup>)}</Select>
-                <Input label="Category" value={selectedCategory?.name ?? ''} readOnly description="Category belongs to the persisted Prize." />
+                <Select label="Acara" value={form.eventId} onChange={(event) => update('eventId', event.target.value)} disabled><option value={form.eventId}>{record?.event.name ?? form.eventId}</option></Select>
+                <Select label="Hadiah" value={form.prizeCategoryId} onChange={(event) => update('prizeCategoryId', event.target.value)} disabled={started}><option value="">Pilih hadiah</option>{prizeGroups.map((status) => prizeStatuses[status].length === 0 ? null : <optgroup key={status} label={PRIZE_SELECTOR_STATUS_LABELS[status]}>{prizeStatuses[status].map((category) => <option key={category.id} value={category.id}>{category.prizeName} · {category.name} · {PRIZE_SELECTOR_STATUS_LABELS[status]}</option>)}</optgroup>)}</Select>
+                <Input label="Kategori" value={selectedCategory?.name ?? ''} readOnly description="Kategori terikat pada Hadiah tersimpan." />
               </div>
             </section>
             <section className="draw-setup-section" aria-labelledby="winner-quantity-title">
-              <div className="draw-setup-section__heading"><h2 id="winner-quantity-title">Winner quantity</h2><span className="draw-setup-section__hint">Saved to DrawConfiguration</span></div>
-              <div className="winner-count-controls"><div className="winner-count-controls__presets"><div className="winner-count-choices" aria-label="Quick winner counts">{QUICK_WINNER_COUNTS.map((count) => <Button key={count} type="button" size="sm" variant={form.requestedWinners === String(count) ? 'primary' : 'secondary'} aria-pressed={form.requestedWinners === String(count)} onClick={() => update('requestedWinners', String(count))} disabled={started}>{count}</Button>)}</div><span className="draw-setup-section__hint">Choose a preset or enter 1–100. Save to recalculate readiness.</span></div><Input label="Custom winner count" type="number" min={1} max={100} step={1} value={form.requestedWinners} onChange={(event) => update('requestedWinners', event.target.value)} disabled={started} /></div>
+              <div className="draw-setup-section__heading"><h2 id="winner-quantity-title">Jumlah pemenang</h2><span className="draw-setup-section__hint">Disimpan ke DrawConfiguration</span></div>
+              <div className="winner-count-controls"><div className="winner-count-controls__presets"><div className="winner-count-choices" aria-label="Pilihan cepat jumlah pemenang">{QUICK_WINNER_COUNTS.map((count) => <Button key={count} type="button" size="sm" variant={form.requestedWinners === String(count) ? 'primary' : 'secondary'} aria-pressed={form.requestedWinners === String(count)} onClick={() => update('requestedWinners', String(count))} disabled={started}>{count}</Button>)}</div><span className="draw-setup-section__hint">Pilih preset atau masukkan 1–100. Simpan untuk menghitung ulang kesiapan.</span></div><Input label="Jumlah pemenang khusus" type="number" min={1} max={100} step={1} value={form.requestedWinners} onChange={(event) => update('requestedWinners', event.target.value)} disabled={started} /></div>
             </section>
             <DrawPresentationSettings configuration={form.presentation} winnerCount={Number(form.requestedWinners)} disabled={started} onChange={(presentation) => update('presentation', presentation)} />
             <section className="draw-setup-section" aria-labelledby="eligibility-rules-title">
-              <div className="draw-setup-section__heading"><h2 id="eligibility-rules-title">Eligibility rules</h2></div>
+              <div className="draw-setup-section__heading"><h2 id="eligibility-rules-title">Aturan kelayakan</h2></div>
               <div className="eligibility-control-grid">
-                <Select label="Winning rule" value={form.winningRule} onChange={(event) => update('winningRule', event.target.value)} disabled={started}><option value="once-per-event">Once per event</option><option value="once-per-category">Once per category</option><option value="allow-repeat">Allow repeat</option></Select>
-                <Input label="Eligible group filter" value={form.eligibleGroupFilter} onChange={(event) => update('eligibleGroupFilter', event.target.value)} disabled={started} description="Leave empty to include all groups." />
-                <Checkbox label="Require participant check-in" checked={form.requireCheckIn} onChange={(event) => update('requireCheckIn', event.target.checked)} disabled={started} description="Only checked-in participants are eligible." />
+                <Select label="Aturan kemenangan" value={form.winningRule} onChange={(event) => update('winningRule', event.target.value)} disabled={started}><option value="once-per-event">Sekali per Acara</option><option value="once-per-category">Sekali per kategori</option><option value="allow-repeat">Boleh menang lagi</option></Select>
+                <Input label="Filter grup memenuhi syarat" value={form.eligibleGroupFilter} onChange={(event) => update('eligibleGroupFilter', event.target.value)} disabled={started} description="Kosongkan untuk menyertakan semua grup." />
+                <Checkbox label="Wajib check-in" checked={form.requireCheckIn} onChange={(event) => update('requireCheckIn', event.target.checked)} disabled={started} description="Hanya Peserta yang sudah check-in yang memenuhi syarat." />
               </div>
             </section>
           </div>
           <div className="draw-setup__aside">
             <Card className="draw-setup-support-card" padding="md">
-            <fieldset className="draw-mode-options"><legend>Authoring mode</legend><div className="draw-mode-options__list">
-              <label className="draw-mode-option"><input id="draw-mode-practice" type="radio" name="draw-mode" value="practice" aria-labelledby="draw-mode-practice-label" aria-describedby="draw-mode-practice-description" checked={form.mode === 'practice'} onChange={() => update('mode', 'practice')} disabled={started} /><span className="draw-mode-option__copy"><strong id="draw-mode-practice-label">Practice</strong><small id="draw-mode-practice-description">Rehearsal only. No official result is created.</small></span></label>
-              <label className="draw-mode-option"><input id="draw-mode-live" type="radio" name="draw-mode" value="live" aria-labelledby="draw-mode-live-label" aria-describedby="draw-mode-live-description" checked={form.mode === 'live'} onChange={() => update('mode', 'live')} disabled={started} /><span className="draw-mode-option__copy"><strong id="draw-mode-live-label">Live</strong><small id="draw-mode-live-description">Official session. Confirmation is required before starting.</small></span></label>
+            <fieldset className="draw-mode-options"><legend>Mode penyusunan</legend><div className="draw-mode-options__list">
+              <label className="draw-mode-option"><input id="draw-mode-practice" type="radio" name="draw-mode" value="practice" aria-labelledby="draw-mode-practice-label" aria-describedby="draw-mode-practice-description" checked={form.mode === 'practice'} onChange={() => update('mode', 'practice')} disabled={started} /><span className="draw-mode-option__copy"><strong id="draw-mode-practice-label">Latihan</strong><small id="draw-mode-practice-description">Hanya simulasi. Tidak ada hasil resmi yang dibuat.</small></span></label>
+              <label className="draw-mode-option"><input id="draw-mode-live" type="radio" name="draw-mode" value="live" aria-labelledby="draw-mode-live-label" aria-describedby="draw-mode-live-description" checked={form.mode === 'live'} onChange={() => update('mode', 'live')} disabled={started} /><span className="draw-mode-option__copy"><strong id="draw-mode-live-label">Live</strong><small id="draw-mode-live-description">Sesi resmi. Konfirmasi diperlukan sebelum memulai.</small></span></label>
             </div></fieldset>
-            <p>{form.mode === 'live' ? 'Live handoff leads to the official start gate. It does not start a draw here.' : 'Practice is rehearsal only and does not create official results.'} Mode is stored on the ready DrawSession; URL parameters cannot override it.</p>
+            <p>{form.mode === 'live' ? 'Mode Live membuka gerbang mulai resmi. Undian belum dimulai di sini.' : 'Mode Latihan hanya simulasi dan tidak membuat hasil resmi.'} Mode disimpan pada sesi undian siap; parameter URL tidak dapat menggantinya.</p>
             <div className="draw-setup-actions">
-              <Button icon={<Icon name="Save" />} type="submit" size="lg" variant={record === null || dirty ? 'primary' : 'secondary'} isLoading={saving} disabled={started || !dirty || form.prizeCategoryId === ''}>{record === null ? 'Save ready configuration' : 'Save changes'}</Button>
-              {saved ? <ButtonLink icon={<Icon name="Radio" />} size="lg" variant="secondary" to="/draw/live">Open Draw Sessions</ButtonLink> : null}
-              {record !== null ? <Button icon={<Icon name="ArrowRight" />} iconAfter ref={handoffTriggerRef} type="button" size="lg" variant={!dirty && !readinessBlocked && readiness !== null ? 'primary' : 'secondary'} disabled={saving || handoffBusy || dirty || readinessBlocked || readiness === null} isLoading={handoffBusy} onClick={() => { if (form.mode === 'live') setConfirmLive(true); else void handoff() }}>{form.mode === 'live' ? 'Continue to Live start gate' : 'Open Practice start gate'}</Button> : null}
-              {readiness?.retryable ? <Button icon={<Icon name="RefreshCw" />} type="button" variant="secondary" onClick={() => void refreshReadiness()}>Retry readiness</Button> : null}
+              <Button icon={<Icon name="Save" />} type="submit" size="lg" variant={record === null || dirty ? 'primary' : 'secondary'} isLoading={saving} disabled={started || !dirty || form.prizeCategoryId === ''}>{record === null ? 'Simpan konfigurasi siap' : 'Simpan perubahan'}</Button>
+              {saved ? <ButtonLink icon={<Icon name="Radio" />} size="lg" variant="secondary" to="/draw/live">Buka Sesi Undian</ButtonLink> : null}
+              {record !== null ? <Button icon={<Icon name="ArrowRight" />} iconAfter ref={handoffTriggerRef} type="button" size="lg" variant={!dirty && !readinessBlocked && readiness !== null ? 'primary' : 'secondary'} disabled={saving || handoffBusy || dirty || readinessBlocked || readiness === null} isLoading={handoffBusy} onClick={() => { if (form.mode === 'live') setConfirmLive(true); else void handoff() }}>{form.mode === 'live' ? 'Lanjutkan ke gerbang mulai Live' : 'Buka gerbang mulai Latihan'}</Button> : null}
+              {readiness?.retryable ? <Button icon={<Icon name="RefreshCw" />} type="button" variant="secondary" onClick={() => void refreshReadiness()}>Periksa kesiapan lagi</Button> : null}
             </div>
             </Card>
           </div>
         </div>
       </form>
     </Card>
-    <ConfirmationDialog headerIcon={<Icon name="ShieldAlert" />} headerIconTone="warning" open={confirmLive} title="Confirm Live handoff" confirmLabel="Confirm Live handoff" onCancel={() => { setConfirmLive(false); handoffTriggerRef.current?.focus() }} onConfirm={() => { setConfirmLive(false); void handoff() }} consequence={record === null || readiness?.data === undefined ? 'The persisted Live session will be revalidated before handoff.' : <span>Event: {readiness.data?.event.name}. Prize: {readiness.data?.category.prizeName}. Winners: {readiness.data?.requestedWinnerCount}. Eligible: {readiness.data?.authoritativeEligibleCount}. Mode: Live. This only opens the start gate; it does not select winners.</span>} />
+    <ConfirmationDialog headerIcon={<Icon name="ShieldAlert" />} headerIconTone="warning" open={confirmLive} title="Konfirmasi kelanjutan Mode Live" confirmLabel="Konfirmasi kelanjutan Live" onCancel={() => { setConfirmLive(false); handoffTriggerRef.current?.focus() }} onConfirm={() => { setConfirmLive(false); void handoff() }} consequence={record === null || readiness?.data === undefined ? 'Sesi Live tersimpan akan divalidasi ulang sebelum dilanjutkan.' : <span>Acara: {readiness.data?.event.name}. Hadiah: {readiness.data?.category.prizeName}. Pemenang: {readiness.data?.requestedWinnerCount}. Memenuhi syarat: {readiness.data?.authoritativeEligibleCount}. Mode: Live. Tindakan ini hanya membuka gerbang mulai; belum memilih pemenang.</span>} />
     {record === null ? null : <PendingReviewModal record={record} open={pendingReviewRequired} />}
   </section>
 }

@@ -49,11 +49,11 @@ describe('sequential historical Audience publications', () => {
 
     publisher.start(source(sessionA, '00048'))
     expect(audience.getState()).toMatchObject({ kind: 'snapshot', snapshot: { stage: 'pending-handoff', ticketNumbers: ['00048'] } })
-    publisher.publish({ drawSessionId: scope.eventId as never, stage: 'standby', blackoutRequested: false, displayTest: false, eventName: 'Current Event', eventSubtitle: 'Subtitle', primaryColor: '#111111', accentColor: '#222222', blackoutAppearance: 'pure-black', safeAreaMargin: 48 })
+    publisher.publish({ drawSessionId: scope.eventId as never, stage: 'standby', blackoutRequested: false, displayTest: false, eventName: 'Acara Saat Ini', eventSubtitle: 'Subtitle', primaryColor: '#111111', accentColor: '#222222', blackoutAppearance: 'pure-black', safeAreaMargin: 48 })
 
-    expect(audience.getState()).toMatchObject({ kind: 'snapshot', snapshot: { stage: 'standby', drawSessionId: scope.eventId, eventName: 'Current Event' } })
+    expect(audience.getState()).toMatchObject({ kind: 'snapshot', snapshot: { stage: 'standby', drawSessionId: scope.eventId, eventName: 'Acara Saat Ini' } })
     const reconnectingAudience = createAudienceController({ transport: audienceTransport, scope })
-    expect(reconnectingAudience.getState()).toMatchObject({ kind: 'snapshot', snapshot: { stage: 'standby', eventName: 'Current Event' } })
+    expect(reconnectingAudience.getState()).toMatchObject({ kind: 'snapshot', snapshot: { stage: 'standby', eventName: 'Acara Saat Ini' } })
 
     reconnectingAudience.close(); audience.close(); publisher.close(); audienceTransport.close(); operatorTransport.close()
   })

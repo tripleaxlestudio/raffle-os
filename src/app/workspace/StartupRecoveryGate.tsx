@@ -20,23 +20,23 @@ export function StartupRecoveryGate({ recovery }: { readonly recovery?: StartupR
   }, [location.pathname, navigate, targetPath])
 
   if (recovery === undefined || recovery.kind === 'normal' || recovery.kind === 'no-active-event') return null
-  if (recovery.kind === 'storage-failure') return <OperatorPersistenceStatus kind="blocked" detail={`${recovery.error} No official data was changed. Retry from the affected workspace after local storage is available.`} />
+  if (recovery.kind === 'storage-failure') return <OperatorPersistenceStatus kind="blocked" detail={`${recovery.error} Tidak ada data resmi yang diubah. Coba lagi dari ruang kerja terkait setelah penyimpanan lokal tersedia.`} />
   const onRecoveryRoute = targetPath !== null && isRecoveryTarget(location.pathname, targetPath)
   const isConflict = recovery.kind === 'conflicting-sessions'
   const decision = recovery.kind === 'recover-session' ? recovery.decision : undefined
   const acknowledgement = decision?.kind === 'safe-acknowledgement-required'
-  const title = isConflict ? 'Choose a saved Live session to recover' : acknowledgement ? 'Safe acknowledgement required' : 'Saved Live work recovered'
+  const title = isConflict ? 'Pilih sesi Live tersimpan untuk dipulihkan' : acknowledgement ? 'Perlu konfirmasi aman' : 'Pekerjaan Live tersimpan berhasil dipulihkan'
   const detail = isConflict
-    ? `${recovery.sessions.length} unresolved Live sessions were found. Review the saved sessions before continuing.`
+    ? `Ditemukan ${recovery.sessions.length} sesi Live yang belum selesai. Tinjau sesi tersimpan sebelum melanjutkan.`
     : acknowledgement
-      ? 'The selection outcome cannot be inferred safely from presentation state. Review authoritative records before taking action.'
+      ? 'Hasil pemilihan tidak dapat disimpulkan secara aman dari status presentasi. Tinjau record resmi sebelum mengambil tindakan.'
       : decision?.kind === 'resume-setup'
-        ? 'The presentation was interrupted before an official selection. Draw Setup is safe to resume.'
-        : 'The authoritative session was preserved. No new selection will be made during recovery.'
-  const actionLabel = isConflict || acknowledgement ? 'Review saved result' : decision?.kind === 'resume-setup' ? 'Return to Draw Setup' : 'Continue verification'
-  if (onRecoveryRoute) return <StatusBanner badge="Recovery" title={title} tone="warning">{detail} <ButtonLink className="recovery-link" to={targetPath}>{actionLabel}</ButtonLink></StatusBanner>
+        ? 'Presentasi terhenti sebelum pemilihan resmi. Pengaturan Undian aman untuk dilanjutkan.'
+        : 'Sesi resmi tetap dipertahankan. Tidak ada pemilihan baru selama pemulihan.'
+  const actionLabel = isConflict || acknowledgement ? 'Tinjau hasil tersimpan' : decision?.kind === 'resume-setup' ? 'Kembali ke Pengaturan Undian' : 'Lanjutkan verifikasi'
+  if (onRecoveryRoute) return <StatusBanner badge="Pemulihan" title={title} tone="warning">{detail} <ButtonLink className="recovery-link" to={targetPath}>{actionLabel}</ButtonLink></StatusBanner>
   return <Card aria-live="polite" className="production-workspace-state production-workspace-state--loading" padding="md">
-    <div className="production-workspace-state__copy"><h2>Recovering saved Live work</h2><p>{detail}</p></div>
+    <div className="production-workspace-state__copy"><h2>Memulihkan pekerjaan Live tersimpan</h2><p>{detail}</p></div>
     {targetPath === null ? null : <ButtonLink to={targetPath}>{actionLabel}</ButtonLink>}
   </Card>
 }

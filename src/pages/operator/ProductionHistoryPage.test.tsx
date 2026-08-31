@@ -98,16 +98,18 @@ describe('production History empty state', () => {
   it('hides the selected Event context, filters, and secondary sessions action while keeping the empty state action', async () => {
     renderPage()
 
-    expect(await screen.findByRole('heading', { name: 'No official draws yet' })).toBeInTheDocument()
-    expect(screen.getByText('This Event does not have any persisted Live draw results yet.')).toBeInTheDocument()
-    expect(screen.getByText('Completed official draws will appear here automatically.')).toBeInTheDocument()
-    expect(screen.getByText(/Authoritative Live .*24th K-Link Indonesia Anniversary/)).toBeInTheDocument()
+    const heading = await screen.findByRole('heading', { name: 'Belum ada undian resmi', level: 2 })
+    expect(heading.parentElement).toHaveClass('history-empty-state__copy')
+    expect(screen.getByText('Riwayat resmi')).toHaveClass('history-empty-state__label')
+    expect(screen.getByText('Acara ini belum memiliki hasil Undian tersimpan.')).toBeInTheDocument()
+    expect(screen.getByText('Undian resmi yang selesai akan muncul otomatis di sini.')).toBeInTheDocument()
+    expect(screen.getByText('Sesi Undian resmi untuk 24th K-Link Indonesia Anniversary.')).toBeInTheDocument()
     expect(screen.queryByText('Selected Event')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Open Draw Setup' })).toHaveAttribute('href', '/draw/setup')
+    expect(screen.getByRole('link', { name: 'Buka Pengaturan Undian' })).toHaveAttribute('href', '/draw/setup')
     expect(screen.queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Mode' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Open Draw Sessions' })).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'No official draws yet' }).closest('.history-empty-state')).toHaveClass('ui-card')
+    expect(heading.closest('.history-empty-state')).toHaveClass('ui-card')
   })
 
   it('restores filters and populated History behavior when an official session exists', async () => {
@@ -180,7 +182,29 @@ describe('production History export menu', () => {
     expect(screen.getByRole('menu', { name: 'Export confirmed results' })).toHaveClass('history-export__menu')
     expect(screen.getByRole('menuitem', { name: /CSV/ })).toBeVisible()
     expect(screen.getByRole('menuitem', { name: /XLSX/ })).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: /CSV/ })).toHaveFocus()
     expect(screen.getByLabelText('History filters')).toBeInTheDocument()
+  })
+
+  it('supports arrow, Home, End, and Escape menu keyboard behavior', async () => {
+    const user = userEvent.setup()
+    mocks.findByEventId.mockResolvedValue([session('completed-1')])
+    renderPage()
+
+    const trigger = await screen.findByRole('button', { name: 'Export (1)' })
+    await user.click(trigger)
+    const csv = screen.getByRole('menuitem', { name: /CSV/ })
+    const xlsx = screen.getByRole('menuitem', { name: /XLSX/ })
+    expect(csv).toHaveFocus()
+    await user.keyboard('{ArrowDown}')
+    expect(xlsx).toHaveFocus()
+    await user.keyboard('{Home}')
+    expect(csv).toHaveFocus()
+    await user.keyboard('{End}')
+    expect(xlsx).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
   })
 
   it('triggers CSV export and closes the menu', async () => {

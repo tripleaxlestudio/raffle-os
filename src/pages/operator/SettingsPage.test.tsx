@@ -32,7 +32,7 @@ describe('Settings static prototype', () => {
 
   it.each([
     ['/dev/prototypes/settings?section=branding', 'Branding'],
-    ['/dev/prototypes/settings?section=presentation', 'Presentation'],
+    ['/dev/prototypes/settings?section=presentation', 'Presentasi'],
     ['/dev/prototypes/settings?section=audio', 'Audio'],
     ['/dev/prototypes/settings?section=display', 'Display'],
   ])('renders %s directly as the %s section', (path, heading) => {

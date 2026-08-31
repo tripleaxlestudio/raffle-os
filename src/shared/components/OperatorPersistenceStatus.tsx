@@ -11,8 +11,8 @@ interface OperatorPersistenceStatusProps {
 }
 
 const labels: Record<OperatorPersistenceStatusKind, string> = {
-  saved: 'Saved locally', saving: 'Saving locally…', failed: 'Save failed',
-  'recovery-required': 'Recovery required', blocked: 'Live blocked',
+  saved: 'Tersimpan secara lokal', saving: 'Menyimpan secara lokal…', failed: 'Gagal menyimpan',
+  'recovery-required': 'Perlu pemulihan', blocked: 'Mode Live diblokir',
 }
 const icons: Record<OperatorPersistenceStatusKind, 'CircleCheck' | 'Clock' | 'CircleX' | 'ShieldAlert'> = {
   saved: 'CircleCheck', saving: 'Clock', failed: 'CircleX',

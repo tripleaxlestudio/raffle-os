@@ -31,7 +31,7 @@ describe('production Display settings UI contract', () => {
 
     const actionRow = source.indexOf('<div className="settings-action-row">')
     const save = source.indexOf('Save ${details[0]} settings', actionRow)
-    const open = source.indexOf('Open Audience Display', actionRow)
+    const open = source.indexOf('<AudienceDisplayButton', actionRow)
     const test = source.indexOf('Test Display Connection', actionRow)
     const stop = source.indexOf('Stop Test', actionRow)
     expect(save).toBeGreaterThan(-1)

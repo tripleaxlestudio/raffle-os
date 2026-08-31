@@ -38,7 +38,7 @@ describe('Phase 2 deterministic happy path', () => {
     ).toBeVisible()
     expectNoProductionSuccessClaim()
 
-    await user.click(screen.getByRole('link', { name: 'Participants' }))
+    await user.click(screen.getByRole('link', { name: 'Peserta' }))
     await router.navigate('/dev/prototypes/participants?workflow=prototype')
     expectLocation(router, '/dev/prototypes/participants?workflow=prototype')
     expect(await screen.findByRole('heading', { name: 'Choose participant file' })).toBeVisible()
@@ -74,7 +74,7 @@ describe('Phase 2 deterministic happy path', () => {
       screen.getByRole('link', { name: 'Continue to Draw Setup' }),
     )
     expectLocation(router, '/dev/prototypes/draw/setup?mode=practice&scenario=ready')
-    expect(screen.getByRole('heading', { level: 1, name: 'Draw Setup' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Pengaturan Undian' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()
 
@@ -112,10 +112,10 @@ describe('Phase 2 deterministic happy path', () => {
     expectNoProductionSuccessClaim()
 
     await user.click(
-      screen.getByRole('link', { name: 'Review Pending Results' }),
+      screen.getByRole('link', { name: 'Tinjau Hasil Tertunda' }),
     )
     expectLocation(router, '/dev/prototypes/draw/results')
-    expect(screen.getByRole('heading', { level: 1, name: 'Pending Results' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Hasil Tertunda' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()
 

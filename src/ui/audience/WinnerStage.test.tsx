@@ -14,7 +14,15 @@ const scenario = (overrides: Partial<PublicAudienceScenario> = {}): PublicAudien
 
 describe('Audience sequential winner reveal', () => {
   beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(0) })
-  afterEach(() => { vi.useRealTimers() })
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
+
+  it('reveals all authoritative winners immediately when reduced motion is requested', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+    const { container } = render(<WinnerStage scenario={scenario({ presentationMode: 'random-number-roll' })} />)
+
+    expect(container.querySelectorAll('[data-locked="true"]')).toHaveLength(tickets.length)
+    expect(screen.getAllByText(/^(00042|42|00007|100|00099|501)$/).map((node) => node.textContent)).toEqual(tickets)
+  })
 
   it('keeps the authoritative draw identity visible for Instant Reveal and dense winner grids', () => {
     const values = Array.from({ length: 50 }, (_, index) => String(index + 1).padStart(5, '0'))
@@ -51,7 +59,7 @@ describe('Audience sequential winner reveal', () => {
     expect(screen.getByText('CURRENT DRAW')).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Sepeda' })).toBeVisible()
     expect(screen.getByText('Door Prize')).toBeVisible()
-    expect(screen.getByText('6 Winners')).toBeVisible()
+    expect(screen.getByText('6 Winner')).toBeVisible()
     expect(screen.getByText('Rolling in progress')).toBeVisible()
     expect(container.querySelector('.audience-draw-header')).toHaveClass('rolling-stage__header')
     expect(container.querySelector('.display-state-label')).toHaveTextContent('Rolling')

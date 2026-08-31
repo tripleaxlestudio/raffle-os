@@ -93,13 +93,13 @@ describe('ProductionDrawPresentation', () => {
   })
 
   it('renders the persistent public monitor for the Ready-to-Start state', () => {
-    render(<PresentationSupport previewStage="ready" eventName="Spring Event" prizeCategory="Door Prize" prizeName="K-Ion Nano Premium 5" recap={{ winnerCount: 10, eligibleCount: 100, winningRule: 'Once per event', countdownSeconds: 3, rollingSeconds: 8 }} audienceStatus={{ label: 'Connected', detail: 'Acknowledged', displayUrl: null }} blackoutRequested={false} />)
+    render(<PresentationSupport previewStage="ready" eventName="Spring Event" prizeCategory="Door Prize" prizeName="K-Ion Nano Premium 5" recap={{ winnerCount: 10, eligibleCount: 100, winningRule: 'Once per event', countdownSeconds: 3, rollingSeconds: 8 }} audienceStatus={{ label: 'Terhubung', detail: 'Acknowledged', displayUrl: null }} blackoutRequested={false} />)
     const preview = screen.getByTestId('production-preview')
     expect(preview).toHaveAttribute('data-public-stage', 'ready')
     expect(preview.querySelector('[data-audience-state="standby"]')).toBeInTheDocument()
-    expect(preview).toHaveTextContent('Next draw')
+    expect(preview).toHaveTextContent('Undian berikutnya')
     expect(preview).toHaveTextContent('K-Ion Nano Premium 5')
-    expect(screen.getByText('Runtime status')).toBeInTheDocument()
+    expect(screen.getByText('Status runtime')).toBeInTheDocument()
     expect(screen.getByText(/Audience acknowledgement: Acknowledged/)).toBeInTheDocument()
   })
 
@@ -109,7 +109,7 @@ describe('ProductionDrawPresentation', () => {
     expect(winnerList).toBeInTheDocument()
     expect(screen.getAllByRole('listitem')).toHaveLength(count)
     expect(within(winnerList).getByText('00042')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Skip animation' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Lewati animasi' })).not.toBeInTheDocument()
   })
 
   it('bootstraps a Live result without a checkpoint by writing countdown first', async () => {
@@ -117,7 +117,7 @@ describe('ProductionDrawPresentation', () => {
     const upsert = vi.fn(async () => undefined)
     const findByDrawSessionId = vi.fn(async () => null)
     render(<ProductionDrawPresentation result={result(1)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" checkpoints={{ findByDrawSessionId, upsert }} onFailure={() => undefined} />)
-    expect(await screen.findByRole('heading', { name: 'Get ready' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Bersiap' })).toBeInTheDocument()
     expect(findByDrawSessionId).toHaveBeenCalledWith(result(1).drawSessionId)
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ stage: 'countdown', drawSessionId: result(1).drawSessionId }))
   })
@@ -126,15 +126,15 @@ describe('ProductionDrawPresentation', () => {
     vi.stubGlobal('matchMedia', () => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn() }))
     const onRecoveryBack = vi.fn()
     render(<ProductionDrawPresentation result={result(1)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" checkpoints={{ findByDrawSessionId: async () => null, upsert: async () => { throw new Error('write rejected') } }} onFailure={() => undefined} onRecoveryBack={onRecoveryBack} />)
-    const dialog = await screen.findByRole('dialog', { name: 'Winner result safely saved' })
+    const dialog = await screen.findByRole('dialog', { name: 'Hasil pemenang tersimpan dengan aman' })
     expect(screen.getByRole('heading', { name: 'Presentation recovery' })).toBeInTheDocument()
     expect(screen.getByText('The selected winner is safely recorded.')).toBeInTheDocument()
     expect(screen.getByText('Continue to review the winner to confirm the result or draw a replacement if needed.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Back to Draw Setup' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back to Settings Undian' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Review Winner' })).not.toBeInTheDocument()
     expect(dialog).toHaveAttribute('aria-modal', 'true')
     expect(screen.queryByText('Preparing locked result presentation…')).not.toBeInTheDocument()
-    screen.getByRole('button', { name: 'Back to Draw Setup' }).click()
+    screen.getByRole('button', { name: 'Back to Settings Undian' }).click()
     expect(onRecoveryBack).toHaveBeenCalledTimes(1)
   })
 
@@ -148,8 +148,8 @@ describe('ProductionDrawPresentation', () => {
     }
 
     render(<MemoryRouter initialEntries={[`/draw/run/${drawSessionId}`]}><RecoveryHarness /><LocationProbe /></MemoryRouter>)
-    await screen.findByRole('dialog', { name: 'Winner result safely saved' })
-    expect(within(screen.getByRole('contentinfo')).getAllByRole('button').map((button) => button.textContent?.trim())).toEqual(['Back to Draw Setup', 'Review Winner'])
+    await screen.findByRole('dialog', { name: 'Hasil pemenang tersimpan dengan aman' })
+    expect(within(screen.getByRole('contentinfo')).getAllByRole('button').map((button) => button.textContent?.trim())).toEqual(['Back to Settings Undian', 'Review Winner'])
     fireEvent.click(screen.getByRole('button', { name: 'Review Winner' }))
 
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(`/draw/pending/${drawSessionId}`))
@@ -159,17 +159,17 @@ describe('ProductionDrawPresentation', () => {
     const onResetPractice = vi.fn()
     render(<ProductionDrawPresentation result={result(1)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" practiceResult={{ drawSessionId: result(1).drawSessionId, winners: result(1).winners as never, createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1, presentation: { storageFormatVersion: 1, stage: 'pending-handoff', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, presentationPolicyVersion: 1, blackoutRequested: false } }} initialPresentation={{ stage: 'pending-handoff', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} onResetPractice={onResetPractice} />)
     expect(await screen.findByRole('heading', { name: 'Practice presentation complete' })).toBeInTheDocument()
-    await screen.findByRole('button', { name: 'Reset rehearsal' }).then((button) => button.click())
+    await screen.findByRole('button', { name: 'Reset simulasi' }).then((button) => button.click())
     expect(onResetPractice).toHaveBeenCalledTimes(1)
   })
 
   it('does not expose rehearsal reset for Live presentation', async () => {
     render(<ProductionDrawPresentation result={result(1)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} onResetPractice={vi.fn()} />)
-    expect(await screen.findByRole('heading', { name: 'Winner reveal' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Reset rehearsal' })).not.toBeInTheDocument()
-    expect(screen.getByText('Presentation complete')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Pengungkapan pemenang' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reset simulasi' })).not.toBeInTheDocument()
+    expect(screen.getByText('Presentasi selesai')).toBeInTheDocument()
     expect(screen.getByText('The selected winners are ready for review.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Review Pending Results' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Review Hasil Pending' })).toBeInTheDocument()
   })
 
   it('opens quick redraw confirmation without mutating until confirmed', async () => {
@@ -177,8 +177,8 @@ describe('ProductionDrawPresentation', () => {
     const onReviewPendingResults = vi.fn()
     render(<ProductionDrawPresentation result={result(1)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} onQuickRedraw={onQuickRedraw} onReviewPendingResults={onReviewPendingResults} />)
 
-    expect(await screen.findByRole('button', { name: 'Redraw Winner' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Redraw Winner' }))
+    expect(await screen.findByRole('button', { name: 'Undi Ulang Pemenang' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Undi Ulang Pemenang' }))
     expect(screen.getByRole('dialog', { name: 'Redraw winner' })).toBeInTheDocument()
     expect(screen.getByText('Current winner')).toBeInTheDocument()
     expect(screen.getByText('Ticket 00042')).toBeInTheDocument()
@@ -192,7 +192,7 @@ describe('ProductionDrawPresentation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Review Instead' }))
     expect(onReviewPendingResults).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole('dialog', { name: 'Redraw winner' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Redraw Winner' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Undi Ulang Pemenang' }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Redraw' }))
     await waitFor(() => expect(onQuickRedraw).toHaveBeenCalledTimes(1))
   })
@@ -201,8 +201,8 @@ describe('ProductionDrawPresentation', () => {
     const onQuickRedraw = vi.fn(async () => undefined)
     render(<ProductionDrawPresentation result={result(2)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} onQuickRedraw={onQuickRedraw} />)
 
-    expect(await screen.findByRole('button', { name: 'Redraw Winner' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Redraw Winner' }))
+    expect(await screen.findByRole('button', { name: 'Undi Ulang Pemenang' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Undi Ulang Pemenang' }))
     expect(await screen.findByRole('dialog', { name: 'Select winners to redraw' })).toBeInTheDocument()
     expect(screen.getByRole('dialog', { name: 'Select winners to redraw' })).toHaveTextContent('00042')
     expect(screen.getByRole('dialog', { name: 'Select winners to redraw' })).toHaveTextContent('#2')
@@ -226,7 +226,7 @@ describe('ProductionDrawPresentation', () => {
   it.each([3, 5])('keeps redraw available for a %s-winner draw', async (winnerCount) => {
     const onQuickRedraw = vi.fn(async () => undefined)
     render(<ProductionDrawPresentation result={result(winnerCount)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} onQuickRedraw={onQuickRedraw} />)
-    expect(await screen.findByRole('button', { name: 'Redraw Winner' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Undi Ulang Pemenang' })).toBeInTheDocument()
   })
 
   it('restores a compact chained redraw lineage with only the current winner actionable', async () => {
@@ -242,25 +242,25 @@ describe('ProductionDrawPresentation', () => {
     expect(within(history).getByText('00093')).toBeInTheDocument()
     expect(within(history).getByText('00004')).toBeInTheDocument()
     expect(within(history).getAllByText('REPLACED · ABSENT')).toHaveLength(3)
-    expect(screen.getByRole('button', { name: 'Redraw Winner' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Winner reveal' })).toHaveTextContent('00034')
-    fireEvent.click(screen.getByRole('button', { name: 'Redraw Winner' }))
+    expect(screen.getByRole('button', { name: 'Undi Ulang Pemenang' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Pengungkapan pemenang' })).toHaveTextContent('00034')
+    fireEvent.click(screen.getByRole('button', { name: 'Undi Ulang Pemenang' }))
     expect(screen.getByRole('dialog', { name: 'Redraw winner' })).toBeInTheDocument()
   })
 
   it('renders the production control deck and structured Audience status during countdown', async () => {
     vi.stubGlobal('matchMedia', () => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn() }))
-    render(<ProductionDrawPresentation result={result(2)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" practiceResult={{ drawSessionId: result(2).drawSessionId, winners: result(2).winners as never, createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1 }} recap={{ winnerCount: 2, eligibleCount: 40, winningRule: 'uniform', countdownSeconds: 5, rollingSeconds: 8 }} audienceStatus={{ label: 'Connected', detail: 'Audience presence is active and the latest public snapshot was acknowledged.', displayUrl: null }} onFailure={() => undefined} />)
-    expect(await screen.findByRole('heading', { name: 'Get ready' })).toBeInTheDocument()
-    expect(screen.getAllByText('Connected')[0]).toHaveClass('ui-badge--success')
+    render(<ProductionDrawPresentation result={result(2)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" practiceResult={{ drawSessionId: result(2).drawSessionId, winners: result(2).winners as never, createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1 }} recap={{ winnerCount: 2, eligibleCount: 40, winningRule: 'uniform', countdownSeconds: 5, rollingSeconds: 8 }} audienceStatus={{ label: 'Terhubung', detail: 'Audience presence is active and the latest public snapshot was acknowledged.', displayUrl: null }} onFailure={() => undefined} />)
+    expect(await screen.findByRole('heading', { name: 'Bersiap' })).toBeInTheDocument()
+    expect(screen.getAllByText('Terhubung')[0]).toHaveClass('ui-badge--success')
     expect(screen.getAllByText('Audience presence is active and the latest public snapshot was acknowledged.')).toHaveLength(1)
-    expect(screen.getByText('Winner count').nextElementSibling).toHaveTextContent('2')
-    expect(screen.queryByRole('button', { name: 'Reset rehearsal' })).not.toBeInTheDocument()
+    expect(screen.getByText('Jumlah pemenang').nextElementSibling).toHaveTextContent('2')
+    expect(screen.queryByRole('button', { name: 'Reset simulasi' })).not.toBeInTheDocument()
   })
 
   it('renders exact winner values in the authoritative preview during reveal', async () => {
-    render(<ProductionDrawPresentation result={result(1)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} audienceStatus={{ label: 'Connected', detail: 'Acknowledged', displayUrl: null }} onFailure={() => undefined} />)
-    expect(await screen.findByRole('heading', { name: 'Winner reveal' })).toBeInTheDocument()
+    render(<ProductionDrawPresentation result={result(1)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} audienceStatus={{ label: 'Terhubung', detail: 'Acknowledged', displayUrl: null }} onFailure={() => undefined} />)
+    expect(await screen.findByRole('heading', { name: 'Pengungkapan pemenang' })).toBeInTheDocument()
     expect(screen.getByRole('list', { name: '1 Practice winners' })).toHaveTextContent('00042')
     expect(screen.getByTestId('production-preview')).toHaveAttribute('data-public-stage', 'reveal')
     expect(within(screen.getByTestId('production-preview')).getByText('00042')).toBeInTheDocument()
@@ -268,7 +268,7 @@ describe('ProductionDrawPresentation', () => {
 
   it('centers 3-winner result and preview groups without changing ticket strings', async () => {
     render(<ProductionDrawPresentation result={result(3)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} />)
-    expect(await screen.findByRole('heading', { name: 'Winner reveal' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Pengungkapan pemenang' })).toBeInTheDocument()
     const winnerList = screen.getByRole('list', { name: '3 Practice winners' })
     expect(winnerList).toHaveClass('production-winner-list--3')
     expect(winnerList).not.toHaveClass('production-winner-list--1')
@@ -280,7 +280,7 @@ describe('ProductionDrawPresentation', () => {
 
   it('uses a compact three-column winner grid for six winners with contiguous indexes', async () => {
     render(<ProductionDrawPresentation result={result(6)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} />)
-    expect(await screen.findByRole('heading', { name: 'Winner reveal' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Pengungkapan pemenang' })).toBeInTheDocument()
     const winnerList = screen.getByRole('list', { name: '6 Practice winners' })
     expect(winnerList).toHaveClass('production-winner-list--6')
     expect(within(winnerList).getAllByRole('listitem')).toHaveLength(6)
@@ -328,10 +328,10 @@ describe('ProductionDrawPresentation', () => {
   it('restores Reset rehearsal for completed Practice reveal only', async () => {
     const onResetPractice = vi.fn()
     render(<ProductionDrawPresentation result={result(1)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'reveal', stageStartedAt: '2026-08-05T00:00:00.000Z' as never, blackoutRequested: false }} onFailure={() => undefined} onResetPractice={onResetPractice} />)
-    expect(await screen.findByRole('button', { name: 'Reset rehearsal' })).toBeInTheDocument()
-    screen.getByRole('button', { name: 'Reset rehearsal' }).click()
+    expect(await screen.findByRole('button', { name: 'Reset simulasi' })).toBeInTheDocument()
+    screen.getByRole('button', { name: 'Reset simulasi' }).click()
     expect(onResetPractice).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('button', { name: 'Return to Draw Sessions' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Kembali ke Sesi Undian' })).toBeInTheDocument()
   })
 
   it('completes a Practice timed roll without Skip animation', async () => {
@@ -340,12 +340,12 @@ describe('ProductionDrawPresentation', () => {
     const practiceResult = { drawSessionId: result(1).drawSessionId, winners: result(1).winners as never, createdAt: '2026-08-05T00:00:00.000Z', policyVersion: 1 as const }
     render(<ProductionDrawPresentation result={result(1)} mode="practice" eventName="Event" prizeCategory="Gold" prizeName="Prize" practiceResult={practiceResult} presentationConfiguration={{ presentationMode: 'random-number-roll', rollStopMode: 'timed', rollDurationSeconds: 5, rollSpeedPerSecond: 20, revealMode: 'sequential' }} onFailure={() => undefined} />)
     await act(async () => { await Promise.resolve() })
-    expect(screen.getByRole('heading', { name: 'Get ready' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Bersiap' })).toBeInTheDocument()
     await act(async () => { await vi.advanceTimersByTimeAsync(3000) })
     expect(screen.getByRole('heading', { name: 'Rolling' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Skip animation' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Lewati animasi' })).toBeInTheDocument()
     await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
-    expect(screen.getByRole('heading', { name: 'Winner reveal' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Pengungkapan pemenang' })).toBeInTheDocument()
   })
 
   it('shows STOP & REVEAL only for Manual rolling', async () => {
@@ -359,7 +359,7 @@ describe('ProductionDrawPresentation', () => {
     expect(stop).toHaveClass('ui-button--danger', 'ui-button--lg', 'production-manual-stop')
     expect(stop.closest('.production-presentation__content')).not.toBeNull()
     expect(document.querySelector('.presentation-header-actions')?.querySelector('button')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Skip animation' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Lewati animasi' })).not.toBeInTheDocument()
   })
 
   it('survives Strict Mode recovery hydration and continues from the persisted stage', async () => {
@@ -370,7 +370,7 @@ describe('ProductionDrawPresentation', () => {
     render(<StrictMode><ProductionDrawPresentation result={result(1)} mode="live" eventName="Event" prizeCategory="Gold" prizeName="Prize" initialPresentation={{ stage: 'countdown', stageStartedAt: recoveredAt, blackoutRequested: false }} checkpoints={{ findByDrawSessionId: async () => null, upsert: async () => undefined }} onFailure={() => undefined} /></StrictMode>)
 
     await Promise.resolve()
-    expect(screen.getByRole('heading', { name: 'Get ready' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Bersiap' })).toBeInTheDocument()
     await act(async () => { await vi.advanceTimersByTimeAsync(3000) })
     expect(screen.getByRole('heading', { name: 'Rolling' })).toBeInTheDocument()
     expect(screen.queryByText('The presentation stage transition is invalid.')).not.toBeInTheDocument()
@@ -383,13 +383,13 @@ describe('ProductionDrawRunHeader', () => {
       <MemoryRouter>
         <ProductionDrawRunHeader
           backTo="/draw/live"
-          audienceStatus={{ detail: 'Last public snapshot acknowledged.', displayUrl: '/display?eventId=event-1', label: 'Connected' }}
+          audienceStatus={{ detail: 'Last public snapshot acknowledged.', displayUrl: '/display?eventId=event-1', label: 'Terhubung' }}
           eventName="Spring Event"
           mode="live"
           prizeCategory="Grand Prize"
           prizeName="Travel voucher"
           recap={{ countdownSeconds: 5, eligibleCount: 4, rollingSeconds: 8, winnerCount: 1, winningRule: 'Once per category' }}
-          stage="Ready to start"
+          stage="Siap memulai"
         />
       </MemoryRouter>,
     )
@@ -397,7 +397,7 @@ describe('ProductionDrawRunHeader', () => {
     const header = screen.getByRole('banner')
     const metrics = header.querySelector('dl')
     if (metrics === null) throw new Error('Expected the draw metrics definition list.')
-    expect(within(metrics).getAllByText('Winners')).toHaveLength(1)
+    expect(within(metrics).getAllByText('Winner')).toHaveLength(1)
     expect(within(metrics).getAllByText('Eligible')).toHaveLength(1)
     expect(within(metrics).getAllByText('Presentation timing')).toHaveLength(1)
     expect(within(metrics).getByText('1')).toBeVisible()
@@ -406,10 +406,10 @@ describe('ProductionDrawRunHeader', () => {
     expect(within(metrics).getByText('5s')).toBeVisible()
     expect(within(metrics).getByText('Rolling')).toBeVisible()
     expect(within(metrics).getByText('8s')).toBeVisible()
-    expect(within(header).getByRole('link', { name: 'Back to Live Draw' })).toHaveAttribute('href', '/draw/live')
-    expect(within(header).getByRole('link', { name: 'Open Audience Display' })).toHaveAttribute('href', '/display?eventId=event-1')
+    expect(within(header).getByRole('link', { name: 'Kembali ke Undian' })).toHaveAttribute('href', '/draw/live')
+    expect(within(header).getByRole('button', { name: 'Buka Audience Display' })).toBeInTheDocument()
     expect(within(header).getByText('Audience Display')).toBeVisible()
-    expect(within(header).getByText('Connected')).toBeVisible()
+    expect(within(header).getByText('Terhubung')).toBeVisible()
     expect(within(header).getByText('Last public snapshot acknowledged.')).toBeVisible()
   })
 })

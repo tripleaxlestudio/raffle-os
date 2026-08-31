@@ -62,8 +62,8 @@ describe('production Draw Run route shell', () => {
   })
   it('uses production chrome without prototype controls or status bars', async () => {
     renderRoute(`/draw/run/${mocks.sessionId}`)
-    expect(await screen.findByRole('heading', { name: 'Ready to start' })).toBeInTheDocument()
-    expect(screen.getByText('Production workspace')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Siap memulai' })).toBeInTheDocument()
+    expect(screen.getByText('Ruang kerja produksi')).toBeInTheDocument()
     expect(screen.queryByText('Prototype navigation')).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Prototype scenario' })).not.toBeInTheDocument()
     expect(screen.queryByText('Practice Mode')).not.toBeInTheDocument()
@@ -88,8 +88,8 @@ describe('production Draw Run route shell', () => {
 
   it('keeps the primary start action and persisted recap visible without the redundant checklist', async () => {
     renderRoute(`/draw/run/${mocks.sessionId}`)
-    expect(await screen.findByRole('heading', { name: 'Ready to start' })).toBeInTheDocument()
-    for (const label of ['Event', 'Prize', 'Eligible pool', 'Presentation']) {
+    expect(await screen.findByRole('heading', { name: 'Siap memulai' })).toBeInTheDocument()
+    for (const label of ['Event', 'Prize', 'Pool yang memenuhi syarat', 'Presentasi']) {
       expect(screen.getAllByText(label, { exact: true }).length).toBeGreaterThanOrEqual(1)
     }
     expect(screen.queryByTestId('draw-run-readiness-summary')).not.toBeInTheDocument()
@@ -106,7 +106,7 @@ describe('production Draw Run route shell', () => {
 
   it('keeps all-ready stage focused on centered execution without a redundant checklist', async () => {
     renderRoute(`/draw/run/${mocks.sessionId}`)
-    expect(await screen.findByRole('heading', { name: 'Ready to start' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Siap memulai' })).toBeInTheDocument()
     expect(screen.queryByText('PRACTICE MODE')).not.toBeInTheDocument()
     expect(screen.queryByTestId('draw-run-readiness-summary')).not.toBeInTheDocument()
     expect(screen.queryByText('Practice does not affect official history')).not.toBeInTheDocument()
@@ -115,7 +115,7 @@ describe('production Draw Run route shell', () => {
 
   it('places the Practice safety notice inside the Start Draw stage', async () => {
     renderRoute(`/draw/run/${mocks.practiceSessionId}`)
-    expect(await screen.findByRole('heading', { name: 'Ready to start' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Siap memulai' })).toBeInTheDocument()
     expect(screen.getByText('PRACTICE MODE')).toBeInTheDocument()
     expect(screen.getByText('Results will not affect official history.')).toBeInTheDocument()
     expect(screen.queryByTestId('draw-run-readiness-summary')).not.toBeInTheDocument()
@@ -131,7 +131,7 @@ describe('production Draw Run route shell', () => {
     expect(await screen.findByText('The draw could not start safely.')).toBeInTheDocument()
     expect(screen.getByText('The Event is not active and cannot start a draw.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Back to Draw Setup' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Ready to start' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Siap memulai' })).not.toBeInTheDocument()
   })
 
   it('hydrates a valid Practice projection on initial mount and does not show start controls', async () => {
@@ -181,7 +181,7 @@ describe('production Draw Run route shell', () => {
       policyVersion: 1,
     })
     renderRoute(`/draw/run/${mocks.sessionId}`)
-    expect(await screen.findByRole('heading', { name: 'Ready to start' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Siap memulai' })).toBeInTheDocument()
     expect(getItem).not.toHaveBeenCalledWith(`raffle-os:practice-result:v1:${mocks.sessionId}`)
     getItem.mockRestore()
   })
@@ -189,7 +189,7 @@ describe('production Draw Run route shell', () => {
   it('surfaces a corrupt Practice projection as a typed bootstrap error without invoking selection', async () => {
     sessionStorage.setItem(`raffle-os:practice-result:v1:${mocks.practiceSessionId}`, '{bad-json}')
     const { router } = renderRoute(`/draw/run/${mocks.practiceSessionId}`)
-    const dialog = await screen.findByRole('dialog', { name: 'Winner result safely saved' })
+    const dialog = await screen.findByRole('dialog', { name: 'Hasil pemenang tersimpan dengan aman' })
     expect(dialog).toHaveClass('ui-modal--production-surface')
     expect(screen.getByRole('heading', { name: 'Presentation recovery' })).toBeInTheDocument()
     expect(screen.getByText('Draw Run workspace')).toBeInTheDocument()
@@ -202,7 +202,7 @@ describe('production Draw Run route shell', () => {
     expect(screen.queryByRole('button', { name: 'Review Winner' })).not.toBeInTheDocument()
     expect(document.querySelector('.production-recovery-diagnostics')).not.toBeInTheDocument()
     fireEvent.keyDown(dialog, { key: 'Escape' })
-    expect(screen.getByRole('dialog', { name: 'Winner result safely saved' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Hasil pemenang tersimpan dengan aman' })).toBeInTheDocument()
     expect(sessionStorage.getItem(`raffle-os:practice-result:v1:${mocks.practiceSessionId}`)).toBe('{bad-json}')
     fireEvent.click(screen.getByRole('button', { name: 'Back to Draw Setup' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/draw/setup'))

@@ -7,7 +7,7 @@ export function CountdownStage({ scenario }: { readonly scenario: PublicAudience
     <AudienceDrawHeader context={scenario} />
     <div className="countdown-stage__content" data-prototype-static={scenario.prototypeStatic ? 'true' : undefined}>
       <h1>{scenario.message}</h1>
-      <p aria-label={`Static countdown value: ${scenario.countdownValue ?? '—'}`} className="countdown-stage__numeral">{scenario.countdownValue ?? '—'}</p>
+      <p aria-label={`Hitung mundur: ${scenario.countdownValue ?? '—'}`} className="countdown-stage__numeral">{scenario.countdownValue ?? '—'}</p>
     </div>
   </AudienceStage>
 }

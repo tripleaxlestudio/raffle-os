@@ -22,7 +22,7 @@ export function TicketTile({
       data-locked={locked ? 'true' : 'false'}
       data-reveal-entrance={revealEntrance ? 'true' : 'false'}
     >
-      <span className="ticket-tile__label">{locked ? status === 'confirmed' ? 'Confirmed' : 'Pending' : 'Rolling'}</span><strong className="ticket-tile__number">{ticketNumber}</strong>
+      <span className="ticket-tile__label">{locked ? status === 'confirmed' ? 'Dikonfirmasi' : 'Menunggu' : 'Berputar'}</span><strong className="ticket-tile__number">{ticketNumber}</strong>
     </div>
   )
 }

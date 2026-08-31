@@ -15,14 +15,14 @@ const prototypeNavigationItems = [
 ] as const
 
 const productionNavigationItems = [
-  { label: 'Dashboard', icon: 'LayoutDashboard', to: '/dashboard' },
+  { label: 'Dasbor', icon: 'LayoutDashboard', to: '/dashboard' },
   { label: PRODUCTION_SETUP_JOURNEY[1].label, icon: 'Trophy', to: PRODUCTION_SETUP_JOURNEY[1].to },
-  { label: 'Participants', icon: 'Users', to: '/participants' },
+  { label: 'Peserta', icon: 'Users', to: '/participants' },
   { label: PRODUCTION_SETUP_JOURNEY[3].label, icon: 'MonitorCog', to: PRODUCTION_SETUP_JOURNEY[3].to },
-  { label: 'Draw Setup', icon: 'SlidersHorizontal', to: '/draw/setup' },
-  { label: 'Live Draw', icon: 'Radio', to: '/draw/live' },
-  { label: 'Pending Results', icon: 'ClipboardCheck', to: '/draw/pending' },
-  { label: 'History', icon: 'History', to: '/history' },
+  { label: 'Pengaturan Undian', icon: 'SlidersHorizontal', to: '/draw/setup' },
+  { label: 'Undian', icon: 'Radio', to: '/draw/live' },
+  { label: 'Hasil', icon: 'ClipboardCheck', to: '/draw/pending' },
+  { label: 'Riwayat', icon: 'History', to: '/history' },
 ] as const
 
 type NavigationItem = {
@@ -58,22 +58,22 @@ function OperatorSidebarContent({
   readonly reachedStep?: number
 }) {
   return (
-    <aside className="operator-sidebar" aria-label="Operator sidebar">
+    <aside className="operator-sidebar" aria-label="Bilah samping Operator">
       <div className="operator-sidebar__brand">
         <span aria-hidden="true" className="operator-sidebar__monogram">
           RO
         </span>
         <p className="operator-sidebar__identity">
           <strong>Raffle OS</strong>
-          <span>Operator control</span>
+          <span>Kontrol Operator</span>
         </p>
       </div>
-      <p className="operator-sidebar__section-label">Workspace</p>
-      <nav aria-label="Operator navigation">
+      <p className="operator-sidebar__section-label">Ruang kerja</p>
+      <nav aria-label="Navigasi Operator">
         <ul className="operator-nav">
           {navigationItems.map((item) => (
             <li key={item.to}>
-              {item.to !== '/dashboard' && ((readiness !== null && !isProductionNavigationUnlocked(item.to, readiness, reachedStep)) || (readiness === null && disabled)) ? <span aria-disabled="true" className="operator-nav__link operator-nav__link--disabled" title="Complete the previous setup step first">
+              {item.to !== '/dashboard' && ((readiness !== null && !isProductionNavigationUnlocked(item.to, readiness, reachedStep)) || (readiness === null && disabled)) ? <span aria-disabled="true" className="operator-nav__link operator-nav__link--disabled" title="Selesaikan langkah pengaturan sebelumnya terlebih dahulu">
                 <NavigationIcon item={item} />
                 <span>{item.label}</span>
               </span> : <NavLink
@@ -90,9 +90,9 @@ function OperatorSidebarContent({
       </nav>
       <div className="operator-sidebar__footer">
         <span className="operator-sidebar__footer-label">
-          {production ? 'Production workspace' : 'Static prototype'}
+          {production ? 'Ruang kerja produksi' : 'Static prototype'}
         </span>
-        <span>{production ? 'Local-first runtime' : 'Phase 2 Prototype'}</span>
+        <span>{production ? 'Berjalan lokal' : 'Phase 2 Prototype'}</span>
       </div>
     </aside>
   )

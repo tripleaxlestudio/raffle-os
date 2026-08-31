@@ -29,7 +29,7 @@ const deck: DrawSessionQueueDeck = {
 function renderDeck() {
   function Harness() {
     const [mode, setMode] = useState<'practice' | 'live'>('practice')
-    return <DrawControlDeck connection={{ acknowledged: true, acknowledgedAt: undefined, detail: 'Last public snapshot acknowledged.', label: 'Connected', tone: 'success' }} deck={deck} displayUrl="/display?eventId=event-1" selectedMode={mode} setSelectedMode={setMode} />
+    return <DrawControlDeck connection={{ acknowledged: true, acknowledgedAt: undefined, detail: 'Snapshot publik terakhir telah dikonfirmasi.', label: 'Terhubung', tone: 'success' }} deck={deck} displayUrl="/display?eventId=event-1" selectedMode={mode} setSelectedMode={setMode} />
   }
 
   return render(<MemoryRouter><Harness /></MemoryRouter>)
@@ -45,9 +45,9 @@ describe('Production Draw control deck', () => {
       },
     }
 
-    render(<MemoryRouter><DrawControlDeck connection={{ acknowledged: true, acknowledgedAt: undefined, detail: 'Last public snapshot acknowledged.', label: 'Connected', tone: 'success' }} deck={pendingDeck} displayUrl="/display?eventId=event-1" selectedMode="live" setSelectedMode={() => undefined} /></MemoryRouter>)
+    render(<MemoryRouter><DrawControlDeck connection={{ acknowledged: true, acknowledgedAt: undefined, detail: 'Snapshot publik terakhir telah dikonfirmasi.', label: 'Terhubung', tone: 'success' }} deck={pendingDeck} displayUrl="/display?eventId=event-1" selectedMode="live" setSelectedMode={() => undefined} /></MemoryRouter>)
 
-    const review = screen.getByRole('link', { name: 'Review Pending Results' })
+    const review = screen.getByRole('link', { name: 'Review Hasil Pending' })
     expect(review).toBeInTheDocument()
     expect(review.querySelector('.ui-icon')).toBeInTheDocument()
   })
@@ -55,7 +55,7 @@ describe('Production Draw control deck', () => {
   it('uses one prominent mode switch with selected states and compact audience actions', () => {
     renderDeck()
     const modeGroup = screen.getByRole('group', { name: 'Acceptance Prize mode' })
-    const practice = screen.getByRole('button', { name: 'Practice' })
+    const practice = screen.getByRole('button', { name: 'Latihan' })
     const live = screen.getByRole('button', { name: 'Live' })
 
     expect(modeGroup).toBeInTheDocument()
@@ -66,13 +66,13 @@ describe('Production Draw control deck', () => {
     expect(screen.getByRole('heading', { name: 'Ready for rehearsal' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Start Practice' })).toHaveClass('ui-button--lg')
     expect(screen.getByRole('link', { name: 'Start Practice' })).toHaveClass('ui-button--primary')
-    expect(screen.getByRole('link', { name: 'Open Draw Setup' })).toHaveAttribute('href', '/draw/setup')
-    expect(screen.getByRole('link', { name: 'Open Draw Setup' })).toHaveClass('ui-button--lg')
-    expect(screen.getByRole('link', { name: 'Open Draw Setup' })).toHaveClass('draw-control-deck__live-setup-action')
-    expect(screen.getAllByText('Connected')).toHaveLength(1)
+    expect(screen.getByRole('link', { name: 'Open Settings Undian' })).toHaveAttribute('href', '/draw/setup')
+    expect(screen.getByRole('link', { name: 'Open Settings Undian' })).toHaveClass('ui-button--lg')
+    expect(screen.getByRole('link', { name: 'Open Settings Undian' })).toHaveClass('draw-control-deck__live-setup-action')
+    expect(screen.getAllByText('Terhubung')).toHaveLength(1)
     expect(screen.getByText('Last public snapshot acknowledged.')).toBeInTheDocument()
     expect(screen.queryByText('Acknowledged')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Open Audience Display' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Buka Audience Display' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Start Practice' })).toBeInTheDocument()
 
     fireEvent.click(live)

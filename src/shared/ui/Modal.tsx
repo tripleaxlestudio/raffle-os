@@ -50,6 +50,7 @@ export function Modal({
 }: ModalProps) {
   const titleId = useId()
   const descriptionId = useId()
+  const layerRef = useRef<HTMLDivElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
 
@@ -63,6 +64,14 @@ export function Modal({
         ? document.activeElement
         : null
 
+    const layer = layerRef.current
+    const backgroundElements = Array.from(document.body.children)
+      .filter((element): element is HTMLElement => element instanceof HTMLElement && element !== layer)
+      .map((element) => ({ element, wasInert: element.hasAttribute('inert') }))
+    const rootHadModalState = document.documentElement.hasAttribute('data-modal-open')
+    backgroundElements.forEach(({ element }) => element.setAttribute('inert', ''))
+    document.documentElement.setAttribute('data-modal-open', '')
+
     const dialog = dialogRef.current
     const initialFocus =
       initialFocusRef?.current ??
@@ -71,6 +80,10 @@ export function Modal({
     initialFocus?.focus()
 
     return () => {
+      backgroundElements.forEach(({ element, wasInert }) => {
+        if (!wasInert) element.removeAttribute('inert')
+      })
+      if (!rootHadModalState) document.documentElement.removeAttribute('data-modal-open')
       previousFocusRef.current?.focus()
       previousFocusRef.current = null
     }
@@ -127,7 +140,7 @@ export function Modal({
   const resolvedHeaderTone = headerIconTone ?? inferredHeader?.tone ?? 'warning'
 
   return createPortal(
-    <div className="ui-modal-layer">
+    <div className="ui-modal-layer" data-interface="operator" ref={layerRef}>
       <div aria-hidden="true" className="ui-modal-backdrop" />
       <div
         aria-describedby={description === undefined ? undefined : descriptionId}

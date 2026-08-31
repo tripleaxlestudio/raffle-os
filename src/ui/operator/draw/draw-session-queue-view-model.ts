@@ -1,11 +1,12 @@
 import type { DrawSessionQueueItem } from '../../../application/draw/draw-session-queue.ts'
 import type { AppMode } from '../../../domain/types/app-mode.ts'
 import type { BadgeVariant } from '../../../shared/ui/Badge.tsx'
+import { formatProductionDateTime } from '../../../shared/localization/production-locale.ts'
 
 export type DrawSessionQueuePriority = 'action-required' | 'ready' | 'historical'
 
 export interface DrawSessionQueuePresentation {
-  readonly modeLabel: 'Practice' | 'Live'
+  readonly modeLabel: 'Latihan' | 'Live'
   readonly modeTone: 'practice' | 'live'
   readonly lifecycleLabel: string
   readonly lifecycleTone: BadgeVariant
@@ -31,7 +32,7 @@ export interface DrawSessionQueueDeck {
 const operationalStatuses = new Set<DrawSessionQueueItem['session']['status']>(['draft', 'ready', 'drawing', 'pending-confirmation'])
 
 const lifecycleLabels: Record<DrawSessionQueueItem['session']['status'], string> = {
-  draft: 'Draft', ready: 'Ready', drawing: 'Presentation in progress', 'pending-confirmation': 'Decision required', completed: 'Completed', cancelled: 'Cancelled',
+  draft: 'Draf', ready: 'Siap', drawing: 'Presentasi sedang berjalan', 'pending-confirmation': 'Perlu keputusan', completed: 'Selesai', cancelled: 'Dibatalkan',
 }
 
 const lifecycleTones: Record<DrawSessionQueueItem['session']['status'], BadgeVariant> = {
@@ -39,18 +40,17 @@ const lifecycleTones: Record<DrawSessionQueueItem['session']['status'], BadgeVar
 }
 
 const relationLabels: Record<Exclude<DrawSessionQueueItem['relation'], 'valid'>, string> = {
-  'missing-event': 'Event relation unavailable', 'missing-configuration': 'Draw configuration unavailable', 'missing-category': 'Prize category unavailable',
+  'missing-event': 'Relasi Acara tidak tersedia', 'missing-configuration': 'Konfigurasi undian tidak tersedia', 'missing-category': 'Kategori hadiah tidak tersedia',
 }
 
 const checkpointStageLabels: Record<string, string> = {
-  countdown: 'Countdown in progress', rolling: 'Winner presentation in progress', reveal: 'Winner reveal ready', 'pending-handoff': 'Presentation complete; handoff ready',
+  countdown: 'Hitung mundur berlangsung', rolling: 'Presentasi pemenang berlangsung', reveal: 'Pengungkapan pemenang siap', 'pending-handoff': 'Presentasi selesai; siap dilanjutkan',
 }
 
 export function formatQueueTimestamp(value: string): string {
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Updated time unavailable'
-  const formatted = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
-  return formatted.replace(', ', ' · ')
+  if (Number.isNaN(date.getTime())) return 'Waktu pembaruan tidak tersedia'
+  return formatProductionDateTime(date).replace(' pukul ', ' · ')
 }
 
 function priorityFor(item: DrawSessionQueueItem): DrawSessionQueuePriority {
@@ -100,31 +100,31 @@ export function selectCurrentOperationalQueueItems(items: readonly DrawSessionQu
 }
 
 function priorityLabel(priority: DrawSessionQueuePriority): string {
-  if (priority === 'action-required') return 'Action required'
-  if (priority === 'historical') return 'Historical sessions'
-  return 'Ready sessions'
+  if (priority === 'action-required') return 'Perlu tindakan'
+  if (priority === 'historical') return 'Sesi riwayat'
+  return 'Sesi siap'
 }
 
 function checkpointLabel(item: DrawSessionQueueItem): string {
-  if (item.session.status === 'drawing') return item.checkpoint === null ? 'Presentation in progress; resume available' : checkpointStageLabels[item.checkpoint.stage] ?? 'Presentation recovery available'
-  if (item.session.status === 'pending-confirmation') return 'Presentation complete; waiting for operator decision'
-  if (item.session.status === 'completed') return 'Presentation and operator decision complete'
-  if (item.session.status === 'cancelled') return 'Session cancelled; official history preserved'
-  if (item.session.status === 'draft') return 'Draw setup is not ready'
-  return 'Ready to start presentation'
+  if (item.session.status === 'drawing') return item.checkpoint === null ? 'Presentasi sedang berjalan; dapat dilanjutkan' : checkpointStageLabels[item.checkpoint.stage] ?? 'Pemulihan presentasi tersedia'
+  if (item.session.status === 'pending-confirmation') return 'Presentasi selesai; menunggu keputusan Operator'
+  if (item.session.status === 'completed') return 'Presentasi dan keputusan Operator selesai'
+  if (item.session.status === 'cancelled') return 'Sesi dibatalkan; Riwayat resmi dipertahankan'
+  if (item.session.status === 'draft') return 'Pengaturan Undian belum siap'
+  return 'Siap memulai presentasi'
 }
 
 function actionLabel(item: DrawSessionQueueItem): string | null {
   if (item.action === null) return null
-  if (item.action.kind === 'setup') return 'Open Draw Setup'
-  if (item.action.kind === 'run') return item.session.status === 'drawing' ? 'Resume presentation' : item.session.mode === 'live' ? 'Start Live' : 'Start Practice'
-  if (item.action.kind === 'pending') return 'Review Pending Results'
-  return 'Open History'
+  if (item.action.kind === 'setup') return 'Buka Pengaturan Undian'
+  if (item.action.kind === 'run') return item.session.status === 'drawing' ? 'Lanjutkan presentasi' : item.session.mode === 'live' ? 'Mulai Live' : 'Mulai Latihan'
+  if (item.action.kind === 'pending') return 'Tinjau Hasil'
+  return 'Buka Riwayat'
 }
 
 export function presentDrawSessionQueueItem(item: DrawSessionQueueItem): DrawSessionQueuePresentation {
   const priority = priorityFor(item)
-  return { modeLabel: item.session.mode === 'live' ? 'Live' : 'Practice', modeTone: item.session.mode === 'live' ? 'live' : 'practice', lifecycleLabel: lifecycleLabels[item.session.status], lifecycleTone: lifecycleTones[item.session.status], updatedLabel: formatQueueTimestamp(item.session.updatedAt), checkpointLabel: checkpointLabel(item), priority, priorityLabel: priorityLabel(priority), actionLabel: actionLabel(item), relationLabel: item.relation === 'valid' ? null : relationLabels[item.relation], historical: priority === 'historical' }
+  return { modeLabel: item.session.mode === 'live' ? 'Live' : 'Latihan', modeTone: item.session.mode === 'live' ? 'live' : 'practice', lifecycleLabel: lifecycleLabels[item.session.status], lifecycleTone: lifecycleTones[item.session.status], updatedLabel: formatQueueTimestamp(item.session.updatedAt), checkpointLabel: checkpointLabel(item), priority, priorityLabel: priorityLabel(priority), actionLabel: actionLabel(item), relationLabel: item.relation === 'valid' ? null : relationLabels[item.relation], historical: priority === 'historical' }
 }
 
 export function groupDrawSessionQueueItems(items: readonly DrawSessionQueueItem[]): Readonly<Record<DrawSessionQueuePriority, readonly DrawSessionQueueItem[]>> {
@@ -142,6 +142,6 @@ export function groupDrawSessionQueueDecks(items: readonly DrawSessionQueueItem[
   return [...decks].map(([key, deckItems]) => {
     const first = deckItems[0]
     const sessions = Object.fromEntries(deckItems.map((item) => [item.session.mode, item])) as Partial<Record<AppMode, DrawSessionQueueItem>>
-    return { key, eventName: first?.event?.name ?? 'Event unavailable', categoryName: first?.category?.name ?? 'Prize category unavailable', prizeName: first?.category?.prizeName ?? 'Related prize unavailable', winnerCount: first?.winnerCount ?? 0, sessions, defaultMode: preferredMode(deckItems) }
+    return { key, eventName: first?.event?.name ?? 'Acara tidak tersedia', categoryName: first?.category?.name ?? 'Kategori hadiah tidak tersedia', prizeName: first?.category?.prizeName ?? 'Hadiah terkait tidak tersedia', winnerCount: first?.winnerCount ?? 0, sessions, defaultMode: preferredMode(deckItems) }
   })
 }

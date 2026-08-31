@@ -15,14 +15,14 @@ export function PresentationRecoveryDialog({ onBackToSetup, onReviewPendingResul
   return (
     <Modal
       closeOnEscape={false}
-      eyebrow="PRESENTATION RECOVERY"
+      eyebrow="PEMULIHAN PRESENTASI"
       footer={
         <>
           <Button onClick={onBackToSetup} ref={backButtonRef} variant="quiet">
-            Back to Draw Setup
+            Kembali ke Pengaturan Undian
           </Button>
           {reviewPendingResultsAvailable && onReviewPendingResults !== undefined ? <Button onClick={onReviewPendingResults} ref={reviewButtonRef}>
-            Review Winner
+            Tinjau Pemenang
           </Button> : null}
         </>
       }
@@ -30,16 +30,16 @@ export function PresentationRecoveryDialog({ onBackToSetup, onReviewPendingResul
       onClose={() => undefined}
       open
       showCloseButton={false}
-      title="Winner result safely saved"
+      title="Hasil pemenang tersimpan dengan aman"
     >
       <div className="production-recovery-dialog__content">
         <div className="production-recovery-dialog__safe-state">
-          <Badge variant="warning">SAFE STATE</Badge>
+          <Badge variant="warning">STATUS AMAN</Badge>
           <p className="production-recovery-dialog__explanation">
-            The selected winner is safely recorded.
+            Pemenang yang dipilih telah dicatat dengan aman.
           </p>
           <p className="production-recovery-dialog__preservation">
-            Continue to review the winner to confirm the result or draw a replacement if needed.
+            Lanjutkan peninjauan untuk mengonfirmasi hasil atau mengundi pengganti bila diperlukan.
           </p>
         </div>
       </div>

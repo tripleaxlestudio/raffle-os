@@ -14,7 +14,7 @@ export function toCanonicalTimestamp(value: string): string | undefined {
 }
 
 export function formatEventTimestamp(value: string | undefined): string {
-  if (value === undefined) return 'Not scheduled'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+  if (value === undefined) return 'Belum dijadwalkan'
+  return formatProductionDateTime(value)
 }
+import { formatProductionDateTime } from '../../shared/localization/production-locale.ts'

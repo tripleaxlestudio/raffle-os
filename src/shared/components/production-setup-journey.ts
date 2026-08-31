@@ -1,7 +1,7 @@
 export const PRODUCTION_SETUP_JOURNEY = [
-  { label: 'Event', to: '/events' },
-  { label: 'Prize', to: '/prize-categories' },
-  { label: 'Participants', to: '/participants' },
-  { label: 'Display Settings', to: '/settings' },
-  { label: 'Draw Setup', to: '/draw/setup' },
+  { label: 'Acara', to: '/events' },
+  { label: 'Hadiah', to: '/prize-categories' },
+  { label: 'Peserta', to: '/participants' },
+  { label: 'Pengaturan Tampilan', to: '/settings' },
+  { label: 'Pengaturan Undian', to: '/draw/setup' },
 ] as const

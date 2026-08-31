@@ -5,8 +5,8 @@
 Owner approval: 2026-08-31. The eight-slice migration is approved as a plan.
 **Slice 0 is accepted. The owner separately authorized Slice 1 only on
 2026-08-31. The owner authorized proceeding to Slice 2 on 2026-08-31.
-Slice 2 preflight is blocked by existing focused-test failures; implementation
-has not started.** See [Slice 2 preflight](KOCOKAN-UI-SLICE-2.md) and
+Slice 2 is implemented for owner review under the revised regression gate below;
+no Phase 11 reconciliation or Slice 3 execution is authorized.** See [Slice 2 report](KOCOKAN-UI-SLICE-2.md) and
 [Slice 1 evidence and limitations](KOCOKAN-UI-SLICE-1.md). Permission to
 proceed does not waive outstanding visual or browser acceptance.
 The owner-requested light-surface follow-up is recorded in the
@@ -240,10 +240,17 @@ Every implementation slice MUST:
    reviewable evidence is committed deliberately.
 
 Phase 11 failure reconciliation must be authorized and committed independently.
-Do not turn this baseline's failure list into a permanent ignore list. If a
-future slice cannot pass its focused contract because of baseline debt, stop
-and obtain direction for separate reconciliation; do not silently relabel it
-PASS. Final release acceptance still requires the independent release gates.
+Owner preflight decision, 2026-08-31: a visual slice may proceed with known
+baseline failures only when every failing identity and compared signature is
+unchanged, no new failure appears, and no previously passing relevant behavior
+regresses. Do not weaken, skip or rewrite behavioral assertions to improve
+totals. Stop and investigate any new or changed failure. Report newly passing
+focused tests, unchanged baseline failures, changed baseline failures and new
+failures separately. KB-065–067 and KB-098–112 remain FAIL / pre-existing and
+do not alone block Slice 2 completion. No unrelated localization fixes or
+Phase 11 reconciliation may enter the visual commit. Stop after Slice 2 for
+owner review; Slice 3 is not authorized. Final release acceptance still
+requires the independent release gates.
 
 ## Exact proposed Slice 1 boundary
 

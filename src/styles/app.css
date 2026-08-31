@@ -6,6 +6,8 @@
 @import "./kocokan/tokens.css";
 @import "./kocokan/primitives.css";
 @import "./kocokan/shell.css";
+@import "./kocokan/dashboard.css";
+@import "./kocokan/preparation.css";
 
 @layer base {
   *,

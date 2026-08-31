@@ -1,3 +1,4 @@
+import { useUiClass } from '../ui/ui-theme.ts'
 import { useLocation, useNavigate } from 'react-router'
 import { useProductionWorkspace } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 import { Button, ButtonLink } from '../ui/index.ts'
@@ -5,6 +6,8 @@ import { productionSetupJourneyComplete, productionSetupStageComplete, productio
 import { PRODUCTION_SETUP_JOURNEY } from './production-setup-journey.ts'
 
 export function ProductionSetupContinuation() {
+  const ui = useUiClass()
+
   const workspace = useProductionWorkspace()
   const navigate = useNavigate()
   const location = useLocation()
@@ -22,16 +25,16 @@ export function ProductionSetupContinuation() {
   const stateLabel = complete ? 'SELESAI' : unlocked ? 'SEDANG DIKERJAKAN' : 'TERKUNCI'
   const supportingCopy = workspace.status !== 'ready' ? 'Pilih satu Acara sebagai acara aktif untuk melanjutkan.' : !unlocked ? 'Selesaikan langkah pengaturan sebelumnya untuk melanjutkan.' : currentIndex === 1 && !complete ? 'Buat setidaknya satu kategori hadiah untuk melanjutkan.' : complete ? `Pengaturan ${currentStep.label} selesai.` : `Selesaikan pengaturan ${currentStep.label} untuk melanjutkan.`
 
-  return <section className="production-setup-continuation" data-setup-journey-surface="sticky" aria-labelledby="setup-journey-title">
-    <div className="production-setup-continuation__progress">
-      <p className="production-setup-continuation__eyebrow">ALUR PENGATURAN · LANGKAH {currentIndex + 1} DARI {PRODUCTION_SETUP_JOURNEY.length} · {currentStep.label.toUpperCase()} {stateLabel}</p>
+  return <section className={`production-setup-continuation ${ui('setup-continuation')}`} data-setup-journey-surface="sticky" aria-labelledby="setup-journey-title">
+    <div className={ui('production-setup-continuation__progress')}>
+      <p className={ui('production-setup-continuation__eyebrow')}>ALUR PENGATURAN · LANGKAH {currentIndex + 1} DARI {PRODUCTION_SETUP_JOURNEY.length} · {currentStep.label.toUpperCase()} {stateLabel}</p>
       <h2 id="setup-journey-title">Pengaturan {currentStep.label}</h2>
-      <p className="production-setup-continuation__copy">{supportingCopy}{workspace.status === 'ready' ? ` · ${workspace.event.name}` : ''}</p>
-      <ol className="production-setup-continuation__steps" aria-label="Langkah pengaturan produksi">
+      <p className={ui('production-setup-continuation__copy')}>{supportingCopy}{workspace.status === 'ready' ? ` · ${workspace.event.name}` : ''}</p>
+      <ol className={ui('production-setup-continuation__steps')} aria-label="Langkah pengaturan produksi">
         {PRODUCTION_SETUP_JOURNEY.map((step, index) => <li className={productionSetupStageComplete(readiness, index) ? 'is-complete' : index === currentIndex ? 'is-current' : 'is-locked'} aria-current={index === currentIndex ? 'step' : undefined} key={step.to}>{step.label}</li>)}
       </ol>
     </div>
-    <div className="production-setup-continuation__actions">
+    <div className={ui('production-setup-continuation__actions')}>
       {previousStep === undefined ? <ButtonLink to="/dashboard" variant="secondary" size="sm">Kembali ke Dasbor</ButtonLink> : <Button type="button" variant="secondary" size="sm" onClick={() => navigate(previousStep.to)}>Sebelumnya</Button>}
       <Button type="button" disabled={!hasNext} onClick={() => { if (nextStep !== undefined && workspace.status === 'ready') { workspace.advanceSetupJourney?.(currentIndex + 2); navigate(nextStep.to) } }}>Berikutnya: {nextStep?.label ?? 'Selesai'} <span aria-hidden="true">→</span></Button>
     </div>

@@ -781,9 +781,11 @@ Do not renumber phases, broaden domain behavior, or change release gates.
   Separate execution approval received
   after Slice 0 acceptance. Full-suite baseline debt is not waived.
 - [ ] Slice 2 — Dashboard & Event Preparation: execution authorized on
-  2026-08-31; preflight blocked by 18 existing focused failures (45 pass,
-  no new failures). See [preflight](docs/technical/KOCOKAN-UI-SLICE-2.md).
-  Separate baseline reconciliation direction is required before implementation.
+  2026-08-31; owner accepted the 18 unchanged preflight failures as pre-existing
+  debt under the revised regression gate. Implementation and verification
+  complete for owner review; no new/changed failures, no Phase 11 reconciliation.
+  Focused: 45 pass / 18 unchanged fail. Full: 1,067 pass / 140 unchanged fail.
+  See [Slice 2 report](docs/technical/KOCOKAN-UI-SLICE-2.md). Slice 3 not started.
 - [ ] Slice 3 — Draw Console.
 - [ ] Slice 4 — Pending Results.
 - [ ] Slice 5 — History.

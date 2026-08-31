@@ -1,11 +1,12 @@
-# Kocokan UI Slice 2 — preflight
+# Kocokan UI Slice 2 — Dashboard and Event Preparation
 
 Date: 2026-08-31. Branch: `redesign/kocokan-ui`.
 
-The owner authorized Slice 2 after receiving its Dashboard, Event, Prize
-Categories, Participant/import and setup-continuation scope. This authorizes
-the visual slice, not separate Phase 11 defect/localization reconciliation.
-No Slice 2 application implementation has started.
+Status: implemented for owner review under the revised regression gate.
+The owner explicitly authorized proceeding with unchanged baseline failures,
+without Phase 11 reconciliation. The preflight below is retained as historical
+evidence; its former stop decision is superseded by that authorization.
+Slice 3 has not started and is not authorized.
 
 ## Preservation checkpoint
 
@@ -63,8 +64,123 @@ The existing local Operator dashboard was inspected in in-app Chromium at
 and locked preparation navigation. No Event, participant, Live result or
 browser storage was mutated. This observation is not Slice 2 visual acceptance.
 
-The redesign plan requires stopping when a slice cannot pass its focused
-contract because of baseline debt. Next required decision: authorize a
-separate reconciliation of the 18 Event/setup-continuation failures before
-returning to the approved Slice 2 visual work. Do not weaken behavioral
-assertions or relabel this overall failure as PASS.
+At preflight time, the plan required stopping for separate reconciliation
+direction. The owner subsequently replaced that gate: unchanged failure
+identities/signatures may remain FAIL / pre-existing without blocking visual
+implementation. Any changed/new failure must be investigated. No behavioral
+assertions may be weakened, skipped or rewritten to improve totals.
+
+## Implementation
+
+- Dashboard: move the next-draw and operational controls ahead of supporting
+  metrics; group the existing import/setup actions in a quiet preparation strip.
+  Retain the same counts, source queries, state derivation, links and actions.
+- Events: group identity/schedule fields, give the form primary emphasis, use
+  flat divided saved-event rows and a clear current-event marker. Activation
+  remains explicit and visually secondary to form submission. Deletion guards,
+  exact-name confirmation, counts and handlers remain unchanged.
+- Prize Categories: group identity/additional details, use compact paired
+  fields and divided prize rows. Archived/read-only guards remain unchanged.
+- Import: organize target/file, mapping, raw data, validation, strategy and
+  persisted records in reading order. Validation and both tables use full
+  content width; the final decision area separates strategy from confirmation.
+  Native radios, checkbox acknowledgement, file chooser, mapping/worksheet
+  selection, paging and atomic commit commands are retained.
+- ProductionSetupContinuation: numbered steps, completion/current cues and
+  a footer constrained to the content width. The original footer hook remains
+  for shell clearance; no readiness, unlock, navigation or completion logic
+  changes. Its visual effect also appears on Settings and Draw Setup through
+  this existing shared footer; their page compositions remain out of scope.
+
+Page-owned classes opt in using the existing `useUiClass` API, with new
+`kocokan/dashboard.css` and `kocokan/preparation.css` ownership. Unthemed
+consumers retain legacy hooks. No shared primitive, shell, token or legacy
+Operator stylesheet was edited in Slice 2. Old rules remain deliberately for
+unthemed consumers; final unused-CSS removal remains Slice 7's consumer audit.
+
+### Files
+
+Application files modified: `ProductionDashboardPage.tsx`, `EventsPage.tsx`,
+`PrizeCategoriesPage.tsx`, `ProductionParticipantImportPreview.tsx`,
+`ProductionSetupContinuation.tsx`, and `styles/app.css` (two imports only).
+New styles: `styles/kocokan/dashboard.css`, `styles/kocokan/preparation.css`.
+Documentation: this report, the redesign plan, TASKS and this slice's evidence.
+No dependency, database schema, route, domain or Audience change.
+
+## Verification and regression decision
+
+Final focused command uses the same six-file selection as preflight, output
+`node_modules/.tmp/kocokan-slice2-after.json`. Full command:
+
+```text
+npm.cmd run test -- --maxWorkers=2 --reporter=json
+--outputFile=node_modules/.tmp/kocokan-slice2-full.json
+```
+
+| Required category | Focused comparison | Full-suite comparison |
+|---|---|---|
+| A. Newly passing during Slice 2 | 0; all 45 preflight passes retained | No baseline failures resolved by Slice 2; KB-043/044 already passed before this slice |
+| B. PRE-EXISTING / UNCHANGED BASELINE FAILURES | 18: KB-065–067, KB-098–112 | 140 exact baseline identities/signatures |
+| C. Changed baseline failures | 0 | 0 |
+| D. New failures | 0 | 0 |
+
+Focused totals: 63 tests, 45 passed, 18 failed. Full totals: 145 files,
+1,207 tests, 1,067 passed, 140 failed, zero skipped. Both test runs remain
+**FAIL overall**. The revised visual regression gate has no detected
+regression; it does not convert historical failures to PASS.
+
+Exact comparisons: [focused](evidence/kocokan-ui-slice2/focused-comparison.json)
+and [full](evidence/kocokan-ui-slice2/full-comparison.json). The original
+baseline register and comparison algorithm were not modified.
+
+`npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd run build`, and
+`git diff --check`: PASS. The existing build chunk-size warning remains.
+The [source audit](evidence/kocokan-ui-slice2/source-scope.json) compares 137
+JSX behavior attributes against checkpoint `b5c8775`; every compared attribute
+is unchanged. Frozen paths and all test files are unchanged. Reproduce with
+`node docs/technical/evidence/kocokan-ui-slice2/audit-scope.mjs`.
+
+## Browser evidence and observations
+
+In-app Chromium against a separate development origin `127.0.0.1:5174`.
+Created a clearly labelled synthetic draft and prize via normal UI. Merged
+one synthetic XLSX row and 25 synthetic CSV rows, without deleting any data
+or drawing official winners. The user's existing origin/data was untouched.
+
+- Event: disabled blank-name submit; create and explicitly select a draft;
+  activate dialog cancelled by Escape with focus returning to its trigger;
+  permanent-delete dialog opened and cancelled without deletion.
+- Prize: empty/list views; creation; edit prefill and cancellation; Next remains
+  blocked before a saved category and becomes enabled afterwards.
+- Import: empty storage read error remains visible; CSV empty/duplicate rows;
+  25-row raw paging and page-size reset; XLSX worksheet switch from A to B;
+  exact `00011`/`00092` ticket display; merge dialog and successful atomic
+  merge; replacement confirmation disabled without acknowledgement, then
+  cancelled without deletion; saved table paging and 26-row page-size view.
+- Dashboard reviewed at 1366×768, 1440×900 and 1920×1080: operational action
+  is prominent, metric labels fit, preparation actions remain reachable.
+- Import and footer inspected at all three desktop targets: content scrolls
+  vertically, no document horizontal overflow; footer actions remain inside
+  the content viewport. Early Event evidence revealed a legacy `width:100%`
+  footer overflow, corrected locally with `width:auto` and bounded left/right.
+- Screenshots in this evidence directory capture visited states. Earlier
+  Slice 1 screenshots remain the historical visual reference; screenshots
+  with different synthetic data are not pixel-equality comparisons.
+
+### Existing issue observed, deliberately not fixed
+
+When there are zero persisted participants, `getPersistedParticipantsForEvent`
+passes `limit: totalCount` (zero), while the repository's existing validator
+requires a positive limit. The current UI therefore shows its safe read-error
+message. Both files are unchanged from `b5c8775`. After the synthetic merge,
+the persisted preview reads normally. This is a separate functional follow-up,
+not a visual regression or an authorized Phase 11 fix.
+
+## Limits and owner review
+
+No full Chrome/Edge, assistive-technology or two-window owner acceptance is
+claimed. Actual Live/pending/archived and all storage-failure combinations
+were not exhaustively exercised in the browser; existing automated coverage
+and the unchanged behavior audit supplement the visited synthetic states.
+No official Live result was created. Audience presentation and preview
+internals remain frozen. The owner must review this slice before Slice 3.

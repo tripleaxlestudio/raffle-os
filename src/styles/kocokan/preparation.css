@@ -48,7 +48,8 @@
 .kc-production-import-preview p { margin-block: 0; }
 .kc-production-import-preview__event-name { font-size: 20px; font-weight: 750; overflow-wrap: anywhere; }
 .kc-production-import-preview__hint, .kc-production-import-preview__mutability, .kc-production-import-preview__file-meta, .kc-production-import-preview__metric-summary { color: var(--kc-text-muted); font-size: 13px; }
-.kc-production-import-preview__file-picker { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 16px; padding: 20px; min-height: 96px; border: 2px dashed var(--kc-divider); border-radius: 12px; background: var(--kc-surface-muted); }
+.kc-production-import-preview__upload { gap: 8px; }
+.kc-production-import-preview__file-picker { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding: 4px 12px; min-height: 46px; border: 1px dashed var(--kc-divider); border-radius: 8px; background: var(--kc-surface-muted); }
 .kc-production-import-preview__file-name { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; font-weight: 650; }
 .kc-production-import-preview__file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .kc-production-import-preview__file-picker:has(input:focus-visible) { outline: 3px solid var(--kc-focus); outline-offset: 3px; }
@@ -58,6 +59,8 @@
 .kc-production-import-preview__metrics span, .kc-production-import-preview__success-metrics span { font-size: 12px; color: var(--kc-text-muted); }
 .kc-production-import-preview__metrics strong, .kc-production-import-preview__success-metrics strong { font: 800 28px/1.2 var(--kc-font); font-variant-numeric: tabular-nums; }
 .kc-production-import-preview__ticket, .kc-production-import-preview__ticket code { font-family: var(--kc-font-mono); font-weight: 750; white-space: nowrap; }
+/* Keep the page-size value clear of Select's existing decorative chevron. */
+.kc-production-import-preview .kc-pagination__page-size .kc-select { min-width: 84px; padding-right: 36px; }
 .kc-production-import-preview__issue-list { display: grid; gap: 12px; }
 .kc-production-import-preview__issue-list ul { margin: 0; padding: 16px 16px 16px 32px; border-left: 3px solid var(--kc-warning); background: var(--kc-warning-surface); color: var(--kc-warning); }
 .kc-production-import-preview__safe-note { padding: 12px 16px; border-left: 3px solid var(--kc-info); background: var(--kc-info-surface); color: var(--kc-info); font-size: 13px; }

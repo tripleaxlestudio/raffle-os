@@ -184,3 +184,27 @@ were not exhaustively exercised in the browser; existing automated coverage
 and the unchanged behavior audit supplement the visited synthetic states.
 No official Live result was created. Audience presentation and preview
 internals remain frozen. The owner must review this slice before Slice 3.
+
+## Owner review refinement: compact upload and pagination chevron
+
+The owner requested matching card heights by making Upload compact, without
+enlarging the selected Event card. The original column proportions and natural
+Event card height are preserved. Upload spacing and file-picker padding are
+reduced; content can still wrap and grow without a fixed card height. Import
+pagination now reserves 36px for the existing chevron, including the value 100.
+Only `src/styles/kocokan/preparation.css` changes application presentation.
+
+In-app Chromium checks on the isolated synthetic-data origin at 1440x900 and
+1920x1080 show both initial cards at 174.59px high, with their original unequal
+widths. Upload was previously 240.59px high. The saved-record page-size control
+was changed to 100 and its chevron inspected visually, without overlapping text.
+Evidence: `refinement-equal-cards-1440x900.png`,
+`refinement-compact-upload-1920x1080.png`, and
+`refinement-pagination-1440x900.png` in the Slice 2 evidence directory.
+
+Verification: lint and build pass (existing bundle-size warning remains);
+`ProductionParticipantImportPreview.test.tsx` passes all 25 tests; diff check
+passes. No assertions or behavior changed. The broader baseline comparison
+above belongs to the completed Slice 2 run and was not rerun for this CSS-only
+refinement. No new passing tests are claimed; known baseline debt remains FAIL.
+Slice 3 remains unstarted and owner visual acceptance is still pending.

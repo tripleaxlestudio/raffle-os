@@ -776,9 +776,14 @@ Do not renumber phases, broaden domain behavior, or change release gates.
   imply application acceptance. See the dedicated baseline record.
 - [ ] Slice 1 — Visual System & App Shell: implementation and verification
   recorded in [Slice 1 report](docs/technical/KOCOKAN-UI-SLICE-1.md); owner
-  visual acceptance remains pending. Separate execution approval received
+  visual acceptance remains pending. Requested light-surface corrections are
+  recorded in the [refinement report](docs/technical/KOCOKAN-UI-SLICE-1-REFINEMENT.md).
+  Separate execution approval received
   after Slice 0 acceptance. Full-suite baseline debt is not waived.
-- [ ] Slice 2 — Dashboard & Event Preparation.
+- [ ] Slice 2 — Dashboard & Event Preparation: execution authorized on
+  2026-08-31; preflight blocked by 18 existing focused failures (45 pass,
+  no new failures). See [preflight](docs/technical/KOCOKAN-UI-SLICE-2.md).
+  Separate baseline reconciliation direction is required before implementation.
 - [ ] Slice 3 — Draw Console.
 - [ ] Slice 4 — Pending Results.
 - [ ] Slice 5 — History.

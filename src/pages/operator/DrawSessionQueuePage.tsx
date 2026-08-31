@@ -56,7 +56,46 @@ export function DrawSessionQueuePage() {
   const hasPersistedSessions = state.queue.items.length > 0
   return <section aria-labelledby="draw-queue-title" className="draw-live-queue">
     <PageHeader eyebrow="OPERASI LIVE" headingId="draw-queue-title" title="Undian" description="Jalankan sesi undian siap untuk Acara yang dipilih." />
-    {decks.length === 0 ? <Card padding="md"><h2>{hasPersistedSessions ? 'Tidak ada Undian aktif' : 'Belum ada sesi undian'}</h2><p>{hasPersistedSessions ? 'Undian sebelumnya yang selesai atau dibatalkan tetap tersedia di Riwayat. Buat undian berikutnya dari Pengaturan Undian saat siap.' : 'Buat konfigurasi di Pengaturan Undian; sesi tersimpan akan langsung muncul di sini.'}</p><div className="draw-action-bar__actions"><ButtonLink to="/draw/setup">{hasPersistedSessions ? 'Mulai Undian Berikutnya' : 'Buat Sesi Undian'}</ButtonLink>{hasPersistedSessions ? <ButtonLink icon={<Icon name="History" />} to="/history" variant="secondary">Lihat Riwayat</ButtonLink> : null}</div></Card> : <div className="draw-control-decks" aria-label="Panel kontrol undian">{decks.map((deck) => <DrawControlDeck connection={connection} deck={deck} displayUrl={displayUrl} key={deck.key} selectedMode={selectedModes[deck.key] ?? deck.defaultMode} setSelectedMode={(mode) => setSelectedModes((current) => ({ ...current, [deck.key]: mode }))} />)}</div>}
+    {decks.length === 0 ? (
+      <Card className="draw-live-queue__empty-state" padding="lg" tone="raised">
+        <div className="draw-live-queue__empty-icon" aria-hidden="true">
+          <Icon name="Radio" size={28} />
+        </div>
+        <div className="draw-live-queue__empty-copy">
+          <h2>{hasPersistedSessions ? 'Tidak ada Undian aktif' : 'Belum ada sesi undian'}</h2>
+          <p>
+            {hasPersistedSessions
+              ? 'Undian sebelumnya yang selesai atau dibatalkan tetap tersedia di Riwayat. Buat undian berikutnya dari Pengaturan Undian saat siap.'
+              : 'Buat konfigurasi di Pengaturan Undian; sesi tersimpan akan langsung muncul di sini.'}
+          </p>
+        </div>
+        <div className="draw-live-queue__empty-actions">
+          <ButtonLink to="/draw/setup" variant="primary">
+            {hasPersistedSessions ? 'Mulai Undian Berikutnya' : 'Buat Sesi Undian'}
+          </ButtonLink>
+          {hasPersistedSessions ? (
+            <ButtonLink icon={<Icon name="History" />} to="/history" variant="secondary">
+              Lihat Riwayat
+            </ButtonLink>
+          ) : null}
+        </div>
+      </Card>
+    ) : (
+      <div className="draw-control-decks" aria-label="Panel kontrol undian">
+        {decks.map((deck) => (
+          <DrawControlDeck
+            connection={connection}
+            deck={deck}
+            displayUrl={displayUrl}
+            key={deck.key}
+            selectedMode={selectedModes[deck.key] ?? deck.defaultMode}
+            setSelectedMode={(mode) =>
+              setSelectedModes((current) => ({ ...current, [deck.key]: mode }))
+            }
+          />
+        ))}
+      </div>
+    )}
   </section>
 }
 
@@ -73,7 +112,7 @@ export function DrawControlDeck({ connection, deck, displayUrl, selectedMode, se
   const liveSelected = selectedMode === 'live'
   const unavailableReason = selectedMode === 'live' ? 'Tidak ada sesi Live tersimpan untuk undian ini.' : 'Tidak ada sesi Latihan tersimpan untuk undian ini.'
   const audienceWarning = liveSelected && connection.label !== 'Terhubung' ? <StatusBanner badge="Perhatian Tampilan Audiens" title="Konfirmasi Tampilan Audiens belum diterima" tone="warning">{connection.detail} Pastikan tampilan publik siap sebelum memulai undian Live resmi.</StatusBanner> : null
-  return <Card className={`draw-control-deck draw-control-deck--${liveSelected ? 'live' : 'practice'}`} padding="none">
+  return <Card className={`draw-control-deck draw-control-deck--${liveSelected ? 'live' : 'practice'}`} padding="none" tone="raised">
     <div className="draw-control-deck__header">
       <div className="draw-control-deck__mode">
         <div className="draw-control-deck__mode-heading"><span>Mode operasi</span></div>

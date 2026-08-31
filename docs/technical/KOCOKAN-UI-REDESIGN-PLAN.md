@@ -4,8 +4,13 @@
 
 Owner approval: 2026-08-31. The eight-slice migration is approved as a plan.
 **Slice 0 is accepted. The owner separately authorized Slice 1 only on
-2026-08-31. Slice 1 implementation is awaiting owner review; Slice 2 is not
-authorized.** See [Slice 1 evidence and limitations](KOCOKAN-UI-SLICE-1.md).
+2026-08-31. The owner authorized proceeding to Slice 2 on 2026-08-31.
+Slice 2 preflight is blocked by existing focused-test failures; implementation
+has not started.** See [Slice 2 preflight](KOCOKAN-UI-SLICE-2.md) and
+[Slice 1 evidence and limitations](KOCOKAN-UI-SLICE-1.md). Permission to
+proceed does not waive outstanding visual or browser acceptance.
+The owner-requested light-surface follow-up is recorded in the
+[Slice 1 refinement report](KOCOKAN-UI-SLICE-1-REFINEMENT.md).
 This is a dedicated visual
 modernization workstream, not a new functional Phase 11 item or a Phase rename.
 
@@ -266,7 +271,7 @@ Pending winner grids/reason adapter, History filters/rows, Settings layout,
 fallback composition, any business logic, and all Audience internals.
 Do not remove the monolithic legacy CSS in Slice 1. Require full-suite
 comparison plus focused primitives/modal/shell/router/status tests and a real
-preview/prototype isolation check. **Approval to start Slice 1 is still pending.**
+preview/prototype isolation check. Slice 1 execution was authorized as recorded above.
 
 ## Linked evidence
 

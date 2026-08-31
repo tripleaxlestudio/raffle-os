@@ -9,6 +9,12 @@ docs/technical/KOCOKAN-UI-SLICE-1.md`). Frozen production baseline remains
 
 ## Implementation and boundaries
 
+Follow-up: the owner requested correction of remaining dark Operator surfaces.
+The [Slice 1 refinement report](KOCOKAN-UI-SLICE-1-REFINEMENT.md) records the
+fixes, new evidence and exact verification. It supersedes the deferred-dark
+description below for the reported Dashboard/Prize/Import/Settings/Draw Setup/
+control deck surfaces; original checkpoint results remain historical.
+
 1. **Theme ownership.** `ProductionOperatorLayout` supplies `UiThemeContext`
    and `data-ui-theme="kocokan"`. The default context is `legacy`. Shared
    components select exclusive `kc-*` or legacy classes; caller classes stay

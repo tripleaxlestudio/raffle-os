@@ -1,4 +1,5 @@
 import type { PrototypeImportStep } from '../../prototype/operator-types.ts'
+import { useUiClass } from '../ui/ui-theme.ts'
 
 export interface ProgressStep {
   id: PrototypeImportStep
@@ -18,11 +19,12 @@ export function ProgressStepper({
   completed = false,
   locale = 'en',
 }: ProgressStepperProps) {
+  const ui = useUiClass()
   const matchedIndex = steps.findIndex((step) => step.id === currentStep)
   const currentIndex = matchedIndex < 0 ? 0 : matchedIndex
 
   return (
-    <nav aria-label={locale === 'id' ? 'Progres Impor Peserta' : 'Participant Import progress'} className="progress-stepper">
+    <nav aria-label={locale === 'id' ? 'Progres Impor Peserta' : 'Participant Import progress'} className={ui('progress-stepper')}>
       <ol>
         {steps.map((step, index) => {
           const state = completed || index < currentIndex
@@ -40,12 +42,12 @@ export function ProgressStepper({
               data-state={state}
               key={step.id}
             >
-              <span aria-hidden="true" className="progress-stepper__marker">
+              <span aria-hidden="true" className={ui('progress-stepper__marker')}>
                 {state === 'complete' ? '✓' : index + 1}
               </span>
-              <span className="progress-stepper__copy">
-                <span className="progress-stepper__label">{step.label}</span>
-                <span className="progress-stepper__status">{stateLabel}</span>
+              <span className={ui('progress-stepper__copy')}>
+                <span className={ui('progress-stepper__label')}>{step.label}</span>
+                <span className={ui('progress-stepper__status')}>{stateLabel}</span>
               </span>
             </li>
           )

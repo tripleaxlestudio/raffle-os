@@ -33,6 +33,24 @@ export function ProductionPendingResultsLandingPage() {
   const pending = state.queue.items.filter((item) => item.session.mode === 'live' && item.session.status === 'pending-confirmation')
   return <section aria-labelledby="pending-landing-title" className="pending-results pending-results--production">
     <PageHeader eyebrow="Operasi produksi" headingId="pending-landing-title" title="Hasil" description={`${state.queue.event.name} · sesi Live belum selesai`} />
-    {pending.length === 0 ? <Card padding="lg" className="pending-results__empty-state"><Badge aria-label="Tidak perlu tindakan" className="pending-results__empty-state-icon" variant="success">✓</Badge><div className="pending-results__empty-state-copy"><h2>Tidak ada hasil menunggu konfirmasi</h2><p>Tidak ada hasil Undian yang menunggu peninjauan.</p></div><div className="pending-results__empty-state-actions"><ButtonLink icon={<Icon name="Radio" />} to="/draw/live">Buka Undian</ButtonLink><ButtonLink icon={<Icon name="History" />} variant="secondary" to="/history">Lihat Riwayat</ButtonLink></div></Card> : pending.length === 1 ? <Card padding="md" className="pending-results__landing-card"><div className="pending-results__landing-heading"><p className="operator-eyebrow">MENUNGGU PENINJAUAN</p><Badge variant="pending">MENUNGGU</Badge></div><h2>{pending[0].category?.prizeName ?? 'Hadiah tidak tersedia'}</h2><p className="pending-results__landing-meta">{pending[0].category?.name ?? 'Kategori hadiah tidak tersedia'} · <strong>{pending[0].winnerCount} pemenang</strong></p><p className="pending-results__landing-supporting"><strong>{pending[0].winnerCount}</strong> pemenang menunggu keputusan.</p><ButtonLink icon={<Icon name="ClipboardCheck" />} size="lg" to={`/draw/pending/${pending[0].session.id}`}>Tinjau Pemenang</ButtonLink></Card> : <div className="draw-session-queue" aria-label="Sesi undian menunggu konfirmasi">{pending.map((item) => <Card key={item.session.id} padding="md" className="draw-session-queue__item"><p className="operator-eyebrow">{item.category?.name ?? 'Kategori hadiah tidak tersedia'}</p><h2>{item.category?.prizeName ?? 'Hadiah tidak tersedia'}</h2><p>Diperbarui {item.session.updatedAt}</p><ButtonLink icon={<Icon name="ClipboardCheck" />} to={`/draw/pending/${item.session.id}`}>Tinjau hasil ini</ButtonLink></Card>)}</div>}
+    {pending.length === 0 ? (
+      <Card className="pending-results__empty-state" padding="lg" tone="raised">
+        <div aria-label="Tidak perlu tindakan" className="pending-results__empty-state-icon" role="img">
+          <Icon name="CircleCheck" size={28} />
+        </div>
+        <div className="pending-results__empty-state-copy">
+          <h2>Tidak ada hasil menunggu konfirmasi</h2>
+          <p>Tidak ada hasil Undian yang menunggu peninjauan.</p>
+        </div>
+        <div className="pending-results__empty-state-actions">
+          <ButtonLink icon={<Icon name="Radio" />} to="/draw/live" variant="primary">
+            Buka Undian
+          </ButtonLink>
+          <ButtonLink icon={<Icon name="History" />} to="/history" variant="secondary">
+            Lihat Riwayat
+          </ButtonLink>
+        </div>
+      </Card>
+    ) : pending.length === 1 ? <Card padding="md" tone="raised" className="pending-results__landing-card"><div className="pending-results__landing-heading"><p className="operator-eyebrow">MENUNGGU PENINJAUAN</p><Badge variant="pending">MENUNGGU</Badge></div><h2>{pending[0].category?.prizeName ?? 'Hadiah tidak tersedia'}</h2><p className="pending-results__landing-meta">{pending[0].category?.name ?? 'Kategori hadiah tidak tersedia'} · <strong>{pending[0].winnerCount} pemenang</strong></p><p className="pending-results__landing-supporting"><strong>{pending[0].winnerCount}</strong> pemenang menunggu keputusan.</p><ButtonLink icon={<Icon name="ClipboardCheck" />} size="lg" to={`/draw/pending/${pending[0].session.id}`}>Tinjau Pemenang</ButtonLink></Card> : <div className="draw-session-queue" aria-label="Sesi undian menunggu konfirmasi">{pending.map((item) => <Card key={item.session.id} padding="md" tone="raised" className="draw-session-queue__item"><p className="operator-eyebrow">{item.category?.name ?? 'Kategori hadiah tidak tersedia'}</p><h2>{item.category?.prizeName ?? 'Hadiah tidak tersedia'}</h2><p>Diperbarui {item.session.updatedAt}</p><ButtonLink icon={<Icon name="ClipboardCheck" />} to={`/draw/pending/${item.session.id}`}>Tinjau hasil ini</ButtonLink></Card>)}</div>}
   </section>
 }

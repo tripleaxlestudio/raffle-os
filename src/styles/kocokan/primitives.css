@@ -18,15 +18,15 @@
 .kc-button--success:hover:not(:disabled) { background: color-mix(in srgb, var(--kc-success) 85%, var(--kc-outline)); }
 .kc-button:active:not(:disabled, [aria-disabled="true"]) { transform: translate(1px, 2px); box-shadow: none; }
 .kc-button:disabled, .kc-button[aria-disabled="true"] { border-color: var(--kc-divider); background: var(--kc-disabled-surface); color: var(--kc-disabled-text); box-shadow: none; cursor: not-allowed; }
-.kc-button:focus-visible, .kc-input:focus-visible, .kc-select:focus-visible { outline: var(--kc-focus-width) solid var(--kc-focus); outline-offset: var(--kc-focus-offset); }
+.kc-button:focus-visible, .kc-button:has(input[type="file"]:focus-visible), .kc-input:focus-visible, .kc-select:focus-visible { outline: var(--kc-focus-width) solid var(--kc-focus); outline-offset: var(--kc-focus-offset); }
 .kc-button__icon { display: inline-grid; flex: 0 0 auto; place-items: center; line-height: 1; }
+.kc-button input[type="file"] { color-scheme: light; }
 .kc-button__spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; }
 
 /* Default/secondary cards stay flat; raised/interactive cards own emphasis. */
 .kc-card, .kc-modal, .kc-side-panel { --kc-label: var(--kc-text); --kc-label-muted: var(--kc-text-muted); }
-/* Page-owned dark sections are deferred. Their labels must remain readable
-   when they contain new controls; this never changes a presentation token. */
-.draw-setup-section, .draw-setup-capacity-section, .settings-card:not(.kc-card), .locked-configuration:not(.kc-card), .running-actions:not(.kc-card), .draw-control-deck:not(.kc-card), .pending-results__section-heading, .pending-results__action-bar {
+/* Remaining live-detail surfaces keep their existing page ownership. */
+.locked-configuration:not(.kc-card), .running-actions:not(.kc-card), .pending-results__section-heading, .pending-results__action-bar {
   --kc-label: var(--text-primary);
   --kc-label-muted: var(--text-secondary);
   color: var(--text-primary);
@@ -40,6 +40,95 @@
 .kc-card--padding-sm { padding: 16px; }
 .kc-card--padding-md { padding: 24px; }
 .kc-card--padding-lg { padding: 32px; }
+
+/* MetricCard neo-brutalist styling under Kocokan */
+.kc-card.metric-card,
+[data-ui-theme="kocokan"] .metric-card {
+  border: 2px solid var(--kc-outline);
+  border-radius: var(--kc-radius-card);
+  background: var(--kc-surface);
+  box-shadow: var(--kc-shadow-control);
+  padding: 16px;
+  gap: 6px;
+  transition: transform var(--kc-motion), box-shadow var(--kc-motion), border-color var(--kc-motion), background-color var(--kc-motion);
+}
+.kc-card.metric-card::before,
+[data-ui-theme="kocokan"] .metric-card::before {
+  width: 4px;
+  border-radius: 4px 0 0 4px;
+}
+[data-ui-theme="kocokan"] .metric-card[data-tone="neutral"]::before,
+.kc-card.metric-card[data-tone="neutral"]::before {
+  background: var(--kc-outline);
+}
+[data-ui-theme="kocokan"] .metric-card[data-tone="info"]::before,
+.kc-card.metric-card[data-tone="info"]::before {
+  background: var(--kc-primary);
+}
+[data-ui-theme="kocokan"] .metric-card[data-tone="success"]::before,
+.kc-card.metric-card[data-tone="success"]::before {
+  background: var(--kc-success);
+}
+[data-ui-theme="kocokan"] .metric-card[data-tone="warning"]::before,
+.kc-card.metric-card[data-tone="warning"]::before {
+  background: var(--kc-warning);
+}
+[data-ui-theme="kocokan"] .metric-card .metric-card__label,
+.kc-card.metric-card .metric-card__label {
+  color: var(--kc-text-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+[data-ui-theme="kocokan"] .metric-card .metric-card__value,
+.kc-card.metric-card .metric-card__value {
+  color: var(--kc-text);
+  font-family: var(--kc-font-mono);
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+[data-ui-theme="kocokan"] .metric-card .metric-card__detail,
+.kc-card.metric-card .metric-card__detail {
+  color: var(--kc-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+[data-ui-theme="kocokan"] .metric-card[href]:hover,
+.kc-card.metric-card[href]:hover {
+  border-color: var(--kc-outline);
+  outline: none;
+  background: var(--kc-surface);
+  transform: translate(-1px, -2px);
+  box-shadow: var(--kc-shadow-card);
+}
+[data-ui-theme="kocokan"] .metric-card[href]:focus-visible,
+.kc-card.metric-card[href]:focus-visible {
+  outline: var(--kc-focus-width) solid var(--kc-focus);
+  outline-offset: var(--kc-focus-offset);
+}
+[data-ui-theme="kocokan"] .metric-card[href]:active,
+.kc-card.metric-card[href]:active {
+  transform: translate(1px, 2px);
+  box-shadow: none;
+}
+
+/* Shared progress primitive, with the existing four-step composition. */
+.kc-progress-stepper { min-width: 0; overflow: hidden; border: 1px solid var(--kc-outline); border-radius: var(--kc-radius-card); background: var(--kc-surface); }
+.kc-progress-stepper ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
+.kc-progress-stepper li { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; min-width: 0; min-height: 64px; padding: 8px 16px; border-right: 1px solid var(--kc-divider); color: var(--kc-text-muted); }
+.kc-progress-stepper li:last-child { border-right: 0; }
+.kc-progress-stepper li[data-state="active"] { background: var(--kc-selection); color: var(--kc-primary); box-shadow: inset 0 -3px 0 var(--kc-primary); }
+.kc-progress-stepper li[data-state="complete"] { color: var(--kc-success); }
+.kc-progress-stepper__marker { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid currentColor; border-radius: 50%; font: 700 12px var(--kc-font-mono); }
+.kc-progress-stepper li[data-state="active"] .kc-progress-stepper__marker { border-radius: 6px; background: var(--kc-primary); color: var(--kc-on-primary); }
+.kc-progress-stepper li[data-state="complete"] .kc-progress-stepper__marker { background: var(--kc-success-surface); }
+.kc-progress-stepper__copy { display: grid; min-width: 0; gap: 4px; }
+.kc-progress-stepper__label { overflow: hidden; color: var(--kc-text); font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.kc-progress-stepper__status { color: currentColor; font: 10px var(--kc-font-mono); letter-spacing: .07em; text-transform: uppercase; }
+@media (max-width: 80rem) { .kc-progress-stepper li { gap: 8px; padding-inline: 12px; } }
 
 .kc-field { display: grid; min-width: 0; gap: 8px; color: var(--kc-text); }
 .kc-field__label { color: var(--kc-label, var(--kc-text)); font-size: 14px; font-weight: 650; }
@@ -106,11 +195,12 @@
 .kc-table__sort-marker { margin-left: 8px; color: var(--kc-text-muted); }
 .kc-table code { color: var(--kc-text); font-family: var(--kc-font-mono); white-space: nowrap; }
 .kc-table-empty { border-top: 1px solid var(--kc-divider); }
-.kc-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-block: 12px; color: var(--kc-text); font-size: 14px; font-variant-numeric: tabular-nums; }
-.kc-pagination__controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.kc-pagination { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--kc-divider); color: var(--kc-text); font-size: 14px; font-variant-numeric: tabular-nums; }
+.kc-pagination__controls { display: flex; align-items: center; flex-wrap: nowrap; gap: 12px; }
 .kc-pagination__page-size { display: flex; align-items: center; gap: 8px; }
-.kc-pagination__page-size .kc-select { min-height: 36px; }
-.kc-pagination__range, .kc-pagination__page-status { color: var(--kc-text-muted); }
+.kc-pagination__page-size .kc-field__label { color: var(--kc-text-muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.kc-pagination__page-size .kc-select { min-height: 36px; padding-block: 4px; padding-inline: 8px; }
+.kc-pagination__range, .kc-pagination__page-status { color: var(--kc-text-muted); font-family: var(--kc-font-mono); font-size: 13px; font-weight: 600; white-space: nowrap; }
 
 /* Portals receive their own token root through React context; body stays legacy. */
 .kc-modal-layer { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 20px; }

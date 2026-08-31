@@ -169,7 +169,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
     {error ? <StatusBanner badge={error.retryable ? 'Dapat dicoba lagi' : 'Kesalahan validasi'} title="Pengaturan Undian tidak dapat disimpan" tone="warning">{errorText(error)}{error.retryable ? ' Anda dapat mencoba lagi tanpa kehilangan nilai formulir.' : ''}</StatusBanner> : null}
     {started ? <StatusBanner badge="Terkunci" title="Sesi undian ini tidak dapat diedit" tone="warning">Sesi tersimpan berstatus {record?.session.status.replace('-', ' ')}. Sesi tidak direset ke siap dan data resminya tetap tidak berubah.</StatusBanner> : null}
     {categories.length === 0 ? <StatusBanner badge="Kategori diperlukan" title="Buat Kategori Hadiah sebelum mengatur undian" tone="warning"><ButtonLink icon={<Icon name="Trophy" />} to="/prize-categories">Buka pengelolaan Kategori Hadiah</ButtonLink></StatusBanner> : null}
-    <Card className="draw-panel" padding="md">
+    <Card className="draw-panel" padding="md" tone="raised">
       <form onSubmit={(event) => { event.preventDefault(); void save() }}>
         <section className="draw-setup-capacity-section" aria-labelledby="capacity-summary-title">
           <div className="draw-setup-section__heading"><div><p className="operator-eyebrow">Kapasitas</p><h2 id="capacity-summary-title">Ringkasan peserta memenuhi syarat</h2></div></div>

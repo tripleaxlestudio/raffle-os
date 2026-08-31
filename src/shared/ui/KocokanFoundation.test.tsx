@@ -10,12 +10,34 @@ import { ThemedSelectMenu } from './ThemedSelectMenu.tsx'
 import { AudiencePreviewSurface } from '../../ui/audience/AudiencePreviewSurface.tsx'
 import { AudienceConnectionStatus } from '../components/AudienceConnectionStatus.tsx'
 import { FieldGroup } from '../components/FieldGroup.tsx'
+import { MetricCard } from '../components/MetricCard.tsx'
+import { ProgressStepper } from '../components/ProgressStepper.tsx'
 
 function ProductionTheme({ children }: { children: ReactNode }) {
   return <UiThemeContext value="kocokan"><div data-interface="operator" data-ui-theme="kocokan" data-operator-shell>{children}</div></UiThemeContext>
 }
 
 describe('Kocokan production foundation', () => {
+  it('themes linked metrics and import progress without changing navigation or step semantics', async () => {
+    const user = userEvent.setup()
+    const steps = [{ id: 'upload', label: 'Upload' }, { id: 'mapping', label: 'Mapping' }] as const
+    render(<MemoryRouter><MetricCard label="Legacy metric" value="0" detail="Unchanged" to="/participants" />
+      <ProductionTheme><MetricCard label="Production metric" value="300" detail="231 checked in" to="/participants" />
+        <ProgressStepper currentStep="mapping" steps={steps} /></ProductionTheme></MemoryRouter>)
+    const link = screen.getByRole('link', { name: 'Production metric 300 231 checked in' })
+    expect(link).toHaveAttribute('href', '/participants')
+    expect(link).toHaveClass('kc-card')
+    expect(link).not.toHaveClass('ui-card')
+    expect(screen.getByRole('link', { name: 'Legacy metric 0 Unchanged' })).toHaveClass('ui-card')
+    await user.tab()
+    await user.tab()
+    expect(link).toHaveFocus()
+    const progress = screen.getByRole('navigation', { name: 'Participant Import progress' })
+    expect(progress).toHaveClass('kc-progress-stepper')
+    const items = within(progress).getAllByRole('listitem')
+    expect(items[0]).toHaveAttribute('data-state', 'complete')
+    expect(items[1]).toHaveAttribute('aria-current', 'step')
+  })
   it('keeps legacy defaults separate while retaining native button and link behavior', async () => {
     const user = userEvent.setup()
     const action = vi.fn()

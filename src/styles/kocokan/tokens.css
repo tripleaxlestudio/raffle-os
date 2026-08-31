@@ -31,6 +31,8 @@
   --kc-shadow-control: 2px 2px 0 var(--kc-outline);
   --kc-shadow-card: 4px 4px 0 var(--kc-outline);
   --kc-shadow-modal: 6px 6px 0 var(--kc-outline);
+  --kc-shadow-flat: none;
+  --kc-native-scheme: light;
   --kc-space-1: 4px;
   --kc-space-2: 8px;
   --kc-space-3: 12px;

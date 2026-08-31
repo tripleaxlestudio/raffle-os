@@ -197,15 +197,16 @@
     width: 100%;
     min-height: var(--control-height-md);
     padding: 0 var(--control-inline-padding);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md);
-    background-color: var(--surface-muted);
-    color: var(--text-primary);
+    border: 2px solid var(--kc-outline, var(--border-strong));
+    border-radius: var(--kc-radius-control, var(--radius-md));
+    background-color: var(--kc-surface, var(--surface-default));
+    color: var(--kc-text, var(--text-primary));
     font-size: var(--font-size-sm);
+    color-scheme: light;
   }
 
   .ui-input::placeholder {
-    color: var(--text-muted);
+    color: var(--kc-text-muted, var(--text-muted));
   }
 
   .ui-input:hover:not(:disabled),

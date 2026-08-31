@@ -762,6 +762,32 @@ messages/menu are deferred for a separate discussion, not approved for implement
   checksum, and passes offline launch and update-persistence smoke tests.
 - [ ] Release limitations are documented.
 
+## Separate Workstream — Kocokan Operator UI Redesign
+
+Owner approval 2026-08-31: adopt the controlled visual modernization plan in
+[`docs/technical/KOCOKAN-UI-REDESIGN-PLAN.md`](docs/technical/KOCOKAN-UI-REDESIGN-PLAN.md).
+This is separate from Phase 11 functional requirements and its 11.2A items.
+Do not renumber phases, broaden domain behavior, or change release gates.
+
+- [x] Slice 0 — Baseline & Scope: preserve existing Phase 11 work at `523da46`,
+  branch `redesign/kocokan-ui`, record verification/failure register, visual
+  inventory, theme/CSS proposal, tokens and browser/manual checklist.
+  Full-suite baseline is FAIL (142 tests); this preparation checkbox does not
+  imply application acceptance. See the dedicated baseline record.
+- [ ] Slice 1 — Visual System & App Shell (not started; approval required).
+- [ ] Slice 2 — Dashboard & Event Preparation.
+- [ ] Slice 3 — Draw Console.
+- [ ] Slice 4 — Pending Results.
+- [ ] Slice 5 — History.
+- [ ] Slice 6 — Settings & Cross-App States.
+- [ ] Slice 7 — Integrated Visual Acceptance.
+
+Plan approval is not authorization to execute every slice automatically.
+Implement, verify and commit each approved slice separately; stop for approval
+before the next. Phase 11 defect/localization reconciliation is separately
+owned and must not be mixed into redesign commits. Audience presentation and
+prototype styling remain explicit exclusions.
+
 ## Deferred P2 Backlog
 
 These items are not scheduled for MVP implementation and require separate scope approval:

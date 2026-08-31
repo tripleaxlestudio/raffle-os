@@ -10,6 +10,17 @@ to scope approval. Comprehensive manual acceptance moves after packaging
 implementation, as recorded in section 11. This does not approve unspecified
 features or mark earlier slices accepted.
 
+Owner scope reconciliation — 2026-08-31: the full Kocokan Operator UI redesign
+is approved as a **separate visual modernization workstream**, documented in
+[`KOCOKAN-UI-REDESIGN-PLAN.md`](KOCOKAN-UI-REDESIGN-PLAN.md). Only its Slice 0
+(baseline and preparation) is authorized now; Slice 1 requires a new approval.
+This is not an expansion of Phase 11 functional scope or a renaming of phases.
+The broad-redesign non-goal below continues to apply to Phase 11 itself;
+the dedicated redesign plan owns the separately approved visual work.
+Domain, persistence, routes, Audience contracts, and all independent Phase 11
+acceptance/release gates remain unchanged. Historical acceptance is preserved;
+new baseline evidence and pre-existing failures live in the redesign records.
+
 This document audits the post-Phase-10 baseline and proposes the final MVP
 hardening slices. It creates no production behavior, schema, dependency, data,
 or acceptance claim. The release-stage policy is defined separately in

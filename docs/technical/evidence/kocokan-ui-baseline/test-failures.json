@@ -1,0 +1,1015 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "523da4642556aa8ae033f6cf61cd1f663d211249",
+  "branch": "redesign/kocokan-ui",
+  "date": "2026-08-31",
+  "command": "npm.cmd run test -- --reporter=json --outputFile=node_modules/.tmp/kocokan-slice0-baseline-tests.json",
+  "exitCode": 1,
+  "totals": {
+    "files": 144,
+    "passedFiles": 112,
+    "failedFiles": 32,
+    "tests": 1190,
+    "passedTests": 1048,
+    "failedTests": 142,
+    "skippedTests": 0
+  },
+  "rawReportSha256": "1dde8e0cc7950f294af09e7fb090d478b7e5d2dd5d56d3cba725b4d7f75ecdb5",
+  "classificationPolicy": "Pre-existing means observed at the unchanged starting production checkpoint before any redesign. It does not prove each failure predates Phase 11.2A. Most failures show mixed-language/copy/markup assertions; no blanket harmlessness or behavioral PASS is claimed. Root-cause adjudication and fixes belong to separately approved Phase 11 work.",
+  "failures": [
+    {
+      "id": "KB-001",
+      "classification": "pre-existing",
+      "file": "src/app/PhaseTwoHappyPath.test.tsx",
+      "test": "Phase 2 deterministic happy path connects every static screen through browser-history-compatible URLs",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"link\" and name \"Peserta\""
+    },
+    {
+      "id": "KB-002",
+      "classification": "pre-existing",
+      "file": "src/app/production-draw-run-route.test.tsx",
+      "test": "production Draw Run route shell keeps an unknown session safe and never starts the command",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Back to Draw Setup\""
+    },
+    {
+      "id": "KB-003",
+      "classification": "pre-existing",
+      "file": "src/app/production-draw-run-route.test.tsx",
+      "test": "production Draw Run route shell renders the persisted start gate without invoking the command on route load",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Hold to start official Live draw\""
+    },
+    {
+      "id": "KB-004",
+      "classification": "pre-existing",
+      "file": "src/app/production-draw-run-route.test.tsx",
+      "test": "production Draw Run route shell keeps the primary start action and persisted recap visible without the redundant checklist",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: Event. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-005",
+      "classification": "pre-existing",
+      "file": "src/app/production-draw-run-route.test.tsx",
+      "test": "production Draw Run route shell keeps all-ready stage focused on centered execution without a redundant checklist",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Hold to start official Live draw\""
+    },
+    {
+      "id": "KB-006",
+      "classification": "pre-existing",
+      "file": "src/app/production-draw-run-route.test.tsx",
+      "test": "production Draw Run route shell places the Practice safety notice inside the Start Draw stage",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: PRACTICE MODE. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-007",
+      "classification": "pre-existing",
+      "file": "src/app/production-draw-run-route.test.tsx",
+      "test": "production Draw Run route shell surfaces a start failure instead of silently returning to Ready",
+      "message": "Error: Unable to find role=\"button\" and name \"Hold to start official Live draw\""
+    },
+    {
+      "id": "KB-008",
+      "classification": "pre-existing",
+      "file": "src/app/production-draw-run-route.test.tsx",
+      "test": "production Draw Run route shell hydrates a valid Practice projection on initial mount and does not show start controls",
+      "message": "Error: Unable to find role=\"heading\" and name \"Result Locked\""
+    },
+    {
+      "id": "KB-009",
+      "classification": "pre-existing",
+      "file": "src/app/production-draw-run-route.test.tsx",
+      "test": "production Draw Run route shell uses the same projection after remount without reselection",
+      "message": "Error: Unable to find role=\"heading\" and name \"Result Locked\""
+    },
+    {
+      "id": "KB-010",
+      "classification": "pre-existing",
+      "file": "src/app/production-draw-run-route.test.tsx",
+      "test": "production Draw Run route shell surfaces a corrupt Practice projection as a typed bootstrap error without invoking selection",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Presentation recovery\""
+    },
+    {
+      "id": "KB-011",
+      "classification": "pre-existing",
+      "file": "src/app/router.test.tsx",
+      "test": "application routes exposes only production destinations in the production sidebar",
+      "message": "Error: expect(element).toHaveTextContent()"
+    },
+    {
+      "id": "KB-012",
+      "classification": "pre-existing",
+      "file": "src/app/router.test.tsx",
+      "test": "application routes keeps production route /draw/pending honest",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Hasil Pending\""
+    },
+    {
+      "id": "KB-013",
+      "classification": "pre-existing",
+      "file": "src/app/router.test.tsx",
+      "test": "application routes keeps production route /settings honest",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Event required\""
+    },
+    {
+      "id": "KB-014",
+      "classification": "pre-existing",
+      "file": "src/app/router.test.tsx",
+      "test": "application routes does not expose the prototype pending route as production navigation",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Not Found\""
+    },
+    {
+      "id": "KB-015",
+      "classification": "pre-existing",
+      "file": "src/app/router.test.tsx",
+      "test": "application routes keeps the current Event header control safe when no Event is active",
+      "message": "Error: Unable to find role=\"button\" and name `/Current Event/i`"
+    },
+    {
+      "id": "KB-016",
+      "classification": "pre-existing",
+      "file": "src/app/router.test.tsx",
+      "test": "application routes closes the Current Event menu on outside pointer interaction and reopens cleanly",
+      "message": "Error: Unable to find role=\"button\" and name `/Current Event/i`"
+    },
+    {
+      "id": "KB-017",
+      "classification": "pre-existing",
+      "file": "src/app/router.test.tsx",
+      "test": "application routes links missing production Audience configuration to Settings",
+      "message": "Error: Unable to find role=\"link\" and name \"Audience: Setup required\""
+    },
+    {
+      "id": "KB-018",
+      "classification": "pre-existing",
+      "file": "src/app/router.test.tsx",
+      "test": "application routes keeps unknown routes recoverable through the production dashboard",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"link\" and name \"Return to Dashboard\""
+    },
+    {
+      "id": "KB-019",
+      "classification": "pre-existing",
+      "file": "src/app/errors/ErrorHandling.test.tsx",
+      "test": "AppErrorBoundary provides a reload action",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Reload application\""
+    },
+    {
+      "id": "KB-020",
+      "classification": "pre-existing",
+      "file": "src/app/errors/ErrorHandling.test.tsx",
+      "test": "RouteErrorPage renders a generic fallback for unknown errors without a raw stack",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"link\" and name \"Return to Dashboard\""
+    },
+    {
+      "id": "KB-021",
+      "classification": "pre-existing",
+      "file": "src/application/display-transport/audience-liveness.test.tsx",
+      "test": "Audience liveness watchdog keeps DISPLAY TEST and standby rendered while the real publisher heartbeat continues",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /DISPLAY TEST/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-022",
+      "classification": "pre-existing",
+      "file": "src/application/display-transport/audience-liveness.test.tsx",
+      "test": "Audience liveness watchdog keeps the public presentation stable for a 60-second heartbeat interval",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /DISPLAY TEST/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-023",
+      "classification": "pre-existing",
+      "file": "src/application/display-transport/audience-liveness.test.tsx",
+      "test": "Audience liveness watchdog shows interrupted only after publisher activity expires, then restores the retained snapshot",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Display connection interrupted\""
+    },
+    {
+      "id": "KB-024",
+      "classification": "pre-existing",
+      "file": "src/application/display-transport/audience-render-commit.integration.test.tsx",
+      "test": "Phase 8 Audience render-source acknowledgement boundary restores retained standby for a late Audience without a sequence or heartbeat storm",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: Display ready. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-025",
+      "classification": "pre-existing",
+      "file": "src/application/display-transport/audience-render-commit.integration.test.tsx",
+      "test": "Phase 8 Audience render-source acknowledgement boundary acknowledges standby and display-test only after the real route selects each presentation",
+      "message": "Error: Unable to find an element with the text: Display ready. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-026",
+      "classification": "pre-existing",
+      "file": "src/application/display-transport/phase7-integration.test.tsx",
+      "test": "Phase 7 integration and automated acceptance runs the authoritative Operator → public projection → protocol → Audience → DOM flow",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Draw will begin shortly\""
+    },
+    {
+      "id": "KB-027",
+      "classification": "pre-existing",
+      "file": "src/application/display-transport/settings-display-integration.test.ts",
+      "test": "production Settings display-test integration moves the real Audience controller from connecting to display test after acknowledgement",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /DISPLAY TEST/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-028",
+      "classification": "pre-existing",
+      "file": "src/application/display-transport/settings-display-integration.test.ts",
+      "test": "production Settings display-test integration restores the same public test for late joiners, refreshes, and multiple windows",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /DISPLAY TEST/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-029",
+      "classification": "pre-existing",
+      "file": "src/application/display-transport/settings-display-integration.test.ts",
+      "test": "production Settings display-test integration keeps one publisher alive across five realtime start/stop cycles",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: Display ready. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-030",
+      "classification": "pre-existing",
+      "file": "src/application/display-transport/settings-display-integration.test.ts",
+      "test": "production Settings display-test integration delivers the production snapshot through the BroadcastChannel adapter",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: Display ready. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-031",
+      "classification": "pre-existing",
+      "file": "src/application/draw/draw-run-preflight.test.ts",
+      "test": "Draw Run production preflight composes a complete ready checklist with Practice context and presentation summary",
+      "message": "AssertionError: expected [ 'Event', 'Prize', …(4) ] to deeply equal [ 'Event', 'Prize', …(4) ]"
+    },
+    {
+      "id": "KB-032",
+      "classification": "pre-existing",
+      "file": "src/application/draw/draw-run-preflight.test.ts",
+      "test": "Draw Run production preflight makes missing DisplayConfiguration a setup-required hard blocker",
+      "message": "AssertionError: expected { key: 'audience', …(5) } to match object { state: 'blocked', …(2) }"
+    },
+    {
+      "id": "KB-033",
+      "classification": "pre-existing",
+      "file": "src/application/draw/draw-run-preflight.test.ts",
+      "test": "Draw Run production preflight distinguishes configured waiting, connected, and unavailable Audience states",
+      "message": "AssertionError: expected { key: 'audience', …(5) } to match object { state: 'ready', value: 'Terhubung' }"
+    },
+    {
+      "id": "KB-034",
+      "classification": "pre-existing",
+      "file": "src/application/workflow/phase10-recovery-acceptance.integration.test.tsx",
+      "test": "Phase 10.7 integrated recovery acceptance scenarios A-I H: unresolved official work redirects the Operator away from conflicting fresh setup",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: The authoritative session was preserved. No new selection will be made during recovery.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-035",
+      "classification": "pre-existing",
+      "file": "src/pages/display/AudienceDisplayPage.test.tsx",
+      "test": "Audience Display static states renders a static accessible countdown numeral",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Bersiap\""
+    },
+    {
+      "id": "KB-036",
+      "classification": "pre-existing",
+      "file": "src/pages/display/AudienceDisplayPage.test.tsx",
+      "test": "Audience Display static states renders a stable deterministic rolling arrangement with leading zeroes",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"list\" and name \"Presentational ticket stream\""
+    },
+    {
+      "id": "KB-037",
+      "classification": "pre-existing",
+      "file": "src/pages/display/AudienceDisplayPage.test.tsx",
+      "test": "Audience winner grids renders confirmed count 1 with the same exact hero layout",
+      "message": "Error: expect(element).toHaveTextContent()"
+    },
+    {
+      "id": "KB-038",
+      "classification": "pre-existing",
+      "file": "src/pages/display/AudienceDisplayPage.test.tsx",
+      "test": "Audience winner grids renders confirmed count 6 with the same exact 3x2 layout",
+      "message": "Error: expect(element).toHaveTextContent()"
+    },
+    {
+      "id": "KB-039",
+      "classification": "pre-existing",
+      "file": "src/pages/display/AudienceDisplayPage.test.tsx",
+      "test": "Audience winner grids renders confirmed count 10 with the same exact 5x2 layout",
+      "message": "Error: expect(element).toHaveTextContent()"
+    },
+    {
+      "id": "KB-040",
+      "classification": "pre-existing",
+      "file": "src/pages/display/AudienceDisplayPage.test.tsx",
+      "test": "Audience winner grids renders confirmed count 20 with the same exact 5x4 layout",
+      "message": "Error: expect(element).toHaveTextContent()"
+    },
+    {
+      "id": "KB-041",
+      "classification": "pre-existing",
+      "file": "src/pages/display/AudienceDisplayPage.test.tsx",
+      "test": "Audience winner grids preserves exact leading-zero strings throughout winner layouts",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"list\" and name \"20 ticket results\""
+    },
+    {
+      "id": "KB-042",
+      "classification": "pre-existing",
+      "file": "src/pages/display/AudienceDisplayPage.test.tsx",
+      "test": "Audience safety and privacy renders blackout as a non-interactive public surface with an assistive status",
+      "message": "Error: expect(element).toHaveAccessibleName()"
+    },
+    {
+      "id": "KB-043",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSessionQueuePage.test.tsx",
+      "test": "Production Draw control deck renders ClipboardCheck for the pending-result action branch",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"link\" and name \"Review Hasil Pending\""
+    },
+    {
+      "id": "KB-044",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSessionQueuePage.test.tsx",
+      "test": "Production Draw control deck uses one prominent mode switch with selected states and compact audience actions",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"group\" and name \"Acceptance Prize mode\""
+    },
+    {
+      "id": "KB-045",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring keeps Event read-only and follows the selected persisted category prize",
+      "message": "TestingLibraryElementError: Unable to find a label with the text of: Prize"
+    },
+    {
+      "id": "KB-046",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring shows prize-first option identities and persisted draw status groups",
+      "message": "Error: Unable to find role=\"option\" and name \"K-Ion Nano Premium 5 · Door Prize · COMPLETED\""
+    },
+    {
+      "id": "KB-047",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring shows quick counts with pressed semantics and updates the same winner field",
+      "message": "TestingLibraryElementError: Unable to find a label with the text of: Custom winner count"
+    },
+    {
+      "id": "KB-048",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring saves requestedWinners through the existing authoring service",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Save changes\""
+    },
+    {
+      "id": "KB-049",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring keeps Save changes disabled while pristine and re-enables it for each editable change",
+      "message": "Error: Unable to find role=\"button\" and name \"Save changes\""
+    },
+    {
+      "id": "KB-050",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring preserves the custom 1–100 input and validation errors",
+      "message": "Error: Unable to find a label with the text of: Custom winner count"
+    },
+    {
+      "id": "KB-051",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring shows authoritative capacity diagnostics and readiness",
+      "message": "Error: Unable to find role=\"heading\" and name \"Eligible pool summary\""
+    },
+    {
+      "id": "KB-052",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring defaults to Instant Reveal and keeps the pool and winner quantity workflow intact",
+      "message": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+    },
+    {
+      "id": "KB-053",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring selects Random Number Roll and maps duration, speed, and reveal presets",
+      "message": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+    },
+    {
+      "id": "KB-054",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring persists the shared presentation configuration in Practice and does not alter winner quantity",
+      "message": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+    },
+    {
+      "id": "KB-055",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring shows timed duration controls by default and preserves the duration across Manual Stop",
+      "message": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+    },
+    {
+      "id": "KB-056",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring saves and reloads Manual Stop with speed and reveal settings intact",
+      "message": "Error: Unable to find role=\"radio\" and name `/Random Number Roll/`"
+    },
+    {
+      "id": "KB-057",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring restores the selected presentation UI after Save changes and reload",
+      "message": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+    },
+    {
+      "id": "KB-058",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring hides roll controls when switching back to Instant Reveal while preserving their draft values",
+      "message": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+    },
+    {
+      "id": "KB-059",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring does not claim authoritative readiness while dirty and blocks handoff",
+      "message": "Error: Unable to find a label with the text of: Custom winner count"
+    },
+    {
+      "id": "KB-060",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring refreshes readiness after save and preserves Live conflict blocking",
+      "message": "Error: Unable to find a label with the text of: Custom winner count"
+    },
+    {
+      "id": "KB-061",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring keeps started sessions immutable and preserves Live distinction",
+      "message": "Error: Unable to find role=\"heading\" and name \"This DrawSession is not editable\""
+    },
+    {
+      "id": "KB-062",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring keeps all presentation controls aligned with the active-session lock",
+      "message": "Error: Unable to find role=\"dialog\" and name \"Winner review pending\""
+    },
+    {
+      "id": "KB-063",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupPage.test.tsx",
+      "test": "Draw Setup persisted authoring allows a completed previous session to prepare the next presentation configuration",
+      "message": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+    },
+    {
+      "id": "KB-064",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/DrawSetupRoute.test.tsx",
+      "test": "Draw Setup route isolation uses the production composition when no prototype scenario is supplied",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /Loading persisted Event/i. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-065",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/EventsPage.test.tsx",
+      "test": "EventsPage activation flow distinguishes Current from Draft and requires confirmation before activation",
+      "message": "Error: Unable to find an element with the text: SAAT INI. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-066",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/EventsPage.test.tsx",
+      "test": "EventsPage activation flow cancels without changing Draft, then activates to Ready while remaining Current",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Batal\""
+    },
+    {
+      "id": "KB-067",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/EventsPage.test.tsx",
+      "test": "EventsPage activation flow does not offer activation for a Live Event",
+      "message": "Error: Unable to find an element with the text: LIVE. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-068",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/LiveDrawPage.test.tsx",
+      "test": "Live Draw static prototype opens confirmation and returns focus when cancelled",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Batal\""
+    },
+    {
+      "id": "KB-069",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/LiveDrawPage.test.tsx",
+      "test": "Live Draw static prototype renders exact leading-zero tickets without declaring a winner",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"link\" and name \"Tinjau Hasil Tertunda\""
+    },
+    {
+      "id": "KB-070",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/PendingResultsPage.test.tsx",
+      "test": "Hasil Pending static prototype renders the pending summary and exact leading-zero tickets",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Hasil Pending\""
+    },
+    {
+      "id": "KB-071",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/PendingResultsPage.test.tsx",
+      "test": "Hasil Pending static prototype renders partial and confirmed fixture states directly",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: Tertunda. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-072",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/PendingResultsPage.test.tsx",
+      "test": "Hasil Pending static prototype reconciles every partial row status with the exact summary counts",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: Tertunda. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-073",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionAudioSettings.test.ts",
+      "test": "production Audio settings UI contract keeps the authoritative audio contract in a compact two-column layout",
+      "message": "AssertionError: expected 'import { useCallback, useEffect, useM…' to contain 'Audio cues'"
+    },
+    {
+      "id": "KB-074",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionAudioSettings.test.ts",
+      "test": "production Audio settings UI contract keeps empty, selected, replace, and remove states inside the audio card",
+      "message": "AssertionError: expected 'import { useCallback, useEffect, useM…' to contain 'No local audio asset selected.'"
+    },
+    {
+      "id": "KB-075",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionAudioSettings.test.ts",
+      "test": "production Audio settings UI contract explains unavailable playback and preserves the shared save toast path",
+      "message": "AssertionError: expected 'import { useCallback, useEffect, useM…' to contain 'Enable audio to test the selected rev…'"
+    },
+    {
+      "id": "KB-076",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionDisplaySettings.test.ts",
+      "test": "production Display settings UI contract keeps the persisted controls in grouped output and safety sections",
+      "message": "AssertionError: expected 'import { useCallback, useEffect, useM…' to contain 'Output framing'"
+    },
+    {
+      "id": "KB-077",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionDisplaySettings.test.ts",
+      "test": "production Display settings UI contract preserves the live preview, metadata strip, and desktop action order",
+      "message": "AssertionError: expected 'import { useCallback, useEffect, useM…' to contain 'Aspect'"
+    },
+    {
+      "id": "KB-078",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryPage.test.tsx",
+      "test": "production History empty state restores filters and populated History behavior when an official session exists",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"link\" and name \"Open Draw Sessions\""
+    },
+    {
+      "id": "KB-079",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryPage.test.tsx",
+      "test": "production History empty state queries authoritative history by the selected Event",
+      "message": "Error: Unable to find role=\"heading\" and name \"No official draws yet\""
+    },
+    {
+      "id": "KB-080",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryPage.test.tsx",
+      "test": "production History empty state shows and publishes from an eligible row while retaining the details action",
+      "message": "Error: Unable to find role=\"button\" and name \"Show\""
+    },
+    {
+      "id": "KB-081",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryPage.test.tsx",
+      "test": "production History empty state derives Hide from the retained Audience session and returns every row to Show on standby",
+      "message": "Error: Unable to find role=\"button\" and name \"Show\""
+    },
+    {
+      "id": "KB-082",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryPage.test.tsx",
+      "test": "production History empty state renders an official result route without the history list",
+      "message": "Error: Unable to find role=\"heading\" and name \"Winner records\""
+    },
+    {
+      "id": "KB-083",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryPage.test.tsx",
+      "test": "production History export menu opens a contained menu without shifting the History filters",
+      "message": "Error: Unable to find role=\"button\" and name \"Export (1)\""
+    },
+    {
+      "id": "KB-084",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryPage.test.tsx",
+      "test": "production History export menu supports arrow, Home, End, and Escape menu keyboard behavior",
+      "message": "Error: Unable to find role=\"button\" and name \"Export (1)\""
+    },
+    {
+      "id": "KB-085",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryPage.test.tsx",
+      "test": "production History export menu triggers CSV export and closes the menu",
+      "message": "Error: Unable to find role=\"button\" and name \"Export (1)\""
+    },
+    {
+      "id": "KB-086",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryPage.test.tsx",
+      "test": "production History export menu triggers XLSX export and closes the menu",
+      "message": "Error: Unable to find role=\"button\" and name \"Export (1)\""
+    },
+    {
+      "id": "KB-087",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryPage.test.tsx",
+      "test": "production History export menu closes on outside click and Escape",
+      "message": "Error: Unable to find role=\"button\" and name \"Export (1)\""
+    },
+    {
+      "id": "KB-088",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryTable.test.tsx",
+      "test": "production History table renders 1 draw sessions as compact table rows",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"table\" and name \"Official history sessions\""
+    },
+    {
+      "id": "KB-089",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryTable.test.tsx",
+      "test": "production History table renders 5 draw sessions as compact table rows",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"table\" and name \"Official history sessions\""
+    },
+    {
+      "id": "KB-090",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryTable.test.tsx",
+      "test": "production History table renders 10 draw sessions as compact table rows",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"table\" and name \"Official history sessions\""
+    },
+    {
+      "id": "KB-091",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryViews.test.tsx",
+      "test": "production History views keeps all retained winners, exact tickets, and redraw lineage visible in detail",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: Official record is incomplete or inconsistent. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-092",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionHistoryViews.test.tsx",
+      "test": "production History views aggregates confirmed, cancelled, and pending records without presenting practice data",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"table\" and name \"All official winners\""
+    },
+    {
+      "id": "KB-093",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionPresentationSettings.test.ts",
+      "test": "production Presentation settings UI contract contains the six persisted Presentation controls in the approved two-column order",
+      "message": "AssertionError: expected 'import { useCallback, useEffect, useM…' to contain 'Countdown duration'"
+    },
+    {
+      "id": "KB-094",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/ProductionPresentationSettings.test.ts",
+      "test": "production Presentation settings UI contract keeps the Presentation save toast detail and Display ownership explicit",
+      "message": "AssertionError: expected 'import { useCallback, useEffect, useM…' to contain '`${details[0]} settings saved`'"
+    },
+    {
+      "id": "KB-095",
+      "classification": "pre-existing",
+      "file": "src/pages/operator/SettingsPage.test.tsx",
+      "test": "Settings static prototype renders /dev/prototypes/settings?section=presentation directly as the Presentasi section",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Presentasi\""
+    },
+    {
+      "id": "KB-096",
+      "classification": "pre-existing",
+      "file": "src/shared/components/OperatorPersistenceStatus.test.tsx",
+      "test": "OperatorPersistenceStatus describes a saved local state",
+      "message": "Error: expect(element).toHaveTextContent()"
+    },
+    {
+      "id": "KB-097",
+      "classification": "pre-existing",
+      "file": "src/shared/components/OperatorPersistenceStatus.test.tsx",
+      "test": "OperatorPersistenceStatus exposes a retry action for failed persistence",
+      "message": "Error: expect(element).toHaveTextContent()"
+    },
+    {
+      "id": "KB-098",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation reports the five-stage production setup journey in order",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"region\" and name \"Event setup\""
+    },
+    {
+      "id": "KB-099",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation uses the route as the current setup stage for /events",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /SETUP JOURNEY · STEP 1 OF 5/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-100",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation uses the route as the current setup stage for /prize-categories",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /SETUP JOURNEY · STEP 2 OF 5/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-101",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation uses the route as the current setup stage for /participants",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /SETUP JOURNEY · STEP 3 OF 5/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-102",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation uses the route as the current setup stage for /settings",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /SETUP JOURNEY · STEP 4 OF 5/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-103",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation uses the route as the current setup stage for /draw/setup",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /SETUP JOURNEY · STEP 5 OF 5/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-104",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation keeps Next disabled without an authoritative Current Event",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name `/Next: Prize/i`"
+    },
+    {
+      "id": "KB-105",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation keeps Participants locked while Prize has no persisted category",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /PRIZE IN PROGRESS/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-106",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation uses persisted readiness to enable the next stage without a visit flag",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /PRIZE COMPLETE/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-107",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation does not admit Participants merely because Prize is complete",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name `/Next: Participants/i`"
+    },
+    {
+      "id": "KB-108",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation uses Previous for every stage after Event",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Previous\""
+    },
+    {
+      "id": "KB-109",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation enables Next and shows the Current Event identity as workspace state becomes ready",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name `/Next: Prize/i`"
+    },
+    {
+      "id": "KB-110",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation keeps Step 5 visible while authoritative Draw Setup is incomplete",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /SETUP JOURNEY/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-111",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation shows the recovery journey again when authoritative setup becomes incomplete",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /SETUP JOURNEY/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-112",
+      "classification": "pre-existing",
+      "file": "src/shared/components/ProductionSetupContinuation.test.tsx",
+      "test": "ProductionSetupContinuation does not carry completion suppression between Events",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"region\" and name \"Draw Setup setup\""
+    },
+    {
+      "id": "KB-113",
+      "classification": "pre-existing",
+      "file": "src/shared/ui/CorePrimitives.test.tsx",
+      "test": "core UI primitives renders typed badge and card variants",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: Dikonfirmasi. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-114",
+      "classification": "pre-existing",
+      "file": "src/shared/ui/Modal.test.tsx",
+      "test": "Modal and ConfirmationDialog has an accessible name and places initial focus on cancel",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Batal\""
+    },
+    {
+      "id": "KB-115",
+      "classification": "pre-existing",
+      "file": "src/shared/ui/Modal.test.tsx",
+      "test": "Modal and ConfirmationDialog closes on cancel and returns focus without confirming",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Batal\""
+    },
+    {
+      "id": "KB-116",
+      "classification": "pre-existing",
+      "file": "src/ui/audience/RandomNumberRollStage.test.tsx",
+      "test": "Random Number Roll presentation continuity shows stable exact draw identity across rolling and reveal without remounting the stage",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: CURRENT DRAW. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-117",
+      "classification": "pre-existing",
+      "file": "src/ui/audience/WinnerStage.test.tsx",
+      "test": "Audience sequential winner reveal keeps the rolling-stage entrance treatment before any winner lock",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: CURRENT DRAW. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-118",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/draw-session-queue-view-model.test.ts",
+      "test": "production DrawSession queue view model formats timestamps without exposing ISO values",
+      "message": "AssertionError: expected '6 Agu 2026, 23.42' to match /^6 Aug 2026 · \\d{2}:42$/"
+    },
+    {
+      "id": "KB-119",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/draw-session-queue-view-model.test.ts",
+      "test": "production DrawSession queue view model uses explicit mode and lifecycle labels",
+      "message": "AssertionError: expected { modeLabel: 'Latihan', …(10) } to match object { modeLabel: 'Latihan', …(3) }"
+    },
+    {
+      "id": "KB-120",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/draw-session-queue-view-model.test.ts",
+      "test": "production DrawSession queue view model formats drawing recovery without raw checkpoint values",
+      "message": "AssertionError: expected { modeLabel: 'Live', …(10) } to match object { …(3) }"
+    },
+    {
+      "id": "KB-121",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/draw-session-queue-view-model.test.ts",
+      "test": "production DrawSession queue view model keeps relationship failures visible and non-actionable",
+      "message": "AssertionError: expected { modeLabel: 'Live', …(10) } to match object { …(2) }"
+    },
+    {
+      "id": "KB-122",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation renders the persistent public monitor for the Ready-to-Start state",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: /Audience acknowledgement: Acknowledged/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-123",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation reveals 1 winners in sequence order without changing ticket strings",
+      "message": "Error: Unable to find role=\"list\" and name \"1 Practice winners\""
+    },
+    {
+      "id": "KB-124",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation reveals 20 winners in sequence order without changing ticket strings",
+      "message": "Error: Unable to find role=\"list\" and name \"20 Practice winners\""
+    },
+    {
+      "id": "KB-125",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation reveals 50 winners in sequence order without changing ticket strings",
+      "message": "Error: Unable to find role=\"list\" and name \"50 Practice winners\""
+    },
+    {
+      "id": "KB-126",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation reveals 100 winners in sequence order without changing ticket strings",
+      "message": "Error: Unable to find role=\"list\" and name \"100 Practice winners\""
+    },
+    {
+      "id": "KB-127",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation shows the blocking recovery dialog when the Live countdown checkpoint write fails",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Presentation recovery\""
+    },
+    {
+      "id": "KB-128",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation routes review to the exact locked DrawSession when pending results are persisted",
+      "message": "AssertionError: expected [ Array(2) ] to deeply equal [ 'Back to Settings Undian', …(1) ]"
+    },
+    {
+      "id": "KB-129",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation exposes rehearsal reset only for completed Practice presentation",
+      "message": "Error: Unable to find role=\"heading\" and name \"Practice presentation complete\""
+    },
+    {
+      "id": "KB-130",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation does not expose rehearsal reset for Live presentation",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: The selected winners are ready for review.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-131",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation opens quick redraw confirmation without mutating until confirmed",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"dialog\" and name \"Redraw winner\""
+    },
+    {
+      "id": "KB-132",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation keeps redraw available for two winners and requires explicit winner selection",
+      "message": "Error: Unable to find role=\"dialog\" and name \"Select winners to redraw\""
+    },
+    {
+      "id": "KB-133",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation restores a compact chained redraw lineage with only the current winner actionable",
+      "message": "Error: Unable to find an element with the text: Redraw history · 3 replaced winners. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    },
+    {
+      "id": "KB-134",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation renders exact winner values in the authoritative preview during reveal",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"list\" and name \"1 Practice winners\""
+    },
+    {
+      "id": "KB-135",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation centers 3-winner result and preview groups without changing ticket strings",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"list\" and name \"3 Practice winners\""
+    },
+    {
+      "id": "KB-136",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation uses a compact three-column winner grid for six winners with contiguous indexes",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"list\" and name \"6 Practice winners\""
+    },
+    {
+      "id": "KB-137",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation keeps only replacement winners in Operator reveal and preview after a partial redraw",
+      "message": "Error: Unable to find role=\"list\" and name \"3 official winners\""
+    },
+    {
+      "id": "KB-138",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation keeps the active multi-winner grid when redraw lineage includes replaced winners",
+      "message": "Error: Unable to find role=\"list\" and name \"6 official winners\""
+    },
+    {
+      "id": "KB-139",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation completes a Practice timed roll without Skip animation",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Rolling\""
+    },
+    {
+      "id": "KB-140",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation shows STOP & REVEAL only for Manual rolling",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"STOP & REVEAL\""
+    },
+    {
+      "id": "KB-141",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawPresentation survives Strict Mode recovery hydration and continues from the persisted stage",
+      "message": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Rolling\""
+    },
+    {
+      "id": "KB-142",
+      "classification": "pre-existing",
+      "file": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx",
+      "test": "ProductionDrawRunHeader keeps critical metrics and production actions explicit",
+      "message": "TestingLibraryElementError: Unable to find an element with the text: Winner. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+    }
+  ]
+}

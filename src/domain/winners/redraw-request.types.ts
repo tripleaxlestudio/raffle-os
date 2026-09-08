@@ -17,7 +17,6 @@ export interface RedrawRequestTarget {
   readonly originalStatus: Extract<WinnerStatus, 'pending' | 'confirmed'>
   readonly originalSequenceNumber: number
 }
-
 export interface RedrawRequestSelection {
   readonly winnerRecordId: WinnerRecordId
   readonly participantId: ParticipantId
@@ -45,4 +44,3 @@ export interface RedrawRequest {
   readonly startedAt?: IsoTimestamp
   readonly completedAt?: IsoTimestamp
 }
-

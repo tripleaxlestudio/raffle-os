@@ -6,4 +6,3 @@ export interface DisplayFontAssetRepository {
   delete(id: string): Promise<void>
   close(): void
 }
-

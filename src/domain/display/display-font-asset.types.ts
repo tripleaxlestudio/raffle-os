@@ -6,4 +6,3 @@ export interface DisplayFontAsset {
   readonly blob: Blob
   readonly createdAt: string
 }
-

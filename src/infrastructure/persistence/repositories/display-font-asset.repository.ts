@@ -17,7 +17,6 @@ class DisplayAssetDatabase extends Dexie {
     this.version(2).stores({ prize_images: '&id, createdAt', display_fonts: '&id, createdAt' })
   }
 }
-
 function createAssetId(): string {
   if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID()
   const bytes = new Uint32Array(2)
@@ -48,4 +47,3 @@ export class DexieDisplayFontAssetRepository implements DisplayFontAssetReposito
 
   close(): void { this.db.close() }
 }
-

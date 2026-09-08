@@ -6,4 +6,3 @@ export interface RedrawRequestRepository {
   findActiveByDrawSessionId(drawSessionId: DrawSessionId): Promise<RedrawRequest | null>
   findByDrawSessionId(drawSessionId: DrawSessionId): Promise<readonly RedrawRequest[]>
 }
-

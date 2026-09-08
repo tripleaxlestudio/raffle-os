@@ -4,6 +4,7 @@ import type { RedrawRecord } from '../../domain/winners/redraw.types.ts'
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
 import type { CommandReceiptRecord } from '../persistence/command-receipt-repository.interface.ts'
 import type { PresentationCheckpointRecord } from '../../domain/workflow/presentation-checkpoint.types.ts'
+import type { RedrawRequest } from '../../domain/winners/redraw-request.types.ts'
 import {
   checkpointForSession,
   decideRecovery,
@@ -24,6 +25,7 @@ export type StartupRecoveryResult =
       readonly kind: 'recover-session'
       readonly session: DrawSession
       readonly decision: RecoveryDecision
+      readonly redrawRequest?: RedrawRequest
       readonly recommendedRoute: string
     }
 
@@ -34,6 +36,7 @@ export interface StartupRecoveryInput {
   readonly winners?: readonly WinnerRecord[]
   readonly redraws?: readonly RedrawRecord[]
   readonly receipts?: readonly CommandReceiptRecord[]
+  readonly redrawRequests?: readonly RedrawRequest[]
   readonly checkpoint?: PresentationCheckpointRecord | null
 }
 
@@ -74,6 +77,9 @@ export function evaluateStartupRecovery(input: StartupRecoveryInput): StartupRec
   const sessionWinners = (input.winners ?? []).filter((winner) => winner.drawSessionId === unresolvedSession.id)
   const sessionRedraws = (input.redraws ?? []).filter((redraw) => redraw.drawSessionId === unresolvedSession.id)
   const sessionReceipts = (input.receipts ?? []).filter((receipt) => receipt.drawSessionId === unresolvedSession.id)
+  const activeRedrawRequest = (input.redrawRequests ?? []).find(
+    (request) => request.drawSessionId === unresolvedSession.id && request.status !== 'completed',
+  )
   const checkpointObs: RecoveryCheckpointObservation = checkpointForSession(
     unresolvedSession.id,
     input.checkpoint ?? null,
@@ -87,10 +93,10 @@ export function evaluateStartupRecovery(input: StartupRecoveryInput): StartupRec
     checkpoint: checkpointObs,
   })
 
-  let recommendedRoute = '/dashboard'
-  if (decision.kind === 'resume-pending' || decision.kind === 'resume-verification' || decision.kind === 'safe-acknowledgement-required') {
+  let recommendedRoute = activeRedrawRequest === undefined ? '/dashboard' : `/draw/run/${unresolvedSession.id}`
+  if (activeRedrawRequest === undefined && (decision.kind === 'resume-pending' || decision.kind === 'resume-verification' || decision.kind === 'safe-acknowledgement-required')) {
     recommendedRoute = `/draw/pending/${unresolvedSession.id}`
-  } else if (decision.kind === 'resume-setup') {
+  } else if (activeRedrawRequest === undefined && decision.kind === 'resume-setup') {
     recommendedRoute = '/draw/setup'
   }
 
@@ -98,6 +104,7 @@ export function evaluateStartupRecovery(input: StartupRecoveryInput): StartupRec
     kind: 'recover-session',
     session: unresolvedSession,
     decision,
+    ...(activeRedrawRequest === undefined ? {} : { redrawRequest: activeRedrawRequest }),
     recommendedRoute,
   }
 }

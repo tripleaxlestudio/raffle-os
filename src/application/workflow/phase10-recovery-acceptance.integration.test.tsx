@@ -280,7 +280,7 @@ describe('Phase 10.7 integrated recovery acceptance scenarios A-I', () => {
       </MemoryRouter>,
     )
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(`/draw/pending/${fixture.session.id}`))
-    expect(screen.getByText('The authoritative session was preserved. No new selection will be made during recovery.')).toBeVisible()
+    expect(screen.getByText('Sesi resmi tetap dipertahankan. Tidak ada pemilihan baru selama pemulihan.')).toBeVisible()
   })
 
   it('I: repeated recovery and duplicate command replay remain idempotent', async () => {

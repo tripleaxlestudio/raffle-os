@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactSelect, { type StylesConfig } from 'react-select'
 import { ThemedSelectMenu } from '../../shared/ui/ThemedSelectMenu.tsx'
-import { Link, useParams } from 'react-router'
-import { useProductionAudiencePublisher } from '../../app/workspace/ProductionWorkspaceContext.tsx'
+import { Link, useNavigate, useParams } from 'react-router'
+import { signalProductionWorkspaceChanged, useIntentionalRedrawTransition, useProductionAudiencePublisher } from '../../app/workspace/ProductionWorkspaceContext.tsx'
+import { queryDrawReadiness } from '../../application/draw/draw-readiness-query.ts'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
 import type { Event } from '../../domain/events/event.types.ts'
@@ -11,6 +12,7 @@ import type { RedrawReason, RedrawRecord } from '../../domain/winners/redraw.typ
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
 import type { CommandId } from '../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
+import { resolveDisplayAppearance } from '../../domain/display/display-configuration.types.ts'
 import { calculateReplacementCapacity, LOCAL_OPERATOR, type PendingDecisionCommand } from '../../application/pending-decisions/index.ts'
 import { projectCommittedAudienceState } from '../../application/display-transport/authoritative-projection.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
@@ -158,7 +160,9 @@ function CancelWinnerDialog({ selectedWinners, reason, note, busy, onReasonChang
 export function ProductionPendingResultsPage() {
   const services = useMemo(() => createDrawSetupProductionServices(), [])
   const audience = useProductionAudiencePublisher()
+  const redrawTransition = useIntentionalRedrawTransition()
   const { drawSessionId } = useParams<{ drawSessionId: string }>()
+  const navigate = useNavigate()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [decision, setDecision] = useState<Decision | null>(null)
@@ -182,6 +186,11 @@ export function ProductionPendingResultsPage() {
       if (session.mode !== 'live') { setState({ status: 'error', title: 'Hasil Live diperlukan', message: 'Keputusan produksi hanya tersedia untuk sesi Undian dalam Mode Live.' }); return }
       if (!['pending-confirmation', 'completed', 'cancelled'].includes(session.status)) { setState({ status: 'error', title: 'Status hasil tidak didukung', message: `Hasil ini berstatus ${session.status} dan tidak dapat diputuskan di sini.` }); return }
       if (session.configurationSnapshot === null) { setState({ status: 'error', title: 'Hasil tidak lengkap', message: 'Snapshot konfigurasi otoritatif tidak tersedia.' }); return }
+      const activeRedrawRequest = await services.redrawRequests?.findActiveByDrawSessionId(session.id)
+      if (activeRedrawRequest !== undefined && activeRedrawRequest !== null) {
+        navigate(`/draw/run/${session.id}`, { replace: true })
+        return
+      }
       const [event, category, winners, redraws] = await Promise.all([
         services.events.findById(session.eventId),
         services.categories.findById(session.configurationSnapshot.prizeCategoryId),
@@ -199,7 +208,7 @@ export function ProductionPendingResultsPage() {
       const text = error instanceof Error && /version/i.test(error.message) ? 'Database lokal ini lebih baru daripada versi aplikasi yang didukung.' : 'Hasil produksi otoritatif tidak dapat dibaca dengan aman. Coba baca ulang data lokal.'
       setState({ status: 'error', title: 'Hasil produksi tidak tersedia', message: text })
     }
-  }, [drawSessionId, services])
+  }, [drawSessionId, navigate, services])
 
   useEffect(() => { void Promise.resolve().then(load) }, [load])
   useEffect(() => audience.subscribe((status) => {
@@ -214,13 +223,18 @@ export function ProductionPendingResultsPage() {
       blackoutRequested: state.blackoutRequested,
     })
     if (audience.publisher === null) return
-    audience.publish(result)
+    audience.publish({
+      ...result,
+      appearance: resolveDisplayAppearance(state.displayConfiguration),
+      blackoutAppearance: state.displayConfiguration.blackoutAppearance,
+      safeAreaMargin: state.displayConfiguration.safeAreaMargin,
+    })
   }, [audience, state])
 
   if (state.status === 'loading') return <section aria-busy="true" aria-live="polite"><PageHeader eyebrow="Produksi Live" headingId="pending-title" title="Hasil Tertunda" description="Membaca hasil lokal otoritatif…" /></section>
   if (state.status === 'error') return <section aria-live="polite"><PageHeader eyebrow="Produksi Live" headingId="pending-title" title={state.title} description={state.message} /><StatusBanner badge="Pemulihan hanya baca" title={state.title} tone="warning">Tidak ada keputusan atau pemilihan acak yang dijalankan. Coba baca ulang atau kembali ke Pengaturan Undian.</StatusBanner><Button icon={<Icon name="RefreshCw" />} onClick={() => void load()}>Coba baca lagi</Button></section>
 
-  const { session, event, category, winners, redraws } = state
+  const { session, event, category, winners, redraws, displayConfiguration } = state
   const pending = winners.filter((winner) => winner.status === 'pending')
   const confirmed = winners.filter((winner) => winner.status === 'confirmed')
   const cancelled = winners.filter((winner) => winner.status === 'cancelled')
@@ -256,7 +270,7 @@ export function ProductionPendingResultsPage() {
         const result = await services.pendingDecisions.confirmation.confirm(command)
         if (result.status === 'unknown') { setMessage('Hasil perintah tidak diketahui. Muat ulang record otoritatif sebelum mencoba lagi dengan ID perintah yang sama.'); return }
         if ('error' in result) { setMessage(result.error.message); return }
-        setDecision(null); commandRef.current = null; setMessage(result.status === 'idempotent-replay' ? 'Tanda terima tersimpan diputar ulang dengan aman.' : 'Hasil resmi diperbarui.'); await load(); return
+        setDecision(null); commandRef.current = null; signalProductionWorkspaceChanged(); setMessage(result.status === 'idempotent-replay' ? 'Tanda terima tersimpan diputar ulang dengan aman.' : 'Hasil resmi diperbarui.'); await load(); return
       }
       if (decision === 'cancel') {
         const command = { ...base, operation: 'cancel-pending-winners' as const, reason, ...(note.trim() ? { note: note.trim() } : {}), targets: selectedWinners.map((winner) => ({ winnerId: winner.id, expectedStatus: 'pending' as const })) }
@@ -264,7 +278,7 @@ export function ProductionPendingResultsPage() {
         const result = await services.pendingDecisions.cancellation.cancel(command)
         if (result.status === 'unknown') { setMessage('Hasil perintah tidak diketahui. Muat ulang record otoritatif sebelum mencoba lagi dengan ID perintah yang sama.'); return }
         if ('error' in result) { setMessage(result.error.message); return }
-        setDecision(null); commandRef.current = null; setMessage(result.status === 'idempotent-replay' ? 'Tanda terima tersimpan diputar ulang dengan aman.' : 'Hasil resmi diperbarui.'); await load(); return
+        setDecision(null); commandRef.current = null; signalProductionWorkspaceChanged(); setMessage(result.status === 'idempotent-replay' ? 'Tanda terima tersimpan diputar ulang dengan aman.' : 'Hasil resmi diperbarui.'); await load(); return
       }
       const command = decision === 'redraw-confirmed'
         ? { ...base, operation: 'redraw-confirmed-winners' as const, reason, ...(note.trim() ? { note: note.trim() } : {}), targets: selectedWinners.map((winner) => ({ winnerId: winner.id, expectedStatus: 'confirmed' as const })) }
@@ -273,7 +287,18 @@ export function ProductionPendingResultsPage() {
       const result = await services.pendingDecisions.redraw.redraw(command)
       if (result.status === 'unknown') { setMessage('Hasil perintah tidak diketahui. Muat ulang record otoritatif sebelum mencoba lagi dengan ID perintah yang sama.'); return }
       if ('error' in result) { setMessage(result.error.message); return }
-      setDecision(null); commandRef.current = null; setMessage(result.status === 'idempotent-replay' ? 'Tanda terima tersimpan diputar ulang dengan aman.' : 'Hasil resmi diperbarui.'); await load()
+      const [request, readiness] = await Promise.all([
+        services.redrawRequests?.findActiveByDrawSessionId(session.id) ?? Promise.resolve(null),
+        services.checkStorage === undefined || services.checkCrypto === undefined
+          ? Promise.resolve(null)
+          : queryDrawReadiness(session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto }),
+      ])
+      if (request === null || readiness === null || readiness.data?.session.id !== session.id) {
+        setMessage('Permintaan undi ulang tersimpan tetapi handoff otoritatif tidak dapat dibaca. Muat ulang untuk memulihkan sesi; jangan membuat permintaan baru.')
+        return
+      }
+      redrawTransition.prepare({ drawSessionId: session.id, request, readiness, displayConfigurationId: displayConfiguration.id })
+      setDecision(null); commandRef.current = null; navigate(`/draw/run/${session.id}`); signalProductionWorkspaceChanged()
     } catch { setMessage('Perintah tidak dapat disimpan dengan aman. Muat ulang record otoritatif sebelum mencoba lagi.') }
     finally { setBusy(false) }
   }
@@ -281,19 +306,20 @@ export function ProductionPendingResultsPage() {
   const isReadOnly = session.status === 'cancelled'
   const dialogTitle = decision === 'confirm' ? `Konfirmasi ${selectedWinners.length} pemenang` : decision === 'cancel' ? `Batalkan ${selectedWinners.length} pemenang` : decision === 'redraw-confirmed' ? 'Undi ulang pemenang terkonfirmasi' : 'Undi ulang pemenang tertunda'
   const remainingPending = Math.max(0, pending.length - selectedWinners.filter((winner) => winner.status === 'pending').length)
-  const replacements = winners.filter((winner) => winner.sequenceNumber > (session.configurationSnapshot?.requestedWinners ?? Number.MAX_SAFE_INTEGER))
+  const replacements = redraws.length
+  const activeWinnerCount = pending.length + confirmed.length
   return <section aria-labelledby="pending-title" className={`pending-results pending-results--production${session.status === 'completed' ? ' pending-results--completed' : ''}`}>
     <PageHeader eyebrow={session.status === 'completed' ? 'UNDIAN SELESAI · LIVE' : 'Live · produksi resmi'} headingId="pending-title" title={session.status === 'completed' ? 'Hasil Akhir' : 'Tinjau Pemenang'} description={`${category.prizeName} · ${category.name}`} />
     {message === null || session.status === 'completed' ? null : <StatusBanner badge="Tindakan Operator" title="Rekonsiliasi diperlukan" tone="warning">{message}</StatusBanner>}
     {isReadOnly ? <StatusBanner badge="Dibatalkan" title="Hasil terselesaikan · hanya baca" tone="warning">Sesi ini tetap berada dalam riwayat resmi dan tidak dapat diubah di sini.</StatusBanner> : session.status === 'completed' ? <div className="pending-results__completion-state" role="status"><div className="pending-results__completion-copy"><span>UNDIAN SELESAI</span><strong>Peninjauan pemenang selesai</strong><p>Semua {confirmed.length} pemenang telah dikonfirmasi dan siap untuk undian berikutnya.</p></div><div className="pending-results__completion-actions"><ButtonLink icon={<Icon name="Play" />} size="lg" to="/draw/setup" variant="primary">Mulai Undian Berikutnya</ButtonLink><ButtonLink icon={<Icon name="History" />} to="/history" variant="secondary">Lihat Riwayat</ButtonLink></div></div> : null}
-    <PendingResultsSummary total={winners.length} pending={pending.length} confirmed={confirmed.length} cancelled={cancelled.length} replacements={replacements.length} />
+    <PendingResultsSummary total={activeWinnerCount} pending={pending.length} confirmed={confirmed.length} cancelled={cancelled.length} replacements={replacements} />
     <div className="pending-results__workspace">
       {!isReadOnly && pending.length > 0 ? <Card padding="none" tone="raised" className="pending-results__queue"><div className="pending-results__section-heading"><div><p className="operator-eyebrow">Keputusan pemenang</p><h2>Pilih pemenang</h2><p>Pilih pemenang, lalu konfirmasi, batalkan, atau undi ulang sesuai kebutuhan.</p></div><Button icon={allPendingSelected ? <Icon name="ListX" /> : <Icon name="ListChecks" />} onClick={toggleAllPending} variant="secondary" disabled={busy || pending.length === 0}>{bulkSelectionLabel}</Button></div><div className="pending-results__selection-status" aria-live="polite"><strong>{pending.length} pending</strong><span>{selectedWinners.length > 0 ? `${selectedWinners.length} dipilih` : 'Belum ada pemenang dipilih'}</span></div><PendingWinnerGrid winners={winners} selected={selected} busy={busy} onToggle={toggle} /><div className="pending-results__action-bar"><div><strong>Tindakan keputusan</strong><span>{selectedWinners.length > 0 ? `Terapkan ke ${selectedWinners.length} pemenang yang dipilih.` : 'Pilih satu atau beberapa pemenang tertunda untuk melanjutkan.'}</span></div><div className="pending-results__actions"><Button className="pending-results__action pending-results__action--confirm" icon={<Icon name="CircleCheck" />} disabled={!canDecide} onClick={() => openDecision('confirm')}>Konfirmasi{selectedWinners.length > 0 ? ` ${selectedWinners.length}` : ''}</Button><Button className="pending-results__action pending-results__action--cancel" icon={<Icon name="CircleX" />} disabled={!canDecide} onClick={() => openDecision('cancel')} variant="danger">Batalkan{selectedWinners.length > 0 ? ` ${selectedWinners.length}` : ''}</Button><Button className="pending-results__action pending-results__action--redraw" icon={<Icon name="RotateCcw" />} disabled={!canDecide || !capacityEnough} onClick={() => openDecision('redraw-pending')} variant="secondary">Undi Ulang{selectedWinners.length > 0 ? ` ${selectedWinners.length}` : ''}</Button></div></div></Card> : null}
-      <Card padding="md" tone="raised" className="pending-results__details"><div className="pending-results__section-heading"><div><p className="operator-eyebrow">Konteks Operator</p><h2>Detail Hasil</h2></div><Badge variant="live">Live</Badge></div><dl className="pending-results__details-list"><div><dt>Acara</dt><dd>{event.name}</dd></div><div><dt>Kategori hadiah</dt><dd>{category.name}</dd></div><div><dt>Hadiah</dt><dd>{category.prizeName}</dd></div><div><dt>Jumlah pemenang</dt><dd>{winners.length}</dd></div><div><dt>Pool yang memenuhi syarat</dt><dd>{session.candidatePoolSnapshot?.eligibleSnapshotCount ?? '—'}</dd></div><div><dt>Waktu undian</dt><dd>{formatOperatorDateTime(session.createdAt)}</dd></div></dl><div className="pending-results__capacity"><span>Kapasitas undian ulang</span><strong>{displayedReplacementCapacity} pengganti yang memenuhi syarat tersedia</strong><small>Identitas pengganti tidak dipilih sampai undian ulang diminta.</small></div></Card>
+      <Card padding="md" tone="raised" className="pending-results__details"><div className="pending-results__section-heading"><div><p className="operator-eyebrow">Konteks Operator</p><h2>Detail Hasil</h2></div><Badge variant="live">Live</Badge></div><dl className="pending-results__details-list"><div><dt>Acara</dt><dd>{event.name}</dd></div><div><dt>Kategori hadiah</dt><dd>{category.name}</dd></div><div><dt>Hadiah</dt><dd>{category.prizeName}</dd></div><div><dt>Jumlah pemenang</dt><dd>{activeWinnerCount}</dd></div><div><dt>Pool yang memenuhi syarat</dt><dd>{session.candidatePoolSnapshot?.eligibleSnapshotCount ?? '—'}</dd></div><div><dt>Waktu undian</dt><dd>{formatOperatorDateTime(session.createdAt)}</dd></div></dl><div className="pending-results__capacity"><span>Kapasitas undian ulang</span><strong>{displayedReplacementCapacity} pengganti yang memenuhi syarat tersedia</strong><small>Identitas pengganti tidak dipilih sampai undian ulang benar-benar dimulai.</small></div></Card>
     </div>
     {session.status === 'completed' && confirmed.length > 0 ? <Card padding="sm" tone="raised" className="pending-results__completed-actions"><div className="pending-results__correction-actions"><div><p className="operator-eyebrow">Koreksi / Pemulihan</p><h2>Perlu mengoreksi hasil ini?</h2></div><Button icon={<Icon name="RotateCcw" />} disabled={busy} onClick={() => { setSelected(new Set(confirmed.map((winner) => winner.id))); openDecision('redraw-confirmed') }} variant="danger">Undi ulang pemenang terkonfirmasi</Button></div></Card> : null}
     <details className="pending-results__audit"><summary>Record pemenang otoritatif <span>{winners.length} record</span></summary><div><ol aria-label="Pemenang resmi">{winners.map((winner) => { const redraw = redraws.find((candidate) => candidate.originalWinnerRecordId === winner.id); const replacement = redraw === undefined ? undefined : winners.find((candidate) => candidate.id === redraw.replacementWinnerRecordId); return <li key={winner.id}><code>{winner.ticketNumber}</code> <Badge variant={winner.status === 'pending' ? 'pending' : winner.status === 'confirmed' ? 'confirmed' : 'danger'}>{statusLabel(winner.status)}</Badge>{winner.confirmedAt ? ` · dikonfirmasi ${winner.confirmedAt}` : ''}{winner.cancelledAt ? ` · dibatalkan ${winner.cancelledAt}` : ''}{redraw === undefined ? null : <> · pengganti <code>{replacement?.ticketNumber ?? 'tidak tersedia'}</code> ({replacement?.status ?? 'tidak tersedia'})</>}</li> })}</ol><p><small>WinnerRecord asli tetap terlihat untuk peninjauan audit dan hubungan pengganti.</small></p></div></details>
     {session.status === 'completed' ? null : <nav className="pending-results__navigation" aria-label="Navigasi hasil tertunda"><Link to="/history"><Icon name="History" />Buka riwayat resmi</Link><Link to="/draw/setup"><Icon name="ArrowLeft" />Kembali ke Pengaturan Undian</Link></nav>}
-    {decision === 'cancel' ? <CancelWinnerDialog selectedWinners={selectedWinners} reason={reason} note={note} busy={busy} onReasonChange={setReason} onNoteChange={setNote} onCancel={() => { if (!busy) setDecision(null) }} onConfirm={() => void submit()} /> : <ConfirmationDialog headerIcon={decision === 'confirm' ? <Icon name="CircleCheck" /> : <Icon name="RotateCcw" />} headerIconTone={decision === 'confirm' ? 'success' : 'danger'} cancelLabel="Kembali" consequenceLabel={null} confirmDisabled={busy || (decision === 'redraw-pending' && !capacityEnough) || (decision !== 'confirm' && reason === 'other' && note.trim() === '')} confirmLabel={decision === 'confirm' ? 'Konfirmasi secara resmi' : 'Undi ulang secara resmi'} confirmLoading={busy} consequence={<div className="pending-results__decision-content"><div className="pending-results__decision-consequence"><p>{decision === 'confirm' ? <>Pemenang ini akan ditambahkan ke hasil resmi.{remainingPending > 0 ? ` ${remainingPending} pemenang akan tetap tertunda.` : ''}</> : <>Ini adalah tindakan Live resmi yang destruktif. Hasil asli yang dipilih tetap terlihat dan pengganti akan tertunda setelah disimpan. Kapasitas tersedia: {replacementCapacity}.</>}{decision === 'redraw-confirmed' ? ' Hasil yang selesai akan kembali menjadi menunggu konfirmasi; pemenang terkonfirmasi yang tidak terdampak tetap terkonfirmasi.' : ''}</p></div>{decision === 'confirm' ? null : <div className="pending-results__decision-form"><ReasonSelect id="reason" reason={reason} busy={busy} onChange={setReason} /><label className="ui-field" htmlFor="note"><span className="ui-field__label">Catatan {reason === 'other' ? '(wajib)' : '(opsional)'}</span><textarea className="ui-input pending-results__note" id="note" disabled={busy} onChange={(event) => setNote(event.target.value)} placeholder="Tambahkan konteks untuk record audit…" value={note} /></label></div>}</div>} onCancel={() => { if (!busy) setDecision(null) }} onConfirm={() => void submit()} open={decision !== null} title={dialogTitle} tone={decision === 'confirm' ? 'warning' : 'danger'} />}
+    {decision === 'cancel' ? <CancelWinnerDialog selectedWinners={selectedWinners} reason={reason} note={note} busy={busy} onReasonChange={setReason} onNoteChange={setNote} onCancel={() => { if (!busy) setDecision(null) }} onConfirm={() => void submit()} /> : <ConfirmationDialog headerIcon={decision === 'confirm' ? <Icon name="CircleCheck" /> : <Icon name="RotateCcw" />} headerIconTone={decision === 'confirm' ? 'success' : 'danger'} cancelLabel="Kembali" consequenceLabel={null} confirmDisabled={busy || (decision === 'redraw-pending' && !capacityEnough) || (decision !== 'confirm' && reason === 'other' && note.trim() === '')} confirmLabel={decision === 'confirm' ? 'Konfirmasi secara resmi' : 'Undi ulang secara resmi'} confirmLoading={busy} consequence={<div className="pending-results__decision-content"><div className="pending-results__decision-consequence"><p>{decision === 'confirm' ? <>Pemenang ini akan ditambahkan ke hasil resmi.{remainingPending > 0 ? ` ${remainingPending} pemenang akan tetap tertunda.` : ''}</> : <>Ini adalah tindakan Live resmi yang destruktif. Hasil asli yang dipilih akan dibatalkan dan menunggu pengganti. Setelah disimpan, Anda akan diarahkan ke Live Draw untuk menjalankan rolling dan Stop manual. Kapasitas tersedia: {replacementCapacity}.</>}{decision === 'redraw-confirmed' ? ' Hasil yang selesai akan kembali menjadi menunggu konfirmasi; pemenang terkonfirmasi yang tidak terdampak tetap terkonfirmasi.' : ''}</p></div>{decision === 'confirm' ? null : <div className="pending-results__decision-form"><ReasonSelect id="reason" reason={reason} busy={busy} onChange={setReason} /><label className="ui-field" htmlFor="note"><span className="ui-field__label">Catatan {reason === 'other' ? '(wajib)' : '(opsional)'}</span><textarea className="ui-input pending-results__note" id="note" disabled={busy} onChange={(event) => setNote(event.target.value)} placeholder="Tambahkan konteks untuk record audit…" value={note} /></label></div>}</div>} onCancel={() => { if (!busy) setDecision(null) }} onConfirm={() => void submit()} open={decision !== null} title={dialogTitle} tone={decision === 'confirm' ? 'warning' : 'danger'} />}
   </section>
 }

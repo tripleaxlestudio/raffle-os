@@ -4,6 +4,8 @@ import type { PendingDecisionError } from './validation.ts'
 import { canonicalizeDecisionPayload, validateCommandPayloadConflict, validateLiveMutationCommand } from './validation.ts'
 import type { PendingDecisionOutcome, RedrawConfirmedWinnersCommand, RedrawPendingWinnersCommand } from './command.types.ts'
 import { PersistenceError } from '../../infrastructure/persistence/errors/persistence-errors.ts'
+import type { CommandId } from '../../domain/shared/identifiers.ts'
+import type { RedrawRequest } from '../../domain/winners/redraw-request.types.ts'
 
 export type RedrawApplicationResult =
   | { readonly status: 'committed' | 'idempotent-replay'; readonly outcome: PendingDecisionOutcome }
@@ -88,5 +90,15 @@ export class RedrawService {
     const equivalent = validateCommandPayloadConflict(JSON.parse(receipt.canonicalPayload) as typeof payload, payload)
     if (!equivalent.ok) return { status: 'conflict', error: equivalent.error }
     return replay(receipt) ?? error('unknown', 'unknown-outcome', 'The redraw receipt is not committed; reload authoritative records before retrying.')
+  }
+
+  async start(requestId: CommandId): Promise<RedrawRequest> {
+    if (this.persistence.startRedraw === undefined) throw new Error('The redraw start persistence boundary is unavailable.')
+    return this.persistence.startRedraw({ requestId })
+  }
+
+  async complete(requestId: CommandId): Promise<RedrawRequest> {
+    if (this.persistence.completeRedraw === undefined) throw new Error('The redraw completion persistence boundary is unavailable.')
+    return this.persistence.completeRedraw({ requestId })
   }
 }

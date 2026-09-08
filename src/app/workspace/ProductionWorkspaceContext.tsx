@@ -3,10 +3,11 @@ import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
 import type { Event } from '../../domain/events/event.types.ts'
 import type { AppMode } from '../../domain/types/app-mode.ts'
 import type { DisplayConfiguration } from '../../domain/display/display-configuration.types.ts'
+import { resolveDisplayAppearance, type DisplayAppearanceConfiguration } from '../../domain/display/display-configuration.types.ts'
 import { DEFAULT_EVENT_SETTINGS, type EventSettings } from '../../domain/settings/event-settings.types.ts'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 import { createOperatorPublisher, createPublisherRuntimeIdentity, type OperatorPublisher, type PublisherResult, type PublisherStatus } from '../../application/display-transport/operator-publisher.ts'
-import { createBroadcastChannelTransport } from '../../application/display-transport/transport.ts'
+import { createProductionDisplayTransport } from '../../infrastructure/display/production-display-transport.ts'
 import type { PresentationProjectionSource, PublicDisplaySnapshot } from '../../application/display-transport/public-projection.ts'
 import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
@@ -14,6 +15,21 @@ import { setDisplayConnectionStatus, syncAudiencePresenceConnectionStatus } from
 import { deriveProductionSetupReadiness, type ProductionSetupReadiness } from './production-setup-readiness.ts'
 import { evaluateStartupRecovery, type StartupRecoveryResult } from '../../application/workflow/startup-recovery-arbiter.ts'
 import { projectAudienceRecoverySource } from '../../application/display-transport/audience-recovery.ts'
+import type { DrawReadinessResult } from '../../application/draw/draw-readiness.types.ts'
+import type { RedrawRequest } from '../../domain/winners/redraw-request.types.ts'
+
+export interface IntentionalRedrawHandoff {
+  readonly drawSessionId: RedrawRequest['drawSessionId']
+  readonly request: RedrawRequest
+  readonly readiness: DrawReadinessResult
+  readonly displayConfigurationId?: string
+}
+
+type RedrawTransitionContextValue = {
+  readonly handoff: IntentionalRedrawHandoff | null
+  readonly prepare: (handoff: IntentionalRedrawHandoff) => void
+  readonly clear: () => void
+}
 
 export type ProductionWorkspaceState =
   | { readonly status: 'loading' }
@@ -40,10 +56,12 @@ export type ProductionWorkspaceState =
     }
 
 const WorkspaceContext = createContext<ProductionWorkspaceState | undefined>(undefined)
+const RedrawTransitionContext = createContext<RedrawTransitionContextValue | undefined>(undefined)
 type AudiencePublisherContextValue = {
   readonly publisher: OperatorPublisher | null
   readonly status: PublisherStatus
   readonly publish: (source: PresentationProjectionSource) => PublisherResult
+  readonly publishAppearance: (appearance: DisplayAppearanceConfiguration) => PublisherResult
   readonly subscribe: (listener: (status: PublisherStatus) => void) => () => void
   readonly subscribeSnapshot: (listener: () => void) => () => void
   readonly getSnapshot: () => PublicDisplaySnapshot | undefined
@@ -66,6 +84,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
   const publisherStatusCleanupRef = useRef<(() => void) | null>(null)
   const [publisher, setPublisher] = useState<OperatorPublisher | null>(null)
   const [publisherStatus, setPublisherStatus] = useState<PublisherStatus>({ kind: 'waiting-for-display' })
+  const [redrawHandoff, setRedrawHandoff] = useState<IntentionalRedrawHandoff | null>(null)
 
   const refresh = useCallback(() => {
     let active = true
@@ -107,12 +126,13 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
           .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] ?? null
         const unresolvedSessions = sessions.filter((session) => session.mode === 'live' && (session.status === 'drawing' || session.status === 'pending-confirmation'))
         const recoveryRecords = await Promise.all(unresolvedSessions.map(async (session) => {
-          const [redraws, receipts, checkpoint] = await Promise.all([
+          const [redraws, receipts, checkpoint, activeRedrawRequest] = await Promise.all([
             services.redraws?.findByDrawSessionId(session.id) ?? Promise.resolve([]),
             services.pendingDecisions?.receipts.findBySession(session.id) ?? Promise.resolve([]),
             services.presentationCheckpoints?.findByDrawSessionId(session.id) ?? Promise.resolve(null),
+            services.redrawRequests?.findActiveByDrawSessionId(session.id) ?? Promise.resolve(null),
           ])
-          return { redraws, receipts, checkpoint }
+          return { redraws, receipts, checkpoint, activeRedrawRequest }
         }))
         const startupRecovery = evaluateStartupRecovery({
           activeEvent: event,
@@ -120,6 +140,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
           winners,
           redraws: recoveryRecords.flatMap((record) => record.redraws),
           receipts: recoveryRecords.flatMap((record) => record.receipts),
+          redrawRequests: recoveryRecords.flatMap((record) => record.activeRedrawRequest === null ? [] : [record.activeRedrawRequest]),
           checkpoint: recoveryRecords.find((record) => record.checkpoint !== null)?.checkpoint ?? null,
         })
         if (startupRecovery.kind === 'storage-failure') {
@@ -194,8 +215,8 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
     const scope = { eventId: state.event.id, displayId: state.displayConfiguration.id }
     const runtime = createPublisherRuntimeIdentity()
     const publisher = createOperatorPublisher({
-      transport: createBroadcastChannelTransport('raffle-os-display', scope),
-      transportFactory: () => createBroadcastChannelTransport('raffle-os-display', scope),
+      transport: createProductionDisplayTransport('operator', scope),
+      transportFactory: () => createProductionDisplayTransport('operator', scope),
       scope,
       senderId: runtime.publisherInstanceId,
       epoch: runtime.epoch,
@@ -223,6 +244,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
       background: initial.background === undefined ? undefined : { type: initial.background.type, blob: initial.background.blob },
       blackoutAppearance: state.displayConfiguration?.blackoutAppearance,
       safeAreaMargin: state.displayConfiguration?.safeAreaMargin,
+      appearance: resolveDisplayAppearance(state.displayConfiguration, initial),
     }
     publisher.start(state.audienceRecoverySource ?? standbySource)
     queueMicrotask(() => { if (publisherRef.current === publisher) setPublisher(publisher) })
@@ -241,13 +263,20 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
     publisher,
     status: publisherStatus,
     publish: (source) => publisherRef.current === null ? { ok: false, error: { kind: 'transport-closed' } } : publisherRef.current.publish(source),
+    publishAppearance: (appearance) => publisherRef.current === null ? { ok: false, error: { kind: 'transport-closed' } } : publisherRef.current.publishAppearance(appearance),
     subscribe: (listener) => publisherRef.current?.subscribe(listener) ?? (() => undefined),
     subscribeSnapshot: (listener) => publisherRef.current?.subscribeSnapshot(listener) ?? (() => undefined),
     getSnapshot: () => publisherRef.current?.getSnapshot(),
     getDiagnostics: () => publisherRef.current?.getDiagnostics(),
   }), [publisher, publisherStatus])
 
-  return <WorkspaceContext.Provider value={state}><AudiencePublisherContext.Provider value={audiencePublisher}>{children}</AudiencePublisherContext.Provider></WorkspaceContext.Provider>
+  const redrawTransition = useMemo<RedrawTransitionContextValue>(() => ({
+    handoff: redrawHandoff,
+    prepare: setRedrawHandoff,
+    clear: () => setRedrawHandoff(null),
+  }), [redrawHandoff])
+
+  return <WorkspaceContext.Provider value={state}><AudiencePublisherContext.Provider value={audiencePublisher}><RedrawTransitionContext.Provider value={redrawTransition}>{children}</RedrawTransitionContext.Provider></AudiencePublisherContext.Provider></WorkspaceContext.Provider>
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -261,5 +290,12 @@ export function useProductionWorkspace(): ProductionWorkspaceState {
 export function useProductionAudiencePublisher(): AudiencePublisherContextValue {
   const value = useContext(AudiencePublisherContext)
   if (value === undefined) throw new Error('useProductionAudiencePublisher must be used inside ProductionWorkspaceProvider.')
+  return value
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useIntentionalRedrawTransition(): RedrawTransitionContextValue {
+  const value = useContext(RedrawTransitionContext)
+  if (value === undefined) throw new Error('useIntentionalRedrawTransition must be used inside ProductionWorkspaceProvider.')
   return value
 }

@@ -27,7 +27,7 @@ export type DrawRunAudienceState = 'setup-required' | 'waiting' | 'connected' | 
 
 function presentationSummary(configuration: DrawPresentationConfiguration): string {
   if (configuration.presentationMode === 'instant-reveal') return 'Instant Reveal'
-  return `Random Number Roll · ${configuration.rollStopMode === 'manual' ? 'Manual Stop' : `Timed · ${configuration.rollDurationSeconds}s`}`
+  return 'Random Number Roll · Manual Stop'
 }
 
 export function createDrawRunPreflight(

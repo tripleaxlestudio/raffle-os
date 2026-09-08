@@ -1,4 +1,4 @@
-import type { DisplayConfiguration } from '../../domain/display/display-configuration.types.ts'
+import { resolveDisplayAppearance, type DisplayConfiguration } from '../../domain/display/display-configuration.types.ts'
 import type { EventSettings } from '../../domain/settings/event-settings.types.ts'
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 import type { PresentationProjectionSource } from '../display-transport/public-projection.ts'
@@ -35,6 +35,7 @@ export function projectCompletedResultForAudience(input: {
       eventSubtitle: input.eventSettings.subtitle,
       primaryColor: input.eventSettings.primaryColor,
       accentColor: input.eventSettings.accentColor,
+      appearance: resolveDisplayAppearance(input.displayConfiguration, input.eventSettings),
       ...(input.eventSettings.logo === undefined ? {} : { logo: { type: input.eventSettings.logo.type, blob: input.eventSettings.logo.blob } }),
       ...(input.eventSettings.background === undefined ? {} : { background: { type: input.eventSettings.background.type, blob: input.eventSettings.background.blob } }),
       ...(input.displayConfiguration === null ? {} : { blackoutAppearance: input.displayConfiguration.blackoutAppearance, safeAreaMargin: input.displayConfiguration.safeAreaMargin }),

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import type { PublicAudienceScenario } from './audience-view.types.ts'
 import { AudienceStage } from './AudienceStage.tsx'
 import { AudienceDrawHeader } from './AudienceDrawHeader.tsx'
-import { DisplayStateLabel } from './DisplayStateLabel.tsx'
 import { WinnerGrid } from './WinnerGrid.tsx'
 import { SEQUENTIAL_REVEAL_INTERVAL_MS, visibleWinnerCount } from './sequential-reveal.ts'
 import { rollingFrameIndex, syntheticRollingNumber } from './rolling-number.ts'
@@ -31,6 +30,5 @@ export function WinnerStage({ scenario }: { readonly scenario: PublicAudienceSce
   return <AudienceStage className="winner-stage" state={scenario.state}>
     <AudienceDrawHeader context={scenario} winnerCount={count} className="winner-stage__header" />
     <WinnerGrid confirmed={confirmed} winnerStatuses={scenario.winnerStatuses} count={count} ticketNumbers={displayedValues} lockedCount={lockedCount} rolling={sequential} revealEntrance={revealEntrance} />
-    <DisplayStateLabel tone={confirmed ? 'confirmed' : 'verification'}>{scenario.statusMessage ?? 'Hasil publik'}</DisplayStateLabel>
   </AudienceStage>
 }

@@ -17,6 +17,7 @@ export type PublicAudienceContext = Readonly<{
   readonly logo?: Blob
   readonly prizeCategory: string
   readonly prizeLabel: string
+  readonly prizeImageAssetId?: string
   readonly prototypeStatic?: boolean
 }>
 

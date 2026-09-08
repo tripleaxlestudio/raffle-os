@@ -4,7 +4,7 @@ import { EventBrand } from './EventBrand.tsx'
 
 export function AudienceDrawHeader({ context, winnerCount, children, className = '' }: { readonly context: PublicAudienceContext; readonly winnerCount?: number; readonly children?: ReactNode; readonly className?: string }) {
   return <header className={['audience-draw-header', className].filter(Boolean).join(' ')}>
-    <EventBrand eventName={context.eventName} eventSubtitle={context.eventSubtitle} logo={context.logo} />
+    <EventBrand compact eventName={context.eventName} eventSubtitle={context.eventSubtitle} logo={context.logo} />
     <div className="audience-draw-header__identity">
       <p className="audience-eyebrow">UNDIAN AKTIF</p>
       <h1 className="audience-draw-header__prize">{context.prizeLabel}</h1>

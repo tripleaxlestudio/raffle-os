@@ -56,13 +56,12 @@ describe('Audience sequential winner reveal', () => {
     const { container } = render(<RollingStage scenario={scenario({ state: 'rolling', presentationMode: 'random-number-roll', prototypeStatic: false, prizeCategory: 'Door Prize', prizeLabel: 'Sepeda' })} />)
     expect(container.querySelectorAll('[data-reveal-entrance="true"]')).toHaveLength(tickets.length)
     expect(container.querySelectorAll('[data-locked="false"]')).toHaveLength(tickets.length)
-    expect(screen.getByText('CURRENT DRAW')).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Sepeda' })).toBeVisible()
     expect(screen.getByText('Door Prize')).toBeVisible()
-    expect(screen.getByText('6 Winner')).toBeVisible()
-    expect(screen.getByText('Rolling in progress')).toBeVisible()
+    expect(screen.getByText('6 Pemenang')).toBeVisible()
+    expect(screen.getByText('Putaran berlangsung')).toBeVisible()
     expect(container.querySelector('.audience-draw-header')).toHaveClass('rolling-stage__header')
-    expect(container.querySelector('.display-state-label')).toHaveTextContent('Rolling')
+    expect(container.querySelector('.display-state-label')).not.toBeInTheDocument()
   })
 
   it('locks Random Number Roll sequential slots directly while remaining slots keep rolling', () => {

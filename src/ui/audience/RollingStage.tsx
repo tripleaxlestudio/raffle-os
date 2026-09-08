@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import type { PublicAudienceScenario } from './audience-view.types.ts'
 import { AudienceStage } from './AudienceStage.tsx'
 import { AudienceDrawHeader } from './AudienceDrawHeader.tsx'
-import { DisplayStateLabel } from './DisplayStateLabel.tsx'
 import { rollingFrameIndex, syntheticRollingNumber } from './rolling-number.ts'
 import { WinnerGrid } from './WinnerGrid.tsx'
 import { useReducedMotionPreference } from '../../shared/hooks/useReducedMotionPreference.ts'
@@ -28,6 +27,5 @@ export function RollingStage({ scenario }: { readonly scenario: PublicAudienceSc
     <div className="rolling-stage__content">
       <WinnerGrid confirmed={false} count={slotCount} ticketNumbers={values} lockedCount={scenario.prototypeStatic ? slotCount : 0} rolling={!scenario.prototypeStatic} prototypeStatic={scenario.prototypeStatic} revealEntrance className="rolling-ticket-stream" ariaLabel={scenario.prototypeStatic ? 'Aliran tiket presentasi' : 'Nomor tiket putaran sintetis'} />
     </div>
-    <DisplayStateLabel>Berputar</DisplayStateLabel>
   </AudienceStage>
 }

@@ -4,7 +4,7 @@ import { AudienceDrawHeader } from './AudienceDrawHeader.tsx'
 
 export function CountdownStage({ scenario }: { readonly scenario: PublicAudienceScenario }) {
   return <AudienceStage className="countdown-stage" state={scenario.state}>
-    <AudienceDrawHeader context={scenario} />
+    <AudienceDrawHeader context={scenario} winnerCount={scenario.winnerCount} />
     <div className="countdown-stage__content" data-prototype-static={scenario.prototypeStatic ? 'true' : undefined}>
       <h1>{scenario.message}</h1>
       <p aria-label={`Hitung mundur: ${scenario.countdownValue ?? '—'}`} className="countdown-stage__numeral">{scenario.countdownValue ?? '—'}</p>

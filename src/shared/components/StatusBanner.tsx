@@ -8,6 +8,7 @@ interface StatusBannerProps {
   badge: string
   children: ReactNode
   className?: string
+  icon?: ReactNode
   title: string
   tone: StatusBannerTone
 }
@@ -22,6 +23,7 @@ export function StatusBanner({
   badge,
   children,
   className,
+  icon,
   title,
   tone,
 }: StatusBannerProps) {
@@ -32,7 +34,7 @@ export function StatusBanner({
       aria-labelledby={titleId}
       className={`${ui(`status-banner status-banner--${tone}`)}${className === undefined ? '' : ` ${className}`}`}
     >
-      <span aria-hidden="true" className={ui("status-banner__marker")} />
+      <span aria-hidden="true" className={ui("status-banner__marker")}>{icon}</span>
       <div className={ui("status-banner__copy")}>
         <div className={ui("status-banner__heading")}>
           <h2 id={titleId}>{title}</h2>

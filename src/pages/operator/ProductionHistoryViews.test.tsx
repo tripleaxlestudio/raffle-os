@@ -18,22 +18,22 @@ const makeProjection = (): HistoryReconstruction => ({ kind: 'incomplete', value
 describe('production History views', () => {
   it('keeps all retained winners, exact tickets, and redraw lineage visible in detail', () => {
     render(<MemoryRouter><HistoryDetail reconstruction={makeProjection()} /></MemoryRouter>)
-    expect(screen.getByText('Official record is incomplete or inconsistent')).toBeInTheDocument()
+    expect(screen.getByText('Record resmi tidak lengkap atau tidak konsisten')).toBeInTheDocument()
     expect(screen.getAllByText('00042').length).toBeGreaterThan(0)
     expect(screen.getAllByText('42').length).toBeGreaterThan(0)
-    expect(screen.getByText('Replacement context')).toBeInTheDocument()
-    expect(screen.getByText('Tertunda')).toBeInTheDocument()
+    expect(screen.getByText('Konteks pengganti')).toBeInTheDocument()
+    expect(screen.getAllByText('Menunggu Konfirmasi').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Dibatalkan').length).toBeGreaterThan(1)
-    expect(screen.getByText('Eligible-pool count')).toBeInTheDocument()
+    expect(screen.getByText('Jumlah pool yang memenuhi syarat')).toBeInTheDocument()
   })
 
   it('aggregates confirmed, cancelled, and pending records without presenting practice data', () => {
     const second = makeProjection()
     render(<MemoryRouter><AllWinners eventName="Event" sessions={[makeProjection(), second]} /></MemoryRouter>)
-    const table = screen.getByRole('table', { name: 'All official winners' })
+    const table = screen.getByRole('table', { name: 'Semua pemenang resmi' })
     expect(within(table).getAllByText('00042').length).toBeGreaterThanOrEqual(2)
     expect(within(table).getAllByText('42').length).toBeGreaterThanOrEqual(2)
-    expect(within(table).getAllByText('Tertunda')).toHaveLength(2)
+    expect(within(table).getAllByText('Menunggu Konfirmasi')).toHaveLength(2)
     expect(within(table).getAllByText('Dibatalkan').length).toBeGreaterThanOrEqual(2)
     expect(screen.queryByText('Latihan')).not.toBeInTheDocument()
   })

@@ -12,9 +12,9 @@ describe('production History table', () => {
   it.each([1, 5, 10])('renders %i draw sessions as compact table rows', (count) => {
     render(<MemoryRouter><HistoryTable items={Array.from({ length: count }, (_, index) => makeItem(index))} /></MemoryRouter>)
 
-    const table = screen.getByRole('table', { name: 'Official history sessions' })
+    const table = screen.getByRole('table', { name: 'Sesi Riwayat resmi' })
     expect(within(table).getAllByRole('row')).toHaveLength(count + 1)
-    expect(within(table).getAllByRole('link', { name: 'View Details' })).toHaveLength(count)
+    expect(within(table).getAllByRole('link', { name: 'Lihat Detail' })).toHaveLength(count)
   })
 
   it('keeps the prize strongest and event context secondary', () => {

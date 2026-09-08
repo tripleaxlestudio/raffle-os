@@ -170,7 +170,7 @@
 .kc-field-group__description { margin: 8px 0 0; color: var(--kc-label-muted, var(--kc-text-muted)); font-size: 14px; }
 .kc-field-group__content { margin-top: 16px; }
 
-.kc-badge { display: inline-flex; min-height: 28px; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--kc-divider); border-radius: 6px; background: var(--kc-surface-muted); color: var(--kc-text-muted); font: 650 12px/1.2 var(--kc-font); white-space: nowrap; }
+.kc-badge { display: inline-flex; min-height: 28px; align-items: center; gap: 6px; padding: 4px 8px; border: 1.5px solid var(--kc-outline); border-radius: 6px; background: var(--kc-surface-muted); color: var(--kc-text); font: 750 12px/1.2 var(--kc-font); white-space: nowrap; }
 .kc-badge[data-indicator="true"]::before { content: ""; width: 6px; height: 6px; border: 1px solid currentColor; border-radius: 50%; }
 .kc-badge--info, .kc-badge--live { background: var(--kc-info-surface); color: var(--kc-info); }
 .kc-badge--success, .kc-badge--confirmed { background: var(--kc-success-surface); color: var(--kc-success); }
@@ -182,19 +182,19 @@
 .kc-audience-connection-status[data-connection-state="setup-required"] { color: var(--kc-text-muted); }
 .kc-audience-connection-status[data-connection-state="unavailable"], .kc-audience-connection-status[data-connection-state="publication-failed"] { color: var(--kc-danger); }
 
-.kc-table-frame { min-width: 0; overflow: hidden; border: 1px solid var(--kc-divider); border-radius: 12px; background: var(--kc-surface); }
+.kc-table-frame { min-width: 0; overflow: hidden; border: 2px solid var(--kc-outline); border-radius: var(--kc-radius-card); background: var(--kc-surface); box-shadow: var(--kc-shadow-card); }
 .kc-table-scroll { max-width: 100%; overflow: auto; scrollbar-color: var(--kc-divider) transparent; }
 .kc-table { width: 100%; border-collapse: collapse; color: var(--kc-text); font-size: 14px; font-variant-numeric: tabular-nums; text-align: left; }
 .kc-table caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.kc-table th, .kc-table td { min-width: 7rem; padding: 10px 12px; border-bottom: 1px solid var(--kc-divider); vertical-align: top; }
-.kc-table th { font-weight: 650; }
-.kc-table thead th { position: sticky; top: 0; z-index: 1; background: var(--kc-surface-muted); color: var(--kc-text-muted); font-size: 12px; }
+.kc-table th, .kc-table td { min-width: 7rem; padding: 12px 14px; border-bottom: 1px solid var(--kc-divider); vertical-align: middle; }
+.kc-table th { font-weight: 750; }
+.kc-table thead th { position: sticky; top: 0; z-index: 1; background: var(--kc-surface-muted); color: var(--kc-text); font-size: 12px; font-weight: 750; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 2px solid var(--kc-outline); }
 .kc-table tbody tr:last-child > * { border-bottom: 0; }
 .kc-table tbody tr:hover > * { background: var(--kc-info-surface); }
 .kc-table__header--sortable { white-space: nowrap; }
-.kc-table__sort-marker { margin-left: 8px; color: var(--kc-text-muted); }
-.kc-table code { color: var(--kc-text); font-family: var(--kc-font-mono); white-space: nowrap; }
-.kc-table-empty { border-top: 1px solid var(--kc-divider); }
+.kc-table__sort-marker { margin-left: 8px; color: var(--kc-text); font-weight: 800; }
+.kc-table code { color: var(--kc-text); font-family: var(--kc-font-mono); font-weight: 750; background: var(--kc-surface-muted); border: 1.5px solid var(--kc-outline); padding: 2px 6px; border-radius: 6px; white-space: nowrap; }
+.kc-table-empty { border-top: 1px solid var(--kc-divider); color: var(--kc-text-muted); font-size: 14px; padding: 24px; text-align: center; }
 .kc-pagination { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--kc-divider); color: var(--kc-text); font-size: 14px; font-variant-numeric: tabular-nums; }
 .kc-pagination__controls { display: flex; align-items: center; flex-wrap: nowrap; gap: 12px; }
 .kc-pagination__page-size { display: flex; align-items: center; gap: 8px; }

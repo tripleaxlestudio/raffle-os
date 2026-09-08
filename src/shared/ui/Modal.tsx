@@ -33,6 +33,8 @@ interface ModalProps {
   title: string
   headerIcon?: ReactNode
   headerIconTone?: 'warning' | 'danger' | 'success' | 'info'
+  closeAriaLabel?: string
+  closeLabel?: string
 }
 
 export function Modal({
@@ -48,6 +50,8 @@ export function Modal({
   title,
   headerIcon,
   headerIconTone,
+  closeAriaLabel = 'Close dialog',
+  closeLabel = 'Close',
 }: ModalProps) {
   const ui = useUiClass()
   const theme = useUiTheme()
@@ -166,13 +170,13 @@ export function Modal({
           </div>
           {showCloseButton ? (
             <Button
-              aria-label="Close dialog"
+              aria-label={closeAriaLabel}
               icon={<Icon name="X" />}
               onClick={onClose}
               size="sm"
               variant="quiet"
             >
-              Close
+              {closeLabel}
             </Button>
           ) : null}
         </header>

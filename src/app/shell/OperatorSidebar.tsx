@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { themeClass } from '../../shared/ui/ui-theme.ts'
 import { NavLink } from 'react-router'
 import { useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
@@ -24,7 +25,16 @@ const productionNavigationItems = [
   { label: 'Undian', icon: 'Radio', to: '/draw/live' },
   { label: 'Hasil', icon: 'ClipboardCheck', to: '/draw/pending' },
   { label: 'Riwayat', icon: 'History', to: '/history' },
+  { label: 'Log', icon: 'FileText', to: '/log' },
+  { label: 'Settings', icon: 'Settings', to: '/settings/app' },
 ] as const
+
+const productionUtilityItems = [
+  { label: 'Yang Baru', icon: 'Sparkles' },
+  { label: 'Panduan Pengguna', icon: 'BookOpen' },
+] as const satisfies readonly { readonly label: string; readonly icon: IconName }[]
+
+const productionSupportItems = ['Laporkan Masalah', 'Dokumentasi', 'Tentang Kocokan'] as const
 
 type NavigationItem = {
   readonly label: string
@@ -58,6 +68,7 @@ function OperatorSidebarContent({
   readonly readiness?: ProductionSetupReadiness | null
   readonly reachedStep?: number
 }) {
+  const [supportExpanded, setSupportExpanded] = useState(false)
   const shellClass = (name: string) => themeClass(production ? 'kocokan' : 'legacy', name)
   return (
     <aside className={shellClass("operator-sidebar")} aria-label="Bilah samping Operator">
@@ -75,7 +86,7 @@ function OperatorSidebarContent({
         <ul className={shellClass("operator-nav")}>
           {navigationItems.map((item) => (
             <li key={item.to}>
-              {item.to !== '/dashboard' && ((readiness !== null && !isProductionNavigationUnlocked(item.to, readiness, reachedStep)) || (readiness === null && disabled)) ? <span aria-disabled="true" className={shellClass("operator-nav__link operator-nav__link--disabled")} title="Selesaikan langkah pengaturan sebelumnya terlebih dahulu">
+              {isEventScopedNavigationItem(item.to) && ((readiness !== null && !isProductionNavigationUnlocked(item.to, readiness, reachedStep)) || (readiness === null && disabled)) ? <span aria-disabled="true" className={shellClass("operator-nav__link operator-nav__link--disabled")} title="Selesaikan langkah pengaturan sebelumnya terlebih dahulu">
                 <NavigationIcon item={item} production={production} />
                 <span>{item.label}</span>
               </span> : <NavLink
@@ -90,11 +101,39 @@ function OperatorSidebarContent({
           ))}
         </ul>
       </nav>
+      {production ? <nav aria-label="Bantuan dan informasi" className={shellClass("operator-sidebar__utility")}>
+        <ul className={shellClass("operator-sidebar__utility-list")}>
+          {productionUtilityItems.map((item) => <li key={item.label}>
+            <button className={shellClass("operator-sidebar__utility-button")} title={`${item.label} belum tersedia`} type="button">
+              <span className={shellClass("operator-sidebar__utility-icon")}><Icon name={item.icon} size={17} /></span>
+              <span>{item.label}</span>
+            </button>
+          </li>)}
+          <li>
+            <button
+              aria-controls="operator-sidebar-support-menu"
+              aria-expanded={supportExpanded}
+              className={shellClass("operator-sidebar__utility-button operator-sidebar__utility-button--disclosure")}
+              onClick={() => setSupportExpanded((expanded) => !expanded)}
+              type="button"
+            >
+              <span className={shellClass("operator-sidebar__utility-icon")}><Icon name="LifeBuoy" size={17} /></span>
+              <span>Dukungan</span>
+              <span aria-hidden="true" className={shellClass("operator-sidebar__utility-chevron")}><Icon name="ChevronDown" size={15} /></span>
+            </button>
+            {supportExpanded ? <ul className={shellClass("operator-sidebar__submenu")} id="operator-sidebar-support-menu">
+              {productionSupportItems.map((label) => <li key={label}>
+                <button className={shellClass("operator-sidebar__submenu-button")} title={`${label} belum tersedia`} type="button">{label}</button>
+              </li>)}
+            </ul> : null}
+          </li>
+        </ul>
+      </nav> : null}
       <div className={shellClass("operator-sidebar__footer")}>
         <span className={shellClass("operator-sidebar__footer-label")}>
-          {production ? 'Ruang kerja produksi' : 'Static prototype'}
+          {production ? 'KOCOKAN' : 'Static prototype'}
         </span>
-        <span>{production ? 'Berjalan lokal' : 'Phase 2 Prototype'}</span>
+        <span>{production ? 'Versi pengembangan' : 'Phase 2 Prototype'}</span>
       </div>
     </aside>
   )
@@ -111,4 +150,8 @@ function isProductionNavigationUnlocked(pathname: string, readiness: ProductionS
   const stageIndex = productionSetupStageIndexForRoute(pathname)
   if (stageIndex !== undefined) return stageIndex < reachedStep
   return reachedStep >= 5 && readiness.drawSetup
+}
+
+function isEventScopedNavigationItem(pathname: string): boolean {
+  return pathname !== '/dashboard' && pathname !== '/log' && pathname !== '/settings/app'
 }

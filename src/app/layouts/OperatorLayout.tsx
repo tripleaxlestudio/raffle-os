@@ -16,6 +16,7 @@ import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
 import { createParticipantImportProductionServices } from '../../application/participant-import/participant-import-production-services.ts'
 import { resolveParticipantWorkflow } from '../../pages/operator/participant-workflow.ts'
 import type { Event } from '../../domain/events/event.types.ts'
+import { BackToTopButton } from '../../shared/components/BackToTopButton.tsx'
 
 export function OperatorLayout() {
   const location = useLocation()
@@ -92,9 +93,10 @@ export function OperatorLayout() {
           scenario={scenario}
           showPrototypeControls={!isProductionEventRoute}
         />
-        <main className="operator-main">
+        <main className="operator-main" id="operator-main">
           <Outlet />
         </main>
+        <BackToTopButton />
       </div>
     </div>
   )

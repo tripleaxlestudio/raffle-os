@@ -19,6 +19,11 @@ interface ConfirmationDialogProps {
   cancelIcon?: ReactNode
   headerIcon?: ReactNode
   headerIconTone?: 'warning' | 'danger' | 'success' | 'info'
+  closeAriaLabel?: string
+  closeLabel?: string
+  consequenceIcon?: ReactNode
+  structuredConsequence?: boolean
+  eyebrow?: string
 }
 
 export function ConfirmationDialog({
@@ -37,6 +42,11 @@ export function ConfirmationDialog({
   cancelIcon,
   headerIcon,
   headerIconTone,
+  closeAriaLabel,
+  closeLabel,
+  consequenceIcon,
+  structuredConsequence = false,
+  eyebrow,
 }: ConfirmationDialogProps) {
   const ui = useUiClass()
   const theme = useUiTheme()
@@ -68,17 +78,24 @@ export function ConfirmationDialog({
       initialFocusRef={cancelButtonRef}
       headerIcon={headerIcon}
       headerIconTone={headerIconTone ?? (theme === 'kocokan' ? tone : undefined)}
+      closeAriaLabel={closeAriaLabel}
+      closeLabel={closeLabel}
+      eyebrow={eyebrow}
       onClose={onCancel}
       open={open}
       title={title}
     >
       <div className={ui("ui-confirmation")} data-tone={tone}>
         <span aria-hidden="true" className={ui("ui-confirmation__marker")}>
-          !
+          {consequenceIcon ?? '!'}
         </span>
         <div>
           {consequenceLabel === null ? null : <strong>{consequenceLabel}</strong>}
-          <p>{consequence}</p>
+          {structuredConsequence ? (
+            <div className={ui("ui-confirmation__consequence")}>{consequence}</div>
+          ) : (
+            <p>{consequence}</p>
+          )}
         </div>
       </div>
     </Modal>

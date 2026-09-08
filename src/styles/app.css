@@ -10,6 +10,9 @@
 @import "./kocokan/preparation.css";
 @import "./kocokan/draw.css";
 @import "./kocokan/pending.css";
+@import "./kocokan/log.css";
+@import "./kocokan/settings.css";
+@import "./kocokan/display-designer.css";
 
 @layer base {
   *,
@@ -168,6 +171,7 @@
   }
 
   .operator-workspace {
+    position: relative;
     display: grid;
     grid-template-rows: var(--operator-header-height) minmax(0, 1fr);
     min-width: 0;

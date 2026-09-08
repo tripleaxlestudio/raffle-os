@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -37,6 +37,8 @@ describe('production sidebar Event gating', () => {
       expect(item.closest('a')).toBeNull()
       await user.click(item)
     }
+    expect(screen.getByRole('link', { name: 'Log' })).toHaveAttribute('href', '/log')
+    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings/app')
     expect(screen.getByTestId('location')).toHaveTextContent('/dashboard')
   })
 
@@ -44,11 +46,47 @@ describe('production sidebar Event gating', () => {
     workspace.status = 'ready'
     renderSidebar()
 
-    expect(document.querySelectorAll('.kc-operator-nav__icon .ui-icon')).toHaveLength(8)
+    expect(document.querySelectorAll('.kc-operator-nav__icon .ui-icon')).toHaveLength(10)
     expect(document.querySelectorAll('.kc-operator-nav__marker')).toHaveLength(0)
     for (const label of ['Dasbor', 'Hadiah', 'Peserta', 'Pengaturan Tampilan', 'Pengaturan Undian', 'Undian', 'Hasil', 'Riwayat']) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
+    const labels = within(screen.getByRole('navigation', { name: 'Navigasi Operator' })).getAllByRole('link').map((link) => link.textContent)
+    expect(labels.slice(-3)).toEqual(['Riwayat', 'Log', 'Settings'])
+  })
+
+  it('shows secondary placeholder utilities without creating navigation', async () => {
+    const user = userEvent.setup()
+    workspace.status = 'ready'
+    renderSidebar('/dashboard')
+
+    const utilities = screen.getByRole('navigation', { name: 'Bantuan dan informasi' })
+    for (const label of ['Yang Baru', 'Panduan Pengguna']) {
+      const utility = within(utilities).getByRole('button', { name: label })
+      expect(utility).toHaveAttribute('title', `${label} belum tersedia`)
+      await user.click(utility)
+      expect(screen.getByTestId('location')).toHaveTextContent('/dashboard')
+    }
+
+    const support = within(utilities).getByRole('button', { name: 'Dukungan' })
+    expect(support).toHaveAttribute('aria-expanded', 'false')
+    expect(within(utilities).queryByRole('button', { name: 'Laporkan Masalah' })).not.toBeInTheDocument()
+
+    await user.click(support)
+
+    expect(support).toHaveAttribute('aria-expanded', 'true')
+    for (const label of ['Laporkan Masalah', 'Dokumentasi', 'Tentang Kocokan']) {
+      const submenuItem = within(utilities).getByRole('button', { name: label })
+      expect(submenuItem).toHaveAttribute('title', `${label} belum tersedia`)
+      await user.click(submenuItem)
+      expect(screen.getByTestId('location')).toHaveTextContent('/dashboard')
+    }
+
+    await user.click(support)
+    expect(support).toHaveAttribute('aria-expanded', 'false')
+    expect(within(utilities).queryByRole('button', { name: 'Laporkan Masalah' })).not.toBeInTheDocument()
+    expect(screen.getByText('KOCOKAN', { selector: '.kc-operator-sidebar__footer-label' })).toBeInTheDocument()
+    expect(screen.getByText('Versi pengembangan')).toBeInTheDocument()
   })
 
   it('treats a stale Event reference as unavailable', () => {
@@ -73,7 +111,7 @@ describe('production sidebar Event gating', () => {
     workspace.status = 'loading'
     renderSidebar()
 
-    expect(screen.getAllByRole('link')).toHaveLength(8)
+    expect(screen.getAllByRole('link')).toHaveLength(10)
     expect(screen.queryAllByText('Select an Event first')).toHaveLength(0)
   })
 
@@ -83,6 +121,16 @@ describe('production sidebar Event gating', () => {
 
     expect(screen.getByRole('link', { name: 'Hadiah' })).toHaveClass('kc-operator-nav__link--active')
     expect(screen.getByRole('link', { name: 'Hadiah' })).toHaveAttribute('href', '/prize-categories')
+  })
+
+  it.each([
+    ['Log', '/log'],
+    ['Settings', '/settings/app'],
+  ])('preserves the active treatment for %s', (label, path) => {
+    workspace.status = 'ready'
+    renderSidebar(path)
+
+    expect(screen.getByRole('link', { name: label })).toHaveClass('kc-operator-nav__link--active')
   })
 
   it('keeps the next stage disabled when the current stage is complete but not admitted', () => {

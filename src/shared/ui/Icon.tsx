@@ -2,16 +2,23 @@ import type { ReactNode, SVGAttributes } from 'react'
 import { joinClassNames } from './class-names.ts'
 
 export type IconName =
+  | 'ArrowDown'
   | 'ArrowLeft'
   | 'ArrowRight'
+  | 'ArrowUp'
+  | 'BookOpen'
   | 'Calendar'
+  | 'Check'
   | 'CircleCheck'
   | 'CircleAlert'
+  | 'CircleStop'
   | 'CircleX'
   | 'Clock'
   | 'ChevronDown'
   | 'ChevronUp'
   | 'ClipboardCheck'
+  | 'Copy'
+  | 'Download'
   | 'ExternalLink'
   | 'FileSpreadsheet'
   | 'FileText'
@@ -21,11 +28,13 @@ export type IconName =
   | 'LayoutDashboard'
   | 'ListChecks'
   | 'ListX'
+  | 'LifeBuoy'
   | 'Lock'
   | 'Monitor'
   | 'MonitorCheck'
   | 'MonitorCog'
   | 'Palette'
+  | 'Pause'
   | 'Pencil'
   | 'Play'
   | 'Plus'
@@ -33,9 +42,13 @@ export type IconName =
   | 'Radio'
   | 'RotateCcw'
   | 'Save'
+  | 'Search'
+  | 'Settings'
   | 'SlidersHorizontal'
+  | 'Square'
   | 'StopCircle'
   | 'ShieldAlert'
+  | 'Sparkles'
   | 'TriangleAlert'
   | 'Trash2'
   | 'Trophy'
@@ -71,6 +84,12 @@ export function Icon({ className, name, size = 20, ...props }: IconProps) {
 }
 
 const iconPaths: Record<IconName, ReactNode> = {
+  ArrowDown: (
+    <>
+      <path d="M12 5v14" />
+      <path d="m19 12-7 7-7-7" />
+    </>
+  ),
   ArrowLeft: (
     <>
       <path d="M19 12H5" />
@@ -83,12 +102,25 @@ const iconPaths: Record<IconName, ReactNode> = {
       <path d="m12 5 7 7-7 7" />
     </>
   ),
+  ArrowUp: (
+    <>
+      <path d="M12 19V5" />
+      <path d="m5 12 7-7 7 7" />
+    </>
+  ),
+  BookOpen: (
+    <>
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11a1 1 0 0 1 1 1v16a2 2 0 0 0-2-2H4z" />
+      <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13a1 1 0 0 0-1 1v16a2 2 0 0 1 2-2h6z" />
+    </>
+  ),
   Calendar: (
     <>
       <rect height="16" rx="2" width="18" x="3" y="4" />
       <path d="M16 2v4M8 2v4M3 10h18" />
     </>
   ),
+  Check: <path d="m5 12 5 5L20 7" />,
   CircleCheck: (
     <>
       <circle cx="12" cy="12" r="9" />
@@ -121,6 +153,19 @@ const iconPaths: Record<IconName, ReactNode> = {
       <path d="M9 3h6v4H9z" />
       <rect height="16" rx="2" width="14" x="5" y="5" />
       <path d="m9 14 2 2 4-4" />
+    </>
+  ),
+  Copy: (
+    <>
+      <rect height="13" rx="2" width="13" x="9" y="9" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </>
+  ),
+  Download: (
+    <>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M12 15V3" />
     </>
   ),
   ExternalLink: (
@@ -181,6 +226,13 @@ const iconPaths: Record<IconName, ReactNode> = {
       <path d="m3 5 3 3M6 5 3 8M3 17l3 3M6 17l-3 3" />
     </>
   ),
+  LifeBuoy: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="m5.6 5.6 4.3 4.3M14.1 14.1l4.3 4.3M18.4 5.6l-4.3 4.3M9.9 14.1l-4.3 4.3" />
+    </>
+  ),
   Lock: (
     <>
       <rect height="10" rx="2" width="14" x="5" y="10" />
@@ -213,6 +265,12 @@ const iconPaths: Record<IconName, ReactNode> = {
       <circle cx="7.5" cy="10" r=".75" />
       <circle cx="8.5" cy="6.5" r=".75" />
       <circle cx="13" cy="6" r=".75" />
+    </>
+  ),
+  Pause: (
+    <>
+      <rect height="16" rx="1" width="4" x="6" y="4" />
+      <rect height="16" rx="1" width="4" x="14" y="4" />
     </>
   ),
   Pencil: (
@@ -254,10 +312,28 @@ const iconPaths: Record<IconName, ReactNode> = {
       <path d="M8 3v6h8V3M8 21v-6h8v6" />
     </>
   ),
+  Search: (
+    <>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </>
+  ),
+  Settings: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" />
+    </>
+  ),
   ShieldAlert: (
     <>
       <path d="M12 3 20 6v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6z" />
       <path d="M12 8v5M12 16h.01" />
+    </>
+  ),
+  Sparkles: (
+    <>
+      <path d="m12 3-1.2 3.3L7.5 7.5l3.3 1.2L12 12l1.2-3.3 3.3-1.2-3.3-1.2z" />
+      <path d="m18 13-.8 2.2L15 16l2.2.8L18 19l.8-2.2L21 16l-2.2-.8zM5 12l-.6 1.4L3 14l1.4.6L5 16l.6-1.4L7 14l-1.4-.6z" />
     </>
   ),
   SlidersHorizontal: (
@@ -268,6 +344,13 @@ const iconPaths: Record<IconName, ReactNode> = {
       <circle cx="10" cy="18" r="2" />
     </>
   ),
+  CircleStop: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <rect height="6" rx="1" width="6" x="9" y="9" />
+    </>
+  ),
+  Square: <rect height="18" rx="2" width="18" x="3" y="3" />,
   StopCircle: (
     <>
       <circle cx="12" cy="12" r="9" />

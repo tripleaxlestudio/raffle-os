@@ -1,46 +1,50 @@
 import { UiThemeContext } from '../../shared/ui/ui-theme.ts'
 import { Link, Outlet, useLocation } from 'react-router'
-import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { getDisplayConnectionStatus, subscribeDisplayConnectionStatus, type DisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
-import { ProductionWorkspaceProvider, signalProductionWorkspaceChanged, useProductionAudiencePublisher, useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.tsx'
+import { ProductionWorkspaceProvider, useProductionAudiencePublisher, useProductionWorkspace, type ProductionWorkspaceState } from '../workspace/ProductionWorkspaceContext.tsx'
 import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
 import { RuntimeDiagnosticsPanel } from '../../application/display-transport/RuntimeDiagnostics.tsx'
 import { appendRuntimeTrace } from '../../application/display-transport/runtime-trace.ts'
 import { productionSetupStageIndexForRoute } from '../workspace/production-setup-readiness.ts'
 import { ProductionSetupContinuation } from '../../shared/components/ProductionSetupContinuation.tsx'
-import { createEventSetupProductionServices } from '../../infrastructure/composition/event-setup-production.ts'
-import type { Event as RaffleEvent } from '../../domain/events/event.types.ts'
 import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
 import { Icon } from '../../shared/ui/index.ts'
 import { StartupRecoveryGate } from '../workspace/StartupRecoveryGate.tsx'
 import { openManagedAudienceDisplay } from '../../infrastructure/browser/managed-audience-display.ts'
 import { AudienceConnectionStatus } from '../../shared/components/AudienceConnectionStatus.tsx'
+import { BackToTopButton } from '../../shared/components/BackToTopButton.tsx'
+
+type OperatorEventStatus = {
+  readonly key: 'ready' | 'live' | 'pending' | 'completed' | 'interrupted' | 'draft' | 'archived' | 'loading' | 'setup-required' | 'unavailable'
+  readonly label: string
+}
+
+function operatorEventStatus(workspace: ProductionWorkspaceState): OperatorEventStatus {
+  if (workspace.status === 'loading') return { key: 'loading', label: 'Memuat' }
+  if (workspace.status === 'empty') return { key: 'setup-required', label: 'Perlu pengaturan' }
+  if (workspace.status !== 'ready') return { key: 'unavailable', label: 'Tidak tersedia' }
+
+  const recoveryInterrupted = workspace.startupRecovery.kind === 'conflicting-sessions'
+    || (workspace.startupRecovery.kind === 'recover-session'
+      && (workspace.startupRecovery.decision.kind === 'resume-setup' || workspace.startupRecovery.decision.kind === 'safe-acknowledgement-required'))
+  if (recoveryInterrupted) return { key: 'interrupted', label: 'Terganggu' }
+  if (workspace.unresolvedSession?.status === 'drawing') return { key: 'live', label: 'Live' }
+  if (workspace.unresolvedSession?.status === 'pending-confirmation') return { key: 'pending', label: 'Pending' }
+
+  const eventStatuses: Readonly<Record<typeof workspace.event.status, OperatorEventStatus>> = {
+    archived: { key: 'archived', label: 'Diarsipkan' },
+    completed: { key: 'completed', label: 'Selesai' },
+    draft: { key: 'draft', label: 'Draf' },
+    live: { key: 'live', label: 'Live' },
+    ready: { key: 'ready', label: 'Ready' },
+  }
+  return eventStatuses[workspace.event.status]
+}
 
 function ProductionOperatorHeader() {
   const workspace = useProductionWorkspace()
   const audience = useProductionAudiencePublisher()
-  const eventServices = useMemo(() => createEventSetupProductionServices(), [])
-  const [eventMenuOpen, setEventMenuOpen] = useState(false)
-  const [availableEvents, setAvailableEvents] = useState<readonly RaffleEvent[]>([])
-  const [eventsLoading, setEventsLoading] = useState(false)
-  const [eventSwitching, setEventSwitching] = useState(false)
-  const [eventMenuError, setEventMenuError] = useState<string | null>(null)
-  const eventMenuId = useId()
-  const eventButtonRef = useRef<HTMLButtonElement>(null)
-  const eventPopoverRef = useRef<HTMLDivElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const loadAvailableEvents = useCallback(async () => {
-    setEventsLoading(true)
-    try {
-      await eventServices.open()
-      setAvailableEvents((await eventServices.events.findAll()).filter((event) => event.status !== 'archived'))
-      setEventMenuError(null)
-    } catch (cause: unknown) {
-      setEventMenuError(cause instanceof Error ? cause.message : 'Acara tidak dapat dibaca dengan aman.')
-    } finally {
-      setEventsLoading(false)
-    }
-  }, [eventServices])
   const eventLabel = workspace.status === 'loading'
     ? 'Membaca Acara aktif'
     : workspace.status === 'ready'
@@ -48,9 +52,7 @@ function ProductionOperatorHeader() {
       : workspace.status === 'empty'
         ? 'Tidak ada Acara aktif'
         : 'Ruang kerja tidak tersedia'
-  const eventStatus = workspace.status === 'ready'
-    ? workspace.event.status.charAt(0).toUpperCase() + workspace.event.status.slice(1)
-    : workspace.status === 'empty' ? 'Perlu pengaturan' : workspace.status === 'loading' ? 'Memuat' : 'Tidak tersedia'
+  const eventStatus = operatorEventStatus(workspace)
   const audienceStatusKey = workspace.status === 'ready' && workspace.displayConfiguration !== null ? `${workspace.event.id}:${workspace.displayConfiguration.id}` : 'unconfigured'
   const subscribedAudienceState = useSyncExternalStore((listener) => subscribeDisplayConnectionStatus(audienceStatusKey, listener), (): DisplayConnectionStatus => getDisplayConnectionStatus(audienceStatusKey), (): DisplayConnectionStatus => 'waiting')
   const audienceState: DisplayConnectionStatus = workspace.status !== 'ready'
@@ -87,86 +89,17 @@ function ProductionOperatorHeader() {
       safeAreaMargin: workspace.displayConfiguration.safeAreaMargin,
     })
   }
-  const selectEvent = async (event: RaffleEvent) => {
-    if (eventSwitching) return
-    setEventMenuError(null)
-    if (workspace.status === 'ready' && workspace.event.id === event.id) {
-      setEventMenuOpen(false)
-      return
-    }
-    setEventSwitching(true)
-    try {
-      await eventServices.service.selectEvent(event.id)
-      signalProductionWorkspaceChanged()
-      setEventMenuOpen(false)
-    } catch (cause: unknown) {
-      setEventMenuError(cause instanceof Error ? cause.message : 'Acara tidak dapat dipilih.')
-    } finally {
-      setEventSwitching(false)
-    }
-  }
   const openAudience = () => {
     if (audienceUrl === null) return
     openManagedAudienceDisplay(audienceUrl)
   }
-  useEffect(() => {
-    if (!eventMenuOpen) return
-    queueMicrotask(() => {
-      const firstItem = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')
-      ;(firstItem ?? menuRef.current)?.focus()
-    })
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setEventMenuOpen(false)
-        eventButtonRef.current?.focus()
-      } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End') {
-        event.preventDefault()
-        const items = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
-        if (items.length === 0) return
-        const current = items.indexOf(document.activeElement as HTMLElement)
-        const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : event.key === 'ArrowDown' ? (current + 1) % items.length : (current - 1 + items.length) % items.length
-        items[next]?.focus()
-      }
-    }
-    document.addEventListener('keydown', onKeyDown)
-    const onPointerDown = (event: PointerEvent) => {
-      if (!eventPopoverRef.current?.contains(event.target as Node)) setEventMenuOpen(false)
-    }
-    document.addEventListener('pointerdown', onPointerDown)
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      document.removeEventListener('pointerdown', onPointerDown)
-    }
-  }, [eventMenuOpen])
-  useEffect(() => {
-    if (!eventMenuOpen || eventsLoading || availableEvents.length === 0) return
-    const menu = menuRef.current
-    if (menu !== null && document.activeElement === menu) {
-      menu.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
-    }
-  }, [availableEvents.length, eventMenuOpen, eventsLoading])
   return <header className="kc-operator-header">
-    <div ref={eventPopoverRef} className="kc-operator-header__event">
-      <button ref={eventButtonRef} type="button" className="kc-operator-header__event-control" aria-controls={eventMenuOpen ? eventMenuId : undefined} aria-haspopup="menu" aria-expanded={eventMenuOpen} onClick={() => { const nextOpen = !eventMenuOpen; setEventMenuOpen(nextOpen); if (nextOpen) void loadAvailableEvents() }}>
+    <div className="kc-operator-header__event">
+      <Link className="kc-operator-header__event-control" to="/events">
         <span className="kc-operator-header__label">Acara aktif</span>
         <strong title={eventLabel}>{eventLabel}</strong>
-        <span className="kc-operator-event-status">{eventStatus}</span>
-        <span className="kc-operator-header__chevron" aria-hidden="true" />
-      </button>
-      {eventMenuOpen ? <div ref={menuRef} id={eventMenuId} className="kc-operator-header__menu" role="menu" aria-busy={eventsLoading || undefined} aria-label="Pemilih Acara aktif" tabIndex={-1}>
-        {eventsLoading ? <span className="kc-operator-header__menu-status" role="status">Memuat Acara…</span> : null}
-        {eventMenuError === null ? availableEvents.map((event) => {
-          const isCurrent = workspace.status === 'ready' && workspace.event.id === event.id
-          return <div className={`kc-operator-header__event-option${isCurrent ? ' kc-operator-header__event-option--current' : ''}`} key={event.id}>
-            <button type="button" role="menuitem" className="kc-operator-header__event-switch" aria-current={isCurrent ? 'true' : undefined} disabled={eventSwitching} onClick={() => void selectEvent(event)}>
-              <span className="kc-operator-header__event-option-copy"><strong>{event.name}</strong><span>{statusLabel(event.status)}</span></span>
-              {isCurrent ? <span className="kc-operator-header__event-current">Aktif</span> : null}
-            </button>
-            <Link role="menuitem" className="kc-operator-header__event-manage" aria-label={`Kelola ${event.name}`} to={`/events?eventId=${encodeURIComponent(event.id)}`} onClick={() => setEventMenuOpen(false)}><span aria-hidden="true">⚙</span></Link>
-          </div>
-        }) : <span className="kc-operator-header__menu-status" role="alert">{eventMenuError}</span>}
-        {!eventsLoading && eventMenuError === null && availableEvents.length === 0 ? <span className="kc-operator-header__menu-status">Tidak ada Acara yang tersedia.</span> : null}
-      </div> : null}
+        <span className="kc-operator-event-status" data-status={eventStatus.key}>{eventStatus.label}</span>
+      </Link>
     </div>
     <div className="kc-operator-header__status" aria-label="Utilitas Operator">
       {workspace.status === 'ready' && workspace.currentMode !== null ? <span className="kc-mode-badge" data-mode={workspace.currentMode}>{workspace.currentMode === 'live' ? 'Mode Live' : 'Mode Latihan'}</span> : null}
@@ -240,6 +173,7 @@ function ProductionOperatorContent() {
     <div className="operator-workspace kc-operator-workspace">
       <ProductionOperatorHeader />
       <main className="operator-main operator-main--production kc-operator-main" data-production-content-scroll="true" id="operator-main" tabIndex={-1}><StartupRecoveryGate recovery={workspace.status === 'ready' ? workspace.startupRecovery : undefined} /><Outlet /><ProductionAudienceDiagnostics />{productionSetupStageIndexForRoute(location.pathname) !== undefined ? <ProductionSetupContinuation /> : null}</main>
+      <BackToTopButton />
     </div>
   </div>
 }

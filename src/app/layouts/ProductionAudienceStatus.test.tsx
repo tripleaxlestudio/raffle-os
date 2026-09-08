@@ -7,6 +7,9 @@ import type { PublisherStatus } from '../../application/display-transport/operat
 import { setDisplayConnectionStatus } from '../../application/display-transport/connection-status.ts'
 import { ProductionOperatorLayout } from './ProductionOperatorLayout.tsx'
 import { ProductionDashboardPage } from '../../pages/operator/ProductionDashboardPage.tsx'
+import type { EventStatus } from '../../domain/events/event.types.ts'
+import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
+import type { StartupRecoveryResult } from '../../application/workflow/startup-recovery-arbiter.ts'
 
 const mocks = vi.hoisted(() => {
   const listeners = new Set<(status: PublisherStatus) => void>()
@@ -18,9 +21,9 @@ const mocks = vi.hoisted(() => {
     publish: vi.fn(),
   }
   const workspace = {
-    status: 'ready', event: { id: 'ui-event', name: 'UI test', status: 'draft' },
+    status: 'ready', event: { id: 'ui-event', name: 'UI test', status: 'ready' as EventStatus },
     displayConfiguration: { id: 'ui-display' }, currentMode: null as 'live' | 'practice' | null,
-    unresolvedSession: null, participantCount: 0, checkedInParticipantCount: 0,
+    unresolvedSession: null as DrawSession | null, startupRecovery: { kind: 'normal', targetPath: '/dashboard' } as StartupRecoveryResult, participantCount: 0, checkedInParticipantCount: 0,
     prizeCategoryCount: 0, liveSessionCount: 0,
     sessionCounts: { ready: 0, drawing: 0, 'pending-confirmation': 0 },
   }
@@ -41,7 +44,7 @@ vi.mock('../../application/draw/draw-session-queue.ts', () => ({ queryDrawSessio
 vi.mock('../../infrastructure/browser/managed-audience-display.ts', () => ({ openManagedAudienceDisplay: mocks.openAudience }))
 
 function renderDashboard() {
-  return render(<MemoryRouter initialEntries={['/dashboard']}><Routes><Route element={<ProductionOperatorLayout />}><Route path="/dashboard" element={<ProductionDashboardPage />} /></Route></Routes></MemoryRouter>)
+  return render(<MemoryRouter initialEntries={['/dashboard']}><Routes><Route element={<ProductionOperatorLayout />}><Route path="/dashboard" element={<ProductionDashboardPage />} /><Route path="/events" element={<h1>Pengaturan Acara</h1>} /></Route></Routes></MemoryRouter>)
 }
 
 describe('production header and dashboard Audience indicators', () => {
@@ -49,44 +52,59 @@ describe('production header and dashboard Audience indicators', () => {
     mocks.state.connected = false
     mocks.audience.status = { kind: 'waiting-for-display' }
     mocks.openAudience.mockClear()
-    mocks.services.service.selectEvent.mockClear()
     mocks.workspace.currentMode = null
     mocks.workspace.event.name = 'UI test'
+    mocks.workspace.event.status = 'ready'
+    mocks.workspace.unresolvedSession = null
+    mocks.workspace.startupRecovery = { kind: 'normal', targetPath: '/dashboard' }
     setDisplayConnectionStatus('ui-event:ui-display', 'waiting')
   })
 
-  it('retains Event menu keyboard navigation, selection and Escape focus return', async () => {
+  it('uses one accessible Active Event link to navigate directly to Event settings', async () => {
     const user = userEvent.setup()
     renderDashboard()
-    const trigger = screen.getByRole('button', { name: /^Acara aktif\s*UI test\s*Draft$/ })
-    await user.click(trigger)
-    const menu = screen.getByRole('menu', { name: 'Pemilih Acara aktif' })
-    const first = await within(menu).findByRole('menuitem', { name: /^UI test\s*Draf\s*Aktif$/ })
-    await user.keyboard('{Home}')
-    expect(first).toHaveFocus()
-    await user.keyboard('{End}')
-    expect(within(menu).getByRole('menuitem', { name: 'Kelola Another test event' })).toHaveFocus()
-    await user.keyboard('{ArrowUp}')
-    expect(within(menu).getByRole('menuitem', { name: /^Another test event\s*Draf$/ })).toHaveFocus()
-    await user.keyboard('{Escape}')
-    expect(trigger).toHaveFocus()
+    const control = screen.getByRole('link', { name: /^Acara aktif\s*UI test\s*Ready$/ })
+    expect(control).toHaveAttribute('href', '/events')
+    expect(control.querySelector('.kc-operator-header__chevron')).not.toBeInTheDocument()
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
-    expect(mocks.services.service.selectEvent).not.toHaveBeenCalled()
-    await user.click(trigger)
-    await user.click(await screen.findByRole('menuitem', { name: /^Another test event\s*Draf$/ }))
-    expect(mocks.services.service.selectEvent).toHaveBeenCalledWith('another-event')
+    await user.click(control)
+    expect(screen.getByRole('heading', { level: 1, name: 'Pengaturan Acara' })).toBeVisible()
   })
 
-  it('retains the complete long Event name in its title and menu', async () => {
+  it('retains the complete long Event name in the compact link title', () => {
     mocks.workspace.event.name = 'Perayaan tahunan perusahaan dan keluarga besar seluruh cabang Indonesia — fixture nama Acara panjang'
-    const user = userEvent.setup()
     renderDashboard()
     const header = within(screen.getByRole('banner'))
     expect(header.getByText(mocks.workspace.event.name)).toHaveAttribute('title', mocks.workspace.event.name)
-    await user.click(header.getByRole('button', { name: /^Acara aktif/ }))
-    expect(await within(screen.getByRole('menu')).findByText(mocks.workspace.event.name)).toBeVisible()
-    await user.click(screen.getByRole('heading', { level: 1 }))
+    expect(header.getByRole('link', { name: /^Acara aktif/ })).toHaveAttribute('href', '/events')
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['ready', 'ready', 'Ready'],
+    ['live', 'live', 'Live'],
+    ['completed', 'completed', 'Selesai'],
+    ['draft', 'draft', 'Draf'],
+    ['archived', 'archived', 'Diarsipkan'],
+  ] as const)('maps the %s Event status to an explicit %s badge', (eventStatus, statusKey, label) => {
+    mocks.workspace.event.status = eventStatus
+    renderDashboard()
+    expect(within(screen.getByRole('banner')).getByText(label)).toHaveAttribute('data-status', statusKey)
+  })
+
+  it.each([
+    ['drawing', 'live', 'Live'],
+    ['pending-confirmation', 'pending', 'Pending'],
+  ] as const)('uses authoritative %s Live-session state for the %s badge', (sessionStatus, statusKey, label) => {
+    mocks.workspace.unresolvedSession = { status: sessionStatus } as DrawSession
+    renderDashboard()
+    expect(within(screen.getByRole('banner')).getByText(label)).toHaveAttribute('data-status', statusKey)
+  })
+
+  it('shows an interrupted badge for authoritative conflicting recovery state', () => {
+    mocks.workspace.startupRecovery = { kind: 'conflicting-sessions', sessions: [], recommendedRoute: '/draw/pending' }
+    renderDashboard()
+    expect(within(screen.getByRole('banner')).getByText('Terganggu')).toHaveAttribute('data-status', 'interrupted')
   })
 
   it.each([['live', 'Mode Live'], ['practice', 'Mode Latihan']] as const)('keeps %s mode explicit in production chrome', (mode, label) => {

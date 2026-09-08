@@ -40,12 +40,12 @@ describe('EventsPage activation flow', () => {
     const user = userEvent.setup()
     renderPage()
 
-    expect(await screen.findByText('SAAT INI')).toBeInTheDocument()
-    expect(screen.getByText('DRAFT')).toBeInTheDocument()
+    expect(await screen.findByText('AKTIF')).toBeInTheDocument()
+    expect(screen.getByText('DRAF')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Aktifkan Acara' }))
 
-    expect(screen.getByRole('dialog')).toHaveTextContent('Activate Uji Coba Event?')
-    expect(screen.getByText('Verify the Event setup before continuing.')).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toHaveTextContent('Aktifkan Uji Coba Event?')
+    expect(screen.getByText('Pastikan pengaturan Acara sudah benar sebelum melanjutkan.')).toBeInTheDocument()
     expect(service.activateEvent).not.toHaveBeenCalled()
   })
 
@@ -53,15 +53,15 @@ describe('EventsPage activation flow', () => {
     const user = userEvent.setup()
     renderPage()
     await user.click(await screen.findByRole('button', { name: 'Aktifkan Acara' }))
-    await user.click(screen.getByRole('button', { name: 'Batal' }))
-    expect(screen.getByText('DRAFT')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByText('DRAF')).toBeInTheDocument()
     expect(service.activateEvent).not.toHaveBeenCalled()
 
     await user.click(screen.getByRole('button', { name: 'Aktifkan Acara' }))
     const activationButtons = screen.getAllByRole('button', { name: 'Aktifkan Acara' })
     await user.click(activationButtons[activationButtons.length - 1])
-    expect(await screen.findByText('READY')).toBeInTheDocument()
-    expect(screen.getByText('SAAT INI')).toBeInTheDocument()
+    expect(await screen.findByText('SIAP')).toBeInTheDocument()
+    expect(screen.getByText('AKTIF')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Aktifkan Acara' })).not.toBeInTheDocument()
   })
 
@@ -69,8 +69,8 @@ describe('EventsPage activation flow', () => {
     event = { ...event, status: 'live' }
     renderPage()
 
-    await screen.findByText('LIVE')
+    await screen.findByText('MODE LIVE')
     expect(screen.queryByRole('button', { name: 'Aktifkan Acara' })).not.toBeInTheDocument()
-    expect(screen.getByText('Protected')).toBeInTheDocument()
+    expect(screen.getByText('Dilindungi')).toBeInTheDocument()
   })
 })

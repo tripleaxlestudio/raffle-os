@@ -58,6 +58,7 @@ export interface DrawSetupProductionServices extends DrawSetupQueryRepositories 
   readonly displayConfigurations?: import('../persistence/repositories/display-configuration-repository.interface.ts').DisplayConfigurationRepository
   readonly audits?: import('../persistence/repositories/audit-repository.interface.ts').AuditRepository
   readonly redraws?: import('../persistence/repositories/redraw-repository.interface.ts').RedrawRepository
+  readonly redrawRequests?: import('../persistence/repositories/redraw-request-repository.interface.ts').RedrawRequestRepository
   readonly pendingDecisions?: {
     readonly confirmation: import('../pending-decisions/confirmation-service.ts').ConfirmationService
     readonly cancellation: import('../pending-decisions/cancellation-service.ts').CancellationService

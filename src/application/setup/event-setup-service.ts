@@ -13,7 +13,7 @@ export interface EventSetupServices {
 }
 
 export interface EventDraft { readonly name: string; readonly description?: string; readonly scheduledAt?: string }
-export interface CategoryDraft { readonly eventId: EventId; readonly name: string; readonly prizeName: string; readonly description?: string; readonly sponsorName?: string; readonly displayOrder: number }
+export interface CategoryDraft { readonly eventId: EventId; readonly name: string; readonly prizeName: string; readonly description?: string; readonly sponsorName?: string; readonly displayOrder: number; readonly prizeImageAssetId?: string }
 
 function timestamp(): IsoTimestamp {
   const result = isoTimestampFromDate(new Date())
@@ -62,12 +62,12 @@ export function createEventSetupService(services: EventSetupServices) {
       await services.preferences.set('activeEventId', eventId, timestamp())
     },
     async createCategory(draft: CategoryDraft): Promise<PrizeCategory> {
-      const category: PrizeCategory = { id: createPrizeCategoryId(), eventId: draft.eventId, name: draft.name.trim(), prizeName: draft.prizeName.trim(), description: optionalText(draft.description), sponsorName: optionalText(draft.sponsorName), displayOrder: draft.displayOrder, createdAt: timestamp() }
+      const category: PrizeCategory = { id: createPrizeCategoryId(), eventId: draft.eventId, name: draft.name.trim(), prizeName: draft.prizeName.trim(), description: optionalText(draft.description), sponsorName: optionalText(draft.sponsorName), displayOrder: draft.displayOrder, prizeImageAssetId: optionalText(draft.prizeImageAssetId), createdAt: timestamp() }
       await services.categories.create(category)
       return category
     },
     async updateCategory(category: PrizeCategory, draft: Omit<CategoryDraft, 'eventId'>): Promise<PrizeCategory> {
-      const updated: PrizeCategory = { ...category, name: draft.name.trim(), prizeName: draft.prizeName.trim(), description: optionalText(draft.description), sponsorName: optionalText(draft.sponsorName), displayOrder: draft.displayOrder }
+      const updated: PrizeCategory = { ...category, name: draft.name.trim(), prizeName: draft.prizeName.trim(), description: optionalText(draft.description), sponsorName: optionalText(draft.sponsorName), displayOrder: draft.displayOrder, prizeImageAssetId: optionalText(draft.prizeImageAssetId) }
       await services.categories.updateDraft(updated)
       return updated
     },

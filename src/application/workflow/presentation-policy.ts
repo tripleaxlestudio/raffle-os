@@ -3,14 +3,11 @@ import type { DrawPresentationConfiguration } from '../../domain/draws/draw-pres
 
 export const PRESENTATION_POLICY_VERSION = 1 as const
 
-// Manual Stop orchestration must use a bounded safety timeout owned by Draw Run,
-// not the operator-facing roll duration. It is intentionally not part of this
-// pre-Slice-3 controller contract until Stop & Reveal is implemented.
-
 export interface PresentationPolicy {
   readonly version: typeof PRESENTATION_POLICY_VERSION
   readonly countdownDurationMs: number
   readonly countdownLabelDurationMs: number
+  /** @deprecated Retained for persisted EventSettings compatibility; rolling has no timeout. */
   readonly rollingDurationMs: number
   readonly countdownLabels: readonly [3, 2, 1]
   readonly presentationConfiguration?: DrawPresentationConfiguration
@@ -30,6 +27,6 @@ export function presentationPolicyFromSettings(countdownDurationSeconds: number,
 
 export function stageDurationMs(stage: PresentationStage, policy = PRESENTATION_POLICY): number {
   if (stage === 'countdown') return policy.countdownDurationMs
-  if (stage === 'rolling') return policy.rollingDurationMs
+  if (stage === 'rolling') return Number.POSITIVE_INFINITY
   return Number.POSITIVE_INFINITY
 }

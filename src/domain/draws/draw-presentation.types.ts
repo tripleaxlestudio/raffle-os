@@ -11,6 +11,7 @@ export const DRAW_PRESENTATION_MODES = [
 ] as const
 
 export const DRAW_REVEAL_MODES = ['all-together', 'sequential'] as const
+/** @deprecated Retained only to parse persisted configurations from before manual-only rolling. */
 export const DRAW_ROLL_STOP_MODES = ['timed', 'manual'] as const
 
 export const DRAW_ROLL_SPEED_PER_SECOND_MIN = 1
@@ -23,7 +24,9 @@ export type DrawRollStopMode = (typeof DRAW_ROLL_STOP_MODES)[number]
 
 export interface DrawPresentationConfiguration {
   readonly presentationMode: DrawPresentationMode
+  /** @deprecated Persisted for backward compatibility. Runtime rolling is always manual. */
   readonly rollStopMode: DrawRollStopMode
+  /** @deprecated Persisted for backward compatibility and ignored by rolling runtime. */
   readonly rollDurationSeconds: RollingDurationSeconds
   readonly rollSpeedPerSecond: number
   readonly revealMode: DrawRevealMode
@@ -31,7 +34,7 @@ export interface DrawPresentationConfiguration {
 
 export const DEFAULT_DRAW_PRESENTATION_CONFIGURATION: DrawPresentationConfiguration = Object.freeze({
   presentationMode: 'instant-reveal',
-  rollStopMode: 'timed',
+  rollStopMode: 'manual',
   rollDurationSeconds: DEFAULT_PRESENTATION_SETTINGS.rollingDurationSeconds,
   rollSpeedPerSecond: DEFAULT_DRAW_ROLL_SPEED_PER_SECOND,
   revealMode: 'all-together',
@@ -53,9 +56,17 @@ const isRollSpeed = (value: unknown): value is number =>
 export function resolveDrawPresentationConfiguration(
   value: Partial<DrawPresentationConfiguration> | undefined,
 ): DrawPresentationConfiguration {
+  const presentationMode: DrawPresentationMode =
+    value?.presentationMode === 'random-number-roll'
+      ? 'random-number-roll'
+      : 'instant-reveal'
+
   return Object.freeze({
-    ...DEFAULT_DRAW_PRESENTATION_CONFIGURATION,
-    ...(value ?? {}),
+    presentationMode,
+    rollStopMode: 'manual',
+    rollDurationSeconds: DEFAULT_PRESENTATION_SETTINGS.rollingDurationSeconds,
+    rollSpeedPerSecond: DEFAULT_DRAW_ROLL_SPEED_PER_SECOND,
+    revealMode: 'all-together',
   })
 }
 
@@ -70,25 +81,25 @@ export function validateDrawPresentationConfiguration(
   if (!isOneOf(DRAW_PRESENTATION_MODES, candidate.presentationMode)) {
     return failure('invalid-presentation-mode', 'Presentation mode is unsupported.')
   }
-  if (!isOneOf(DRAW_ROLL_STOP_MODES, candidate.rollStopMode)) {
+  if (candidate.rollStopMode !== undefined && !isOneOf(DRAW_ROLL_STOP_MODES, candidate.rollStopMode)) {
     return failure('invalid-roll-stop-mode', 'Roll stop mode is unsupported.')
   }
-  if (!isRollDuration(candidate.rollDurationSeconds)) {
+  if (candidate.rollDurationSeconds !== undefined && !isRollDuration(candidate.rollDurationSeconds)) {
     return failure('invalid-roll-duration', 'Roll duration must use a supported duration.')
   }
-  if (!isRollSpeed(candidate.rollSpeedPerSecond)) {
+  if (candidate.rollSpeedPerSecond !== undefined && !isRollSpeed(candidate.rollSpeedPerSecond)) {
     return failure('invalid-roll-speed', `Roll speed must be an integer from ${DRAW_ROLL_SPEED_PER_SECOND_MIN} through ${DRAW_ROLL_SPEED_PER_SECOND_MAX} per second.`)
   }
-  if (!isOneOf(DRAW_REVEAL_MODES, candidate.revealMode)) {
+  if (candidate.revealMode !== undefined && !isOneOf(DRAW_REVEAL_MODES, candidate.revealMode)) {
     return failure('invalid-reveal-mode', 'Reveal mode is unsupported.')
   }
 
   return success(Object.freeze({
     presentationMode: candidate.presentationMode,
-    rollStopMode: candidate.rollStopMode,
-    rollDurationSeconds: candidate.rollDurationSeconds,
-    rollSpeedPerSecond: candidate.rollSpeedPerSecond,
-    revealMode: candidate.revealMode,
+    rollStopMode: 'manual',
+    rollDurationSeconds: DEFAULT_PRESENTATION_SETTINGS.rollingDurationSeconds,
+    rollSpeedPerSecond: DEFAULT_DRAW_ROLL_SPEED_PER_SECOND,
+    revealMode: 'all-together',
   }))
 }
 

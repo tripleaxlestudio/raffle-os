@@ -48,7 +48,7 @@ describe('draw authoring service', () => {
     if (!result.ok) return
     expect(result.record.configuration.presentation).toEqual({
       presentationMode: 'random-number-roll',
-      rollStopMode: 'timed',
+      rollStopMode: 'manual',
       rollDurationSeconds: 5,
       rollSpeedPerSecond: 20,
       revealMode: 'all-together',

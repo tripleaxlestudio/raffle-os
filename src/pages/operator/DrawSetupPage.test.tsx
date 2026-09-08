@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
@@ -26,12 +26,46 @@ function services(overrides: { record?: DrawAuthoringRecord | null; recordRef?: 
   const selectedParticipants = overrides.participants ?? participants
   const persistedConfigurations = overrides.configurations ?? [configuration]
   const persistedSessions = overrides.sessions ?? [session]
-  return { open: vi.fn(async () => undefined), checkStorage: vi.fn(async () => ({ ok: true as const })), checkCrypto: vi.fn(async () => ({ ok: true as const })), preferences: { get: vi.fn(async () => event.id) }, events: { findById: vi.fn(async () => event) }, configurations: { findById: vi.fn(async () => configuration), findByEventId: vi.fn(async () => persistedConfigurations) }, categories: { findById: vi.fn(async () => category) }, sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => activeConflict === undefined ? persistedSessions : [session, { ...session, id: 'live-conflict', mode: 'live' as const, status: activeConflict }]) }, participants: { countByEventId: vi.fn(async () => selectedParticipants.length), findByEventId: vi.fn(async () => selectedParticipants) }, winners: { findByEventId: vi.fn(async () => []) }, authoringService: { load, save }, } as unknown as DrawSetupProductionServices
+  return { open: vi.fn(async () => undefined), checkStorage: vi.fn(async () => ({ ok: true as const })), checkCrypto: vi.fn(async () => ({ ok: true as const })), preferences: { get: vi.fn(async () => event.id) }, events: { findById: vi.fn(async () => event) }, configurations: { findById: vi.fn(async () => configuration), findByEventId: vi.fn(async () => persistedConfigurations) }, categories: { findById: vi.fn(async () => category), findByEventId: vi.fn(async () => overrides.categories ?? [category]) }, sessions: { findById: vi.fn(async () => session), findByEventId: vi.fn(async () => activeConflict === undefined ? persistedSessions : [session, { ...session, id: 'live-conflict', mode: 'live' as const, status: activeConflict }]) }, participants: { countByEventId: vi.fn(async () => selectedParticipants.length), findByEventId: vi.fn(async () => selectedParticipants) }, winners: { findByEventId: vi.fn(async () => []) }, authoringService: { load, save }, } as unknown as DrawSetupProductionServices
 }
 
 function renderPage(value: DrawSetupProductionServices) { return render(<MemoryRouter><DrawSetupPage services={value} /></MemoryRouter>) }
 
+function metricValue(metrics: HTMLElement, label: string): HTMLElement {
+  const value = within(metrics).getByText(label).closest('div')?.querySelector('dd')
+  if (!(value instanceof HTMLElement)) throw new Error(`Expected a metric value for ${label}.`)
+  return value
+}
+
 describe('Draw Setup persisted authoring', () => {
+  it('presents the Live continuation consequence as a localized, scannable confirmation', async () => {
+    const user = userEvent.setup()
+    const liveRecord = {
+      ...record,
+      session: { ...session, mode: 'live' as const },
+    } as unknown as DrawAuthoringRecord
+
+    renderPage(services({ record: liveRecord }))
+
+    await user.click(await screen.findByRole('button', { name: 'Lanjutkan ke gerbang mulai Live' }))
+    const dialog = screen.getByRole('dialog', { name: 'Konfirmasi kelanjutan Mode Live' })
+
+    expect(within(dialog).getByText('Konfirmasi operator')).toBeInTheDocument()
+    expect(within(dialog).getByText('Periksa dampak sebelum melanjutkan')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Batal' })).toHaveFocus()
+    expect(within(dialog).getByRole('button', { name: 'Tutup dialog' })).toHaveTextContent('Tutup')
+    expect(within(dialog).getByRole('button', { name: 'Konfirmasi kelanjutan Live' })).toHaveClass('ui-button--primary')
+    expect(within(dialog).getByText('Acara').closest('div')).toHaveTextContent('Persisted Gala')
+    expect(within(dialog).getByText('Hadiah').closest('div')).toHaveTextContent('Electric Vehicle')
+    expect(within(dialog).getByText('Jumlah pemenang').closest('div')).toHaveTextContent('1')
+    expect(within(dialog).getByText('Pool memenuhi syarat').closest('div')).toHaveTextContent('1')
+    expect(within(dialog).getByText('Mode').closest('div')).toHaveTextContent('Live')
+    expect(within(dialog).getByText('Tindakan ini hanya membuka gerbang mulai; belum memilih pemenang.')).toBeInTheDocument()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Batal' }))
+    expect(screen.queryByRole('dialog', { name: 'Konfirmasi kelanjutan Mode Live' })).not.toBeInTheDocument()
+  })
+
   it('keeps Event read-only and follows the selected persisted category prize', async () => {
     const user = userEvent.setup()
     renderPage(services({ categories: [category, alternateCategory] }))
@@ -184,27 +218,22 @@ describe('Draw Setup persisted authoring', () => {
     expect(screen.getByRole('heading', { name: 'Winner quantity' })).toBeInTheDocument()
   })
 
-  it('selects Random Number Roll and maps duration, speed, and reveal presets', async () => {
+  it('selects Random Number Roll and maps speed and reveal presets without timed controls', async () => {
     const user = userEvent.setup()
     renderPage(services())
     await screen.findByRole('heading', { name: 'Reveal style' })
     await user.click(screen.getByRole('radio', { name: /Random Number Roll/ }))
     expect(screen.getByRole('radio', { name: /Random Number Roll/ })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('radio', { name: '8 sec' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('radio', { name: '8 sec' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('radio', { name: '8 sec' })).toHaveClass('presentation-segment--selected')
+    expect(screen.queryByRole('group', { name: 'Roll control' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Roll duration' })).not.toBeInTheDocument()
     expect(screen.getByRole('radio', { name: /Fast/ })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByRole('radio', { name: /Fast/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('radio', { name: /Fast/ })).toHaveClass('presentation-segment--selected')
     expect(screen.getByRole('radio', { name: 'Reveal Together' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByRole('radio', { name: 'Reveal Together' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('radio', { name: 'Reveal Together' })).toHaveClass('presentation-segment--selected')
-    expect(screen.getByRole('radio', { name: '5 sec' })).toHaveAttribute('aria-checked', 'false')
-    await user.click(screen.getByRole('radio', { name: '5 sec' }))
     await user.click(screen.getByRole('radio', { name: /Smooth/ }))
     await user.click(screen.getByRole('radio', { name: 'Reveal Sequentially' }))
-    expect(screen.getByRole('radio', { name: '5 sec' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('radio', { name: '5 sec' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('radio', { name: /Smooth/ })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByRole('radio', { name: /Smooth/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('radio', { name: 'Reveal Sequentially' })).toHaveAttribute('aria-checked', 'true')
@@ -217,32 +246,25 @@ describe('Draw Setup persisted authoring', () => {
     renderPage(services({ save }))
     await screen.findByRole('heading', { name: 'Reveal style' })
     await user.click(screen.getByRole('radio', { name: /Random Number Roll/ }))
-    await user.click(screen.getByRole('radio', { name: '12 sec' }))
     await user.click(screen.getByRole('radio', { name: /Rapid/ }))
     await user.click(screen.getByRole('radio', { name: 'Reveal Together' }))
     expect(screen.getByRole('radio', { name: 'Latihan' })).toBeChecked()
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ requestedWinners: '1', mode: 'practice', presentation: { presentationMode: 'random-number-roll', rollStopMode: 'timed', rollDurationSeconds: 12, rollSpeedPerSecond: 20, revealMode: 'all-together' } }))
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ requestedWinners: '1', mode: 'practice', presentation: { presentationMode: 'random-number-roll', rollStopMode: 'manual', rollDurationSeconds: 8, rollSpeedPerSecond: 20, revealMode: 'all-together' } }))
   })
 
-  it('shows timed duration controls by default and preserves the duration across Manual Stop', async () => {
+  it('does not expose rolling stop or duration controls', async () => {
     const user = userEvent.setup()
     renderPage(services())
     await screen.findByRole('heading', { name: 'Reveal style' })
     await user.click(screen.getByRole('radio', { name: /Random Number Roll/ }))
-    await user.click(screen.getByRole('radio', { name: '5 sec' }))
-    await user.click(screen.getByRole('radio', { name: 'Manual Stop' }))
-    expect(screen.getByText('Manual control')).toBeInTheDocument()
-    expect(screen.getByText('Stop & Reveal from Live Draw')).toBeInTheDocument()
-    expect(screen.getByText('Rolling continues until the operator stops it.')).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Roll control' })).not.toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Roll duration' })).not.toBeInTheDocument()
     expect(screen.getByRole('radio', { name: /Smooth/ })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Reveal Together' })).toBeInTheDocument()
-    await user.click(screen.getByRole('radio', { name: 'Timed' }))
-    expect(screen.getByRole('radio', { name: '5 sec' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('saves and reloads Manual Stop with speed and reveal settings intact', async () => {
+  it('saves and reloads manual-only rolling with speed and reveal settings intact', async () => {
     const user = userEvent.setup()
     const recordRef = { current: record as DrawAuthoringRecord | null }
     const save = vi.fn(async (draft: DrawAuthoringDraft) => {
@@ -252,14 +274,14 @@ describe('Draw Setup persisted authoring', () => {
     const value = services({ recordRef, save })
     const first = renderPage(value)
     await user.click(await screen.findByRole('radio', { name: /Random Number Roll/ }))
-    await user.click(screen.getByRole('radio', { name: 'Manual Stop' }))
     await user.click(screen.getByRole('radio', { name: /Smooth/ }))
     await user.click(screen.getByRole('radio', { name: 'Reveal Sequentially' }))
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ presentation: { presentationMode: 'random-number-roll', rollStopMode: 'manual', rollDurationSeconds: 8, rollSpeedPerSecond: 6, revealMode: 'sequential' } }))
     first.unmount()
     renderPage(value)
-    expect(await screen.findByRole('radio', { name: 'Manual Stop' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByRole('radio', { name: /Random Number Roll/ })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByRole('group', { name: 'Roll control' })).not.toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Roll duration' })).not.toBeInTheDocument()
     expect(screen.getByRole('radio', { name: /Smooth/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('radio', { name: 'Reveal Sequentially' })).toHaveAttribute('aria-pressed', 'true')
@@ -276,7 +298,6 @@ describe('Draw Setup persisted authoring', () => {
     const first = renderPage(value)
     await screen.findByRole('heading', { name: 'Reveal style' })
     await user.click(screen.getByRole('radio', { name: /Random Number Roll/ }))
-    await user.click(screen.getByRole('radio', { name: '12 sec' }))
     await user.click(screen.getByRole('radio', { name: /Rapid/ }))
     await user.click(screen.getByRole('radio', { name: 'Reveal Sequentially' }))
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
@@ -285,35 +306,79 @@ describe('Draw Setup persisted authoring', () => {
     renderPage(value)
     await screen.findByRole('heading', { name: 'Reveal style' })
     expect(screen.getByRole('radio', { name: /Random Number Roll/ })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('radio', { name: '12 sec' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('group', { name: 'Roll duration' })).not.toBeInTheDocument()
     expect(screen.getByRole('radio', { name: /Rapid/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('radio', { name: 'Reveal Sequentially' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled()
   })
 
-  it('hides roll controls when switching back to Instant Reveal while preserving their draft values', async () => {
+  it('keeps Instant Reveal unaffected while preserving non-duration draft values', async () => {
     const user = userEvent.setup()
     const save = vi.fn(async () => ({ ok: true as const, record }))
     renderPage(services({ save }))
     await screen.findByRole('heading', { name: 'Reveal style' })
     await user.click(screen.getByRole('radio', { name: /Random Number Roll/ }))
-    await user.click(screen.getByRole('radio', { name: '5 sec' }))
     await user.click(screen.getByRole('radio', { name: /Rapid/ }))
     await user.click(screen.getByRole('radio', { name: /Instant Reveal/ }))
-    expect(screen.queryByRole('radio', { name: '5 sec' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Roll duration' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ presentation: { presentationMode: 'instant-reveal', rollStopMode: 'timed', rollDurationSeconds: 5, rollSpeedPerSecond: 20, revealMode: 'all-together' } }))
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ presentation: { presentationMode: 'instant-reveal', rollStopMode: 'manual', rollDurationSeconds: 8, rollSpeedPerSecond: 20, revealMode: 'all-together' } }))
   })
 
-  it('does not claim authoritative readiness while dirty and blocks handoff', async () => {
+  it('previews capacity from unsaved winner, check-in, and group-filter changes while keeping handoff blocked', async () => {
+    const user = userEvent.setup()
+    const save = vi.fn(async () => ({ ok: true as const, record }))
+    renderPage(services({ save }))
+    const metrics = await screen.findByLabelText('Metrik peserta memenuhi syarat')
+    await waitFor(() => expect(metricValue(metrics, 'Memenuhi syarat')).toHaveTextContent('1'))
+
+    await user.click(screen.getByRole('checkbox', { name: /Wajib check-in/ }))
+    await waitFor(() => expect(metricValue(metrics, 'Memenuhi syarat')).toHaveTextContent('2'))
+
+    await user.type(screen.getByLabelText('Filter grup memenuhi syarat'), 'TIDAK-ADA')
+    await waitFor(() => expect(metricValue(metrics, 'Memenuhi syarat')).toHaveTextContent('0'))
+
+    await user.click(screen.getByRole('button', { name: '6' }))
+    await waitFor(() => expect(metricValue(metrics, 'Pemenang diminta')).toHaveTextContent('6'))
+    expect(screen.getByText('Ringkasan kapasitas menggunakan perubahan saat ini. Simpan perubahan sebelum melanjutkan ke gerbang mulai.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Buka gerbang mulai Latihan' })).toBeDisabled()
+    expect(save).not.toHaveBeenCalled()
+  })
+
+  it('renders zero instead of an em dash for valid empty capacity counts', async () => {
+    renderPage(services({ participants: [] }))
+    const metrics = await screen.findByLabelText('Metrik peserta memenuhi syarat')
+    for (const label of ['Total peserta', 'Peserta sudah check-in', 'Pemenang sebelumnya dikecualikan', 'Memenuhi syarat']) {
+      await waitFor(() => expect(metricValue(metrics, label)).toHaveTextContent('0'))
+    }
+    expect(within(metrics).queryByText('—')).not.toBeInTheDocument()
+  })
+
+  it('shows a clear status icon for blocked readiness', async () => {
+    renderPage(services({ conflict: 'drawing' }))
+    const banner = await screen.findByRole('region', { name: 'Sesi Live lain harus diselesaikan' })
+    expect(banner).toHaveClass('draw-setup-blocked-banner')
+    expect(banner.querySelector('.status-banner__marker svg')).toBeInTheDocument()
+  })
+
+  it('presents ready capacity as a compact operational status with an icon', async () => {
+    renderPage(services())
+    const status = await screen.findByRole('region', { name: 'Undian siap dilanjutkan' })
+    expect(status).toHaveClass('draw-setup-ready-status')
+    expect(status.querySelector('.status-banner__marker svg')).toBeInTheDocument()
+  })
+
+  it('shows a temporary save toast without replacing the readiness state', async () => {
     const user = userEvent.setup()
     renderPage(services())
-    await screen.findByLabelText('Custom winner count')
-    await user.clear(screen.getByLabelText('Custom winner count'))
-    await user.type(screen.getByLabelText('Custom winner count'), '2')
-    expect(screen.getByText('Save changes to evaluate eligibility and readiness.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Open Practice start gate' })).toBeDisabled()
-    expect(screen.getAllByText('—')).toHaveLength(5)
+    await user.click(await screen.findByRole('button', { name: '3' }))
+    await user.click(screen.getByRole('button', { name: 'Simpan perubahan' }))
+
+    const toast = await screen.findByRole('status')
+    expect(toast).toHaveTextContent('Sesi undian berhasil disimpan')
+    expect(toast.querySelector('.draw-setup-save-toast__icon svg')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Undian siap dilanjutkan' })).toBeInTheDocument()
+    expect(screen.queryByText('Sesi undian siap telah disimpan')).not.toBeInTheDocument()
   })
 
   it('refreshes readiness after save and preserves Live conflict blocking', async () => {

@@ -3,7 +3,7 @@ import type { PresentationStage } from '../../domain/workflow/presentation-workf
 import { PresentationError } from './presentation-errors.ts'
 import { PRESENTATION_POLICY, type PresentationPolicy } from './presentation-policy.ts'
 import type { PresentationResultProjection } from './presentation-projection.ts'
-import { DEFAULT_DRAW_PRESENTATION_CONFIGURATION, type DrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
+import { resolveDrawPresentationConfiguration, type DrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
 
 export type PresentationControllerStage = 'result-locked' | PresentationStage | 'failed'
 export interface PresentationClock {
@@ -29,7 +29,6 @@ export class PresentationController {
   readonly presentationConfiguration: DrawPresentationConfiguration
   private readonly options: PresentationControllerOptions
   private readonly policy: PresentationPolicy
-  private readonly usesLegacyPolicy: boolean
   private timeout: unknown = null
   private disposed = false
   private transitioning = false
@@ -37,7 +36,7 @@ export class PresentationController {
   private lifecycleVersion = 0
   private state: PresentationControllerState
 
-  constructor(options: PresentationControllerOptions) { this.options = options; this.result = options.result; this.presentationConfiguration = options.presentationConfiguration ?? DEFAULT_DRAW_PRESENTATION_CONFIGURATION; this.policy = options.policy ?? PRESENTATION_POLICY; this.usesLegacyPolicy = options.presentationConfiguration === undefined; this.state = { stage: 'result-locked', countdownLabel: null, error: null, presentationConfiguration: this.presentationConfiguration } }
+  constructor(options: PresentationControllerOptions) { this.options = options; this.result = options.result; this.presentationConfiguration = resolveDrawPresentationConfiguration(options.presentationConfiguration); this.policy = options.policy ?? PRESENTATION_POLICY; this.state = { stage: 'result-locked', countdownLabel: null, error: null, presentationConfiguration: this.presentationConfiguration } }
   getState(): PresentationControllerState { return this.state }
   async resume(stage: PresentationStage, stageStartedAt: IsoTimestamp, blackoutRequested = false): Promise<void> {
     this.reactivateAfterStrictModeReplay()
@@ -48,8 +47,13 @@ export class PresentationController {
       this.options.onState(this.state)
       return
     }
+    if (stage === 'rolling') {
+      this.state = { ...this.state, stage, countdownLabel: null, error: null, stageStartedAt, blackoutRequested }
+      this.options.onState(this.state)
+      return
+    }
     const elapsed = Math.max(0, Date.parse(this.options.clock.now()) - Date.parse(stageStartedAt))
-    const duration = stage === 'countdown' ? this.policy.countdownDurationMs : this.rollingDurationMs()
+    const duration = this.policy.countdownDurationMs
     if (!Number.isFinite(elapsed) || elapsed >= duration) {
       await this.transition(this.nextAfter(stage))
       return
@@ -57,10 +61,8 @@ export class PresentationController {
     const label = stage === 'countdown' ? (Math.max(1, 3 - Math.floor(elapsed / this.policy.countdownLabelDurationMs)) as 3 | 2 | 1) : null
     this.state = { ...this.state, stage, countdownLabel: label, error: null, stageStartedAt, blackoutRequested }
     this.options.onState(this.state)
-    if (stage === 'countdown' || !this.isManualRolling()) {
-      this.clearTimer()
-      this.schedule(Math.max(0, duration - elapsed), () => { void this.transition(stage === 'countdown' ? this.nextAfter('countdown') : 'reveal') })
-    }
+    this.clearTimer()
+    this.schedule(Math.max(0, duration - elapsed), () => { void this.transition(this.nextAfter('countdown')) })
   }
   async handoff(): Promise<void> {
     if (this.disposed || this.state.stage === 'result-locked' || this.state.stage === 'failed' || this.state.stage === 'pending-handoff') return
@@ -79,16 +81,16 @@ export class PresentationController {
     this.reactivateAfterStrictModeReplay()
     if (this.disposed || this.state.stage !== 'result-locked' || this.bootstrapStarted) return
     this.bootstrapStarted = true
-    if (this.options.clock.prefersReducedMotion()) { await this.transition('reveal'); return }
+    if (this.options.clock.prefersReducedMotion()) { await this.transition(this.presentationConfiguration.presentationMode === 'random-number-roll' ? 'rolling' : 'reveal'); return }
     await this.transition('countdown')
   }
   async skip(): Promise<void> {
-    if (this.disposed || (this.state.stage !== 'countdown' && this.state.stage !== 'rolling')) return
+    if (this.disposed || this.state.stage !== 'countdown') return
     this.clearTimer()
-    await this.transition('reveal')
+    await this.transition(this.nextAfter('countdown'))
   }
   async stopRollingAndReveal(): Promise<void> {
-    if (this.disposed || this.state.stage !== 'rolling' || !this.isManualRolling()) return
+    if (this.disposed || this.state.stage !== 'rolling') return
     this.clearTimer()
     await this.transition('reveal')
   }
@@ -116,14 +118,16 @@ export class PresentationController {
   private async tick(): Promise<void> {
     if (this.disposed || this.state.stage === 'failed' || this.transitioning) return
     if (this.state.stage === 'countdown') {
-      const nextLabel = this.state.countdownLabel === null ? 3 : this.state.countdownLabel > 1 ? (this.state.countdownLabel - 1) as 3 | 2 | 1 : null
-      this.state = { ...this.state, countdownLabel: nextLabel }
-      this.options.onState(this.state)
-      if (nextLabel !== null) { this.scheduleStageCompletion('countdown', this.policy.countdownLabelDurationMs); return }
-      await this.transition(this.nextAfter('countdown'));
+      if (this.state.countdownLabel !== null && this.state.countdownLabel > 1) {
+        const nextLabel = (this.state.countdownLabel - 1) as 2 | 1
+        this.state = { ...this.state, countdownLabel: nextLabel }
+        this.options.onState(this.state)
+        this.scheduleStageCompletion('countdown', this.policy.countdownLabelDurationMs)
+        return
+      }
+      await this.transition(this.nextAfter('countdown'))
       return
     }
-    if (this.state.stage === 'rolling') await this.transition('reveal')
   }
   private async transition(next: PresentationStage): Promise<void> {
     if (this.disposed || this.transitioning || this.state.stage === next || this.state.stage === 'failed') return
@@ -137,7 +141,6 @@ export class PresentationController {
       this.state = { ...this.state, stage: next, countdownLabel: next === 'countdown' ? 3 : null, error: null, stageStartedAt: startedAt, blackoutRequested: this.state.blackoutRequested }
       this.options.onState(this.state)
       if (next === 'countdown') this.scheduleStageCompletion('countdown', this.policy.countdownLabelDurationMs)
-      else if (next === 'rolling' && !this.isManualRolling()) this.scheduleStageCompletion('rolling', this.rollingDurationMs())
     } catch (cause: unknown) {
       const error = cause instanceof PresentationError ? cause : new PresentationError(next === 'pending-handoff' ? 'pending-handoff-write-failure' : 'unexpected-presentation-failure', next === 'pending-handoff' ? 'Pending handoff could not be saved. Retry the handoff; the official result is preserved.' : 'Presentation could not continue safely.', true, true, cause)
       this.fail(error)
@@ -154,7 +157,5 @@ export class PresentationController {
   }
   private fail(error: PresentationError): void { this.clearTimer(); this.state = { ...this.state, stage: 'failed', countdownLabel: null, error }; this.options.onState(this.state) }
   private clearTimer(): void { if (this.timeout !== null) { this.options.clock.clearTimeout(this.timeout); this.timeout = null } }
-  private rollingDurationMs(): number { return this.usesLegacyPolicy ? this.policy.rollingDurationMs : this.presentationConfiguration.rollDurationSeconds * 1000 }
-  private isManualRolling(): boolean { return !this.usesLegacyPolicy && this.presentationConfiguration.presentationMode === 'random-number-roll' && this.presentationConfiguration.rollStopMode === 'manual' }
-  private nextAfter(stage: 'countdown' | 'rolling'): PresentationStage { return stage === 'countdown' && (this.usesLegacyPolicy || this.presentationConfiguration.presentationMode === 'random-number-roll') ? 'rolling' : 'reveal' }
+  private nextAfter(stage: 'countdown' | 'rolling'): PresentationStage { return stage === 'countdown' && this.presentationConfiguration.presentationMode === 'random-number-roll' ? 'rolling' : 'reveal' }
 }

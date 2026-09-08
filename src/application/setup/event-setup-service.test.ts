@@ -58,12 +58,28 @@ describe('event setup service', () => {
     expect(services.eventsCreated.find((candidate) => candidate.id === second.id)?.status).toBe('draft')
   })
 
-  it('creates a PrizeCategory with exact Event ownership', async () => {
+  it('creates a PrizeCategory with exact Event ownership and optional prizeImageAssetId', async () => {
     const services = makeServices()
     const event = await createEventSetupService(services).createEvent({ name: 'Event' })
-    const category = await createEventSetupService(services).createCategory({ eventId: event.id, name: '  Grand Prize ', prizeName: 'Travel voucher', displayOrder: 2 })
+    const category = await createEventSetupService(services).createCategory({
+      eventId: event.id,
+      name: '  Grand Prize ',
+      prizeName: 'Travel voucher',
+      displayOrder: 2,
+      prizeImageAssetId: 'asset-12345',
+    })
     expect(category.eventId).toBe(event.id)
     expect(category.name).toBe('Grand Prize')
+    expect(category.prizeImageAssetId).toBe('asset-12345')
     expect(services.categoriesCreated).toHaveLength(1)
+
+    const updated = await createEventSetupService(services).updateCategory(category, {
+      name: 'Updated Grand Prize',
+      prizeName: 'Car',
+      displayOrder: 1,
+      prizeImageAssetId: 'asset-67890',
+    })
+    expect(updated.name).toBe('Updated Grand Prize')
+    expect(updated.prizeImageAssetId).toBe('asset-67890')
   })
 })

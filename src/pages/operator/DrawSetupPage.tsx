@@ -10,6 +10,7 @@ import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
 import type { PrizeCategory } from '../../domain/prizes/prize.types.ts'
 import { queryDrawReadiness } from '../../application/draw/draw-readiness-query.ts'
 import type { DrawReadinessResult } from '../../application/draw/draw-readiness.types.ts'
+import { queryDrawCapacityPreview, type DrawCapacityPreviewResult } from '../../application/draw/draw-capacity-preview-query.ts'
 import { DrawAuthoringError } from '../../application/draw/draw-authoring-errors.ts'
 import { createDrawSetupProductionServices } from '../../infrastructure/composition/draw-command-production.ts'
 import { PageHeader } from '../../shared/components/PageHeader.tsx'
@@ -18,6 +19,7 @@ import { Badge, Button, ButtonLink, Card, Checkbox, ConfirmationDialog, Icon, In
 import { signalProductionWorkspaceChanged } from '../../app/workspace/ProductionWorkspaceContext.tsx'
 import { DrawPresentationSettings } from '../../ui/operator/draw/DrawPresentationSettings.tsx'
 import { ProductionLoadingState, ProductionSetupRequired } from '../../shared/components/ProductionWorkspaceState.tsx'
+import { DrawSetupSaveToast } from './DrawSetupSaveToast.tsx'
 
 type FormState = {
   eventId: string
@@ -90,10 +92,13 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<DrawAuthoringError | null>(null)
   const [saved, setSaved] = useState(false)
+  const [saveToastVisible, setSaveToastVisible] = useState(false)
   const [eventMissing, setEventMissing] = useState(false)
   const [readiness, setReadiness] = useState<DrawReadinessResult | null>(null)
+  const [capacityPreview, setCapacityPreview] = useState<DrawCapacityPreviewResult | { readonly state: 'loading' }>({ state: 'loading' })
   const [confirmLive, setConfirmLive] = useState(false)
   const [handoffBusy, setHandoffBusy] = useState(false)
+  const draft = useMemo(() => draftFromForm(form), [form])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -123,17 +128,24 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
 
   useEffect(() => { void Promise.resolve().then(load) }, [load])
 
+  useEffect(() => {
+    let active = true
+    void queryDrawCapacityPreview(draft, services).then((result) => {
+      if (active) setCapacityPreview(result)
+    })
+    return () => { active = false }
+  }, [draft, services])
+
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setSaved(false); setError(null); setForm((current) => ({ ...current, [key]: value }))
+    setSaved(false); setSaveToastVisible(false); setError(null); setForm((current) => ({ ...current, [key]: value }))
   }
 
   async function save() {
     if (saving) return
-    setSaving(true); setSaved(false); setError(null)
-    const draft = draftFromForm(form)
+    setSaving(true); setSaved(false); setSaveToastVisible(false); setError(null)
     if (services.authoringService === undefined) { setError(new DrawAuthoringError('persistence-unavailable', 'Layanan penyusunan undian tidak tersedia.', { retryable: true })); setSaving(false); return }
     const result = await services.authoringService.save(draft)
-    if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setPrizeStatuses((current) => ({ ...current, ready: current.ready.some((category) => category.id === result.record.category.id) ? current.ready : [...current.ready, result.record.category], available: current.available.filter((category) => category.id !== result.record.category.id), active: current.active.filter((category) => category.id !== result.record.category.id), completed: current.completed.filter((category) => category.id !== result.record.category.id) })); setSaved(true); signalProductionWorkspaceChanged(); if (services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })) }
+    if (result.ok) { setRecord(result.record); setForm(formFromRecord(result.record, result.record.event.id)); setPrizeStatuses((current) => ({ ...current, ready: current.ready.some((category) => category.id === result.record.category.id) ? current.ready : [...current.ready, result.record.category], available: current.available.filter((category) => category.id !== result.record.category.id), active: current.active.filter((category) => category.id !== result.record.category.id), completed: current.completed.filter((category) => category.id !== result.record.category.id) })); setSaved(true); setSaveToastVisible(true); signalProductionWorkspaceChanged(); if (services.checkStorage !== undefined && services.checkCrypto !== undefined) setReadiness(await queryDrawReadiness(result.record.session.id, { ...services, checkStorage: services.checkStorage, checkCrypto: services.checkCrypto })) }
     else setError(result.error)
     setSaving(false)
   }
@@ -157,18 +169,22 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
   if (eventMissing || form.eventId === '') return <section className={uiClass("draw-setup")}><PageHeader eyebrow="Penyusunan undian" headingId="draw-setup-title" title="Pengaturan Undian" description="Tidak ada Acara tersimpan" /><ProductionSetupRequired description="Pilih atau buat Acara sebelum mengatur undian." />{error?.retryable ? <Button icon={<Icon name="RefreshCw" />} onClick={() => void load()}>Coba lagi</Button> : null}</section>
 
   const started = record !== null && isDrawSessionAuthoringLocked(record.session)
-  const dirty = isDrawAuthoringDraftDirty(draftFromForm(form), record)
+  const dirty = isDrawAuthoringDraftDirty(draft, record)
   const readinessBlocked = readiness !== null && readiness.state !== 'ready'
   const eligibilityNotEvaluated = readiness?.state === 'session-conflict'
-  const capacity = dirty ? undefined : readiness?.data
-  const readinessTitle = readiness?.state === 'ready' ? 'Undian siap dilanjutkan' : readiness?.state === 'insufficient-capacity' ? 'Jumlah peserta memenuhi syarat tidak cukup' : readiness?.state === 'session-conflict' ? 'Sesi Live lain harus diselesaikan' : readiness?.state === 'session-not-ready' ? 'Sesi undian belum siap' : readiness?.state === 'storage-unavailable' ? 'Penyimpanan lokal tidak tersedia' : readiness?.state === 'crypto-unavailable' ? 'Web Crypto aman tidak tersedia' : readiness?.state === undefined ? 'Kesiapan belum dievaluasi' : 'Kelanjutan undian diblokir'
-  const readinessBadge = readiness?.state === 'ready' ? 'Siap' : dirty ? 'Perlu disimpan' : 'Diblokir'
-  const readinessTone = readiness?.state === 'ready' ? 'success' : dirty ? 'info' : 'warning'
+  const capacity = capacityPreview.state === 'ready' ? capacityPreview.data : undefined
+  const requestedWinnerValue = Number(form.requestedWinners)
+  const requestedWinnerPreview = form.requestedWinners.trim() !== '' && Number.isInteger(requestedWinnerValue) && requestedWinnerValue >= 1 && requestedWinnerValue <= 100 ? requestedWinnerValue : undefined
+  const readinessTitle = dirty ? 'Perubahan belum disimpan' : readiness?.state === 'ready' ? 'Undian siap dilanjutkan' : readiness?.state === 'insufficient-capacity' ? 'Jumlah peserta memenuhi syarat tidak cukup' : readiness?.state === 'session-conflict' ? 'Sesi Live lain harus diselesaikan' : readiness?.state === 'session-not-ready' ? 'Sesi undian belum siap' : readiness?.state === 'storage-unavailable' ? 'Penyimpanan lokal tidak tersedia' : readiness?.state === 'crypto-unavailable' ? 'Web Crypto aman tidak tersedia' : readiness?.state === undefined ? 'Kesiapan belum dievaluasi' : 'Kelanjutan undian diblokir'
+  const readinessBadge = dirty ? 'Perlu disimpan' : readiness?.state === 'ready' ? 'Siap' : 'Diblokir'
+  const readinessTone = dirty ? 'info' : readiness?.state === 'ready' ? 'success' : 'warning'
+  const blockedReadiness = !dirty && readiness !== null && readiness.state !== 'ready'
+  const readyReadiness = !dirty && readiness?.state === 'ready'
   const pendingReviewRequired = record?.session.mode === 'live' && record.session.status === 'pending-confirmation'
 
   return <section aria-labelledby="draw-setup-title" className={uiClass("draw-setup")}>
     <PageHeader eyebrow="Penyusunan undian" headingId="draw-setup-title" title="Pengaturan Undian" description={record?.event.name ?? 'Buat sesi siap yang tersimpan'} />
-    {saved ? <StatusBanner badge="Tersimpan" title="Sesi undian siap telah disimpan" tone="success">Nilai di bawah berhasil dibaca kembali dari penyimpanan lokal. Tidak ada pemenang, checkpoint, atau audit mulai-undian yang dibuat.</StatusBanner> : null}
+    {saveToastVisible ? <DrawSetupSaveToast onDismiss={() => setSaveToastVisible(false)} /> : null}
     {error ? <StatusBanner badge={error.retryable ? 'Dapat dicoba lagi' : 'Kesalahan validasi'} title="Pengaturan Undian tidak dapat disimpan" tone="warning">{errorText(error)}{error.retryable ? ' Anda dapat mencoba lagi tanpa kehilangan nilai formulir.' : ''}</StatusBanner> : null}
     {started ? <StatusBanner badge="Terkunci" title="Sesi undian ini tidak dapat diedit" tone="warning">Sesi tersimpan berstatus {record?.session.status.replace('-', ' ')}. Sesi tidak direset ke siap dan data resminya tetap tidak berubah.</StatusBanner> : null}
     {categories.length === 0 ? <StatusBanner badge="Kategori diperlukan" title="Buat Kategori Hadiah sebelum mengatur undian" tone="warning"><ButtonLink icon={<Icon name="Trophy" />} to="/prize-categories">Buka pengelolaan Kategori Hadiah</ButtonLink></StatusBanner> : null}
@@ -180,11 +196,11 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
             <div><dt>Total peserta</dt><dd>{capacity?.totalParticipantCount ?? '—'}</dd></div>
             <div><dt>Peserta sudah check-in</dt><dd>{capacity?.checkedInParticipantCount ?? '—'}</dd></div>
             <div><dt>Pemenang sebelumnya dikecualikan</dt><dd>{capacity?.previousWinnerExcludedCount ?? '—'}</dd></div>
-            <div className={uiClass("eligible-pool-metrics__highlight")}><dt>Memenuhi syarat</dt><dd>{capacity?.authoritativeEligibleCount ?? '—'}</dd></div>
-            <div className={uiClass("eligible-pool-metrics__highlight eligible-pool-metrics__highlight--secondary")}><dt>Pemenang diminta</dt><dd>{capacity?.requestedWinnerCount ?? '—'}</dd></div>
+            <div className={uiClass("eligible-pool-metrics__highlight")}><dt>Memenuhi syarat</dt><dd>{capacity?.eligibleParticipantCount ?? '—'}</dd></div>
+            <div className={uiClass("eligible-pool-metrics__highlight eligible-pool-metrics__highlight--secondary")}><dt>Pemenang diminta</dt><dd>{requestedWinnerPreview ?? '—'}</dd></div>
           </dl>
           <div className={uiClass("draw-setup-capacity-readiness")}>
-            <StatusBanner badge={readinessBadge} title={readinessTitle} tone={readinessTone}>{dirty ? 'Simpan perubahan untuk mengevaluasi kelayakan dan kesiapan.' : readiness?.state === 'ready' ? `Penyimpanan dan Web Crypto aman siap. Tersedia ${readiness.data?.authoritativeEligibleCount} peserta memenuhi syarat untuk ${readiness.data?.requestedWinnerCount} pemenang yang diminta.` : readiness?.reason ?? 'Kesiapan sedang diperiksa.'}{eligibilityNotEvaluated ? ' Kelayakan tidak dievaluasi karena sesi Live aktif atau menunggu konfirmasi harus diselesaikan terlebih dahulu.' : null}{!dirty && readiness?.retryable ? ' Coba periksa kesiapan lagi setelah masalah diperbaiki.' : null}</StatusBanner>
+            <StatusBanner badge={readinessBadge} className={dirty ? uiClass("draw-setup-unsaved-banner") : blockedReadiness ? uiClass("draw-setup-blocked-banner") : readyReadiness ? uiClass("draw-setup-ready-status") : undefined} icon={dirty ? <Icon name="Pencil" size={18} /> : blockedReadiness ? <Icon name="CircleAlert" size={18} /> : readyReadiness ? <Icon name="CircleCheck" size={17} /> : undefined} title={readinessTitle} tone={readinessTone}>{dirty ? 'Ringkasan kapasitas menggunakan perubahan saat ini. Simpan perubahan sebelum melanjutkan ke gerbang mulai.' : readiness?.state === 'ready' ? `Penyimpanan dan Web Crypto aman siap. Tersedia ${readiness.data?.authoritativeEligibleCount} peserta memenuhi syarat untuk ${readiness.data?.requestedWinnerCount} pemenang yang diminta.` : readiness?.reason ?? 'Kesiapan sedang diperiksa.'}{eligibilityNotEvaluated ? ' Kelayakan tidak dievaluasi karena sesi Live aktif atau menunggu konfirmasi harus diselesaikan terlebih dahulu.' : null}{!dirty && readiness?.retryable ? ' Coba periksa kesiapan lagi setelah masalah diperbaiki.' : null}</StatusBanner>
           </div>
         </section>
         <div className={uiClass("draw-setup__layout")}>
@@ -199,7 +215,7 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
             </section>
             <section className={uiClass("draw-setup-section")} aria-labelledby="winner-quantity-title">
               <div className={uiClass("draw-setup-section__heading")}><h2 id="winner-quantity-title">Jumlah pemenang</h2><span className={uiClass("draw-setup-section__hint")}>Disimpan ke DrawConfiguration</span></div>
-              <div className={uiClass("winner-count-controls")}><div className={uiClass("winner-count-controls__presets")}><div className={uiClass("winner-count-choices")} aria-label="Pilihan cepat jumlah pemenang">{QUICK_WINNER_COUNTS.map((count) => <Button key={count} type="button" size="sm" variant={form.requestedWinners === String(count) ? 'primary' : 'secondary'} aria-pressed={form.requestedWinners === String(count)} onClick={() => update('requestedWinners', String(count))} disabled={started}>{count}</Button>)}</div><span className={uiClass("draw-setup-section__hint")}>Pilih preset atau masukkan 1–100. Simpan untuk menghitung ulang kesiapan.</span></div><Input label="Jumlah pemenang khusus" type="number" min={1} max={100} step={1} value={form.requestedWinners} onChange={(event) => update('requestedWinners', event.target.value)} disabled={started} /></div>
+              <div className={uiClass("winner-count-controls")}><div className={uiClass("winner-count-controls__presets")}><div className={uiClass("winner-count-choices")} aria-label="Pilihan cepat jumlah pemenang">{QUICK_WINNER_COUNTS.map((count) => <Button key={count} type="button" size="sm" variant={form.requestedWinners === String(count) ? 'primary' : 'secondary'} aria-pressed={form.requestedWinners === String(count)} onClick={() => update('requestedWinners', String(count))} disabled={started}>{count}</Button>)}</div><span className={uiClass("draw-setup-section__hint")}>Pilih preset atau masukkan 1–100. Ringkasan kapasitas mengikuti nilai saat ini.</span></div><Input label="Jumlah pemenang khusus" type="number" min={1} max={100} step={1} value={form.requestedWinners} onChange={(event) => update('requestedWinners', event.target.value)} disabled={started} /></div>
             </section>
             <DrawPresentationSettings configuration={form.presentation} winnerCount={Number(form.requestedWinners)} disabled={started} onChange={(presentation) => update('presentation', presentation)} />
             <section className={uiClass("draw-setup-section")} aria-labelledby="eligibility-rules-title">
@@ -229,7 +245,36 @@ export function DrawSetupPage({ services: suppliedServices }: { services?: DrawS
         </div>
       </form>
     </Card>
-    <ConfirmationDialog headerIcon={<Icon name="ShieldAlert" />} headerIconTone="warning" open={confirmLive} title="Konfirmasi kelanjutan Mode Live" confirmLabel="Konfirmasi kelanjutan Live" onCancel={() => { setConfirmLive(false); handoffTriggerRef.current?.focus() }} onConfirm={() => { setConfirmLive(false); void handoff() }} consequence={record === null || readiness?.data === undefined ? 'Sesi Live tersimpan akan divalidasi ulang sebelum dilanjutkan.' : <span>Acara: {readiness.data?.event.name}. Hadiah: {readiness.data?.category.prizeName}. Pemenang: {readiness.data?.requestedWinnerCount}. Memenuhi syarat: {readiness.data?.authoritativeEligibleCount}. Mode: Live. Tindakan ini hanya membuka gerbang mulai; belum memilih pemenang.</span>} />
+    <ConfirmationDialog
+      cancelLabel="Batal"
+      closeAriaLabel="Tutup dialog"
+      closeLabel="Tutup"
+      confirmLabel="Konfirmasi kelanjutan Live"
+      consequence={record === null || readiness?.data === undefined ? (
+        <p className={uiClass("draw-setup-live-confirmation__fallback")}>Sesi Live tersimpan akan divalidasi ulang sebelum dilanjutkan.</p>
+      ) : (
+        <div className={uiClass("draw-setup-live-confirmation__content")}>
+          <dl className={uiClass("draw-setup-live-confirmation__summary")}>
+            <div><dt>Acara</dt><dd>{readiness.data.event.name}</dd></div>
+            <div><dt>Hadiah</dt><dd>{readiness.data.category.prizeName}</dd></div>
+            <div><dt>Jumlah pemenang</dt><dd>{readiness.data.requestedWinnerCount}</dd></div>
+            <div><dt>Pool memenuhi syarat</dt><dd>{readiness.data.authoritativeEligibleCount}</dd></div>
+            <div><dt>Mode</dt><dd>Live</dd></div>
+          </dl>
+          <p className={uiClass("draw-setup-live-confirmation__note")}>Tindakan ini hanya membuka gerbang mulai; belum memilih pemenang.</p>
+        </div>
+      )}
+      consequenceIcon={<Icon name="TriangleAlert" />}
+      consequenceLabel="Periksa dampak sebelum melanjutkan"
+      eyebrow="Konfirmasi operator"
+      headerIcon={<Icon name="ShieldAlert" />}
+      headerIconTone="warning"
+      open={confirmLive}
+      structuredConsequence
+      title="Konfirmasi kelanjutan Mode Live"
+      onCancel={() => { setConfirmLive(false); handoffTriggerRef.current?.focus() }}
+      onConfirm={() => { setConfirmLive(false); void handoff() }}
+    />
     {record === null ? null : <PendingReviewModal record={record} open={pendingReviewRequired} />}
   </section>
 }

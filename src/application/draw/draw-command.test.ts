@@ -116,7 +116,10 @@ describe('executeDraw', () => {
 
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.value.configurationSnapshot.presentation).toEqual(fixture.configuration.presentation)
+    expect(result.value.configurationSnapshot.presentation).toEqual({
+      ...fixture.configuration.presentation,
+      rollStopMode: 'manual',
+    })
     expect(Object.isFrozen(result.value.configurationSnapshot.presentation)).toBe(true)
     expect(result.value.pendingWinners.map((winner) => winner.ticketNumber)).toEqual(['42', '00042'])
   })

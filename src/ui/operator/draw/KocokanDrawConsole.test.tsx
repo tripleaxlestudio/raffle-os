@@ -25,22 +25,26 @@ function Themed({ children }: { children: ReactNode }) {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('Kocokan Draw Console isolation', () => {
-  it('retains checked semantics, draft values and existing manual controls in the themed settings', () => {
+  it('retains checked semantics, draft values and simplified choices in the themed settings', () => {
     function Settings() {
       const [configuration, setConfiguration] = useState(DEFAULT_DRAW_PRESENTATION_CONFIGURATION)
       return <DrawPresentationSettings configuration={configuration} winnerCount={6} disabled={false} onChange={setConfiguration} />
     }
     render(<Themed><Settings /></Themed>)
-    const rolling = screen.getByRole('radio', { name: /Putar Nomor Acak/ })
+    const direct = screen.getByRole('radio', { name: /Tampil Langsung/ })
+    const rolling = screen.getByRole('radio', { name: /Putar & Stop Manual/ })
+    expect(direct).toHaveAttribute('aria-checked', 'true')
+    expect(direct).toHaveClass('kc-presentation-choice--selected')
+    expect(rolling).toHaveAttribute('aria-checked', 'false')
+
     fireEvent.click(rolling)
     expect(rolling).toHaveAttribute('aria-checked', 'true')
     expect(rolling).toHaveClass('kc-presentation-choice--selected')
-    fireEvent.click(screen.getByRole('radio', { name: 'Berhenti Manual' }))
-    expect(screen.getByRole('radio', { name: 'Berhenti Manual' })).toHaveAttribute('aria-checked', 'true')
+    expect(direct).toHaveAttribute('aria-checked', 'false')
+
+    expect(screen.queryByRole('group', { name: 'Kecepatan putaran' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Mode pengungkapan' })).not.toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Durasi putaran' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('radio', { name: /Ungkap Langsung/ }))
-    fireEvent.click(rolling)
-    expect(screen.getByRole('radio', { name: 'Berhenti Manual' })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('keeps locked settings disabled without dispatching a draft update', () => {
@@ -52,7 +56,7 @@ describe('Kocokan Draw Console isolation', () => {
 
   it('retains legacy class defaults outside the production theme', () => {
     render(<DrawPresentationSettings configuration={DEFAULT_DRAW_PRESENTATION_CONFIGURATION} winnerCount={1} disabled={false} onChange={() => undefined} />)
-    expect(screen.getByRole('radio', { name: /Ungkap Langsung/ })).toHaveClass('presentation-choice')
+    expect(screen.getByRole('radio', { name: /Tampil Langsung/ })).toHaveClass('presentation-choice')
     expect(document.querySelector('[class*="kc-"]')).toBeNull()
   })
 

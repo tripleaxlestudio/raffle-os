@@ -11,10 +11,10 @@ describe('LogPage', () => {
     expect(screen.getByText('Aktivitas dan diagnostik aplikasi KOCOKAN.')).toBeInTheDocument()
 
     // Level filter chips
-    const errorBtn = screen.getByRole('button', { name: /Error/i })
-    const warnBtn = screen.getByRole('button', { name: /Peringatan/i })
-    const infoBtn = screen.getByRole('button', { name: /Info/i })
-    const debugBtn = screen.getByRole('button', { name: /Debug/i })
+    const errorBtn = screen.getByRole('button', { name: /^Error\s*\(\d+\)$/i })
+    const warnBtn = screen.getByRole('button', { name: /^Peringatan\s*\(\d+\)$/i })
+    const infoBtn = screen.getByRole('button', { name: /^Info\s*\(\d+\)$/i })
+    const debugBtn = screen.getByRole('button', { name: /^Debug\s*\(\d+\)$/i })
 
     expect(errorBtn).toHaveAttribute('aria-pressed', 'true')
     expect(warnBtn).toHaveAttribute('aria-pressed', 'true')

@@ -6,6 +6,8 @@ import type {
   CancelPendingWinnersPersistenceOutcome,
   RedrawWinnersPersistenceOutcome,
   RedrawWinnersPersistenceInput,
+  StartRedrawPersistenceInput,
+  CompleteRedrawPersistenceInput,
   PersistStartedDrawInput,
   RecordRedrawReplacementInput,
   TransitionWinnersWithAuditInput,
@@ -54,6 +56,7 @@ import type { RandomSource } from '../../../application/draw/random-source.ts'
 import { createWebCryptoRandomSource } from '../../random/web-crypto-random-source.ts'
 import { createRedrawRecordId, createWinnerRecordId } from '../../../domain/shared/identifiers.ts'
 import { buildRedrawCandidates, selectRedrawCandidates } from '../../../domain/draws/redraw-eligibility.ts'
+import type { RedrawRequest } from '../../../domain/winners/redraw-request.types.ts'
 
 function requireAuditRecords(
   count: number,
@@ -650,7 +653,7 @@ export class DexieDrawPersistenceUnitOfWork
         this.database.prize_categories,
         this.database.draw_sessions,
         this.database.winner_records,
-        this.database.redraw_records,
+        this.database.redraw_requests,
         this.database.audit_records,
         this.database.command_receipts,
       ], async (transaction) => {
@@ -700,6 +703,8 @@ export class DexieDrawPersistenceUnitOfWork
           if (winner.eventId !== session.eventId) throw new RelationshipMismatchError('Every redraw target must belong to the session Event.')
           return winner
         })
+        const activeRequest = await this.database.redraw_requests.where('[drawSessionId+status]').between([session.id, 'pending'], [session.id, 'running'], true, true).first()
+        if (activeRequest !== undefined) throw new ImmutableRecordError('This DrawSession already has an unfinished redraw request.')
         const event = await this.database.events.get(session.eventId)
         if (event === undefined) throw new RecordNotFoundError('The DrawSession Event was not found.')
         const category = await this.database.prize_categories.get(session.configurationSnapshot.prizeCategoryId)
@@ -718,48 +723,111 @@ export class DexieDrawPersistenceUnitOfWork
         }
         const eligible = buildRedrawCandidates(event, category, session.configurationSnapshot, candidateSnapshot, participants, winners, (await this.database.draw_sessions.where('eventId').equals(session.eventId).toArray()), originals)
         if (eligible.length < originals.length) throw new ValidationError(`Insufficient redraw capacity: ${eligible.length} eligible replacement(s) for ${originals.length} target(s).`)
-        const selected = selectRedrawCandidates(eligible, originals.length, this.randomSource)
-        const existingSequences = sessionWinners.map((winner) => winner.sequenceNumber)
-        let nextSequence = Math.max(0, ...existingSequences) + 1
-        const replacements = selected.map((entry) => ({
-          id: createWinnerRecordId(),
-          eventId: session.eventId,
-          prizeCategoryId: session.configurationSnapshot!.prizeCategoryId,
-          drawSessionId: session.id,
-          participantId: entry.participantId,
-          ticketNumber: entry.ticketNumber,
-          sequenceNumber: nextSequence++,
-          status: 'pending' as const,
-          createdAt: at,
-          updatedAt: at,
-        }))
-        const redraws = originals.map((original, index) => ({
-          id: createRedrawRecordId(),
+        const orderedOriginals = [...originals].sort((left, right) => left.sequenceNumber - right.sequenceNumber)
+        const request: RedrawRequest = {
+          id: input.commandId,
           eventId: session.eventId,
           drawSessionId: session.id,
-          originalWinnerRecordId: original.id,
-          replacementWinnerRecordId: replacements[index]!.id,
+          status: 'pending',
           reason: input.reason,
           ...(payload.note === undefined ? {} : { reasonNote: payload.note }),
+          targets: orderedOriginals.map((original) => ({ winnerId: original.id, originalStatus: expectedStatus, originalSequenceNumber: original.sequenceNumber })),
+          replacementCount: orderedOriginals.length,
           createdAt: at,
-        }))
-        const audits: AuditRecord[] = []
-        for (const [index, original] of originals.entries()) {
-          const replacement = replacements[index]!
-          audits.push({ action: 'winner-cancelled', actor: { type: 'operator', name: LOCAL_OPERATOR }, detail: { afterStatus: 'cancelled', beforeStatus: original.status, commandId: input.commandId, drawSessionId: session.id, reason: input.reason, ...(payload.note === undefined ? {} : { normalizedNote: payload.note }), ticketNumber: original.ticketNumber, winnerId: original.id }, eventId: session.eventId, id: createAuditRecordId(), timestamp: at })
-          audits.push({ action: 'redraw-recorded', actor: { type: 'operator', name: LOCAL_OPERATOR }, detail: { commandId: input.commandId, drawSessionId: session.id, originalWinnerId: original.id, originalTicketNumber: original.ticketNumber, replacementWinnerId: replacement.id, replacementTicketNumber: replacement.ticketNumber, reason: input.reason, ...(payload.note === undefined ? {} : { normalizedNote: payload.note }), actor: LOCAL_OPERATOR, resultingSessionStatus: 'pending-confirmation' }, eventId: session.eventId, id: createAuditRecordId(), timestamp: at })
+          updatedAt: at,
         }
+        const audits: AuditRecord[] = orderedOriginals.map((original) => ({ action: 'winner-cancelled', actor: { type: 'operator', name: LOCAL_OPERATOR }, detail: { afterStatus: 'cancelled', beforeStatus: original.status, commandId: input.commandId, drawSessionId: session.id, redrawState: 'awaiting-replacement', reason: input.reason, ...(payload.note === undefined ? {} : { normalizedNote: payload.note }), ticketNumber: original.ticketNumber, winnerId: original.id }, eventId: session.eventId, id: createAuditRecordId(), timestamp: at }))
 
         if (session.status === 'completed') await transitionDrawSessionInTransaction(this.database, session.id, 'completed', 'pending-confirmation', at)
-        for (const original of originals) await transitionWinnerInTransaction(this.database, original.id, expectedStatus, 'cancelled', at, true)
-        await appendWinnerBatchInTransaction(this.database, replacements)
-        for (const redraw of redraws) await appendRedrawInTransaction(this.database, redraw)
+        for (const original of orderedOriginals) await transitionWinnerInTransaction(this.database, original.id, expectedStatus, 'cancelled', at, true)
+        await this.database.redraw_requests.add(request)
         for (const audit of audits) await appendAuditInTransaction(this.database, audit)
-        const outcome = await this.receipts.finalize(input.commandId, payload, { affectedWinnerIds: originals.map((winner) => winner.id), commandId: input.commandId, committedAt: at, drawSessionId: session.id, operation: input.operation, replacementWinnerIds: replacements.map((winner) => winner.id), replacementTickets: replacements.map((winner) => winner.ticketNumber), sessionStatus: 'pending-confirmation', status: 'committed' }, this.receipts.inTransaction(transaction))
-        return { ...outcome, operation: input.operation, replacementWinnerIds: replacements.map((winner) => winner.id), replacementTickets: replacements.map((winner) => winner.ticketNumber), sessionStatus: 'pending-confirmation', status: 'committed' as const }
+        const outcome = await this.receipts.finalize(input.commandId, payload, { affectedWinnerIds: orderedOriginals.map((winner) => winner.id), commandId: input.commandId, committedAt: at, drawSessionId: session.id, operation: input.operation, replacementWinnerIds: [], replacementTickets: [], sessionStatus: 'pending-confirmation', status: 'committed' }, this.receipts.inTransaction(transaction))
+        return { ...outcome, operation: input.operation, replacementWinnerIds: [], replacementTickets: [], sessionStatus: 'pending-confirmation', status: 'committed' as const }
       })
     } catch (error: unknown) {
-      throw normalizeRepositoryError(error, 'Persisting the audited redraw replacement')
+      throw normalizeRepositoryError(error, 'Persisting the audited redraw request')
+    }
+  }
+
+  async startRedraw(input: StartRedrawPersistenceInput): Promise<RedrawRequest> {
+    try {
+      return await this.database.transaction('rw', [this.database.events, this.database.participants, this.database.prize_categories, this.database.draw_sessions, this.database.winner_records, this.database.redraw_requests, this.database.presentation_checkpoints], async () => {
+        const request = await this.database.redraw_requests.get(input.requestId)
+        if (request === undefined) throw new RecordNotFoundError('The redraw request was not found.')
+        if (request.status === 'completed' || request.status === 'running') return request
+        const session = await this.database.draw_sessions.get(request.drawSessionId)
+        if (session === undefined || session.mode !== 'live' || session.status !== 'pending-confirmation' || session.configurationSnapshot === null || session.candidatePoolSnapshot === null) throw new ImmutableRecordError('The redraw request no longer has a valid pending Live DrawSession.')
+        const event = await this.database.events.get(session.eventId)
+        const category = await this.database.prize_categories.get(session.configurationSnapshot.prizeCategoryId)
+        if (event === undefined || category === undefined) throw new RecordNotFoundError('The redraw Event or PrizeCategory was not found.')
+        const winners = await this.database.winner_records.where('eventId').equals(session.eventId).toArray()
+        const originals = request.targets.map((target) => {
+          const winner = winners.find((candidate) => candidate.id === target.winnerId)
+          if (winner === undefined || winner.status !== 'cancelled') throw new ImmutableRecordError('A redraw original is no longer cancelled and awaiting replacement.')
+          return winner
+        })
+        const participants = await this.database.participants.where('eventId').equals(session.eventId).toArray()
+        const sessions = await this.database.draw_sessions.where('eventId').equals(session.eventId).toArray()
+        const eligible = buildRedrawCandidates(event, category, session.configurationSnapshot, session.candidatePoolSnapshot, participants, winners, sessions, originals)
+        if (eligible.length < request.replacementCount) throw new ValidationError(`Insufficient redraw capacity: ${eligible.length} eligible replacement(s) for ${request.replacementCount} target(s).`)
+        const selected = selectRedrawCandidates(eligible, request.replacementCount, this.randomSource)
+        const atResult = isoTimestampFromDate(new Date())
+        if (!atResult.ok) throw new TransactionError('Persistence could not generate a redraw start timestamp.')
+        const running: RedrawRequest = {
+          ...request,
+          status: 'running',
+          selections: selected.map((entry, index) => ({ winnerRecordId: createWinnerRecordId(), participantId: entry.participantId, ticketNumber: entry.ticketNumber, selectionOrder: index + 1 })),
+          startedAt: atResult.value,
+          updatedAt: atResult.value,
+        }
+        await this.database.redraw_requests.put(running)
+        await this.database.presentation_checkpoints.delete(session.id)
+        return running
+      })
+    } catch (error: unknown) {
+      throw normalizeRepositoryError(error, 'Starting the secure redraw selection')
+    }
+  }
+
+  async completeRedraw(input: CompleteRedrawPersistenceInput): Promise<RedrawRequest> {
+    try {
+      return await this.database.transaction('rw', [this.database.events, this.database.participants, this.database.draw_sessions, this.database.winner_records, this.database.redraw_records, this.database.redraw_requests, this.database.audit_records], async () => {
+        const request = await this.database.redraw_requests.get(input.requestId)
+        if (request === undefined) throw new RecordNotFoundError('The redraw request was not found.')
+        if (request.status === 'completed') return request
+        if (request.status !== 'running' || request.selections === undefined || request.selections.length !== request.replacementCount) throw new ImmutableRecordError('The redraw request has no locked secure selection to complete.')
+        const session = await this.database.draw_sessions.get(request.drawSessionId)
+        if (session === undefined || session.status !== 'pending-confirmation' || session.configurationSnapshot === null) throw new ImmutableRecordError('The redraw DrawSession is no longer pending confirmation.')
+        const participants = await this.database.participants.where('eventId').equals(session.eventId).toArray()
+        const participantById = new Map(participants.map((participant) => [participant.id, participant]))
+        for (const selection of request.selections) {
+          const participant = participantById.get(selection.participantId)
+          if (participant === undefined || participant.ticketNumber !== selection.ticketNumber) throw new RelationshipMismatchError('A locked redraw selection no longer matches its Participant.')
+        }
+        const sessionWinners = await this.database.winner_records.where('drawSessionId').equals(session.id).toArray()
+        const originals = request.targets.map((target) => {
+          const winner = sessionWinners.find((candidate) => candidate.id === target.winnerId)
+          if (winner === undefined || winner.status !== 'cancelled') throw new ImmutableRecordError('A redraw original is no longer cancelled.')
+          return winner
+        })
+        const atResult = isoTimestampFromDate(new Date())
+        if (!atResult.ok) throw new TransactionError('Persistence could not generate a redraw completion timestamp.')
+        const at = atResult.value
+        let nextSequence = Math.max(0, ...sessionWinners.map((winner) => winner.sequenceNumber)) + 1
+        const replacements = request.selections.map((selection) => ({ id: selection.winnerRecordId, eventId: session.eventId, prizeCategoryId: session.configurationSnapshot!.prizeCategoryId, drawSessionId: session.id, participantId: selection.participantId, ticketNumber: selection.ticketNumber, sequenceNumber: nextSequence++, status: 'pending' as const, createdAt: at, updatedAt: at }))
+        await appendWinnerBatchInTransaction(this.database, replacements)
+        for (const [index, original] of originals.entries()) {
+          const replacement = replacements[index]!
+          await appendRedrawInTransaction(this.database, { id: createRedrawRecordId(), eventId: session.eventId, drawSessionId: session.id, originalWinnerRecordId: original.id, replacementWinnerRecordId: replacement.id, reason: request.reason, ...(request.reasonNote === undefined ? {} : { reasonNote: request.reasonNote }), createdAt: at })
+          await appendAuditInTransaction(this.database, { action: 'redraw-recorded', actor: { type: 'operator', name: LOCAL_OPERATOR }, detail: { commandId: request.id, drawSessionId: session.id, originalWinnerId: original.id, originalTicketNumber: original.ticketNumber, replacementWinnerId: replacement.id, replacementTicketNumber: replacement.ticketNumber, reason: request.reason, ...(request.reasonNote === undefined ? {} : { normalizedNote: request.reasonNote }), actor: LOCAL_OPERATOR, resultingSessionStatus: 'pending-confirmation' }, eventId: session.eventId, id: createAuditRecordId(), timestamp: at })
+        }
+        const completed: RedrawRequest = { ...request, status: 'completed', completedAt: at, updatedAt: at }
+        await this.database.redraw_requests.put(completed)
+        return completed
+      })
+    } catch (error: unknown) {
+      throw normalizeRepositoryError(error, 'Completing the audited redraw replacement')
     }
   }
 }

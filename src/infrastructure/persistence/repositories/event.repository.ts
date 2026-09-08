@@ -322,7 +322,7 @@ export class DexieEventRepository implements EventRepository {
         this.database.events, this.database.participants, this.database.prize_categories,
         this.database.draw_configurations, this.database.display_configurations,
         this.database.event_settings, this.database.draw_sessions, this.database.winner_records,
-        this.database.redraw_records, this.database.audit_records, this.database.preferences,
+        this.database.redraw_records, this.database.redraw_requests, this.database.audit_records, this.database.preferences,
         this.database.presentation_checkpoints, this.database.command_receipts,
       ], async () => {
         const event = await this.database.events.get(id)
@@ -344,6 +344,7 @@ export class DexieEventRepository implements EventRepository {
           this.database.draw_sessions.where('eventId').equals(id).delete(),
           this.database.winner_records.where('eventId').equals(id).delete(),
           this.database.redraw_records.where('eventId').equals(id).delete(),
+          this.database.redraw_requests.where('eventId').equals(id).delete(),
           this.database.audit_records.where('eventId').equals(id).delete(),
           ...sessionIds.map((sessionId) => this.database.presentation_checkpoints.delete(sessionId)),
           ...sessionIds.map((sessionId) => this.database.command_receipts.where('drawSessionId').equals(sessionId).delete()),

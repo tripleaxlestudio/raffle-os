@@ -29,6 +29,8 @@ import {
   SCHEMA_V5,
   SCHEMA_VERSION_5,
   SCHEMA_VERSION_6,
+  SCHEMA_V7,
+  SCHEMA_VERSION_7,
 } from './schema-v1.ts'
 
 const openedDatabases = new Set<Dexie>()
@@ -75,11 +77,13 @@ describe('centralized persistence migrations', () => {
     expect(SCHEMA_VERSION_3).toBe(3)
     expect(SCHEMA_VERSION_4).toBe(4)
     expect(SCHEMA_VERSION_5).toBe(5)
-    expect(CURRENT_SUPPORTED_SCHEMA_VERSION).toBe(6)
+    expect(SCHEMA_VERSION_6).toBe(6)
+    expect(SCHEMA_VERSION_7).toBe(7)
+    expect(CURRENT_SUPPORTED_SCHEMA_VERSION).toBe(7)
   })
 
   it('centralizes the exact Version 1 store contract', () => {
-    expect(PERSISTENCE_MIGRATIONS).toHaveLength(6)
+    expect(PERSISTENCE_MIGRATIONS).toHaveLength(7)
     expect(PERSISTENCE_MIGRATIONS[0]).toEqual({
       stores: SCHEMA_V1,
       version: 1,
@@ -91,6 +95,7 @@ describe('centralized persistence migrations', () => {
     expect(SCHEMA_VERSION_6).toBe(6)
     expect(PERSISTENCE_MIGRATIONS[4]?.version).toBe(5)
     expect(PERSISTENCE_MIGRATIONS[5]?.version).toBe(6)
+    expect(PERSISTENCE_MIGRATIONS[6]).toEqual({ stores: SCHEMA_V7, version: 7 })
     expect(Object.keys(SCHEMA_V1).sort()).toEqual(
       [...SCHEMA_V1_STORE_NAMES].sort(),
     )
@@ -126,9 +131,9 @@ describe('centralized persistence migrations', () => {
     expect(PERSISTENCE_MIGRATIONS[0]?.upgrade).toBeUndefined()
 
     await database.open()
-    expect(database.verno).toBe(6)
+    expect(database.verno).toBe(7)
     expect(database.tables.map((table) => table.name).sort()).toEqual(
-      [...SCHEMA_V1_STORE_NAMES, 'presentation_checkpoints', 'command_receipts', 'event_settings'].sort(),
+      [...SCHEMA_V1_STORE_NAMES, 'presentation_checkpoints', 'command_receipts', 'event_settings', 'redraw_requests'].sort(),
     )
   })
 
@@ -163,7 +168,7 @@ describe('centralized persistence migrations', () => {
             id: 'v2-upgrade-ran',
           })
         },
-        version: 7,
+        version: 8,
       },
     ]
     const versionTwoDatabase = createDexie(name)
@@ -174,7 +179,7 @@ describe('centralized persistence migrations', () => {
 
     await versionTwoDatabase.open()
 
-    expect(versionTwoDatabase.verno).toBe(7)
+    expect(versionTwoDatabase.verno).toBe(8)
     expect(upgradeCalls).toBe(1)
     expect(
       await versionTwoDatabase.table('events').get(

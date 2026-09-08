@@ -336,7 +336,7 @@ async function writeFixtureSet(
 describe('RaffleOS database construction and Schema Version 1', () => {
   it('uses the production defaults without constructing a singleton', () => {
     expect(DEFAULT_DATABASE_NAME).toBe('RaffleOS_DB')
-    expect(APPLICATION_SCHEMA_VERSION).toBe(6)
+    expect(APPLICATION_SCHEMA_VERSION).toBe(7)
   })
 
   it('does not open on construction and accepts a custom database name', async () => {
@@ -405,9 +405,9 @@ describe('RaffleOS database construction and Schema Version 1', () => {
     const nativeStores = Array.from(
       database.backendDB().objectStoreNames,
     ).sort()
-    const expectedStores = [...SCHEMA_V1_STORE_NAMES, 'presentation_checkpoints', 'command_receipts', 'event_settings'].sort()
+    const expectedStores = [...SCHEMA_V1_STORE_NAMES, 'presentation_checkpoints', 'command_receipts', 'event_settings', 'redraw_requests'].sort()
 
-    expect(database.verno).toBe(6)
+    expect(database.verno).toBe(7)
     expect(dexieStores).toEqual(expectedStores)
     expect(nativeStores).toEqual(expectedStores)
   })
@@ -657,7 +657,7 @@ describe('safe open boundary and persistence errors', () => {
         indexedDB,
       }),
     )
-    newerDatabase.version(7).stores({
+    newerDatabase.version(8).stores({
       ...SCHEMA_V1,
       ...SCHEMA_V2,
       ...SCHEMA_V3,
@@ -702,7 +702,7 @@ describe('safe open boundary and persistence errors', () => {
         indexedDB,
       }),
     )
-    verificationDatabase.version(4).stores({
+    verificationDatabase.version(8).stores({
       ...SCHEMA_V1,
       ...SCHEMA_V2,
       ...SCHEMA_V3,
@@ -710,7 +710,7 @@ describe('safe open boundary and persistence errors', () => {
     })
     await verificationDatabase.open()
 
-    expect(verificationDatabase.verno).toBe(4)
+    expect(verificationDatabase.verno).toBe(8)
     expect(
       await verificationDatabase
         .table('newer_version_sentinel')

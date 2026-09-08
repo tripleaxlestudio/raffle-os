@@ -54,5 +54,11 @@ export const SCHEMA_V5 = {
 export const SCHEMA_VERSION_6 = 6 as const
 export const SCHEMA_V6 = SCHEMA_V5
 
+export const SCHEMA_VERSION_7 = 7 as const
+export const SCHEMA_V7 = {
+  redraw_requests:
+    '&id, eventId, drawSessionId, status, [drawSessionId+status], createdAt, updatedAt',
+} as const
+
 export type SchemaV1StoreName =
   (typeof SCHEMA_V1_STORE_NAMES)[number]

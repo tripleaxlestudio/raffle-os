@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { DisplayConfiguration } from '../../domain/display/display-configuration.types.ts'
+import { DEFAULT_DISPLAY_APPEARANCE, type DisplayConfiguration } from '../../domain/display/display-configuration.types.ts'
 import type { Event } from '../../domain/events/event.types.ts'
 import { createDisplayConfigurationId, createEventId } from '../../domain/shared/identifiers.ts'
 import { createDisplayConfigurationService } from './display-configuration-service.ts'
@@ -53,5 +53,17 @@ describe('display configuration service', () => {
     expect(updated.id).toBe(firstConfiguration.id)
     expect(await service.readForEvent(second)).toBeNull()
     expect(services.configurationsStore.get(first.id)?.targetResolution).toEqual({ width: 1280, height: 720 })
+  })
+
+  it('persists appearance and preserves it when a legacy settings save omits that field', async () => {
+    const currentEvent = event()
+    const services = dependencies()
+    services.eventsStore.set(currentEvent.id, currentEvent)
+    const service = createDisplayConfigurationService(services)
+    const transparentAppearance = { ...DEFAULT_DISPLAY_APPEARANCE, background: { ...DEFAULT_DISPLAY_APPEARANCE.background, type: 'transparent' as const } }
+    const created = await service.saveForEvent(currentEvent, { targetResolution: { width: 1920, height: 1080 }, safeAreaMargin: 48, blackoutAppearance: 'pure-black', appearance: transparentAppearance })
+    expect(services.configurationsStore.get(currentEvent.id)?.appearance).toEqual(transparentAppearance)
+    const updated = await service.saveForEvent(currentEvent, { targetResolution: { width: 1280, height: 720 }, safeAreaMargin: 24, blackoutAppearance: 'pure-black' }, created)
+    expect(updated.appearance).toEqual(transparentAppearance)
   })
 })

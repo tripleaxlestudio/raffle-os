@@ -2,6 +2,7 @@ import Dexie from 'dexie'
 import { afterEach, describe, expect, it } from 'vitest'
 import { IDBKeyRange, indexedDB } from 'fake-indexeddb'
 import { RaffleOSDatabase } from '../db.ts'
+import { DexieDrawConfigurationRepository } from '../repositories/draw-configuration.repository.ts'
 import type { CommandId, DrawConfigurationId, DrawSessionId, ParticipantId } from '../../../domain/shared/identifiers.ts'
 import type { IsoTimestamp } from '../../../domain/shared/timestamps.ts'
 import { SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4 } from './schema-v1.ts'
@@ -47,7 +48,7 @@ describe('schema v3 additive migration', () => {
     const name = await makeLegacyDatabase(version)
     const database = new RaffleOSDatabase(name, { IDBKeyRange, indexedDB })
     await database.openSupported()
-    expect(database.verno).toBe(6)
+    expect(database.verno).toBe(7)
     for (const [store, value] of Object.entries(legacy)) {
       const key = 'id' in value ? value.id : value.key
       if (store === 'draw_configurations') {
@@ -55,7 +56,7 @@ describe('schema v3 additive migration', () => {
           ...value,
           presentation: {
             presentationMode: 'instant-reveal',
-            rollStopMode: 'timed',
+            rollStopMode: 'manual',
             rollDurationSeconds: 8,
             rollSpeedPerSecond: 12,
             revealMode: 'all-together',
@@ -68,6 +69,7 @@ describe('schema v3 additive migration', () => {
     expect(await database.participants.get('participant-1' as ParticipantId)).toMatchObject({ ticketNumber: '00042' })
     expect(await database.command_receipts.count()).toBe(0)
     expect(await database.event_settings.count()).toBe(0)
+    expect(await database.redraw_requests.count()).toBe(0)
     if (version === 2) expect(await database.presentation_checkpoints.get('session-1' as DrawSessionId)).toEqual({ drawSessionId: 'session-1', stage: 'rolling', persistedAt: '2026-08-05T01:00:00.000Z' })
     database.close()
   })
@@ -104,11 +106,41 @@ describe('schema v3 additive migration', () => {
     await database.openSupported()
     expect(await database.draw_configurations.get('configuration-1' as DrawConfigurationId)).toMatchObject({
       requestedWinners: 1,
-      presentation: { presentationMode: 'instant-reveal', rollStopMode: 'timed', rollDurationSeconds: 8, rollSpeedPerSecond: 12, revealMode: 'all-together' },
+      presentation: { presentationMode: 'instant-reveal', rollStopMode: 'manual', rollDurationSeconds: 8, rollSpeedPerSecond: 12, revealMode: 'all-together' },
     })
     expect((await database.draw_sessions.get('session-1' as DrawSessionId))?.configurationSnapshot?.presentation).toEqual({
       presentationMode: 'instant-reveal',
-      rollStopMode: 'timed',
+      rollStopMode: 'manual',
+      rollDurationSeconds: 8,
+      rollSpeedPerSecond: 12,
+      revealMode: 'all-together',
+    })
+    database.close()
+  })
+
+  it('loads an existing timed DrawConfiguration as manual without losing presentation choices', async () => {
+    const name = `raffle-os-timed-compat-${crypto.randomUUID()}`
+    names.push(name)
+    const database = new RaffleOSDatabase(name, { IDBKeyRange, indexedDB })
+    await database.openSupported()
+    const configurationId = 'configuration-timed' as DrawConfigurationId
+    await database.draw_configurations.add({
+      id: configurationId,
+      eventId: 'event-timed' as never,
+      prizeCategoryId: 'prize-timed' as never,
+      requestedWinners: 3,
+      winningRule: 'once-per-event',
+      requireCheckIn: false,
+      eligibleGroupFilter: null,
+      presentation: { presentationMode: 'random-number-roll', rollStopMode: 'timed', rollDurationSeconds: 12, rollSpeedPerSecond: 20, revealMode: 'sequential' },
+      createdAt: '2026-08-05T01:00:00.000Z' as IsoTimestamp,
+      updatedAt: '2026-08-05T01:00:00.000Z' as IsoTimestamp,
+    })
+
+    const loaded = await new DexieDrawConfigurationRepository(database).findById(configurationId)
+    expect(loaded?.presentation).toEqual({
+      presentationMode: 'random-number-roll',
+      rollStopMode: 'manual',
       rollDurationSeconds: 8,
       rollSpeedPerSecond: 12,
       revealMode: 'all-together',

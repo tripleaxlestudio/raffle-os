@@ -12,6 +12,7 @@ import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
 import type { RedrawRecord } from '../../domain/winners/redraw.types.ts'
 import type { AppMode } from '../../domain/types/app-mode.ts'
 import type { RedrawReason } from '../../domain/winners/redraw.types.ts'
+import type { RedrawRequest } from '../../domain/winners/redraw-request.types.ts'
 import type {
   WinnerRecord,
   WinnerStatus,
@@ -109,6 +110,14 @@ export interface RedrawWinnersPersistenceOutcome {
   readonly committedAt?: IsoTimestamp
 }
 
+export interface StartRedrawPersistenceInput {
+  readonly requestId: CommandId
+}
+
+export interface CompleteRedrawPersistenceInput {
+  readonly requestId: CommandId
+}
+
 export interface RedrawWinnersPersistenceInput {
   readonly commandId: CommandId
   readonly actor: 'local-operator'
@@ -141,4 +150,6 @@ export interface DrawPersistenceUnitOfWork {
   redrawConfirmedWinners?(
     input: RedrawWinnersPersistenceInput,
   ): Promise<RedrawWinnersPersistenceOutcome>
+  startRedraw?(input: StartRedrawPersistenceInput): Promise<RedrawRequest>
+  completeRedraw?(input: CompleteRedrawPersistenceInput): Promise<RedrawRequest>
 }

@@ -16,6 +16,8 @@ import {
   SCHEMA_VERSION_5,
   SCHEMA_V6,
   SCHEMA_VERSION_6,
+  SCHEMA_V7,
+  SCHEMA_VERSION_7,
 } from './schema-v1.ts'
 import { normalizeDrawPresentationConfiguration } from '../../../domain/draws/draw-presentation.types.ts'
 import type { DrawConfiguration } from '../../../domain/draws/draw-configuration.types.ts'
@@ -36,7 +38,7 @@ export interface PersistenceMigration {
   ) => PromiseLike<void> | void
 }
 
-export const CURRENT_SUPPORTED_SCHEMA_VERSION = SCHEMA_VERSION_6
+export const CURRENT_SUPPORTED_SCHEMA_VERSION = SCHEMA_VERSION_7
 
 export const PERSISTENCE_MIGRATIONS:
   readonly PersistenceMigration[] = [
@@ -100,6 +102,10 @@ export const PERSISTENCE_MIGRATIONS:
           }
         })
       },
+    },
+    {
+      stores: SCHEMA_V7,
+      version: SCHEMA_VERSION_7,
     },
   ]
 

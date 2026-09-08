@@ -1,4 +1,5 @@
 import type { IsoTimestamp } from '../../domain/shared/timestamps.ts'
+import { validateDisplayAppearance, type DisplayAppearanceConfiguration } from '../../domain/display/display-configuration.types.ts'
 import {
   createProtocolEnvelope,
   validateEnvelopeContext,
@@ -34,6 +35,7 @@ export type PublisherResult =
 export type OperatorPublisher = {
   readonly start: (initial: PresentationProjectionSource) => PublisherResult
   readonly publish: (source: PresentationProjectionSource) => PublisherResult
+  readonly publishAppearance: (appearance: DisplayAppearanceConfiguration) => PublisherResult
   readonly subscribe: (listener: (status: PublisherStatus) => void) => () => void
   readonly subscribeSnapshot: (listener: () => void) => () => void
   readonly close: () => void
@@ -111,6 +113,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   let serializedSnapshot: string | undefined
   let currentTransport = options.transport
   let unsubscribe: () => void = () => undefined
+  let unsubscribeTransportStatus: () => void = () => undefined
   let heartbeatHandle: unknown = null
   let heartbeatCount = 0
   let heartbeatReceivedCount = 0
@@ -118,6 +121,8 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   let restoreRequestCount = 0
   let retainedSnapshotResendCount = 0
   const audienceSubscribers = new Map<string, { readonly lastActivity: string; readonly lastHeartbeat?: string }>()
+  let authoritativePresenceObserved = false
+  let authoritativeAudienceCount = 0
   let audienceLivenessHandle: unknown = null
   let audienceLivenessDeadline: string | undefined
   let mostRecentSubscriberExpiryReason: string | undefined
@@ -222,19 +227,20 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
   const audienceTimeoutMs = options.audienceLivenessTimeoutMs ?? 5000
   const scheduleAudienceLiveness = options.scheduleAudienceLiveness ?? ((callback, delay) => globalThis.setInterval(callback, delay))
   const cancelAudienceLiveness = options.cancelAudienceLiveness ?? ((handle) => globalThis.clearInterval(handle as number))
-  const reportPresence = (status: 'connected' | 'waiting'): void => report({ kind: 'audience-presence', status, subscriberCount: audienceSubscribers.size })
+  const effectiveAudienceCount = (): number => authoritativePresenceObserved ? authoritativeAudienceCount : audienceSubscribers.size
+  const reportPresence = (status: 'connected' | 'waiting'): void => report({ kind: 'audience-presence', status, subscriberCount: effectiveAudienceCount() })
   const touchAudience = (runtimeId: string, heartbeat: boolean): void => {
     const timestamp = options.clock.now()
     lastAudienceActivityTimestamp = timestamp
     if (heartbeat) lastAudienceHeartbeatTimestamp = timestamp
     audienceSubscribers.set(runtimeId, { lastActivity: timestamp, ...(heartbeat ? { lastHeartbeat: timestamp } : {}) })
     audienceLivenessDeadline = new Date(Date.parse(timestamp) + audienceTimeoutMs).toISOString()
-    if (audienceSubscribers.size === 1) reportPresence('connected')
+    if (!authoritativePresenceObserved && audienceSubscribers.size === 1) reportPresence('connected')
   }
   const removeAudience = (runtimeId: string, reason: string): void => {
     if (!audienceSubscribers.delete(runtimeId)) return
     mostRecentSubscriberExpiryReason = reason
-    if (audienceSubscribers.size === 0) reportPresence('waiting')
+    if (!authoritativePresenceObserved && audienceSubscribers.size === 0) reportPresence('waiting')
   }
   const expireAudience = (): void => {
     const expiry = Date.parse(options.clock.now()) - audienceTimeoutMs
@@ -276,7 +282,26 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
     publishSnapshot(snapshot, true, true)
   }
 
-  const subscribeTransport = (): void => { unsubscribe = currentTransport.subscribe(onEnvelope) }
+  const subscribeTransport = (): void => {
+    unsubscribe = currentTransport.subscribe(onEnvelope)
+    unsubscribeTransportStatus = currentTransport.subscribeStatus?.((transportStatus) => {
+      if (!transportStatus.authoritative) {
+        if (transportStatus.connection === 'connected') {
+          authoritativePresenceObserved = false
+          authoritativeAudienceCount = 0
+        }
+        return
+      }
+      if (transportStatus.connection === 'unavailable') {
+        authoritativePresenceObserved = false
+        authoritativeAudienceCount = 0
+        return
+      }
+      authoritativePresenceObserved = true
+      authoritativeAudienceCount = transportStatus.connection === 'connected' ? transportStatus.audienceCount ?? 0 : 0
+      reportPresence(authoritativeAudienceCount > 0 ? 'connected' : 'waiting')
+    }) ?? (() => undefined)
+  }
 
   return {
     start(initial) {
@@ -288,6 +313,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
         sequence = 0
         snapshot = undefined
         serializedSnapshot = undefined
+        unsubscribeTransportStatus()
         subscribeTransport()
       } else if (!started) {
         subscribeTransport()
@@ -315,6 +341,13 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       }
       return projectAndPublish(source, false)
     },
+    publishAppearance(appearance) {
+      if (closed) return { ok: false, error: { kind: 'transport-closed' } }
+      if (snapshot === undefined) return { ok: false, error: { kind: 'projection-error', message: 'Publisher has no retained public snapshot.' } }
+      const validated = validateDisplayAppearance(appearance)
+      if (!validated.ok) return { ok: false, error: { kind: 'projection-error', message: validated.error.message } }
+      return publishSnapshot(Object.freeze({ ...snapshot, appearance: validated.value }), false)
+    },
     subscribe(listener) { statuses.add(listener); return () => statuses.delete(listener) },
     subscribeSnapshot(listener) { snapshotSubscribers.add(listener); return () => snapshotSubscribers.delete(listener) },
     close() {
@@ -323,6 +356,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       clearHeartbeat()
       if (audienceLivenessHandle !== null) { cancelAudienceLiveness(audienceLivenessHandle); audienceLivenessHandle = null }
       unsubscribe()
+      unsubscribeTransportStatus()
       currentTransport.close()
       trace({ messageType: 'publisher-disposed', direction: 'local', cleanupDisposeReason: 'close-called' })
       trace({ messageType: 'channel-closed', direction: 'local', cleanupDisposeReason: 'close-called' })
@@ -354,7 +388,7 @@ export function createOperatorPublisher(options: OperatorPublisherOptions): Oper
       retainedSnapshotResendCount,
       audienceLivenessTimeoutMs: audienceTimeoutMs,
       audienceLivenessDeadline,
-      activeAudienceSubscriberCount: audienceSubscribers.size,
+      activeAudienceSubscriberCount: effectiveAudienceCount(),
       audienceSubscriberRuntimeIds: [...audienceSubscribers.keys()],
       lastAudienceActivity: lastAudienceActivityTimestamp,
       lastAudienceHeartbeat: lastAudienceHeartbeatTimestamp,

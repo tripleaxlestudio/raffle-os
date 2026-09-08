@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import { createAudienceController, type AudienceController, type AudienceRenderedState } from '../../application/display-transport/audience-controller.ts'
-import { createAudienceTransport, type Transport } from '../../application/display-transport/transport.ts'
+import type { Transport } from '../../application/display-transport/transport.ts'
+import { createProductionDisplayTransport } from '../../infrastructure/display/production-display-transport.ts'
 import type { ProtocolScope } from '../../application/display-transport/protocol.ts'
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
 import { parseEventId, parseDisplayConfigurationId } from '../../domain/shared/identifiers.ts'
@@ -72,8 +73,8 @@ export function AudienceDisplayPage({ transport: suppliedTransport, scope: suppl
   const displayId = useMemo(() => parseDisplayConfigurationId(displayIdParam), [displayIdParam])
   const scope = useMemo(() => suppliedScope ?? (eventId.ok && displayId.ok ? deriveProductionDisplayScope(eventId.value, displayId.value) : undefined), [displayId, eventId, suppliedScope])
   const hookScope = useMemo(() => scope ?? { eventId: 'invalid-event-context', displayId: 'invalid-display-context' }, [scope])
-  const transport = useMemo(() => suppliedTransport ?? createAudienceTransport('raffle-os-display', hookScope), [hookScope, suppliedTransport])
-  const transportFactory = useMemo(() => suppliedTransport === undefined ? () => createAudienceTransport('raffle-os-display', hookScope) : undefined, [hookScope, suppliedTransport])
+  const transport = useMemo(() => suppliedTransport ?? createProductionDisplayTransport('audience', hookScope), [hookScope, suppliedTransport])
+  const transportFactory = useMemo(() => suppliedTransport === undefined ? () => createProductionDisplayTransport('audience', hookScope) : undefined, [hookScope, suppliedTransport])
   const controller = useMemo(() => suppliedController ?? createAudienceController({ transport, transportFactory, scope: hookScope, expectedSession, autoStartHandshake: suppliedController === undefined ? false : undefined }), [expectedSession, hookScope, suppliedController, transport, transportFactory])
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const controllerLifecycleGeneration = useRef(0)

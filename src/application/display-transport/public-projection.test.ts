@@ -46,6 +46,11 @@ describe('public display projection privacy boundary', () => {
     expect(JSON.stringify(projection)).not.toMatch(/winnerId|name|isCheckedIn|group|notes|candidate|eligibility|filter|operatorControls/)
   })
 
+  it('normalizes legacy timed rolling metadata to manual for the Audience state', () => {
+    const projection = projectPublicDisplaySnapshot(source({ stage: 'rolling', stageStartedAt: timestamp, result, presentationConfiguration: { winnerCount: 2, rollSpeedPerSecond: 20, rollStopMode: 'timed', rollDurationSeconds: 5, revealMode: 'sequential' }, presentationSeed: 'legacy-timed-seed' }))
+    expect(projection).toMatchObject({ stage: 'rolling', rollStopMode: 'manual', rollSpeedPerSecond: 20, revealMode: 'sequential' })
+  })
+
   it('projects reveal and safe pending handoff with exact public tickets only', () => {
     const reveal = projectPublicDisplaySnapshot(source({ stage: 'reveal', stageStartedAt: timestamp, result }))
     const pending = projectPublicDisplaySnapshot(source({ stage: 'pending-handoff', stageStartedAt: timestamp, result }))
@@ -108,4 +113,26 @@ describe('public display projection privacy boundary', () => {
     expect(protocolResult.ok).toBe(true)
     expect(() => parsePublicDisplaySnapshot({ ...projection, name: 'private' })).toThrowError(expect.objectContaining({ code: 'invalid-public-snapshot' }))
   })
+})
+
+it('round trips only the public prize image reference and rejects non-string references', () => {
+  const projection = projectPublicDisplaySnapshot(source({ prizeImageAssetId: 'asset-public', participant: { name: 'Private Name', notes: 'secret' }, result }))
+  const restored = parsePublicDisplaySnapshot(JSON.parse(serializePublicDisplaySnapshot(projection)))
+  expect(restored.prizeImageAssetId).toBe('asset-public')
+  expect(publicSnapshotToProtocolState(restored)).toMatchObject({ prizeImageAssetId: 'asset-public' })
+  const envelope = parseEnvelope({ protocolVersion: PROTOCOL_VERSION, messageId: 'image-message', sender: { kind: 'operator', id: 'operator-1' }, scope: { eventId: 'event-1', displayId: 'display-1' }, drawSessionId: session, epoch: 1, sequence: 1, emittedAt: timestamp, message: publicSnapshotToProtocolState(restored) })
+  expect(envelope).toMatchObject({ ok: true, envelope: { message: { prizeImageAssetId: 'asset-public' } } })
+  expect(JSON.stringify(restored)).not.toMatch(/Private Name|secret|participant|blob|base64/)
+  expect(() => projectPublicDisplaySnapshot(source({ prizeImageAssetId: new Blob() }))).toThrow()
+})
+
+it.each(['countdown', 'rolling', 'reveal', 'pending-handoff'] as const)('removes the ready-only prize image reference from %s projection', (stage) => {
+  const projection = projectPublicDisplaySnapshot(source({
+    stage,
+    stageStartedAt: timestamp,
+    prizeImageAssetId: 'ready-only-asset',
+    ...(stage === 'reveal' || stage === 'pending-handoff' ? { result } : {}),
+  }))
+  expect(projection).not.toHaveProperty('prizeImageAssetId')
+  expect(publicSnapshotToProtocolState(projection)).not.toHaveProperty('prizeImageAssetId')
 })

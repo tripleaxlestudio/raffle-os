@@ -1,5 +1,5 @@
 import { acceptSequence, createProtocolEnvelope, validateEnvelopeContext, type ProtocolEnvelope, type ProtocolScope, type SequenceTracker } from './protocol.ts'
-import { parsePublicDisplaySnapshot, type PublicDisplaySnapshot } from './public-projection.ts'
+import { parsePublicDisplaySnapshot, serializePublicDisplaySnapshot, type PublicDisplaySnapshot } from './public-projection.ts'
 import type { Transport } from './transport.ts'
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
 import { appendRuntimeTrace } from './runtime-trace.ts'
@@ -129,6 +129,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   let watchdogGeneration = 0
   let closed = false
   let retainedSnapshot: PublicDisplaySnapshot | undefined
+  let retainedSnapshotSerialized: string | undefined
   let unsubscribe: () => void = () => undefined
   let unsubscribeClose: () => void = () => undefined
   const traceBase = { side: 'Audience' as const, publisherControllerInstanceId: sourceId, scope: options.scope, channelName: `raffle-os-display:${options.scope.eventId}:${options.scope.displayId}`, route: options.route }
@@ -304,6 +305,7 @@ export function createAudienceController(options: AudienceControllerOptions): Au
   }
   const startHandshake = (): void => {
     if (closed || currentTransport.capability.transport !== 'available' || diagnostics.listenerAttached) return
+    attach()
     diagnostics = { ...diagnostics, listenerAttached: true, listenerAttachedAt: now(), channelOpen: true }
     armWatchdog()
     startPresenceHeartbeat()
@@ -335,7 +337,6 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       recordPublisherActivity(true)
       trace({ validationResult: 'accepted', orderingResult: 'accepted', controllerStateAfter: state.kind, messageType: 'heartbeat' })
       if (state.kind === 'disconnected-safe') requestRestore()
-      notify()
       return
     }
     if (envelope.message.type !== 'display-state') return
@@ -361,8 +362,8 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         blackoutRequested: message.blackoutRequested ?? false,
         ...(message.displayTest === undefined ? {} : { displayTest: message.displayTest }),
         ...(message.eventName === undefined ? {} : { eventName: message.eventName }),
-        ...(message.prizeCategory === undefined ? {} : { prizeCategory: message.prizeCategory }), ...(message.prizeName === undefined ? {} : { prizeName: message.prizeName }), ...(message.winnerCount === undefined ? {} : { winnerCount: message.winnerCount }),
-        ...(message.eventSubtitle === undefined ? {} : { eventSubtitle: message.eventSubtitle }), ...(message.primaryColor === undefined ? {} : { primaryColor: message.primaryColor }), ...(message.accentColor === undefined ? {} : { accentColor: message.accentColor }), ...(message.logo === undefined ? {} : { logo: message.logo }), ...(message.background === undefined ? {} : { background: message.background }), ...(message.blackoutAppearance === undefined ? {} : { blackoutAppearance: message.blackoutAppearance }), ...(message.safeAreaMargin === undefined ? {} : { safeAreaMargin: message.safeAreaMargin }),
+        ...(message.prizeCategory === undefined ? {} : { prizeCategory: message.prizeCategory }), ...(message.prizeName === undefined ? {} : { prizeName: message.prizeName }), ...(message.prizeImageAssetId === undefined ? {} : { prizeImageAssetId: message.prizeImageAssetId }), ...(message.winnerCount === undefined ? {} : { winnerCount: message.winnerCount }),
+        ...(message.eventSubtitle === undefined ? {} : { eventSubtitle: message.eventSubtitle }), ...(message.primaryColor === undefined ? {} : { primaryColor: message.primaryColor }), ...(message.accentColor === undefined ? {} : { accentColor: message.accentColor }), ...(message.appearance === undefined ? {} : { appearance: message.appearance }), ...(message.logo === undefined ? {} : { logo: message.logo }), ...(message.background === undefined ? {} : { background: message.background }), ...(message.blackoutAppearance === undefined ? {} : { blackoutAppearance: message.blackoutAppearance }), ...(message.safeAreaMargin === undefined ? {} : { safeAreaMargin: message.safeAreaMargin }),
         ...(message.mode === undefined ? {} : { mode: message.mode }),
         ...(message.rollingSlotCount === undefined ? {} : { rollingSlotCount: message.rollingSlotCount }),
         ...(message.rollSpeedPerSecond === undefined ? {} : { rollSpeedPerSecond: message.rollSpeedPerSecond }),
@@ -383,21 +384,32 @@ export function createAudienceController(options: AudienceControllerOptions): Au
         ...(message.winnerStatuses === undefined ? {} : { winnerStatuses: message.winnerStatuses }),
         ...(message.verificationState === undefined ? {} : { verificationState: message.verificationState }),
       }, options.expectedSession)
+      const serializedSnapshot = serializePublicDisplaySnapshot(snapshot)
+      const visibleSnapshot = state.kind === 'snapshot' && state.connection === 'connected' ? state.snapshot : undefined
+      const reuseVisibleSnapshot = visibleSnapshot !== undefined && retainedSnapshotSerialized === serializedSnapshot
       acceptedMessageIds.add(envelope.messageId)
       acceptedOrdering = { epoch: envelope.epoch, sequence: envelope.sequence }
       acceptedOperator = sender
       if (!isSafeNonDrawState) acceptedSession = snapshot.drawSessionId
       restoreRequested = false
       connection = 'connected'
-      retainedSnapshot = snapshot
-      state = { kind: 'snapshot', connection, snapshot }
+      retainedSnapshot = reuseVisibleSnapshot ? visibleSnapshot : snapshot
+      retainedSnapshotSerialized = serializedSnapshot
+      if (!reuseVisibleSnapshot) state = { kind: 'snapshot', connection, snapshot }
       recordPublisherActivity(false)
       const publicState = snapshot.displayTest === true ? 'display-test' : snapshot.stage === 'standby' ? 'standby' : 'draw'
       clearRestoreRetry()
       pendingAcknowledgement = { envelope, snapshot, publicState }
       diagnostics = { ...diagnostics, validationResult: 'accepted', rejectionReason: undefined, publicState, stateAfterReceipt: state.kind, acceptedPublisherInstanceId: envelope.sender.id, acceptedEpoch: envelope.epoch, acceptedSequence: envelope.sequence, firstSnapshotApplied: diagnostics.firstSnapshotApplied ?? { epoch: envelope.epoch, sequence: envelope.sequence, publicState }, acknowledgementPending: { epoch: envelope.epoch, sequence: envelope.sequence, publicState }, acknowledgementSuppressionReason: undefined, invariantFailure: undefined }
-      trace({ validationResult: 'accepted', orderingResult: 'accepted', controllerStateAfter: state.kind, renderedState: publicState, acknowledgementStatus: 'pending' })
-      notify()
+      if (reuseVisibleSnapshot) {
+        pendingAcknowledgement = undefined
+        diagnostics = { ...diagnostics, acknowledgementPending: undefined, selectedRenderedState: publicState }
+        trace({ messageType: 'visual-state-unchanged', validationResult: 'accepted', orderingResult: 'accepted', controllerStateAfter: state.kind, renderedState: publicState, acknowledgementStatus: 'sent' })
+        sendApplied(envelope, snapshot)
+      } else {
+        trace({ validationResult: 'accepted', orderingResult: 'accepted', controllerStateAfter: state.kind, renderedState: publicState, acknowledgementStatus: 'pending' })
+        notify()
+      }
       // React must report the actual selected public presentation before this
       // snapshot is acknowledged. Validation/controller receipt alone is not
       // product-visible application.
@@ -421,11 +433,15 @@ export function createAudienceController(options: AudienceControllerOptions): Au
       reconnectHandle = schedule(() => {
         reconnectHandle = null
         if (closed) return
+        unsubscribe()
+        unsubscribeClose()
+        currentTransport.close()
+        unsubscribe = () => undefined
+        unsubscribeClose = () => undefined
         currentTransport = options.transportFactory?.() ?? currentTransport
         connection = currentTransport.capability.transport === 'available' ? 'connecting' : 'unavailable'
         state = currentTransport.capability.transport === 'available' ? { kind: 'connecting' } : { kind: 'unavailable', connection: 'unavailable' }
         notify()
-        attach()
         diagnostics = { ...diagnostics, listenerAttached: false, channelOpen: currentTransport.capability.transport === 'available' }
         if (currentTransport.capability.transport === 'available') startHandshake()
       }, options.reconnectDelayMs ?? 100)
@@ -437,7 +453,6 @@ export function createAudienceController(options: AudienceControllerOptions): Au
     unsubscribe = currentTransport.subscribe(onEnvelope)
     unsubscribeClose = currentTransport.onClose?.(enterDisconnected) ?? (() => undefined)
   }
-  attach()
   if (options.autoStartHandshake !== false) startHandshake()
 
   return {

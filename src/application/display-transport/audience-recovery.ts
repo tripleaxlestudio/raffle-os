@@ -1,4 +1,4 @@
-import type { DisplayConfiguration } from '../../domain/display/display-configuration.types.ts'
+import { resolveDisplayAppearance, type DisplayConfiguration } from '../../domain/display/display-configuration.types.ts'
 import type { EventSettings } from '../../domain/settings/event-settings.types.ts'
 import type { StartupRecoveryResult } from '../workflow/startup-recovery-arbiter.ts'
 import { projectCommittedAudienceState } from './authoritative-projection.ts'
@@ -45,5 +45,6 @@ export function projectAudienceRecoverySource(
     background: settings.background === undefined ? undefined : { type: settings.background.type, blob: settings.background.blob },
     blackoutAppearance: input.displayConfiguration.blackoutAppearance,
     safeAreaMargin: input.displayConfiguration.safeAreaMargin,
+    appearance: resolveDisplayAppearance(input.displayConfiguration, settings),
   }
 }

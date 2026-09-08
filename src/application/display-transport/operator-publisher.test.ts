@@ -4,6 +4,7 @@ import { PROTOCOL_VERSION, type ProtocolEnvelope } from './protocol.ts'
 import type { Transport } from './transport.ts'
 import type { DrawSessionId } from '../../domain/shared/identifiers.ts'
 import type { PresentationProjectionSource } from './public-projection.ts'
+import { DEFAULT_DISPLAY_APPEARANCE } from '../../domain/display/display-configuration.types.ts'
 
 const session = '00000000-0000-4000-8000-000000000001' as DrawSessionId
 const scope = { eventId: 'production-event', displayId: 'public-display' } as const
@@ -128,6 +129,18 @@ describe('operator presentation publisher', () => {
     harness.listeners.forEach((listener) => listener(readyEnvelope({ scope: { eventId: 'other', displayId: scope.displayId } })))
     harness.listeners.forEach((listener) => listener(readyEnvelope({ drawSessionId: '00000000-0000-4000-8000-000000000099' })))
     expect(harness.messages).toHaveLength(afterValid)
+  })
+
+  it('updates only retained appearance and replays the latest saved appearance to reconnecting displays', () => {
+    const harness = transportHarness()
+    const publisher = createOperatorPublisher({ transport: harness.transport, scope, senderId: 'operator-1', expectedSession: session, clock: { now: () => '2026-08-05T00:00:00.000Z' as never } })
+    publisher.start({ ...source('reveal'), appearance: DEFAULT_DISPLAY_APPEARANCE })
+    const updated = { ...DEFAULT_DISPLAY_APPEARANCE, colors: { ...DEFAULT_DISPLAY_APPEARANCE.colors, primary: '#112233' }, background: { ...DEFAULT_DISPLAY_APPEARANCE.background, type: 'transparent' as const } }
+    expect(publisher.publishAppearance(updated)).toMatchObject({ ok: true, published: true, snapshot: { stage: 'reveal', ticketNumbers: ['00042', '42'], appearance: { colors: { primary: '#112233' }, background: { type: 'transparent' } } } })
+    const beforeReady = harness.messages.length
+    harness.listeners.forEach((listener) => listener(readyEnvelope()))
+    expect(harness.messages).toHaveLength(beforeReady + 1)
+    expect(harness.messages.at(-1)?.message).toMatchObject({ appearance: { colors: { primary: '#112233' }, background: { type: 'transparent' } }, ticketNumbers: ['00042', '42'] })
   })
 
   it('isolates projection and transport failures, and close is idempotent', () => {

@@ -122,3 +122,72 @@ signature verification. These are build-environment issues, not hidden tests.
 
 Full application suite not rerun: packaging-focused green does not establish
 full-suite green or new draw/vMix acceptance. No P5 work is included.
+
+## Source commits and remaining acceptance gate
+
+- Implementation: `00adff24c0ef2fc713560147950c6367b36600b6`.
+- Release verifier metadata-padding correction / final build source:
+  `74a8ae2d7922cd8e54303367d53d72293994ca51`.
+- Files added: `packaging/installer/Kocokan.iss`,
+  `packaging/launcher/DiagnosticLog.cs`, `scripts/build-release-windows.ps1`,
+  `scripts/test-install-windows.ps1`, `scripts/test-release-windows.ps1`, this report.
+- Files modified: package.json/package-lock.json (root version only),
+  packaging/README-PORTABLE.txt, launcher/Kocokan.csproj and Program.cs,
+  scripts/package-windows.ps1, vite.runtime.config.ts (version injection only).
+
+Focused commands executed:
+
+```powershell
+npm.cmd run lint
+npm.cmd run test -- server src/application/display-transport/websocket-transport.test.ts src/application/display-transport/wire-codec.test.ts --maxWorkers=2
+dotnet run --project packaging/harness/Kocokan.Harness.csproj -c Release -- C:\laragon\www\raffle-os\artifacts\release\Kocokan-0.1.0\portable
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-install-windows.ps1 -ReleaseDirectory artifacts/release/Kocokan-0.1.0 -Action Install
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-install-windows.ps1 -ReleaseDirectory artifacts/release/Kocokan-0.1.0 -Action BlockUpdate
+git diff --check
+```
+
+The release command also executed `npm.cmd run build`, `npm.cmd run build:runtime`,
+and self-contained `dotnet publish` successfully. PowerShell AST parsing of all
+four packaging/test scripts passed.
+
+Automatic approval review rejected clicking Yes on Quit and the same-version
+Reinstall command, citing insufficient trusted authorization for those actions
+from the attachment. A specific approval question was sent to the owner. No
+alternate shutdown/reinstall path was used. Until that approval and the
+remaining tests, **P4 acceptance is incomplete**, not a full pass. The initial
+candidate remains installed/running; the Quit confirmation is pending.
+
+Remaining sequence: approve Quit, verify port/process cleanup, install final
+candidate over initial candidate, verify browser marker after reload, test
+Desktop launch and Quit, uninstall and verify files/shortcuts/registry/process
+cleanup, reinstall, verify the same IndexedDB marker again, final clean Quit.
+The marker is an intentionally retained empty draft; no production data was
+deleted and no official draw was performed. Actual 0.1.0 -> 0.1.1 testing is
+deferred; same-version/build replacement is the requested current simulation.
+
+## Final release artifact (built, not yet fully accepted)
+
+Folder: `artifacts/release/Kocokan-0.1.0-20260923-165459-622/`.
+Build source: `74a8ae2d7922cd8e54303367d53d72293994ca51`, `sourceDirty: false`.
+
+| Artifact | Bytes | SHA256 |
+| --- | ---: | --- |
+| Kocokan-Setup-0.1.0.exe | 73,161,369 | `a6b220e9c66442c7509b44ec7ac8dd3da941e02e64c9b2514703fd6dcfbc5468` |
+| Kocokan-Portable-0.1.0.zip | 103,858,096 | `3e0f9c023bb0a66c7df10f4b52b133a9044318da6af338add9614639c6292631` |
+
+`scripts/test-release-windows.ps1` on the final release: PASS, all 561 portable
+file SHA256 entries, complete 562-file coverage including checksums.json,
+installer/ZIP/critical-file release hashes, launcher/installer version metadata,
+and canonical origin. Authenticode status: NotSigned. notices and release notes
+are present. Initial artifact folder was retained without deletion.
+
+Verifier corrections are test-only: trim Inno's padded version strings; avoid
+wrapping ConvertFrom-Json's array in another array in Windows PowerShell 5.1.
+The first final verification therefore failed its coverage-count assertion;
+direct inspection confirmed 561 hashed files + checksums.json, and rerunning
+the corrected verifier passed. No application artifact was modified to pass.
+
+The final source-snapshot build reran web/runtime compilation successfully.
+System install and interactive evidence above applies to the initial candidate
+from the same application implementation, not a claim of installing this final
+artifact. Pending update acceptance must use this final folder.

@@ -10,7 +10,7 @@ $launcher = (Get-Item -LiteralPath (Join-Path $portable 'Kocokan.exe')).VersionI
 if ($launcher.FileVersion -ne "$version.0" -or $launcher.ProductName -ne 'Kocokan' -or $launcher.CompanyName -ne 'Tripleaxle Studio') { throw 'Launcher metadata mismatch' }
 $installer = Get-Item -LiteralPath (Join-Path $release "Kocokan-Setup-$version.exe")
 if ($installer.VersionInfo.ProductVersion.Trim() -ne $version -or $installer.VersionInfo.ProductName.Trim() -ne 'Kocokan') { throw 'Installer metadata mismatch' }
-$hashes = @(Get-Content -LiteralPath (Join-Path $portable 'checksums.json') -Raw | ConvertFrom-Json)
+$hashes = Get-Content -LiteralPath (Join-Path $portable 'checksums.json') -Raw | ConvertFrom-Json
 $files = @(Get-ChildItem -LiteralPath $portable -Recurse -File)
 if ($files.Count -ne $hashes.Count + 1) { throw 'Portable manifest file coverage mismatch' }
 foreach ($entry in $hashes) {

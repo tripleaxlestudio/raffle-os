@@ -12,5 +12,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AssemblyName>Kocokan</AssemblyName>
+    <Product>Kocokan</Product>
+    <Company>Tripleaxle Studio</Company>
   </PropertyGroup>
 </Project>

@@ -1,8 +1,11 @@
-param([switch]$Zip)
+param([switch]$Zip, [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = Split-Path $PSScriptRoot -Parent
 Set-Location -LiteralPath $repo
+$package = Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json
+$productVersion = $package.version
+if ($productVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Product version must be major.minor.patch.' }
 $nodeVersion = '22.23.2'
 $nodeHash = '1177b4137ba5adaa56354ae40f1080c7450e8ae09cecb47da459d1c52ac99f97'
 $nodeUrl = "https://nodejs.org/dist/v$nodeVersion/node-v$nodeVersion-win-x64.zip"
@@ -20,9 +23,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Web build failed.' }
 & npm.cmd run build:runtime
 if ($LASTEXITCODE -ne 0) { throw 'Runtime build failed.' }
 # Unique output avoids stale assets and never deletes an existing delivery.
-$output = Join-Path $repo ('artifacts\Kocokan-Pilot-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+$output = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $repo ('artifacts\Kocokan-' + $productVersion + '-' + (Get-Date -Format 'yyyyMMdd-HHmmss')) }
+if (Test-Path -LiteralPath $output) { throw "Refusing to overwrite existing artifact: $output" }
 New-Item -ItemType Directory -Path $output | Out-Null
-& dotnet publish packaging/launcher/Kocokan.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o $output
+& dotnet publish packaging/launcher/Kocokan.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false "-p:Version=$productVersion" "-p:FileVersion=$productVersion.0" "-p:AssemblyVersion=$productVersion.0" -o $output
 if ($LASTEXITCODE -ne 0) { throw 'Launcher publish failed.' }
 foreach ($directory in @('runtime', 'server', 'web', 'notices')) { New-Item -ItemType Directory -Path (Join-Path $output $directory) | Out-Null }
 Copy-Item -LiteralPath (Join-Path $cache "node-v$nodeVersion-win-x64\node.exe") -Destination (Join-Path $output 'runtime\node.exe')
@@ -63,8 +67,8 @@ $dirty = [bool](& git status --porcelain --untracked-files=normal)
 $package = Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json
 $runtimeConfig = Get-Content -LiteralPath (Join-Path $output 'Kocokan.runtimeconfig.json') -Raw | ConvertFrom-Json
 $manifest = [ordered]@{
-    application = 'Kocokan'; version = 'packaging-pilot-p2'; origin = 'http://127.0.0.1:47882'
-    runtimeVersion = "$($package.version)-packaging-pilot-p2"; nodeVersion = $nodeVersion
+    application = 'Kocokan'; version = $productVersion; publisher = 'Tripleaxle Studio'; origin = 'http://127.0.0.1:47882'
+    runtimeVersion = $productVersion; nodeVersion = $nodeVersion
     nodeSource = $nodeUrl; nodeArchiveSha256 = $nodeHash
     nodeBinarySha256 = (Get-FileHash -LiteralPath (Join-Path $output 'runtime\node.exe')).Hash.ToLowerInvariant()
     launcherRuntime = $runtimeConfig.runtimeOptions.includedFrameworks

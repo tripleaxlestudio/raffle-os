@@ -12,8 +12,9 @@ internal static class Program
     {
         using var mutex = new Mutex(true, InstanceName, out var created);
         if (!created) { PostMessage(new IntPtr(0xffff), ActivateMessage, IntPtr.Zero, IntPtr.Zero); return; }
+        DiagnosticLog.Write("launcher-start");
         try { ApplicationConfiguration.Initialize(); Application.Run(new LauncherForm()); }
-        finally { mutex.ReleaseMutex(); }
+        finally { DiagnosticLog.Write("launcher-exit"); mutex.ReleaseMutex(); }
     }
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int RegisterWindowMessage(string name);
     [DllImport("user32.dll")] private static extern bool PostMessage(IntPtr handle, int message, IntPtr wParam, IntPtr lParam);
@@ -27,6 +28,7 @@ internal sealed partial class LauncherForm : Form
     public LauncherForm()
     {
         InitializeLayout();
+        runtime.Changed += () => DiagnosticLog.Write("runtime-state=" + runtime.State);
         runtime.Changed += RefreshState;
         Shown += async (_, _) => await runtime.StartAsync();
         retry.Click += async (_, _) => await runtime.StartAsync();

@@ -1,4 +1,4 @@
-KOCOKAN - Packaging Pilot P2 (Windows x64)
+KOCOKAN - Windows x64 (version and build commit: manifest.json)
 
 Keep this entire folder together. Run Kocokan.exe. Wait for Running, then
 click Launch Kocokan. Node and .NET are included; no installation is needed.
@@ -13,5 +13,6 @@ folder does not export or transfer browser data. Use a consistent browser/profil
 Closing the browser does not stop the server. The draw controller remains in
 the browser; the launcher does not run draws in the background.
 
-Unsigned pilot. No installer, updater, LAN mode or cloud service included.
+Unsigned pilot. No updater, LAN mode or cloud service included.
+The separate Setup installer wraps this same portable application.
 Third-party licenses: notices/ and runtime license files at this folder root.

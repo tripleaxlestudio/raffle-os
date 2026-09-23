@@ -19,36 +19,14 @@ internal static class Program
     [DllImport("user32.dll")] private static extern bool PostMessage(IntPtr handle, int message, IntPtr wParam, IntPtr lParam);
 }
 
-internal sealed class LauncherForm : Form
+internal sealed partial class LauncherForm : Form
 {
     private readonly RuntimeController runtime = new(AppContext.BaseDirectory);
-    private readonly Label status = new() { AutoSize = true, Text = "Starting", AccessibleName = "Server status" };
-    private readonly Label message = new() { AutoSize = true, MaximumSize = new Size(490, 0) };
-    private readonly Button launch = new() { Text = "Launch Kocokan", AutoSize = true, Enabled = false };
-    private readonly Button retry = new() { Text = "Retry", AutoSize = true, Visible = false };
     private bool closing;
     private bool canClose;
     public LauncherForm()
     {
-        Text = "Kocokan Launcher";
-        ClientSize = new Size(540, 310);
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
-        AutoScaleMode = AutoScaleMode.Dpi;
-        var layout = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Padding = new Padding(22), AutoScroll = true };
-        layout.Controls.Add(new Label { Text = "KOCOKAN", AutoSize = true, Font = new Font(Font.FontFamily, 20, FontStyle.Bold) });
-        layout.Controls.Add(new Label { Text = "Local Event Draw Server", AutoSize = true });
-        layout.Controls.Add(status);
-        layout.Controls.Add(new TextBox { Text = RuntimeController.Origin + "/", ReadOnly = true, Width = 480, AccessibleName = "Server URL" });
-        layout.Controls.Add(new Label { Text = "Port: 47882 (read-only)", AutoSize = true });
-        layout.Controls.Add(message);
-        var buttons = new FlowLayoutPanel { AutoSize = true, WrapContents = false };
-        var hide = new Button { Text = "Hide", AutoSize = true };
-        var quit = new Button { Text = "Quit", AutoSize = true };
-        buttons.Controls.AddRange([launch, hide, quit, retry]);
-        layout.Controls.Add(buttons);
-        layout.Controls.Add(new Label { Text = "Hide minimizes to taskbar. Reopen from taskbar or Kocokan.exe.", AutoSize = true });
-        Controls.Add(layout);
+        InitializeLayout();
         runtime.Changed += RefreshState;
         Shown += async (_, _) => await runtime.StartAsync();
         retry.Click += async (_, _) => await runtime.StartAsync();
@@ -71,6 +49,7 @@ internal sealed class LauncherForm : Form
         message.Text = runtime.Message;
         launch.Enabled = runtime.State == RuntimeState.Running;
         retry.Visible = runtime.State == RuntimeState.Error && !closing;
+        UpdateStatusAppearance(runtime.State);
     }
     private async void OnClosing(object? sender, FormClosingEventArgs args)
     {

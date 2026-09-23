@@ -1,6 +1,5 @@
 import { Server as HttpServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import type { Duplex } from 'node:stream'
-import type { Plugin } from 'vite'
 import { WebSocket, WebSocketServer } from 'ws'
 import { decodeDisplayWireEnvelope, MAX_DISPLAY_WIRE_BYTES, MAX_PUBLIC_ASSET_BYTES } from '../src/application/display-transport/wire-codec.ts'
 import type { ProtocolEnvelope, ProtocolScope } from '../src/application/display-transport/protocol.ts'
@@ -55,22 +54,19 @@ function messageAllowed(role: Role, envelope: ProtocolEnvelope): boolean {
   return envelope.sender.kind === 'display' && envelope.message.type !== 'display-state'
 }
 
-export function createDisplayRealtimeHubPlugin(): Plugin {
-  return {
-    name: 'raffle-os-display-realtime-hub',
-    configureServer(server) { if (server.httpServer instanceof HttpServer) attachDisplayRealtimeHub(server.httpServer, server.middlewares) },
-    configurePreviewServer(server) { if (server.httpServer instanceof HttpServer) attachDisplayRealtimeHub(server.httpServer, server.middlewares) },
-  }
-}
+export type DisplayRealtimeHub = Readonly<{
+  middleware: (request: IncomingMessage, response: ServerResponse, next: () => void) => void
+  dispose: () => Promise<void>
+}>
 
-type MiddlewareServer = Readonly<{ use(handler: (request: IncomingMessage, response: ServerResponse, next: () => void) => void): void }>
-
-function attachDisplayRealtimeHub(httpServer: HttpServer, middleware: MiddlewareServer): void {
+export function attachDisplayRealtimeHub(httpServer: HttpServer, shutdownTimeoutMs = 1000): DisplayRealtimeHub {
   const rooms = new Map<string, Room>()
   const assets = new Map<string, StoredAsset>()
   const clients = new WeakMap<WebSocket, ClientContext>()
   let assetBytes = 0
   const webSockets = new WebSocketServer({ noServer: true, maxPayload: MAX_DISPLAY_WIRE_BYTES })
+  let disposed = false
+  let disposal: Promise<void> | undefined
 
   const roomFor = (key: string): Room => {
     const room = rooms.get(key) ?? { audiences: new Set<WebSocket>() }
@@ -94,8 +90,11 @@ function attachDisplayRealtimeHub(httpServer: HttpServer, middleware: Middleware
     if (room.operator?.readyState === WebSocket.OPEN) room.operator.send(JSON.stringify({ type: 'transport-presence', audienceCount: room.audiences.size }))
   }
 
-  middleware.use((request, response, next) => {
-    const url = new URL(request.url ?? '/', `http://${request.headers.host ?? '127.0.0.1'}`)
+  const middleware: DisplayRealtimeHub['middleware'] = (request, response, next) => {
+    if (disposed) { next(); return }
+    let url: URL
+    try { url = new URL(request.url ?? '/', `http://${request.headers.host ?? '127.0.0.1'}`) }
+    catch { response.statusCode = 400; response.end(); return }
     if (!url.pathname.startsWith('/display-assets/')) { next(); return }
     if (!isLoopback(request.socket.remoteAddress)) { response.statusCode = 403; response.end(); return }
     let id: string
@@ -129,6 +128,7 @@ function attachDisplayRealtimeHub(httpServer: HttpServer, middleware: Middleware
       else request.destroy()
     })
     request.on('end', () => {
+      if (disposed) { response.statusCode = 503; response.end(); return }
       if (received > MAX_PUBLIC_ASSET_BYTES) return
       const bytes = new Uint8Array(received)
       let offset = 0
@@ -138,7 +138,7 @@ function attachDisplayRealtimeHub(httpServer: HttpServer, middleware: Middleware
       response.end()
     })
     request.on('error', () => { if (!response.headersSent) { response.statusCode = 400; response.end() } })
-  })
+  }
 
   webSockets.on('connection', (socket: WebSocket) => {
     const client = clients.get(socket)
@@ -158,11 +158,13 @@ function attachDisplayRealtimeHub(httpServer: HttpServer, middleware: Middleware
       if (isBinary) { socket.close(1003, 'Text frames only'); return }
       const wire = data.toString()
       processing = processing.then(async () => {
+        if (disposed) return
         const envelope = await decodeDisplayWireEnvelope(wire, async ({ id, type, size }) => {
           const asset = assets.get(id)
           if (asset === undefined || asset.type !== type || asset.bytes.byteLength !== size) throw new Error('Referenced public asset is unavailable.')
           return new Blob([asset.bytes], { type: asset.type })
         })
+        if (disposed) return
         if (!sameScope(envelope, client.scope) || !messageAllowed(client.role, envelope)) throw new Error('Display envelope role or scope mismatch.')
         if (client.role === 'operator') {
           if (envelope.message.type === 'display-state') room.latestPublicState = wire
@@ -183,10 +185,37 @@ function attachDisplayRealtimeHub(httpServer: HttpServer, middleware: Middleware
   })
 
   const onUpgrade = (request: IncomingMessage, socket: Duplex, head: Buffer): void => {
+    if (disposed || socket.destroyed) return
     const client = parseClient(request)
-    if (client === undefined) return
+    if (client === undefined) {
+      // Leave unrelated upgrade paths (including Vite HMR) to their owner.
+      if (request.url?.split('?', 1)[0] === '/ws/display') socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n')
+      return
+    }
     webSockets.handleUpgrade(request, socket, head, (webSocket) => { clients.set(webSocket, client); webSockets.emit('connection', webSocket, request) })
   }
   httpServer.on('upgrade', onUpgrade)
-  httpServer.once('close', () => { httpServer.off('upgrade', onUpgrade); webSockets.close() })
+  const onServerClose = (): void => { void dispose() }
+  const dispose = (): Promise<void> => {
+    if (disposal !== undefined) return disposal
+    disposed = true
+    httpServer.off('upgrade', onUpgrade)
+    httpServer.off('close', onServerClose)
+    disposal = new Promise<void>((resolve) => {
+      const deadline = setTimeout(() => {
+        webSockets.clients.forEach((socket) => socket.terminate())
+      }, shutdownTimeoutMs)
+      webSockets.close(() => {
+        clearTimeout(deadline)
+        rooms.clear()
+        assets.clear()
+        assetBytes = 0
+        resolve()
+      })
+      webSockets.clients.forEach((socket) => socket.close(1001, 'Server shutting down'))
+    })
+    return disposal
+  }
+  httpServer.once('close', onServerClose)
+  return { middleware, dispose }
 }

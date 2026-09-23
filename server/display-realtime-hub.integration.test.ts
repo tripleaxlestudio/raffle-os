@@ -4,7 +4,7 @@ import { createServer, type ViteDevServer } from 'vite'
 import { WebSocket } from 'ws'
 import { createProtocolEnvelope } from '../src/application/display-transport/protocol.ts'
 import { encodeDisplayWireEnvelope } from '../src/application/display-transport/wire-codec.ts'
-import { createDisplayRealtimeHubPlugin } from './display-realtime-hub.ts'
+import { createDisplayRealtimeHubPlugin } from './display-realtime-vite-plugin.ts'
 
 let server: ViteDevServer | undefined
 const sockets: WebSocket[] = []

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:runtime": "tsc -b && vite build --config vite.runtime.config.ts",
+    "start:server": "node dist-runtime/kocokan-server.cjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc -b",

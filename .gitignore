@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 dist-runtime
+artifacts/
+.packaging-cache/
+packaging/**/bin/
+packaging/**/obj/
 *.local
 .codex/
 

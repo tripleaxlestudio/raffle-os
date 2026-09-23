@@ -6,7 +6,7 @@ if (typeof manifest !== 'object' || manifest === null || !('version' in manifest
 
 export default defineConfig({
   define: {
-    __KOCOKAN_RUNTIME_VERSION__: JSON.stringify(`${manifest.version}-packaging-pilot-p1`),
+    __KOCOKAN_RUNTIME_VERSION__: JSON.stringify(`${manifest.version}-packaging-pilot-p2`),
     // Ship ws's supported pure-JS path. Optional native accelerators must not
     // become empty optional-peer shims in the portable bundle.
     'process.env.WS_NO_BUFFER_UTIL': JSON.stringify('1'),

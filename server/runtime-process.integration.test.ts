@@ -29,7 +29,7 @@ function launch(args: string[] = ['--web-root', webRoot]): { child: ChildProcess
   // Run the emitted bundle outside the repo, without node_modules or Vite at
   // runtime. process.execPath is the development machine's Node, not yet a
   // distributed Windows binary.
-  const child = fork(bundle, args, { cwd: fixture, execArgv: [], stdio: ['ignore', 'pipe', 'pipe', 'ipc'] })
+  const child = fork(bundle, args, { cwd: fixture, execArgv: [], stdio: [args.includes('--launcher-stdio') ? 'pipe' : 'ignore', 'pipe', 'pipe', 'ipc'] })
   children.add(child)
   let errorOutput = ''
   child.stderr?.on('data', (chunk: Buffer) => { errorOutput += chunk.toString() })
@@ -63,6 +63,17 @@ afterAll(async () => {
 })
 
 describe('built production runtime process', () => {
+  it('shuts down through the launcher stdin pipe and on parent pipe EOF', async () => {
+    for (const command of ['shutdown\n', '']) {
+      const runtime = launch(['--web-root', webRoot, '--launcher-stdio'])
+      await runtime.ready
+      expect((await fetch(`${PILOT_ORIGIN}/health`)).status).toBe(200)
+      runtime.child.stdin?.end(command)
+      expect(await runtime.exited).toBe(0)
+      await expect(fetch(`${PILOT_ORIGIN}/health`)).rejects.toThrow()
+    }
+  })
+
   it('runs without project dependencies, handles substantial WS frames, reports fixed-port conflict and exits through IPC', async () => {
     const primary = launch()
     await primary.ready

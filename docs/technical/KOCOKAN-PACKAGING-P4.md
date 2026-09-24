@@ -1,5 +1,24 @@
 # P4 - Windows Installer and Release Hardening
 
+**Status: P4 RELEASE ACCEPTED BY OWNER**
+
+Owner release decision: 2026-09-24. The owner accepted the existing packaging
+evidence as sufficient for Kocokan v0.1.0 and waived the remaining acceptance
+steps as release blockers. Waived items are **not fully verified** and must not
+be represented as PASS:
+
+- final same-version reinstall -> uninstall -> reinstall sequence;
+- interactive installation of the final timestamped artifact;
+- IndexedDB marker continuity after reinstall;
+- remaining Phase 11 acceptance and additional browser acceptance; and
+- a green full-application regression suite claim from packaging acceptance.
+
+The accepted evidence comprises P2 portable acceptance, the owner's clean-laptop
+operational test, successful installer build, packaging harness PASS,
+server/transport focused tests PASS, valid final artifact checksums, and a clean
+release-preparation worktree. The build remains unsigned, Windows SmartScreen
+may warn, and v0.1.0 has no auto updater.
+
 Date: 2026-09-23. Branch: `codex/packaging-pilot`.
 Pre-P4 baseline: `18006e5ab9820c36926aa0af89b0fc164364be41`.
 Launcher UI Polish V1 was already committed separately; starting worktree and
@@ -165,7 +184,7 @@ The marker is an intentionally retained empty draft; no production data was
 deleted and no official draw was performed. Actual 0.1.0 -> 0.1.1 testing is
 deferred; same-version/build replacement is the requested current simulation.
 
-## Final release artifact (built, not yet fully accepted)
+## Final release artifact (built and owner-accepted for release)
 
 Folder: `artifacts/release/Kocokan-0.1.0-20260923-165459-622/`.
 Build source: `74a8ae2d7922cd8e54303367d53d72293994ca51`, `sourceDirty: false`.
@@ -190,4 +209,25 @@ the corrected verifier passed. No application artifact was modified to pass.
 The final source-snapshot build reran web/runtime compilation successfully.
 System install and interactive evidence above applies to the initial candidate
 from the same application implementation, not a claim of installing this final
-artifact. Pending update acceptance must use this final folder.
+artifact. The owner waived that remaining final-artifact installation sequence
+for v0.1.0; it remains not fully verified rather than PASS.
+
+## Owner release disposition and branch audit
+
+The final artifact is accepted for the v0.1.0 release by owner decision despite
+the explicitly waived, not-fully-verified steps above. This acceptance does not
+retroactively convert an unexecuted check into PASS.
+
+Pre-release branch audit:
+
+- `phase8/slice-14d-subsequent-draw-lifecycle` is **A - superseded by HEAD**.
+  `git cherry` identifies its sole commit as patch-equivalent to history already
+  in the release branch.
+- `codex/wip-rescue-2026-09-08` is **B - rescue/archive only**. It is the original
+  mixed-worktree safety snapshot used before the changes were reconstructed as
+  focused semantic commits. The only files present there and intentionally not
+  retained in HEAD are temporary Audience prize QA fixtures and their result
+  JSON. No required v0.1.0 production source is unique to that branch.
+
+Neither branch is merged as part of the release. No P5 or auto-update work is
+authorized by this disposition.

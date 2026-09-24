@@ -1,136 +1,80 @@
-# Raffle OS
+# KOCOKAN
 
-Raffle OS is a planned local-first event raffle application centered on ticket
-numbers. The interface is split into a production-oriented Operator Panel and a
-standalone fullscreen Audience Display for LED screens, projectors, or vMix
-capture.
+by Tripleaxle Studio
 
-> **Project status:** Phase 1 and Phase 2 are accepted. Phase 4 provides the
-> production Participant Import pipeline for bounded CSV/XLSX staging,
-> validation, and local atomic persistence. Edge evidence is recorded; Chrome
-> was not run and was waived for route promotion. Eligibility and draw
-> execution are not implemented.
+Kocokan is a local-first raffle and event draw system with a production
+Operator interface and a separate fullscreen Audience Display.
 
-## Implemented Presentation Prototype
+The repository name remains `raffle-os`; **Kocokan** is the product identity.
 
-The Phase 2 prototype includes:
+## What Kocokan provides
 
-- a high-fidelity Operator shell, navigation, dashboard, participant-import
-  wizard, draw setup, live-draw states, pending results, redraw drawer, history,
-  and settings;
-- a structurally separate Audience Display with standby, countdown, rolling,
-  reveal, confirmed, blackout, and disconnected-safe states;
-- exact hero, 3 × 2, 5 × 2, and 5 × 4 winner layouts for 1, 6, 10, and 20
-  tickets;
-- reusable typed presentation primitives with accessible focus and dialog
-  behavior;
-- deterministic, query-driven mock scenarios; and
-- Vitest and Testing Library coverage for routing, components, screens,
-  accessibility semantics, scope boundaries, and the complete mock happy path.
+- A browser-based local Operator application for preparing and running event
+  draws.
+- A separate Audience Display for projectors, LED screens, fullscreen browser
+  output, and vMix browser capture.
+- Production workflows for participant import, draw setup and execution,
+  pending-result decisions, confirmation, redraw, history, and export.
+- Local-first persistence using browser IndexedDB.
+- Local WebSocket transport between the packaged Operator and Audience
+  surfaces.
+- Windows distribution through a self-contained launcher, portable ZIP, and
+  Inno Setup installer.
 
-The draw-related screens remain presentation prototypes. Production participant
-file import, CSV/XLSX validation, event-scoped Replace/Merge persistence, audit
-append, and bounded persisted verification are implemented. Eligibility
-evaluation, candidate pools, secure winner selection, confirmation and redraw
-mutation, Operator/Audience synchronization, export, recovery, audio,
-fullscreen control, backend services, and cloud behavior remain unimplemented.
+The packaged Windows application uses the fixed local origin
+`http://127.0.0.1:47882`. It bundles the required runtime and does not require a
+cloud service for normal operation.
 
-## Interfaces and Routes
+## Data and release boundaries
 
-Operator routes share the Operator layout:
+- Application data is browser-profile and origin scoped; it is not cloud
+  synchronized.
+- The v0.1.0 Windows build is unsigned, so Windows SmartScreen may warn.
+- There is no automatic updater in v0.1.0.
+- Kocokan is not claimed to be legally certified or externally audited.
 
-| Route | Prototype surface |
-|---|---|
-| `/` | Redirects to `/dashboard` |
-| `/dashboard` | Event-control dashboard |
-| `/participants` | Production Participant Import workflow |
-| `/draw/setup` | Draw configuration |
-| `/draw/live` | Ready and running draw presentation |
-| `/draw/results` | Pending Results and redraw presentation |
-| `/history` | Draw sessions, winners, audit log, and session detail |
-| `/settings` | Branding, presentation, audio, and display settings |
-
-The Audience Display is a separate interface at `/display`. Unknown paths use
-the not-found route.
-
-`/participants` defaults to production. Use `?workflow=prototype` to preserve
-the Phase 2 deterministic fixture workflow. `?workflow=production-preview` is
-accepted as a production alias; unknown workflow values fall back to
-production. Other prototype states are selected with URL query parameters.
-Examples:
-
-```text
-/participants?workflow=prototype&step=review
-/draw/setup?mode=live&scenario=insufficient
-/draw/live?state=running&mode=practice&stage=countdown
-/draw/results?scenario=partial
-/draw/results?panel=redraw&selection=multiple
-/history?view=session-detail
-/settings?section=display
-/display?state=reveal&count=6
-/display?state=confirmed&count=20
-/display?state=blackout
-/display?state=disconnected
-```
-
-Prototype query changes select deterministic presentation fixtures. They do not
-import, draw, confirm, redraw, persist, synchronize, or export data.
+See [Kocokan v0.1.0 release notes](docs/releases/KOCOKAN-v0.1.0.md) for the
+release scope, known limitations, and acceptance disposition.
 
 ## Technology
 
 - React 19 and React DOM 19
 - React Router 7
-- TypeScript 6 with explicit strict mode
-- Vite 8
-- Tailwind CSS 4 through the official Vite plugin
-- Vitest 4 with jsdom
-- React Testing Library, jest-dom, and user-event
-- ESLint 10
-- npm with a committed lockfile
+- TypeScript 6 in strict mode
+- Vite 8 and Tailwind CSS 4
+- Dexie/IndexedDB local persistence
+- WebSocket local Audience transport
+- Vitest and React Testing Library
+- Self-contained .NET Windows launcher with bundled Node.js runtime
 
-React, React DOM, React Router, Dexie, and the approved SheetJS CE 0.20.3
-tarball are production dependencies. `fake-indexeddb` is test-only. No
-state-management library is installed.
+## Local development
 
-## Local Development
+Install locked dependencies:
 
-Install dependencies:
-
-```bash
-npm install
+```powershell
+npm.cmd install
 ```
 
-Available scripts:
+Common commands:
 
 | Command | Purpose |
 |---|---|
-| `npm run dev` | Start the Vite development server |
-| `npm run build` | Run the TypeScript project build and create a Vite production build |
-| `npm run lint` | Run ESLint across the repository |
-| `npm run preview` | Preview the production build |
-| `npm run typecheck` | Run the TypeScript project build in no-emit mode |
-| `npm run test` | Run the Vitest suite once |
-| `npm run test:watch` | Run Vitest in watch mode |
+| `npm.cmd run dev` | Start the Vite development server |
+| `npm.cmd run build` | Type-check and build the web application |
+| `npm.cmd run build:runtime` | Build the packaged local runtime |
+| `npm.cmd run lint` | Run ESLint |
+| `npm.cmd run typecheck` | Run TypeScript checking without emit |
+| `npm.cmd run test` | Run the Vitest suite once |
 
-Node.js 22.20.0 and npm 10.9.3 were recorded during the Phase 2 planning audit.
-They are verified environment versions, not declared universal minimums;
-`package.json` does not define an `engines` requirement.
+## Documentation
 
-## Project Documentation
+- [Product Requirements Document](docs/product/PRD.md)
+- [Implementation roadmap](TASKS.md)
+- [Local Host architecture](docs/architecture/LOCAL-HOST-RUNTIME.md)
+- [P4 packaging and acceptance record](docs/technical/KOCOKAN-PACKAGING-P4.md)
+- [Third-party notices](docs/legal/THIRD-PARTY-NOTICES.md)
+- [Engineering guidelines](AGENTS.md)
 
-- [Product Requirements Document](docs/product/PRD.md) — approved product
-  scope, behavior, constraints, and acceptance criteria.
-- [Phase 1 Acceptance](docs/technical/PHASE-1-ACCEPTANCE.md) — permanent
-  application-foundation acceptance record.
-- [Phase 2 Plan](docs/technical/PHASE-2-PLAN.md) — implementation plan and
-  completed acceptance checklist.
-- [Phase 2 Acceptance](docs/technical/PHASE-2-ACCEPTANCE.md) — permanent static
-  prototype acceptance record.
-- [Implementation Roadmap](TASKS.md) — ordered phases and verified progress.
-- [Phase 4 Acceptance](docs/technical/PHASE-4-ACCEPTANCE.md) — production
-  import verification and browser disposition.
-- [Agent Guidelines](AGENTS.md) — engineering rules and product invariants.
-
-Read the PRD and relevant technical documentation before implementing product
-features. If project documents conflict, report the conflict rather than
-choosing silently.
+Read the PRD and relevant technical documentation before changing product
+behavior. Ticket identifiers must remain strings, official selection must use
+Web Crypto, and the visual rolling animation must never determine the result.

@@ -1,0 +1,45 @@
+name: Feature Request
+description: Suggest an improvement for Kocokan.
+title: "[Feature]: "
+labels:
+  - enhancement
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement for Kocokan Alpha.
+
+        **Do not include participant names, ticket numbers, event datasets, winner records, confidential screenshots, or other private event information.**
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / need
+      description: What problem or need should this feature address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-improvement
+    attributes:
+      label: Proposed improvement
+      description: Describe the change you would like to see.
+    validations:
+      required: true
+  - type: textarea
+    id: workflow-context
+    attributes:
+      label: Event / workflow context
+      description: Describe the workflow without including private event or participant data.
+    validations:
+      required: true
+  - type: textarea
+    id: benefit
+    attributes:
+      label: Why this would help
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context that does not contain private event data.

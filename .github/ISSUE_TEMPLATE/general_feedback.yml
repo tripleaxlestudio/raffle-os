@@ -1,0 +1,43 @@
+name: General Feedback
+description: Share general feedback about Kocokan.
+title: "[Feedback]: "
+labels:
+  - feedback
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for sharing feedback about Kocokan Alpha.
+
+        **Do not include participant names, ticket numbers, event datasets, winner records, confidential screenshots, or other private event information.**
+  - type: textarea
+    id: using-kocokan-for
+    attributes:
+      label: What are you using Kocokan for?
+      description: Describe the general event or workflow without private event data.
+    validations:
+      required: true
+  - type: textarea
+    id: worked-well
+    attributes:
+      label: What worked well?
+    validations:
+      required: true
+  - type: textarea
+    id: confusing
+    attributes:
+      label: What was confusing or difficult?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestions
+    attributes:
+      label: Suggestions
+    validations:
+      required: true
+  - type: textarea
+    id: additional-comments
+    attributes:
+      label: Additional comments
+      description: Add any other comments that do not contain private event data.

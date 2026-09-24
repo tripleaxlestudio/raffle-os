@@ -1,0 +1,78 @@
+name: Bug Report
+description: Report a reproducible problem in Kocokan.
+title: "[Bug]: "
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve Kocokan Alpha.
+
+        **Do not include participant names, ticket numbers, event datasets, winner records, confidential screenshots, or other private event information.**
+  - type: input
+    id: version
+    attributes:
+      label: Kocokan version
+      description: The version shown by Kocokan.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Operator UI
+        - Audience Display
+        - Draw
+        - Import Data
+        - History / Export
+        - Launcher / Installer
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Minor
+        - Workflow blocker
+        - Blocker
+        - Crash
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Windows version, browser, and other relevant environment information.
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context that does not contain private event data.

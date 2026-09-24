@@ -1,6 +1,4 @@
-declare const __KOCOKAN_APP_VERSION__: string
-
-export const KOCOKAN_APP_VERSION = typeof __KOCOKAN_APP_VERSION__ === 'string' ? __KOCOKAN_APP_VERSION__ : 'Tidak tersedia'
+export { KOCOKAN_APP_VERSION } from './app-version.ts'
 export const GOOGLE_FORM_BASE_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSckueKJdrR111voEETSbQoE9zKRnAvLdtM6gUMXlE1845mYFg/viewform'
 export const GOOGLE_FORM_ENTRIES = {
   reportType: 'entry.2126261945',

@@ -1,12 +1,55 @@
 import { useState } from 'react'
+import { checkForUpdate, type UpdateReleaseClient, type UpdateState } from '../../../application/update/update-checker.ts'
+import { KOCOKAN_APP_VERSION } from '../../../config/app-version.ts'
+import { openExternalLink, type ExternalLinkOpenResult } from '../../../infrastructure/browser/external-link.ts'
+import { githubReleaseClient } from '../../../infrastructure/update/github-release-client.ts'
 import {
   Button,
   Icon,
 } from '../../../shared/ui/index.ts'
 
-export function AboutTab() {
+interface AboutTabProps {
+  readonly updateClient?: UpdateReleaseClient
+  readonly openLink?: (url: string) => ExternalLinkOpenResult
+  readonly currentVersion?: string
+}
+
+function updateStatusText(state: UpdateState): string {
+  switch (state.status) {
+    case 'idle':
+      return 'Belum diperiksa'
+    case 'checking':
+      return 'Memeriksa pembaruan...'
+    case 'up-to-date':
+      return 'Anda menggunakan versi terbaru.'
+    case 'update-available':
+      return `Pembaruan tersedia: v${state.latestVersion}`
+    case 'error':
+      return 'Tidak dapat memeriksa pembaruan.'
+  }
+}
+
+function updateButtonText(state: UpdateState): string {
+  switch (state.status) {
+    case 'idle':
+      return 'Periksa Pembaruan'
+    case 'checking':
+      return 'Memeriksa…'
+    case 'error':
+      return 'Coba Lagi'
+    case 'up-to-date':
+    case 'update-available':
+      return 'Periksa Lagi'
+  }
+}
+
+export function AboutTab({
+  updateClient = githubReleaseClient,
+  openLink = openExternalLink,
+  currentVersion = KOCOKAN_APP_VERSION,
+}: AboutTabProps) {
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null)
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false)
+  const [updateState, setUpdateState] = useState<UpdateState>({ status: 'idle' })
 
   const showTemporaryNotice = (msg: string) => {
     setFeedbackNotice(msg)
@@ -15,12 +58,17 @@ export function AboutTab() {
     }, 3500)
   }
 
-  const handleCheckUpdate = () => {
-    setIsCheckingUpdate(true)
-    setTimeout(() => {
-      setIsCheckingUpdate(false)
-      showTemporaryNotice('Anda menggunakan versi pengembangan terbaru (v0.1.0-dev).')
-    }, 1200)
+  const handleCheckUpdate = async () => {
+    if (updateState.status === 'checking') return
+    setUpdateState({ status: 'checking' })
+    setUpdateState(await checkForUpdate(currentVersion, updateClient))
+  }
+
+  const handleViewRelease = () => {
+    if (updateState.status !== 'update-available') return
+    if (openLink(updateState.releaseUrl) === 'blocked') {
+      showTemporaryNotice('Izinkan pop-up browser untuk membuka halaman rilis.')
+    }
   }
 
   return (
@@ -49,7 +97,7 @@ export function AboutTab() {
       <div className="kc-settings-meta-grid">
         <div className="kc-settings-meta-box">
           <span className="kc-settings-meta-box__label">Version</span>
-          <span className="kc-settings-meta-box__value">0.1.0</span>
+          <span className="kc-settings-meta-box__value">{currentVersion}</span>
         </div>
         <div className="kc-settings-meta-box">
           <span className="kc-settings-meta-box__label">Build</span>
@@ -169,18 +217,30 @@ export function AboutTab() {
             <div className="kc-settings-row__copy">
               <span className="kc-settings-row__label">Status Versi</span>
               <span className="kc-settings-row__desc">
-                Anda menggunakan versi pengembangan.
+                {updateStatusText(updateState)}
               </span>
+              {updateState.status === 'up-to-date' && (
+                <span className="kc-settings-row__desc">Versi {updateState.currentVersion}</span>
+              )}
             </div>
             <div className="kc-settings-row__action">
+              {updateState.status === 'update-available' && (
+                <Button
+                  icon={<Icon name="ExternalLink" size={16} />}
+                  onClick={handleViewRelease}
+                  type="button"
+                >
+                  Lihat Rilis
+                </Button>
+              )}
               <Button
                 icon={<Icon name="RefreshCw" size={16} />}
-                isLoading={isCheckingUpdate}
+                isLoading={updateState.status === 'checking'}
                 onClick={handleCheckUpdate}
                 type="button"
                 variant="secondary"
               >
-                {isCheckingUpdate ? 'Memeriksa…' : 'Periksa Pembaruan'}
+                {updateButtonText(updateState)}
               </Button>
             </div>
           </div>

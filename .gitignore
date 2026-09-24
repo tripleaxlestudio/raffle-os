@@ -18,6 +18,20 @@ packaging/**/obj/
 *.local
 .codex/
 
+# Local secrets and signing credentials
+.env
+.env.*
+!.env.example
+.dev.vars
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+credentials.json
+secrets.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

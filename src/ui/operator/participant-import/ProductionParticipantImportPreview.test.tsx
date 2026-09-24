@@ -10,6 +10,7 @@ import type { IsoTimestamp } from '../../../domain/shared/timestamps.ts'
 import type { ParticipantImportTransactionInput } from '../../../application/persistence/participant-import-unit-of-work.interface.ts'
 import type { ParticipantImportProductionServices } from '../../../application/participant-import/participant-import-production-services.ts'
 import { ParticipantsPage } from '../../../pages/operator/ParticipantsPage.tsx'
+import { PrototypeParticipantsPage } from '../../../pages/operator/PrototypeParticipantsPage.tsx'
 import { appRoutes } from '../../../app/router.tsx'
 
 const eventId = '11111111-1111-4111-8111-111111111111' as EventId
@@ -35,9 +36,9 @@ function makeServices(options: { event?: Event | null; initialRecords?: Particip
       countByEventId: vi.fn().mockImplementation(async (id: EventId) => id === eventId ? records.length : 0),
       findByEventId: vi.fn().mockImplementation(async (id: EventId) => id === eventId ? records.slice() : []),
     },
-    getPersistedParticipantsForEvent: vi.fn().mockImplementation(async (id: EventId, limit: number) => {
+    getPersistedParticipantsForEvent: vi.fn().mockImplementation(async (id: EventId) => {
       const eventRecords = id === eventId ? records : []
-      return { totalCount: eventRecords.length, records: eventRecords.slice(0, limit), truncated: eventRecords.length > limit }
+      return { totalCount: eventRecords.length, records: eventRecords.slice() }
     }),
     unitOfWork: { commitParticipantImport: vi.fn().mockImplementation(async (input: ParticipantImportTransactionInput) => {
       if (options.commit) return options.commit(input)
@@ -58,28 +59,27 @@ function renderProduction(services: ParticipantImportProductionServices, path = 
 
 async function stageFile(user: ReturnType<typeof userEvent.setup>) {
   const file = new File(['Ticket Number,Name\n00042,Ada\n,Invalid'], 'participants.csv', { type: 'text/csv' })
-  await user.upload(screen.getByLabelText('Choose participant file'), file)
-  await waitFor(() => expect(screen.getByRole('heading', { name: 'Validation diagnostics and summary' })).toBeInTheDocument())
+  await user.upload(screen.getByLabelText('File Peserta'), file)
+  await waitFor(() => expect(screen.getByRole('heading', { name: 'Diagnostik dan ringkasan validasi' })).toBeInTheDocument())
 }
 
-async function chooseStrategyAndOpenConfirmation(user: ReturnType<typeof userEvent.setup>, strategy: 'Replace' | 'Merge' = 'Replace') {
+async function chooseStrategyAndOpenConfirmation(user: ReturnType<typeof userEvent.setup>, strategy: 'Ganti' | 'Gabung' = 'Ganti') {
   await user.click(screen.getByRole('radio', { name: strategy }))
-  await user.click(screen.getByRole('button', { name: 'Review and confirm import' }))
+  await user.click(screen.getByRole('button', { name: 'Tinjau dan konfirmasi impor' }))
   await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 }
 
 describe('production participant import preview audit', () => {
   it.each(['/participants', '/participants?workflow=production-preview', '/participants?workflow=unknown', '/participants?workflow='])('promotes %s to the production workflow', (path) => {
     renderProduction(makeServices(), path)
-    expect(screen.getByLabelText('Choose participant file')).toBeInTheDocument()
+    expect(screen.getByLabelText('File Peserta')).toBeInTheDocument()
     expect(screen.queryByText('Fictional participant data for static interface review. No file or participant record is read, changed, or stored.')).not.toBeInTheDocument()
   })
 
-  it('keeps the deterministic prototype behind the explicit workflow query', () => {
+  it('keeps the production route authoritative even when a prototype query is supplied', () => {
     renderProduction(makeServices(), '/participants?workflow=prototype')
-    expect(screen.getByText(/Fictional participant data for static interface review/)).toBeVisible()
-    expect(document.querySelector('input[type="file"]')).toBeNull()
-    expect(screen.getByText('nusantara-tech-gala-participants.xlsx')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Impor Peserta' })).toBeVisible()
+    expect(screen.queryByText(/Fictional participant data for static interface review/)).not.toBeInTheDocument()
   })
 
   it('renders the resolved Event and safe no-Event state without preview wording', async () => {
@@ -90,49 +90,50 @@ describe('production participant import preview audit', () => {
     draftView.unmount()
     const noEvent = makeServices({ event: null })
     renderProduction(noEvent, '/participants?workflow=production-preview')
-    expect(await screen.findByText('No current Event is selected. Select a real Event before importing participants.')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Acara diperlukan untuk impor Peserta' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Buka Pengelolaan Acara' })).toHaveAttribute('href', '/events')
   })
 
   it('keeps validation current and confirmation disabled when all rows are invalid', async () => {
     const user = userEvent.setup()
     renderProduction(makeServices())
-    await user.upload(screen.getByLabelText('Choose participant file'), new File(['Ticket Number\n\n'], 'invalid.csv', { type: 'text/csv' }))
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Validation diagnostics and summary' })).toBeInTheDocument())
-    const progress = screen.getByRole('navigation', { name: 'Participant Import progress' })
-    expect(within(progress).getByText('Validate Data').closest('li')).toHaveAttribute('data-state', 'active')
-    expect(within(progress).getByText('Confirm Import').closest('li')).toHaveAttribute('data-state', 'upcoming')
-    expect(screen.getByRole('button', { name: 'Review and confirm import' })).toBeDisabled()
+    await user.upload(screen.getByLabelText('File Peserta'), new File(['Ticket Number\n\n'], 'invalid.csv', { type: 'text/csv' }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Diagnostik dan ringkasan validasi' })).toBeInTheDocument())
+    const progress = screen.getByRole('navigation', { name: 'Progres Impor Peserta' })
+    expect(within(progress).getByText('Validasi Data').closest('li')).toHaveAttribute('data-state', 'active')
+    expect(within(progress).getByText('Konfirmasi Impor').closest('li')).toHaveAttribute('data-state', 'upcoming')
+    expect(screen.getByRole('button', { name: 'Tinjau dan konfirmasi impor' })).toBeDisabled()
   })
 
   it('renders the integrated operator structure with observable semantics', async () => {
     renderProduction(makeServices())
 
-    expect(await screen.findByRole('navigation', { name: 'Participant Import progress' })).toBeVisible()
-    expect(screen.getByText('Upload File')).toBeVisible()
-    expect(screen.getByText('Map Columns')).toBeVisible()
-    expect(screen.getByText('Validate Data')).toBeVisible()
-    expect(screen.getByText('Confirm Import')).toBeVisible()
+    expect(await screen.findByRole('navigation', { name: 'Progres Impor Peserta' })).toBeVisible()
+    expect(screen.getByText('Unggah File')).toBeVisible()
+    expect(screen.getByText('Petakan Kolom')).toBeVisible()
+    expect(screen.getByText('Validasi Data')).toBeVisible()
+    expect(screen.getByText('Konfirmasi Impor')).toBeVisible()
 
-    const eventRegion = await screen.findByRole('region', { name: 'Selected Event' })
+    const eventRegion = await screen.findByRole('region', { name: 'Acara yang Dipilih' })
     expect(within(eventRegion).getByText('Draft Event')).toBeVisible()
-    const persistedRegion = screen.getByRole('region', { name: 'Persisted Participants' })
+    const persistedRegion = screen.getByRole('region', { name: 'Peserta Tersimpan' })
     expect(persistedRegion).toBeVisible()
-    expect(screen.getByLabelText('Choose participant file')).toBeVisible()
+    expect(screen.getByLabelText('File Peserta')).toBeVisible()
 
     const user = userEvent.setup()
-    await user.upload(screen.getByLabelText('Choose participant file'), new File(['Ticket Number,Name\n00042,Ada'], 'participants.csv', { type: 'text/csv' }))
-    await waitFor(() => expect(screen.getByRole('table', { name: 'Parsed participant rows' })).toBeVisible())
-    expect(screen.getByRole('table', { name: 'Parsed participant rows' })).toHaveTextContent('00042')
-    expect(screen.getByRole('combobox', { name: /Ticket Number · Required/ })).toBeVisible()
-    expect(screen.getByRole('combobox', { name: /Participant Name · Optional/ })).toBeVisible()
-    expect(screen.getByRole('radio', { name: 'Replace' })).not.toBeChecked()
-    expect(screen.getByRole('radio', { name: 'Merge' })).not.toBeChecked()
+    await user.upload(screen.getByLabelText('File Peserta'), new File(['Ticket Number,Name\n00042,Ada'], 'participants.csv', { type: 'text/csv' }))
+    await waitFor(() => expect(screen.getByRole('table', { name: 'Baris Peserta hasil pembacaan' })).toBeVisible())
+    expect(screen.getByRole('table', { name: 'Baris Peserta hasil pembacaan' })).toHaveTextContent('00042')
+    expect(screen.getByRole('combobox', { name: /Nomor Tiket · Wajib/ })).toBeVisible()
+    expect(screen.getByRole('combobox', { name: /Nama Peserta · Opsional/ })).toBeVisible()
+    expect(screen.getByRole('radio', { name: 'Ganti' })).not.toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Gabung' })).not.toBeChecked()
   })
 
   it('resolves production-preview through the real draft Event boundary', async () => {
     const services = makeServices()
     renderProduction(services)
-    expect(await screen.findByRole('heading', { name: 'Selected Event' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Acara yang Dipilih' })).toBeVisible()
     expect(services.preferences.get).toHaveBeenCalledWith('activeEventId')
     expect(services.events.findById).toHaveBeenCalledWith(eventId)
   })
@@ -143,31 +144,60 @@ describe('production participant import preview audit', () => {
       { id: '2' as ParticipantId, eventId, ticketNumber: '42' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp },
     ] })
     renderProduction(services)
-    expect(await screen.findByText('Total stored Participants: 2')).toBeVisible()
+    expect(await screen.findByText('Total Peserta tersimpan: 2')).toBeVisible()
     expect(screen.getByText('00042')).toBeVisible()
     expect(screen.getByText('42')).toBeVisible()
-    expect(services.getPersistedParticipantsForEvent).toHaveBeenCalledWith(eventId, 50)
-    expect(screen.queryByLabelText('Choose participant file')).toBeInTheDocument()
+    expect(services.getPersistedParticipantsForEvent).toHaveBeenCalledWith(eventId)
+    expect(screen.queryByLabelText('File Peserta')).toBeInTheDocument()
   })
 
   it('shows empty, bounded, and safe read-failure verification states', async () => {
     const empty = makeServices()
     const emptyView = renderProduction(empty)
-    expect(await screen.findByText('No Participants are persisted for this Event.')).toBeVisible()
+    expect(await screen.findByText('Belum ada Peserta yang tersimpan untuk Acara ini.')).toBeVisible()
     emptyView.unmount()
 
     const many = Array.from({ length: 51 }, (_, index) => ({ id: `${index}` as ParticipantId, eventId, ticketNumber: `${index}` as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }))
     const bounded = makeServices({ initialRecords: many })
     const boundedView = renderProduction(bounded)
-    expect(await screen.findByText('Preview truncated to 50 Participants.')).toBeVisible()
-    expect(screen.getByText('Total stored Participants: 51')).toBeVisible()
+    expect(await screen.findByText('51 peserta · 0 sudah check-in')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Berikutnya' })).toBeEnabled()
+    expect(screen.queryByText('Preview truncated to 50 Participants.')).not.toBeInTheDocument()
+    expect(screen.getByText('Total Peserta tersimpan: 51')).toBeVisible()
     boundedView.unmount()
 
     const failed = makeServices()
     vi.mocked(failed.getPersistedParticipantsForEvent).mockRejectedValue(new Error('SECRET_DATABASE_DETAIL'))
     renderProduction(failed)
-    const alert = await screen.findByText(/Persisted Participants could not be read safely/)
+    const alert = await screen.findByText(/Peserta tersimpan tidak dapat dibaca dengan aman/)
     expect(alert).not.toHaveTextContent('SECRET_DATABASE_DETAIL')
+  })
+
+  it('paginates the complete persisted dataset without changing ticket strings or order', async () => {
+    const user = userEvent.setup()
+    const records = Array.from({ length: 100 }, (_, index) => ({ id: `${index}` as ParticipantId, eventId, ticketNumber: String(index).padStart(5, '0') as never, isCheckedIn: true, createdAt: timestamp, updatedAt: timestamp }))
+    renderProduction(makeServices({ initialRecords: records }))
+    const table = await screen.findByRole('table', { name: 'Peserta tersimpan' })
+    expect(table).toHaveTextContent('00000')
+    expect(table).toHaveTextContent('00009')
+    expect(table).not.toHaveTextContent('00010')
+    expect(screen.getByRole('button', { name: 'Sebelumnya' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Berikutnya' })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: 'Berikutnya' }))
+    expect(table).toHaveTextContent('00010')
+    expect(table).not.toHaveTextContent('00000')
+    expect(screen.getByRole('button', { name: 'Sebelumnya' })).toBeEnabled()
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Baris per halaman' }), '50')
+    expect(table).toHaveTextContent('00000')
+    expect(table).toHaveTextContent('00049')
+    expect(table).not.toHaveTextContent('00050')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Baris per halaman' }), '100')
+    expect(table).toHaveTextContent('00099')
+    expect(screen.getByRole('button', { name: 'Sebelumnya' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Berikutnya' })).toBeDisabled()
+    expect(screen.getByText('100 peserta · 100 sudah check-in')).toBeVisible()
   })
 
   it('reloads persisted verification when the active Event changes', async () => {
@@ -178,39 +208,41 @@ describe('production participant import preview audit', () => {
       .mockResolvedValueOnce(eventId)
       .mockResolvedValueOnce(secondEventId)
     vi.mocked(services.events.findById).mockImplementation(async (id) => id === eventId ? draftEvent : secondEvent)
-    vi.mocked(services.getPersistedParticipantsForEvent).mockImplementation(async (id, limit) => id === eventId
-      ? { totalCount: 1, records: [{ id: '1' as ParticipantId, eventId, ticketNumber: '00042' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }], truncated: false }
-      : { totalCount: 1, records: [{ id: '2' as ParticipantId, eventId: secondEventId, ticketNumber: '00700' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }].slice(0, limit), truncated: false })
+    vi.mocked(services.getPersistedParticipantsForEvent).mockImplementation(async (id) => id === eventId
+      ? { totalCount: 1, records: [{ id: '1' as ParticipantId, eventId, ticketNumber: '00042' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }] }
+      : { totalCount: 1, records: [{ id: '2' as ParticipantId, eventId: secondEventId, ticketNumber: '00700' as never, isCheckedIn: false, createdAt: timestamp, updatedAt: timestamp }] })
     renderProduction(services)
     expect(await screen.findByText('00042')).toBeVisible()
     window.dispatchEvent(new Event('focus'))
-    expect(await screen.findByRole('heading', { name: 'Selected Event' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Acara yang Dipilih' })).toBeVisible()
     expect(await screen.findByText('00700')).toBeVisible()
   })
 
   it('blocks when no Event is selected and blocks immutable Events', async () => {
     renderProduction(makeServices({ event: null }))
-    expect(await screen.findByText(/No current Event|could not be found/)).toBeVisible()
-    expect(screen.queryByRole('button', { name: 'Review and confirm import' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Acara diperlukan untuk impor Peserta' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Tinjau dan konfirmasi impor' })).not.toBeInTheDocument()
 
     renderProduction(makeServices({ event: immutableEvent }))
-    expect(await screen.findByText(/does not permit participant import|immutable Event/)).toBeVisible()
+    expect(await screen.findByText(/tidak mengizinkan impor Peserta|tidak dapat diubah/)).toBeVisible()
   })
 
   it('requires explicit Replace or Merge selection and confirmation', async () => {
     const user = userEvent.setup(); const services = makeServices(); renderProduction(services); await stageFile(user)
-    expect(screen.getByRole('button', { name: 'Review and confirm import' })).toBeDisabled()
-    await user.click(screen.getByRole('radio', { name: 'Replace' }))
-    expect(screen.getByRole('button', { name: 'Review and confirm import' })).not.toBeDisabled()
-    await user.click(screen.getByRole('button', { name: 'Review and confirm import' }))
-    expect(screen.getByRole('button', { name: 'Confirm Replace' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Tinjau dan konfirmasi impor' })).toBeDisabled()
+    await user.click(screen.getByRole('radio', { name: 'Ganti' }))
+    expect(screen.getByRole('button', { name: 'Tinjau dan konfirmasi impor' })).not.toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Tinjau dan konfirmasi impor' }))
+    expect(screen.getByRole('button', { name: 'Batal' })).toHaveClass('ui-button--secondary')
+    expect(screen.getByRole('button', { name: 'Konfirmasi Ganti' })).toHaveClass('ui-button--primary')
+    expect(screen.getByRole('button', { name: 'Konfirmasi Ganti' })).toBeDisabled()
     expect(services.unitOfWork.commitParticipantImport).not.toHaveBeenCalled()
   })
 
   it('passes only valid drafts, exact Event ID, exact mapping, and exact ticket strings', async () => {
     const user = userEvent.setup(); const services = makeServices(); renderProduction(services); await stageFile(user)
-    await chooseStrategyAndOpenConfirmation(user, 'Merge')
-    await user.click(screen.getByRole('button', { name: 'Confirm atomic Merge' }))
+    await chooseStrategyAndOpenConfirmation(user, 'Gabung')
+    await user.click(screen.getByRole('button', { name: 'Konfirmasi Gabung atomik' }))
     await waitFor(() => expect(services.unitOfWork.commitParticipantImport).toHaveBeenCalledTimes(1))
     const input = vi.mocked(services.unitOfWork.commitParticipantImport).mock.calls[0]?.[0]
     expect(input).toMatchObject({ eventId, strategy: 'merge', auditRecord: { detail: { mapping: { ticketNumber: 'Ticket Number' } } } })
@@ -220,32 +252,41 @@ describe('production participant import preview audit', () => {
 
   it('prevents double submission and disables controls while committing', async () => {
     const pending = deferred<{ removedCount: number; unchangedCount: number }>(); const user = userEvent.setup()
-    const services = makeServices({ commit: () => pending.promise }); renderProduction(services); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Merge')
-    const confirm = screen.getByRole('button', { name: 'Confirm atomic Merge' })
+    const services = makeServices({ commit: () => pending.promise }); renderProduction(services); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Gabung')
+    const confirm = screen.getByRole('button', { name: 'Konfirmasi Gabung atomik' })
     await user.click(confirm); await user.click(confirm)
     expect(services.unitOfWork.commitParticipantImport).toHaveBeenCalledTimes(1)
-    expect(screen.getByLabelText('Choose participant file')).toBeDisabled()
-    expect(screen.getByRole('radio', { name: 'Merge' })).toBeDisabled()
+    expect(screen.getByLabelText('File Peserta')).toBeDisabled()
+    expect(screen.getByRole('radio', { name: 'Gabung' })).toBeDisabled()
     pending.resolve({ removedCount: 0, unchangedCount: 0 })
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Participant import complete' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Impor Peserta selesai' })).toBeInTheDocument())
   })
 
   it('does not show success while the commit promise is pending', async () => {
     const pending = deferred<{ removedCount: number; unchangedCount: number }>(); const user = userEvent.setup()
-    renderProduction(makeServices({ commit: () => pending.promise })); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Merge'); await user.click(screen.getByRole('button', { name: 'Confirm atomic Merge' }))
-    expect(screen.queryByRole('heading', { name: 'Participant import complete' })).not.toBeInTheDocument()
+    renderProduction(makeServices({ commit: () => pending.promise })); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Gabung'); await user.click(screen.getByRole('button', { name: 'Konfirmasi Gabung atomik' }))
+    expect(screen.queryByRole('heading', { name: 'Impor Peserta selesai' })).not.toBeInTheDocument()
     pending.resolve({ removedCount: 0, unchangedCount: 0 })
   })
 
   it('renders Replace counts, Merge counts, and bounded persisted verification', async () => {
-    const user = userEvent.setup(); const replace = makeServices(); const replaceView = renderProduction(replace); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Replace'); await user.click(screen.getByLabelText(/I understand/)); await user.click(screen.getByRole('button', { name: 'Confirm Replace' }))
-    expect(await screen.findByText(/Inserted: 1 · Removed\/replaced: 2 · Unchanged: 0/)).toBeVisible()
+    const user = userEvent.setup(); const replace = makeServices(); const replaceView = renderProduction(replace); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Ganti'); await user.click(screen.getByLabelText(/Saya memahami/)); await user.click(screen.getByRole('button', { name: 'Konfirmasi Ganti' }))
+    expect(await screen.findByText(/Dimasukkan: 1 · Dihapus\/diganti: 2 · Tidak berubah: 0/)).toBeVisible()
 
     expect(replace.getPersistedParticipantsForEvent).toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Tinjau dan konfirmasi impor' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Impor File Lain' })).toBeVisible()
+    const completedProgress = screen.getByRole('navigation', { name: 'Progres Impor Peserta' })
+    expect(within(completedProgress).getAllByText('Selesai')).toHaveLength(4)
+    expect(screen.queryByLabelText('Ruang kerja validasi')).not.toBeInTheDocument()
+    const completedLayout = screen.getByLabelText('Impor Peserta selesai', { selector: '.production-import-preview__success-layout' })
+    expect(completedLayout).toHaveClass('production-import-preview__success-layout')
+    expect(within(completedLayout).getByRole('region', { name: 'Peserta Tersimpan' })).toBeVisible()
+    expect(completedLayout.querySelectorAll('.production-import-preview__success-metrics > div')).toHaveLength(3)
     replaceView.unmount()
-    const merge = makeServices(); renderProduction(merge); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Merge'); await user.click(screen.getByRole('button', { name: 'Confirm atomic Merge' }))
-    expect(await screen.findByText(/Inserted: 1 · Removed\/replaced: 0 · Unchanged: 2/)).toBeVisible()
-    expect(screen.getByText('Total stored Participants: 1')).toBeVisible()
+    const merge = makeServices(); renderProduction(merge); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Gabung'); await user.click(screen.getByRole('button', { name: 'Konfirmasi Gabung atomik' }))
+    expect(await screen.findByText(/Dimasukkan: 1 · Dihapus\/diganti: 0 · Tidak berubah: 2/)).toBeVisible()
+    expect(screen.getByText('Total Peserta tersimpan: 1')).toBeVisible()
     expect(screen.getAllByText('00042').length).toBeGreaterThan(0)
     expect(merge.getPersistedParticipantsForEvent).toHaveBeenCalled()
   })
@@ -253,14 +294,14 @@ describe('production participant import preview audit', () => {
   it('does not restore File, mapping, strategy, or confirmation state after remount', async () => {
     const user = userEvent.setup(); const services = makeServices(); const view = renderProduction(services)
     await stageFile(user)
-    await user.click(screen.getByRole('radio', { name: 'Merge' }))
-    await user.click(screen.getByRole('button', { name: 'Review and confirm import' }))
+    await user.click(screen.getByRole('radio', { name: 'Gabung' }))
+    await user.click(screen.getByRole('button', { name: 'Tinjau dan konfirmasi impor' }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     view.unmount()
     renderProduction(services)
-    await screen.findByText('No Participants are persisted for this Event.')
+    await screen.findByText('Belum ada Peserta yang tersimpan untuk Acara ini.')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Validation diagnostics and summary' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Diagnostik dan ringkasan validasi' })).not.toBeInTheDocument()
     expect(screen.queryByText('participants.csv')).not.toBeInTheDocument()
   })
 
@@ -268,39 +309,39 @@ describe('production participant import preview audit', () => {
     ['existing-ticket-conflict', { code: 'duplicate-record', message: '00042 already exists in this Event' }],
     ['transaction failure', { code: 'unknown', stack: 'SECRET_STACK' }],
   ])('renders safe %s text without raw persistence details', async (_label, error) => {
-    const user = userEvent.setup(); const services = makeServices({ commit: () => Promise.reject(error) }); renderProduction(services); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Merge'); await user.click(screen.getByRole('button', { name: 'Confirm atomic Merge' }))
+    const user = userEvent.setup(); const services = makeServices({ commit: () => Promise.reject(error) }); renderProduction(services); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Gabung'); await user.click(screen.getByRole('button', { name: 'Konfirmasi Gabung atomik' }))
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent(/No records changed|rolled back|rejected/)
+    expect(alert).toHaveTextContent(/Tidak ada record yang berubah|dibatalkan|ditolak/)
     expect(alert).not.toHaveTextContent('SECRET_STACK')
     expect(alert).not.toHaveTextContent('already exists in this Event')
   })
 
   it('keeps the staged validation result available for retry', async () => {
-    const user = userEvent.setup(); const services = makeServices({ commit: () => Promise.reject({ code: 'transaction-failed', stack: 'SECRET' }) }); renderProduction(services); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Merge'); await user.click(screen.getByRole('button', { name: 'Confirm atomic Merge' }))
-    await user.click(await screen.findByRole('button', { name: 'Retry review' }))
-    expect(screen.getByRole('heading', { name: 'Validation diagnostics and summary' })).toBeInTheDocument()
-    expect(screen.getByText(/Valid drafts: 1/)).toBeVisible()
+    const user = userEvent.setup(); const services = makeServices({ commit: () => Promise.reject({ code: 'transaction-failed', stack: 'SECRET' }) }); renderProduction(services); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Gabung'); await user.click(screen.getByRole('button', { name: 'Konfirmasi Gabung atomik' }))
+    await user.click(await screen.findByRole('button', { name: 'Tinjau ulang' }))
+    expect(screen.getByRole('heading', { name: 'Diagnostik dan ringkasan validasi' })).toBeInTheDocument()
+    expect(screen.getByText(/Draf valid: 1/)).toBeVisible()
   })
 
   it('clears success when a new file or mapping is selected', async () => {
-    const user = userEvent.setup(); const services = makeServices(); renderProduction(services); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Merge'); await user.click(screen.getByRole('button', { name: 'Confirm atomic Merge' })); await screen.findByRole('heading', { name: 'Participant import complete' })
-    await user.upload(screen.getByLabelText('Choose participant file'), new File(['Ticket Number,Name\n00099,Bob'], 'new.csv', { type: 'text/csv' }))
-    expect(screen.queryByRole('heading', { name: 'Participant import complete' })).not.toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('combobox', { name: /Participant Name/ })).toBeInTheDocument())
-    await user.selectOptions(screen.getByRole('combobox', { name: /Participant Name/ }), '')
-    expect(screen.queryByRole('heading', { name: 'Participant import complete' })).not.toBeInTheDocument()
+    const user = userEvent.setup(); const services = makeServices(); renderProduction(services); await stageFile(user); await chooseStrategyAndOpenConfirmation(user, 'Gabung'); await user.click(screen.getByRole('button', { name: 'Konfirmasi Gabung atomik' })); await screen.findByRole('heading', { name: 'Impor Peserta selesai' }); await user.click(screen.getByRole('button', { name: 'Impor File Lain' }))
+    await user.upload(screen.getByLabelText('File Peserta'), new File(['Ticket Number,Name\n00099,Bob'], 'new.csv', { type: 'text/csv' }))
+    expect(screen.queryByRole('heading', { name: 'Impor Peserta selesai' })).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('combobox', { name: /Nama Peserta/ })).toBeInTheDocument())
+    await user.selectOptions(screen.getByRole('combobox', { name: /Nama Peserta/ }), '')
+    expect(screen.queryByRole('heading', { name: 'Impor Peserta selesai' })).not.toBeInTheDocument()
   })
 
   it('keeps the explicit prototype route and Audience routes private', () => {
-    const services = makeServices(); const prototypeView = render(<MemoryRouter initialEntries={['/participants?workflow=prototype']}><ParticipantsPage services={services} /></MemoryRouter>)
+    const prototypeView = render(<MemoryRouter initialEntries={['/dev/prototypes/participants?workflow=prototype']}><PrototypeParticipantsPage /></MemoryRouter>)
     expect(screen.getByText(/Fictional participant data/)).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Browse file' })).toBeInTheDocument()
 
     prototypeView.unmount()
     const audienceRouter = createMemoryRouter(appRoutes, { initialEntries: ['/display?workflow=production-preview&ticketNumber=00042'] })
     render(<RouterProvider router={audienceRouter} />)
-    expect(screen.queryByLabelText('Choose participant file')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('File Peserta')).not.toBeInTheDocument()
     expect(screen.queryByText('00042')).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Participant Import' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Impor Peserta' })).not.toBeInTheDocument()
   })
 })

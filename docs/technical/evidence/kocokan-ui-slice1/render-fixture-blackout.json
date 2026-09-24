@@ -1,0 +1,128 @@
+{
+  "stage": "blackout",
+  "observed": {
+    "blackouts": 2,
+    "pressed": "blackout"
+  },
+  "legacy": [
+    {
+      "cls": "audience-display-page",
+      "styles": {
+        "--accent": "#7567ff",
+        "--app-bg": "#0b0d12",
+        "--radius-md": "0.5rem",
+        "--space-4": "1rem",
+        "--text-primary": "#f4f6fa",
+        "background-color": "rgba(0, 0, 0, 0)",
+        "background-image": "none",
+        "border": "0px solid rgb(244, 246, 250)",
+        "border-radius": "0px",
+        "color": "rgb(244, 246, 250)",
+        "color-scheme": "dark",
+        "font-family": "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+        "font-size": "16px",
+        "font-weight": "400",
+        "gap": "normal",
+        "height": "1080px",
+        "letter-spacing": "normal",
+        "line-height": "24px",
+        "margin": "0px",
+        "padding": "0px",
+        "transform": "matrix(0.198148, 0, 0, 0.198148, -960, -540)",
+        "width": "1920px"
+      },
+      "tag": "DIV",
+      "text": null
+    },
+    {
+      "cls": "audience-blackout-stage",
+      "styles": {
+        "--accent": "#7567ff",
+        "--app-bg": "#0b0d12",
+        "--radius-md": "0.5rem",
+        "--space-4": "1rem",
+        "--text-primary": "#f4f6fa",
+        "background-color": "rgb(0, 0, 0)",
+        "background-image": "none",
+        "border": "0px solid rgb(244, 246, 250)",
+        "border-radius": "0px",
+        "color": "rgb(244, 246, 250)",
+        "color-scheme": "dark",
+        "font-family": "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+        "font-size": "16px",
+        "font-weight": "400",
+        "gap": "normal",
+        "height": "1080px",
+        "letter-spacing": "normal",
+        "line-height": "24px",
+        "margin": "0px",
+        "padding": "0px",
+        "transform": "none",
+        "width": "1920px"
+      },
+      "tag": "DIV",
+      "text": ""
+    }
+  ],
+  "themed": [
+    {
+      "cls": "audience-display-page",
+      "styles": {
+        "--accent": "#7567ff",
+        "--app-bg": "#0b0d12",
+        "--radius-md": "0.5rem",
+        "--space-4": "1rem",
+        "--text-primary": "#f4f6fa",
+        "background-color": "rgba(0, 0, 0, 0)",
+        "background-image": "none",
+        "border": "0px solid rgb(244, 246, 250)",
+        "border-radius": "0px",
+        "color": "rgb(244, 246, 250)",
+        "color-scheme": "dark",
+        "font-family": "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+        "font-size": "16px",
+        "font-weight": "400",
+        "gap": "normal",
+        "height": "1080px",
+        "letter-spacing": "normal",
+        "line-height": "24px",
+        "margin": "0px",
+        "padding": "0px",
+        "transform": "matrix(0.198148, 0, 0, 0.198148, -960, -540)",
+        "width": "1920px"
+      },
+      "tag": "DIV",
+      "text": null
+    },
+    {
+      "cls": "audience-blackout-stage",
+      "styles": {
+        "--accent": "#7567ff",
+        "--app-bg": "#0b0d12",
+        "--radius-md": "0.5rem",
+        "--space-4": "1rem",
+        "--text-primary": "#f4f6fa",
+        "background-color": "rgb(0, 0, 0)",
+        "background-image": "none",
+        "border": "0px solid rgb(244, 246, 250)",
+        "border-radius": "0px",
+        "color": "rgb(244, 246, 250)",
+        "color-scheme": "dark",
+        "font-family": "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+        "font-size": "16px",
+        "font-weight": "400",
+        "gap": "normal",
+        "height": "1080px",
+        "letter-spacing": "normal",
+        "line-height": "24px",
+        "margin": "0px",
+        "padding": "0px",
+        "transform": "none",
+        "width": "1920px"
+      },
+      "tag": "DIV",
+      "text": ""
+    }
+  ],
+  "diffs": []
+}

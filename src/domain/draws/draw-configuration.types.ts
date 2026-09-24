@@ -4,6 +4,7 @@ import type {
   PrizeCategoryId,
 } from '../shared/identifiers.ts'
 import type { IsoTimestamp } from '../shared/timestamps.ts'
+import type { DrawPresentationConfiguration } from './draw-presentation.types.ts'
 
 export type WinningRule =
   | 'once-per-event'
@@ -18,6 +19,8 @@ export interface DrawConfiguration {
   readonly winningRule: WinningRule
   readonly requireCheckIn: boolean
   readonly eligibleGroupFilter: string | null
+  /** Optional only for backward compatibility with pre-Slice 1 records. */
+  readonly presentation?: DrawPresentationConfiguration
   readonly createdAt: IsoTimestamp
   readonly updatedAt: IsoTimestamp
 }

@@ -9,6 +9,7 @@ import type {
 } from '../shared/identifiers.ts'
 import type { IsoTimestamp } from '../shared/timestamps.ts'
 import type { WinningRule } from './draw-configuration.types.ts'
+import type { DrawPresentationConfiguration } from './draw-presentation.types.ts'
 
 export type DrawSessionStatus =
   | 'draft'
@@ -29,6 +30,8 @@ export interface DrawConfigurationSnapshot {
   readonly requireCheckIn: boolean
   readonly eligibleGroupFilter: string | null
   readonly capturedAt: IsoTimestamp
+  /** Optional only for backward compatibility with pre-Slice 1 snapshots. */
+  readonly presentation?: DrawPresentationConfiguration
 }
 
 export interface CandidatePoolSnapshotEntry {
@@ -69,4 +72,13 @@ export interface DrawSession {
   readonly createdAt: IsoTimestamp
   readonly updatedAt: IsoTimestamp
   readonly completedAt?: IsoTimestamp
+}
+
+/**
+ * Draw Setup is locked only while this session can still affect an active
+ * draw. Terminal sessions remain immutable, but a later authoring save must
+ * create a new ready session rather than treating the old session as active.
+ */
+export function isDrawSessionAuthoringLocked(session: DrawSession): boolean {
+  return session.status === 'drawing' || session.status === 'pending-confirmation'
 }

@@ -3,6 +3,16 @@
 @import "./primitives.css";
 @import "./operator.css";
 @import "./audience.css";
+@import "./kocokan/tokens.css";
+@import "./kocokan/primitives.css";
+@import "./kocokan/shell.css";
+@import "./kocokan/dashboard.css";
+@import "./kocokan/preparation.css";
+@import "./kocokan/draw.css";
+@import "./kocokan/pending.css";
+@import "./kocokan/log.css";
+@import "./kocokan/settings.css";
+@import "./kocokan/display-designer.css";
 
 @layer base {
   *,
@@ -75,6 +85,25 @@
     color: var(--text-primary);
   }
 
+  .skip-link {
+    position: fixed;
+    z-index: calc(var(--layer-drawer-surface) + 1);
+    top: var(--space-3);
+    left: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 0.1875rem solid var(--focus-ring);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
+    text-decoration: none;
+    transform: translateY(calc(-100% - var(--space-6)));
+  }
+
+  .skip-link:focus-visible {
+    transform: translateY(0);
+  }
+
   .operator-sidebar {
     min-width: 0;
     overflow-y: auto;
@@ -142,6 +171,7 @@
   }
 
   .operator-workspace {
+    position: relative;
     display: grid;
     grid-template-rows: var(--operator-header-height) minmax(0, 1fr);
     min-width: 0;
@@ -280,7 +310,15 @@
     scrollbar-color: var(--border-strong) transparent;
   }
 
+  .operator-main--production {
+    padding-bottom: calc(var(--content-padding) + var(--space-5));
+  }
+
   :root[data-side-panel-open] .operator-main {
+    overflow: hidden;
+  }
+
+  :root[data-modal-open] body {
     overflow: hidden;
   }
 
@@ -402,6 +440,9 @@
   *,
   *::before,
   *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

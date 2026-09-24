@@ -18,12 +18,17 @@ import {
   isIsoTimestamp,
   type IsoTimestamp,
 } from '../shared/timestamps.ts'
+import {
+  normalizeDrawPresentationConfiguration,
+  resolveDrawPresentationConfiguration,
+  validateDrawPresentationConfiguration,
+} from './draw-presentation.types.ts'
 
 const permittedSessionTransitions: Readonly<
   Record<DrawSessionStatus, readonly DrawSessionStatus[]>
 > = {
   cancelled: [],
-  completed: [],
+  completed: ['pending-confirmation'],
   draft: ['ready', 'cancelled'],
   drawing: ['pending-confirmation', 'cancelled'],
   'pending-confirmation': ['completed', 'cancelled'],
@@ -67,6 +72,11 @@ export function validateDrawConfiguration(
       'Draw configuration timestamps must be valid ISO UTC values.',
     )
   }
+
+  const presentation = validateDrawPresentationConfiguration(
+    resolveDrawPresentationConfiguration(configuration.presentation),
+  )
+  if (!presentation.ok) return presentation
 
   return success(configuration)
 }
@@ -118,6 +128,11 @@ export function validateConfigurationSnapshot(
       'Configuration snapshot is incomplete or invalid.',
     )
   }
+
+  const presentation = validateDrawPresentationConfiguration(
+    resolveDrawPresentationConfiguration(snapshot.presentation),
+  )
+  if (!presentation.ok) return presentation
 
   return success(snapshot)
 }
@@ -325,6 +340,15 @@ export function attachSnapshotsAndStartDrawing(
     status: 'drawing',
     updatedAt: at,
   })
+}
+
+export function normalizeDrawConfigurationPresentation(
+  configuration: DrawConfiguration,
+): DrawConfiguration {
+  return {
+    ...configuration,
+    presentation: normalizeDrawPresentationConfiguration(configuration.presentation),
+  }
 }
 
 export function transitionDrawSessionStatus(

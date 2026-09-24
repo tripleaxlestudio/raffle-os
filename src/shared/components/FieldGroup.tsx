@@ -1,3 +1,4 @@
+import { useUiClass } from '../ui/ui-theme.ts'
 import {
   useId,
   type FieldsetHTMLAttributes,
@@ -19,22 +20,23 @@ export function FieldGroup({
   legend,
   ...props
 }: FieldGroupProps) {
+  const ui = useUiClass()
   const generatedId = useId()
   const descriptionId = `${generatedId}-description`
 
   return (
     <fieldset
       aria-describedby={description === undefined ? undefined : descriptionId}
-      className={joinClassNames('field-group', className)}
+      className={joinClassNames(ui('field-group'), className)}
       {...props}
     >
       <legend>{legend}</legend>
       {description === undefined ? null : (
-        <p className="field-group__description" id={descriptionId}>
+        <p className={ui("field-group__description")} id={descriptionId}>
           {description}
         </p>
       )}
-      <div className="field-group__content">{children}</div>
+      <div className={ui("field-group__content")}>{children}</div>
     </fieldset>
   )
 }

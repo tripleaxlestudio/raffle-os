@@ -1,9 +1,18 @@
 import { useId } from 'react'
-import type { PrototypeAudiencePreview } from '../../../prototype/operator-types.ts'
 import { Badge } from '../../../shared/ui/index.ts'
+import { composeWinnerRows, winnerRowComposition } from '../../audience/winner-layout.ts'
+
+interface AudiencePreviewData {
+  readonly eventName: string
+  readonly prizeName: string
+  readonly resolution: string
+  readonly stateLabel: string
+  readonly tickets: readonly string[]
+  readonly winnerCount: number
+}
 
 interface AudiencePreviewProps {
-  preview: PrototypeAudiencePreview
+  preview: AudiencePreviewData
 }
 
 export function AudiencePreview({ preview }: AudiencePreviewProps) {
@@ -40,9 +49,12 @@ export function AudiencePreview({ preview }: AudiencePreviewProps) {
           <div
             aria-label="Static presentational ticket stream"
             className="operator-audience-preview__tickets"
+            data-row-composition={winnerRowComposition(preview.tickets.length).join(',')}
           >
-            {preview.tickets.map((ticket) => (
-              <code key={ticket}>{ticket}</code>
+            {composeWinnerRows(preview.tickets).map((row, rowIndex) => (
+              <div className="operator-audience-preview__ticket-row" data-row-index={rowIndex} data-row-length={row.length} key={rowIndex}>
+                {row.map((ticket) => <code key={ticket}>{ticket}</code>)}
+              </div>
             ))}
           </div>
         )}

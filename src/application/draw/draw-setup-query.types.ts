@@ -54,8 +54,24 @@ export interface DrawSetupCommandService {
 }
 
 export interface DrawSetupProductionServices extends DrawSetupQueryRepositories {
-  readonly command: DrawSetupCommandService
+  readonly eventSettings: import('../persistence/repositories/event-settings-repository.interface.ts').EventSettingsRepository
+  readonly displayConfigurations?: import('../persistence/repositories/display-configuration-repository.interface.ts').DisplayConfigurationRepository
+  readonly audits?: import('../persistence/repositories/audit-repository.interface.ts').AuditRepository
+  readonly redraws?: import('../persistence/repositories/redraw-repository.interface.ts').RedrawRepository
+  readonly redrawRequests?: import('../persistence/repositories/redraw-request-repository.interface.ts').RedrawRequestRepository
+  readonly pendingDecisions?: {
+    readonly confirmation: import('../pending-decisions/confirmation-service.ts').ConfirmationService
+    readonly cancellation: import('../pending-decisions/cancellation-service.ts').CancellationService
+    readonly redraw: import('../pending-decisions/redraw-service.ts').RedrawService
+    readonly persistence: import('../persistence/draw-persistence-unit-of-work.interface.ts').DrawPersistenceUnitOfWork
+    readonly receipts: import('../persistence/command-receipt-repository.interface.ts').CommandReceiptRepository
+  }
+  readonly authoringService?: import('./draw-authoring.types.ts').DrawAuthoringService
   readonly open: () => Promise<void>
+  readonly checkStorage?: import('./draw-readiness-query.ts').DrawReadinessDependencies['checkStorage']
+  readonly checkCrypto?: import('./draw-readiness-query.ts').DrawReadinessDependencies['checkCrypto']
+  readonly command?: DrawSetupCommandService
+  readonly presentationCheckpoints?: import('../persistence/repositories/presentation-checkpoint-repository.interface.ts').PresentationCheckpointRepository
 }
 
 export type DrawSetupFailure = DrawCommandFailure

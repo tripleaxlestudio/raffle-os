@@ -1,0 +1,129 @@
+{
+  "baselineCommit": "523da4642556aa8ae033f6cf61cd1f663d211249",
+  "date": "2026-08-31",
+  "browser": "Codex in-app browser",
+  "origin": "http://localhost:5173",
+  "notes": "Old production UI; observed states only, not release acceptance. See KOCOKAN-UI-VISUAL-BASELINE.md.",
+  "screenshots": [
+    {
+      "file": "audience-1366x768.jpg",
+      "width": 1366,
+      "height": 768,
+      "format": "Jpeg",
+      "bytes": 36074,
+      "sha256": "b1c2735e8b63a2773d77502d902b3aee2432be035a847bd6331983ecbe859622"
+    },
+    {
+      "file": "audience-1440x900.jpg",
+      "width": 1440,
+      "height": 900,
+      "format": "Jpeg",
+      "bytes": 39808,
+      "sha256": "ca971d554d35cc1c00dfeac3a3e21835857fff3bcc9017e9e148461262818067"
+    },
+    {
+      "file": "audience-1920x1080.jpg",
+      "width": 1920,
+      "height": 1080,
+      "format": "Jpeg",
+      "bytes": 55685,
+      "sha256": "2964c9d6efe4cff30118d08fa2fa8e45235d033b0e6a33181fc2a273f0079ccc"
+    },
+    {
+      "file": "dashboard-1366x768.jpg",
+      "width": 1366,
+      "height": 768,
+      "format": "Jpeg",
+      "bytes": 70899,
+      "sha256": "e8c3c2a68217eb8ac0cf30938de9fd1c3702859a15fe81943c1359da5edb2d25"
+    },
+    {
+      "file": "dashboard-1440x900.jpg",
+      "width": 1440,
+      "height": 900,
+      "format": "Jpeg",
+      "bytes": 76416,
+      "sha256": "e4ab55a68a9844000fe3a86addcb35a1a7a61d5be0ada822a112d8fe667bd570"
+    },
+    {
+      "file": "dashboard-1920x1080.jpg",
+      "width": 1920,
+      "height": 1080,
+      "format": "Jpeg",
+      "bytes": 86882,
+      "sha256": "818b24d8a547edccf2995d0bd95c6bb73dabb3fa2f0a245427955f04d09da7e9"
+    },
+    {
+      "file": "draw-setup-1440x900.jpg",
+      "width": 1440,
+      "height": 900,
+      "format": "Jpeg",
+      "bytes": 99624,
+      "sha256": "0747a3ed872bca52a5754bb5e33a7f4c6c4ced50b41768de71a555593367843f"
+    },
+    {
+      "file": "event-confirmation-modal-1440x900.jpg",
+      "width": 1440,
+      "height": 900,
+      "format": "Jpeg",
+      "bytes": 45641,
+      "sha256": "415c4b35865bb0ac9b16391221ba3c38ce6bfba0995058bb698add79d7aaa2bb"
+    },
+    {
+      "file": "history-1440x900.jpg",
+      "width": 1440,
+      "height": 900,
+      "format": "Jpeg",
+      "bytes": 49806,
+      "sha256": "0ca15670ddd9f0fa9f71b23f308d01b25c8c9a8a0c5c0b6b368689c81433976d"
+    },
+    {
+      "file": "history-export-menu-1440x900.jpg",
+      "width": 1440,
+      "height": 900,
+      "format": "Jpeg",
+      "bytes": 56042,
+      "sha256": "8862a0a5523abe343f362e023c763704f9cd82ce15e6c7e00b9a11cf695cf7f6"
+    },
+    {
+      "file": "live-queue-1440x900.jpg",
+      "width": 1440,
+      "height": 900,
+      "format": "Jpeg",
+      "bytes": 42731,
+      "sha256": "0d1ead728753efc6281cb9b2992afdce22268eb4af6bec4e6eacbcc81df1c2eb"
+    },
+    {
+      "file": "participants-1440x900.jpg",
+      "width": 1440,
+      "height": 900,
+      "format": "Jpeg",
+      "bytes": 88205,
+      "sha256": "138543d55c4339984537b68ba62c3efcc511c7e38d4bc1aedb8427e580ed6f0a"
+    },
+    {
+      "file": "pending-1440x900.jpg",
+      "width": 1440,
+      "height": 900,
+      "format": "Jpeg",
+      "bytes": 46779,
+      "sha256": "d9fd4b62dcc9ed3151f8152adc9657510e8e9761d892cd87baf9fae41010c991"
+    },
+    {
+      "file": "settings-branding-1440x900.jpg",
+      "width": 1440,
+      "height": 900,
+      "format": "Jpeg",
+      "bytes": 90127,
+      "sha256": "89cf1df80c68268d76a9b5b58d5bc740ce0111bc9732772a81f56660d5604118"
+    },
+    {
+      "file": "settings-preview-1440x900.jpg",
+      "width": 1440,
+      "height": 900,
+      "format": "Jpeg",
+      "bytes": 100529,
+      "sha256": "01c31385fa3f8955dc3bc5f162e92fdc724b0615d00dd902eb7f1f2e40420703"
+    }
+  ]
+}

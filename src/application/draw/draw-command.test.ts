@@ -19,6 +19,7 @@ import type { RandomSource } from './random-source.ts'
 import { executeDraw } from './draw-command.ts'
 import type { DrawCommandDependencies } from './draw-command.types.ts'
 import { RaffleOSDatabase } from '../../infrastructure/persistence/db.ts'
+import { DexieDrawAuthoringUnitOfWork } from '../../infrastructure/persistence/transactions/dexie-draw-authoring-unit-of-work.ts'
 
 afterEach(cleanupTestDatabases)
 
@@ -53,6 +54,76 @@ function input(fixture: ReturnType<typeof makeDrawHistoryFixture>, mode: 'live' 
 }
 
 describe('executeDraw', () => {
+  it('does not select winners when the Live storage preflight is unsafe', async () => {
+    const database = await openTestDatabase('command-storage-preflight-failure')
+    const fixture = makeDrawHistoryFixture(['00001', '00002'])
+    await seedReadyFixture(database, fixture)
+    const selectWinners = vi.fn(() => { throw new Error('selection must not run') })
+
+    const result = await executeDraw(input(fixture), {
+      ...dependencies(database),
+      checkStorageHealth: async () => ({ ok: false as const, code: 'storage-quota-exceeded', reason: 'Storage is full.' }),
+      selectWinners,
+    })
+
+    expect(result).toMatchObject({ ok: false, error: { kind: 'persistence', code: 'persistence-failed' } })
+    expect(selectWinners).not.toHaveBeenCalled()
+    expect((await database.draw_sessions.get(fixture.session.id))?.status).toBe('ready')
+  })
+
+  it.each([1, 3, 6, 10])('runs a fresh 100-participant Practice Event with %s winner(s)', async (requestedWinners) => {
+    const database = await openTestDatabase(`command-fresh-practice-${requestedWinners}`)
+    const base = makeDrawHistoryFixture(Array.from({ length: 100 }, (_, index) => String(index + 1).padStart(5, '0')))
+    const fixture = {
+      ...base,
+      event: { ...base.event, status: 'draft' as const },
+      configuration: { ...base.configuration, requestedWinners },
+      session: { ...base.session, mode: 'practice' as const },
+    }
+    await seedReadyFixture(database, fixture)
+    await new DexieDrawAuthoringUnitOfWork(database).persistReadyAuthoring({ configuration: fixture.configuration, session: fixture.session, existingConfigurationId: fixture.configuration.id, existingSessionId: fixture.session.id })
+
+    const result = await executeDraw(input(fixture, 'practice'), dependencies(database))
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.pendingWinners).toHaveLength(requestedWinners)
+    expect(result.value.candidatePoolSnapshot.eligibleSnapshotCount).toBe(100)
+    expect(result.value.pendingWinners.every((winner) => winner.ticketNumber.length === 5)).toBe(true)
+    expect((await database.events.get(fixture.event.id))?.status).toBe('ready')
+    expect((await database.draw_sessions.get(fixture.session.id))?.status).toBe('ready')
+  })
+
+  it('captures per-draw presentation configuration without changing selection semantics', async () => {
+    const database = await openTestDatabase('command-presentation-snapshot')
+    const base = makeDrawHistoryFixture(['00042', '42'])
+    const fixture = {
+      ...base,
+      configuration: {
+        ...base.configuration,
+        presentation: {
+          presentationMode: 'random-number-roll' as const,
+          rollStopMode: 'timed' as const,
+          rollDurationSeconds: 12 as const,
+          rollSpeedPerSecond: 18,
+          revealMode: 'sequential' as const,
+        },
+      },
+    }
+    await seedReadyFixture(database, fixture)
+
+    const result = await executeDraw(input(fixture), dependencies(database))
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.configurationSnapshot.presentation).toEqual({
+      ...fixture.configuration.presentation,
+      rollStopMode: 'manual',
+    })
+    expect(Object.isFrozen(result.value.configurationSnapshot.presentation)).toBe(true)
+    expect(result.value.pendingWinners.map((winner) => winner.ticketNumber)).toEqual(['42', '00042'])
+  })
+
   it('persists one complete Live draw and preserves exact tickets after reopen', async () => {
     const database = await openTestDatabase('command-live')
     const fixture = makeDrawHistoryFixture(['00042', '42'])

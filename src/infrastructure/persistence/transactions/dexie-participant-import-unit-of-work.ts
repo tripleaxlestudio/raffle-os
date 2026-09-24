@@ -5,6 +5,7 @@ import type { RaffleOSDatabase } from '../db.ts'
 import { appendAuditInTransaction } from '../repositories/audit.repository.ts'
 import { normalizeRepositoryError } from '../repositories/repository-helpers.ts'
 import { DuplicateRecordError, ImmutableRecordError, RecordNotFoundError, RelationshipMismatchError, ValidationError } from '../errors/persistence-errors.ts'
+import { assertParticipantMutationAllowed } from '../participant-mutation-lock.ts'
 
 const OFFICIAL_AUDIT_ACTIONS = new Set([
   'draw-session-started', 'draw-session-completed', 'draw-session-cancelled',
@@ -38,9 +39,10 @@ export class DexieParticipantImportUnitOfWork implements ParticipantImportUnitOf
     try {
       validateInput(input)
       let result: ParticipantImportTransactionResult = { removedCount: 0, unchangedCount: 0 }
-      await this.database.transaction('rw', [this.database.events, this.database.participants, this.database.draw_sessions, this.database.winner_records, this.database.redraw_records, this.database.audit_records], async () => {
+      await this.database.transaction('rw', [this.database.events, this.database.participants, this.database.draw_sessions, this.database.winner_records, this.database.redraw_records, this.database.audit_records, this.database.presentation_checkpoints], async () => {
         const event = await this.database.events.get(input.eventId)
         if (event === undefined) throw new RecordNotFoundError('The Event required for participant import was not found.')
+        await assertParticipantMutationAllowed(this.database, input.eventId)
         const [drawSession, winnerRecord, redrawRecord, officialAudit] = await Promise.all([
           this.database.draw_sessions.where('eventId').equals(input.eventId).first(),
           this.database.winner_records.where('eventId').equals(input.eventId).first(),

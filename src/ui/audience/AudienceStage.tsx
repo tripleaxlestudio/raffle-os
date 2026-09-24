@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
-import type { PublicAudienceScenario } from '../../prototype/audience-types.ts'
+import type { AudienceViewState } from './audience-view.types.ts'
 
 interface AudienceStageProps {
   children: ReactNode
   className?: string
-  state: PublicAudienceScenario['state']
+  state: AudienceViewState
 }
 
 export function AudienceStage({
@@ -12,7 +12,7 @@ export function AudienceStage({
   className,
   state,
 }: AudienceStageProps) {
-  const classes = ['audience-stage', `audience-stage--${state}`, className]
+  const classes = ['audience-stage', 'audience-presentation-surface', `audience-stage--${state}`, className]
     .filter(Boolean)
     .join(' ')
 

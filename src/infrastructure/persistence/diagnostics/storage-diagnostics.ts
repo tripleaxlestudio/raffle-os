@@ -27,6 +27,13 @@ export interface StorageDiagnosticOptions {
   readonly databaseName?: string
 }
 
+let diagnosticSequence = 0
+
+function createDiagnosticDatabaseName(): string {
+  diagnosticSequence += 1
+  return `RaffleOS_StorageDiag_${Date.now()}_${diagnosticSequence}`
+}
+
 function normalizeDiagnosticError(error: unknown): PersistenceError {
   if (error instanceof PersistenceError) {
     return error
@@ -68,7 +75,7 @@ export async function runStorageCapabilityDiagnostic(
 ): Promise<StorageCapabilityResult> {
   const factory = options.indexedDBFactory ?? globalThis.indexedDB
   const tempDbName =
-    options.databaseName ?? `RaffleOS_StorageDiag_${crypto.randomUUID()}`
+    options.databaseName ?? createDiagnosticDatabaseName()
 
   let currentStage: StorageDiagnosticStage = 'open'
   let db: IDBDatabase | null = null

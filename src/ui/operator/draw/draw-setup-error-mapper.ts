@@ -65,7 +65,7 @@ export function mapDrawSetupError(value: unknown): DrawSetupPresentationError {
     case 'session-already-has-winners':
       return { code: 'duplicate-execution', title: 'This DrawSession has already been started', explanation: 'The same official session cannot be executed twice. No additional winners were produced.', retryable: false, reloadReadinessBeforeRetry: true, remainBlocked: true, suggestedAction: 'Refresh readiness.' }
     case 'persistence-failed':
-      return { code: 'persistence-failure', title: 'The draw could not be saved', explanation: 'The atomic operation failed and no partial winners or audit record are shown.', retryable: true, reloadReadinessBeforeRetry: true, remainBlocked: false, suggestedAction: 'Refresh readiness, then retry.' }
+      return { code: 'persistence-failure', title: 'Local persistence is not safe', explanation: 'The Live draw was blocked or rolled back. No partial winners or audit record are shown.', retryable: true, reloadReadinessBeforeRetry: true, remainBlocked: false, suggestedAction: 'Correct the storage issue, refresh readiness, then retry.' }
     case 'eligibility-failed':
       return { code: 'eligibility-integrity', title: 'Eligibility validation failed', explanation: 'The authoritative eligibility data could not be validated. No winners were produced.', retryable: false, reloadReadinessBeforeRetry: true, remainBlocked: true }
     default:

@@ -1,0 +1,77 @@
+[
+  {
+    "bodyOverflow": false,
+    "header": {
+      "bottom": 68,
+      "height": 68,
+      "left": 240,
+      "right": 1366,
+      "top": 0,
+      "width": 1126,
+      "x": 240,
+      "y": 0
+    },
+    "height": 768,
+    "sidebar": {
+      "bottom": 768,
+      "height": 768,
+      "left": 0,
+      "right": 240,
+      "top": 0,
+      "width": 240,
+      "x": 0,
+      "y": 0
+    },
+    "width": 1366
+  },
+  {
+    "bodyOverflow": false,
+    "header": {
+      "bottom": 68,
+      "height": 68,
+      "left": 240,
+      "right": 1440,
+      "top": 0,
+      "width": 1200,
+      "x": 240,
+      "y": 0
+    },
+    "height": 900,
+    "sidebar": {
+      "bottom": 900,
+      "height": 900,
+      "left": 0,
+      "right": 240,
+      "top": 0,
+      "width": 240,
+      "x": 0,
+      "y": 0
+    },
+    "width": 1440
+  },
+  {
+    "bodyOverflow": false,
+    "header": {
+      "bottom": 68,
+      "height": 68,
+      "left": 240,
+      "right": 1920,
+      "top": 0,
+      "width": 1680,
+      "x": 240,
+      "y": 0
+    },
+    "height": 1080,
+    "sidebar": {
+      "bottom": 1080,
+      "height": 1080,
+      "left": 0,
+      "right": 240,
+      "top": 0,
+      "width": 240,
+      "x": 0,
+      "y": 0
+    },
+    "width": 1920
+  }
+]

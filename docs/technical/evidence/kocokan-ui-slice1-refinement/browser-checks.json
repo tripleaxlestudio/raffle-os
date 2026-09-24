@@ -1,0 +1,155 @@
+{
+  "viewportUnit": "CSS pixels",
+  "darkAuditMethod": "()=>Array.from(document.querySelectorAll('main *')).filter(e=>{const r=e.getBoundingClientRect();const c=getComputedStyle(e).backgroundColor.match(/[\\d.]+/g)?.map(Number);return r.width>70&&r.height>35&&c?.length>=3&&(c.length===3||c[3]>.6)&&Math.max(...c.slice(0,3))<100&&!e.closest('.audience-preview-surface,.audience-presentation-surface,.settings-safe-area-preview,.audience-display-page');}).map(e=>({cls:e.className,tag:e.tagName,background:getComputedStyle(e).backgroundColor,text:e.textContent.slice(0,75)}))",
+  "surfaces": [
+    {
+      "page": "draw-setup",
+      "dark": []
+    },
+    {
+      "page": "dashboard",
+      "dark": []
+    },
+    {
+      "page": "prizes",
+      "dark": []
+    },
+    {
+      "page": "participants",
+      "dark": []
+    },
+    {
+      "page": "populated-fixture",
+      "height": 768,
+      "width": 1366,
+      "dark": []
+    },
+    {
+      "page": "populated-fixture",
+      "height": 900,
+      "width": 1440,
+      "dark": []
+    },
+    {
+      "page": "populated-fixture",
+      "height": 1080,
+      "width": 1920,
+      "dark": []
+    },
+    {
+      "page": "settings-branding",
+      "height": 768,
+      "width": 1366,
+      "dark": []
+    },
+    {
+      "page": "settings-branding",
+      "height": 900,
+      "width": 1440,
+      "dark": []
+    },
+    {
+      "page": "settings-branding",
+      "height": 1080,
+      "width": 1920,
+      "dark": []
+    },
+    {
+      "page": "settings-presentation",
+      "height": 768,
+      "width": 1366,
+      "dark": []
+    },
+    {
+      "page": "settings-presentation",
+      "height": 900,
+      "width": 1440,
+      "dark": []
+    },
+    {
+      "page": "settings-presentation",
+      "height": 1080,
+      "width": 1920,
+      "dark": []
+    },
+    {
+      "page": "settings-audio",
+      "height": 768,
+      "width": 1366,
+      "dark": []
+    },
+    {
+      "page": "settings-audio",
+      "height": 900,
+      "width": 1440,
+      "dark": []
+    },
+    {
+      "page": "settings-audio",
+      "height": 1080,
+      "width": 1920,
+      "dark": []
+    },
+    {
+      "page": "settings-display",
+      "height": 768,
+      "width": 1366,
+      "dark": []
+    },
+    {
+      "page": "settings-display",
+      "height": 900,
+      "width": 1440,
+      "dark": []
+    },
+    {
+      "page": "settings-display",
+      "height": 1080,
+      "width": 1920,
+      "dark": []
+    }
+  ],
+  "nativeDisplayControls": [
+    {
+      "background": "rgb(255, 255, 255)",
+      "className": "kc-input",
+      "color": "rgb(36, 33, 43)",
+      "disabled": false,
+      "scheme": "light",
+      "tag": "SELECT",
+      "type": null
+    },
+    {
+      "background": "rgb(255, 255, 255)",
+      "className": "kc-input",
+      "color": "rgb(36, 33, 43)",
+      "disabled": false,
+      "scheme": "light",
+      "tag": "INPUT",
+      "type": "number"
+    },
+    {
+      "background": "rgb(255, 255, 255)",
+      "className": "kc-input",
+      "color": "rgb(36, 33, 43)",
+      "disabled": false,
+      "scheme": "light",
+      "tag": "SELECT",
+      "type": null
+    }
+  ],
+  "isolation": {
+    "settings": {
+      "nodes": 12,
+      "exactRecordedStylesMatch": true
+    },
+    "prototype": {
+      "nodes": 246,
+      "exactRecordedStylesMatch": true
+    },
+    "audience": {
+      "nodes": 9,
+      "exactRecordedStylesMatch": true
+    }
+  }
+}

@@ -1,3 +1,4 @@
+import { useUiClass, useUiTheme } from './ui-theme.ts'
 import { useRef, type ReactNode } from 'react'
 import { Button } from './Button.tsx'
 import { Modal } from './Modal.tsx'
@@ -13,6 +14,16 @@ interface ConfirmationDialogProps {
   tone?: 'warning' | 'danger'
   confirmDisabled?: boolean
   confirmLoading?: boolean
+  consequenceLabel?: string | null
+  confirmIcon?: ReactNode
+  cancelIcon?: ReactNode
+  headerIcon?: ReactNode
+  headerIconTone?: 'warning' | 'danger' | 'success' | 'info'
+  closeAriaLabel?: string
+  closeLabel?: string
+  consequenceIcon?: ReactNode
+  structuredConsequence?: boolean
+  eyebrow?: string
 }
 
 export function ConfirmationDialog({
@@ -26,7 +37,19 @@ export function ConfirmationDialog({
   tone = 'warning',
   confirmDisabled = false,
   confirmLoading = false,
+  consequenceLabel = 'Review the consequence',
+  confirmIcon,
+  cancelIcon,
+  headerIcon,
+  headerIconTone,
+  closeAriaLabel,
+  closeLabel,
+  consequenceIcon,
+  structuredConsequence = false,
+  eyebrow,
 }: ConfirmationDialogProps) {
+  const ui = useUiClass()
+  const theme = useUiTheme()
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
 
   return (
@@ -34,6 +57,7 @@ export function ConfirmationDialog({
       footer={
         <>
           <Button
+            icon={cancelIcon}
             onClick={onCancel}
             ref={cancelButtonRef}
             variant="secondary"
@@ -41,6 +65,7 @@ export function ConfirmationDialog({
             {cancelLabel}
           </Button>
           <Button
+            icon={confirmIcon}
             disabled={confirmDisabled}
             isLoading={confirmLoading}
             onClick={onConfirm}
@@ -51,17 +76,26 @@ export function ConfirmationDialog({
         </>
       }
       initialFocusRef={cancelButtonRef}
+      headerIcon={headerIcon}
+      headerIconTone={headerIconTone ?? (theme === 'kocokan' ? tone : undefined)}
+      closeAriaLabel={closeAriaLabel}
+      closeLabel={closeLabel}
+      eyebrow={eyebrow}
       onClose={onCancel}
       open={open}
       title={title}
     >
-      <div className="ui-confirmation" data-tone={tone}>
-        <span aria-hidden="true" className="ui-confirmation__marker">
-          !
+      <div className={ui("ui-confirmation")} data-tone={tone}>
+        <span aria-hidden="true" className={ui("ui-confirmation__marker")}>
+          {consequenceIcon ?? '!'}
         </span>
         <div>
-          <strong>Review the consequence</strong>
-          <p>{consequence}</p>
+          {consequenceLabel === null ? null : <strong>{consequenceLabel}</strong>}
+          {structuredConsequence ? (
+            <div className={ui("ui-confirmation__consequence")}>{consequence}</div>
+          ) : (
+            <p>{consequence}</p>
+          )}
         </div>
       </div>
     </Modal>

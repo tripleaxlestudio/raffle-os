@@ -1,3 +1,4 @@
+import { useUiClass } from './ui-theme.ts'
 import { Button } from './Button.tsx'
 
 export interface SegmentedControlOption {
@@ -18,8 +19,9 @@ export function SegmentedControl({
   options,
   value,
 }: SegmentedControlProps) {
+  const ui = useUiClass()
   return (
-    <div aria-label={label} className="ui-segmented" role="group">
+    <div aria-label={label} className={ui("ui-segmented")} role="group">
       {options.map((option) => (
         <Button
           aria-pressed={option.value === value}

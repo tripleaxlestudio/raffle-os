@@ -1,3 +1,4 @@
+import { useUiClass } from './ui-theme.ts'
 import type { HTMLAttributes } from 'react'
 import { joinClassNames } from './class-names.ts'
 
@@ -24,11 +25,12 @@ export function Badge({
   variant = 'neutral',
   ...props
 }: BadgeProps) {
+  const ui = useUiClass()
   return (
     <span
       className={joinClassNames(
-        'ui-badge',
-        `ui-badge--${variant}`,
+        ui('ui-badge'),
+        ui(`ui-badge--${variant}`),
         className,
       )}
       data-indicator={indicator || undefined}

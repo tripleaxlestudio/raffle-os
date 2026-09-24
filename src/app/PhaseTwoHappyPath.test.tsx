@@ -26,7 +26,7 @@ describe('Phase 2 deterministic happy path', () => {
   it('connects every static screen through browser-history-compatible URLs', async () => {
     const user = userEvent.setup()
     const router = createMemoryRouter(appRoutes, {
-      initialEntries: ['/dashboard'],
+      initialEntries: ['/dev/prototypes/dashboard'],
     })
     render(<RouterProvider router={router} />)
 
@@ -38,9 +38,9 @@ describe('Phase 2 deterministic happy path', () => {
     ).toBeVisible()
     expectNoProductionSuccessClaim()
 
-    await user.click(screen.getByRole('link', { name: 'Participants' }))
-    await router.navigate('/participants?workflow=prototype')
-    expectLocation(router, '/participants?workflow=prototype')
+    await user.click(screen.getByRole('link', { name: 'Peserta' }))
+    await router.navigate('/dev/prototypes/participants?workflow=prototype')
+    expectLocation(router, '/dev/prototypes/participants?workflow=prototype')
     expect(await screen.findByRole('heading', { name: 'Choose participant file' })).toBeVisible()
     expectNoProductionSuccessClaim()
 
@@ -49,7 +49,7 @@ describe('Phase 2 deterministic happy path', () => {
         name: 'Continue to column mapping',
       }),
     )
-    expectLocation(router, '/participants?workflow=prototype&step=mapping')
+    expectLocation(router, '/dev/prototypes/participants?step=mapping')
     expect(screen.getByRole('heading', { name: 'Map spreadsheet columns' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()
@@ -57,7 +57,7 @@ describe('Phase 2 deterministic happy path', () => {
     await user.click(
       screen.getByRole('link', { name: 'Validate participant data' }),
     )
-    expectLocation(router, '/participants?workflow=prototype&step=validation')
+    expectLocation(router, '/dev/prototypes/participants?step=validation')
     expect(screen.getByRole('heading', { name: 'Review validation results' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()
@@ -65,7 +65,7 @@ describe('Phase 2 deterministic happy path', () => {
     await user.click(
       screen.getByRole('link', { name: 'Review import summary' }),
     )
-    expectLocation(router, '/participants?workflow=prototype&step=summary')
+    expectLocation(router, '/dev/prototypes/participants?step=summary')
     expect(screen.getByRole('heading', { name: 'Review import summary' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()
@@ -73,13 +73,13 @@ describe('Phase 2 deterministic happy path', () => {
     await user.click(
       screen.getByRole('link', { name: 'Continue to Draw Setup' }),
     )
-    expectLocation(router, '/draw/setup?mode=practice&scenario=ready')
-    expect(screen.getByRole('heading', { level: 1, name: 'Draw Setup' }))
+    expectLocation(router, '/dev/prototypes/draw/setup?mode=practice&scenario=ready')
+    expect(screen.getByRole('heading', { level: 1, name: 'Pengaturan Undian' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()
 
-    await router.navigate('/draw/live?state=ready&mode=practice')
-    expectLocation(router, '/draw/live?state=ready&mode=practice')
+    await router.navigate('/dev/prototypes/draw/live?state=ready&mode=practice')
+    expectLocation(router, '/dev/prototypes/draw/live?state=ready&mode=practice')
     expect(await screen.findByRole('heading', { name: 'Operator start gate' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()
@@ -95,7 +95,7 @@ describe('Phase 2 deterministic happy path', () => {
     await waitFor(() => {
       expectLocation(
         router,
-        '/draw/live?state=running&mode=practice&stage=countdown',
+        '/dev/prototypes/draw/live?state=running&mode=practice&stage=countdown',
       )
     })
     expect(screen.getByLabelText('Static countdown value 3')).toBeVisible()
@@ -106,16 +106,16 @@ describe('Phase 2 deterministic happy path', () => {
     )
     expectLocation(
       router,
-      '/draw/live?state=running&mode=practice&stage=rolling',
+      '/dev/prototypes/draw/live?state=running&mode=practice&stage=rolling',
     )
     expect(screen.getByLabelText('Static ticket stream')).toBeVisible()
     expectNoProductionSuccessClaim()
 
     await user.click(
-      screen.getByRole('link', { name: 'Review Pending Results' }),
+      screen.getByRole('link', { name: 'Tinjau Hasil Tertunda' }),
     )
-    expectLocation(router, '/draw/results')
-    expect(screen.getByRole('heading', { level: 1, name: 'Pending Results' }))
+    expectLocation(router, '/dev/prototypes/draw/results')
+    expect(screen.getByRole('heading', { level: 1, name: 'Hasil Tertunda' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()
 
@@ -126,7 +126,7 @@ describe('Phase 2 deterministic happy path', () => {
       screen.getByRole('button', { name: 'Show partial scenario' }),
     )
     await waitFor(() => {
-      expectLocation(router, '/draw/results?scenario=partial')
+      expectLocation(router, '/dev/prototypes/draw/results?scenario=partial')
     })
     expect(
       screen.getByRole('table', {
@@ -138,7 +138,7 @@ describe('Phase 2 deterministic happy path', () => {
     await user.click(screen.getByRole('link', { name: 'Open redraw' }))
     expectLocation(
       router,
-      '/draw/results?scenario=partial&panel=redraw&selection=multiple',
+      '/dev/prototypes/draw/results?scenario=partial&panel=redraw&selection=multiple',
     )
     expect(
       screen.getByRole('dialog', {
@@ -152,7 +152,7 @@ describe('Phase 2 deterministic happy path', () => {
     )
     expectLocation(
       router,
-      '/draw/results?scenario=partial&panel=replacement',
+      '/dev/prototypes/draw/results?scenario=partial&panel=replacement',
     )
     expect(
       screen.getByRole('dialog', {
@@ -164,7 +164,7 @@ describe('Phase 2 deterministic happy path', () => {
     await user.click(
       screen.getByRole('link', { name: 'Review in History' }),
     )
-    expectLocation(router, '/history?view=session-detail')
+    expectLocation(router, '/dev/prototypes/history?view=session-detail')
     expect(
       screen.getByRole('heading', {
         name: 'Cancellation & replacement',
@@ -177,7 +177,7 @@ describe('Phase 2 deterministic happy path', () => {
         name: 'Review presentation settings',
       }),
     )
-    expectLocation(router, '/settings?section=branding')
+    expectLocation(router, '/dev/prototypes/settings?section=branding')
     expect(screen.getByRole('heading', { level: 2, name: 'Branding' }))
       .toBeVisible()
     expectNoProductionSuccessClaim()
@@ -185,7 +185,7 @@ describe('Phase 2 deterministic happy path', () => {
     await user.click(
       screen.getByRole('link', { name: 'Preview display' }),
     )
-    expectLocation(router, '/display?state=standby')
+    expectLocation(router, '/dev/prototypes/display?state=standby')
     expect(
       screen.getByRole('heading', {
         level: 1,

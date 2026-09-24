@@ -1,0 +1,91 @@
+{
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "comparison": [
+    {
+      "sample": {
+        "stage": "ready",
+        "count": 1
+      },
+      "equal": true,
+      "nodes": 13,
+      "valid": true
+    },
+    {
+      "sample": {
+        "stage": "countdown",
+        "count": 1
+      },
+      "equal": true,
+      "nodes": 15,
+      "valid": true
+    },
+    {
+      "sample": {
+        "stage": "rolling",
+        "count": 6
+      },
+      "equal": true,
+      "nodes": 38,
+      "valid": true
+    },
+    {
+      "sample": {
+        "stage": "reveal",
+        "count": 1
+      },
+      "equal": true,
+      "nodes": 22,
+      "valid": true
+    },
+    {
+      "sample": {
+        "stage": "reveal",
+        "count": 6
+      },
+      "equal": true,
+      "nodes": 38,
+      "valid": true
+    },
+    {
+      "sample": {
+        "stage": "reveal",
+        "count": 10
+      },
+      "equal": true,
+      "nodes": 50,
+      "valid": true
+    },
+    {
+      "sample": {
+        "stage": "reveal",
+        "count": 20
+      },
+      "equal": true,
+      "nodes": 82,
+      "valid": true
+    },
+    {
+      "sample": {
+        "stage": "reveal",
+        "count": 50
+      },
+      "equal": true,
+      "nodes": 173,
+      "valid": true
+    },
+    {
+      "sample": {
+        "stage": "reveal",
+        "count": 6,
+        "blackout": true
+      },
+      "equal": true,
+      "nodes": 0,
+      "valid": false
+    }
+  ],
+  "blackoutNote": "Blackout omits data-audience-preview in baseline renderer; empty selectors are not evidence. Check actual blackout canvas separately."
+}

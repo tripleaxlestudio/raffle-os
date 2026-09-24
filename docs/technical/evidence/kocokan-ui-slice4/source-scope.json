@@ -1,0 +1,62 @@
+{
+  "base": "93f3785b9c01e94eac0efe9f62ae4d36cbd7024d",
+  "changed": [
+    "TASKS.md",
+    "docs/technical/KOCOKAN-UI-REDESIGN-PLAN.md",
+    "docs/technical/KOCOKAN-UI-SLICE-3-PLAN.md",
+    "docs/technical/KOCOKAN-UI-SLICE-3.md",
+    "src/pages/operator/ProductionPendingResultsLandingPage.tsx",
+    "src/pages/operator/ProductionPendingResultsPage.tsx",
+    "src/styles/app.css",
+    "src/ui/operator/draw/ProductionDrawPresentation.tsx",
+    "docs/technical/KOCOKAN-UI-SLICE-4-PLAN.md",
+    "docs/technical/KOCOKAN-UI-SLICE-4.md",
+    "docs/technical/evidence/kocokan-ui-slice4/README.md",
+    "docs/technical/evidence/kocokan-ui-slice4/active-20-1440x900.png",
+    "docs/technical/evidence/kocokan-ui-slice4/audit-scope.mjs",
+    "docs/technical/evidence/kocokan-ui-slice4/compare-preflight.mjs",
+    "docs/technical/evidence/kocokan-ui-slice4/completed-1440x900.png",
+    "docs/technical/evidence/kocokan-ui-slice4/hundred-bottom-1366x768.png",
+    "docs/technical/evidence/kocokan-ui-slice4/image-manifest.mjs",
+    "docs/technical/evidence/kocokan-ui-slice4/reason-menu-1440x900.png",
+    "docs/technical/evidence/kocokan-ui-slice4/regression-comparison.json",
+    "docs/technical/evidence/kocokan-ui-slice4/selected-hover-1440x900.png",
+    "docs/technical/evidence/kocokan-ui-slice4/visual-fixture.html",
+    "docs/technical/evidence/kocokan-ui-slice4/visual-fixture.tsx",
+    "src/pages/operator/KocokanPendingResults.test.tsx",
+    "src/styles/kocokan/pending.css"
+  ],
+  "source": [
+    "src/pages/operator/ProductionPendingResultsLandingPage.tsx",
+    "src/pages/operator/ProductionPendingResultsPage.tsx",
+    "src/styles/app.css",
+    "src/ui/operator/draw/ProductionDrawPresentation.tsx",
+    "src/pages/operator/KocokanPendingResults.test.tsx",
+    "src/styles/kocokan/pending.css"
+  ],
+  "allowedSource": [
+    "src/pages/operator/ProductionPendingResultsLandingPage.tsx",
+    "src/pages/operator/ProductionPendingResultsPage.tsx",
+    "src/pages/operator/KocokanPendingResults.test.tsx",
+    "src/ui/operator/draw/ProductionDrawPresentation.tsx",
+    "src/styles/app.css",
+    "src/styles/kocokan/pending.css"
+  ],
+  "unexpectedSource": [],
+  "productionDrawPresentationHunks": [
+    {
+      "start": 207,
+      "length": 1
+    }
+  ],
+  "productionDrawPresentationOnlyQuickSelection": true,
+  "pendingControlFlowChanges": [],
+  "css": {
+    "hasAudienceSelector": false,
+    "hasHistorySelector": false,
+    "hasImportant": false,
+    "hasLegacyDarkHex": false,
+    "hasPersistentSelectedRule": true
+  },
+  "patchMentionsForbiddenProductionAreas": false
+}

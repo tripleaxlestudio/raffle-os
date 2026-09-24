@@ -19,4 +19,4 @@ export interface Event {
 }
 
 export const EVENT_HARD_DELETION_POLICY =
-  'draft-only-without-official-history' as const
+  'fully-resolved-event-owned-records' as const

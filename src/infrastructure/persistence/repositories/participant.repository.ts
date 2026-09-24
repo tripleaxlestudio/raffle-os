@@ -24,6 +24,7 @@ import {
   TransactionError,
   ValidationError,
 } from '../errors/persistence-errors.ts'
+import { assertParticipantMutationAllowed } from '../participant-mutation-lock.ts'
 
 const OPERATIONAL_CHANGE_KEYS = new Set([
   'group',
@@ -259,6 +260,9 @@ export class DexieParticipantRepository
         'rw',
         this.database.events,
         this.database.participants,
+        this.database.draw_sessions,
+        this.database.winner_records,
+        this.database.presentation_checkpoints,
         async () => {
           const parentEvent = await this.database.events.get(eventId)
           if (parentEvent === undefined) {
@@ -266,6 +270,7 @@ export class DexieParticipantRepository
               'The parent Event for the Participant batch was not found.',
             )
           }
+          await assertParticipantMutationAllowed(this.database, eventId)
 
           await this.database.participants.bulkAdd([...participants])
         },
@@ -292,6 +297,9 @@ export class DexieParticipantRepository
       await this.database.transaction(
         'rw',
         this.database.participants,
+        this.database.draw_sessions,
+        this.database.winner_records,
+        this.database.presentation_checkpoints,
         async () => {
           const current = await this.database.participants.get(id)
           if (current === undefined) {
@@ -299,6 +307,7 @@ export class DexieParticipantRepository
               'The Participant required for an operational update was not found.',
             )
           }
+          await assertParticipantMutationAllowed(this.database, current.eventId)
 
           let updated: Participant = {
             ...current,
@@ -340,6 +349,7 @@ export class DexieParticipantRepository
           this.database.winner_records,
           this.database.redraw_records,
           this.database.audit_records,
+          this.database.presentation_checkpoints,
         ],
         async () => {
           const event = await this.database.events.get(eventId)
@@ -354,6 +364,7 @@ export class DexieParticipantRepository
               'Participants can be deleted only from a draft Event.',
             )
           }
+          await assertParticipantMutationAllowed(this.database, eventId)
 
           const [
             drawSession,

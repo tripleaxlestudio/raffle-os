@@ -1,312 +1,157 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { appRoutes } from './router.tsx'
 
 function renderRoute(path: string) {
-  const router = createMemoryRouter(appRoutes, {
-    initialEntries: [path],
-  })
-
-  const view = render(<RouterProvider router={router} />)
-
-  return { router, ...view }
+  const router = createMemoryRouter(appRoutes, { initialEntries: [path] })
+  render(<RouterProvider router={router} />)
+  return router
 }
 
-const operatorPages = [
-  ['/dashboard', 'Dashboard'],
-  ['/participants', 'Participants'],
-  ['/draw/setup', 'Draw Setup'],
-  ['/draw/live', 'Live Draw'],
-  ['/draw/results', 'Pending Results'],
-  ['/history', 'History'],
-  ['/settings', 'Settings'],
-] as const
-
-const operatorPageHeadings = [
-  ['/dashboard', 'Nusantara Tech Gala 2026'],
-  ['/participants', 'Participant Import'],
-  ['/draw/setup', 'Draw Setup'],
-  ['/draw/live', 'Live Draw'],
-  ['/draw/results', 'Pending Results'],
-  ['/history', 'History'],
-  ['/settings', 'Settings'],
-] as const
-
-const operatorNavigationLabels = operatorPages.map(([, label]) => label)
-
 describe('application routes', () => {
-  it('redirects / to /dashboard', async () => {
-    const { router } = renderRoute('/')
-
-    expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: 'Nusantara Tech Gala 2026',
-      }),
-    ).toBeInTheDocument()
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/dashboard')
-    })
+  it('redirects the root to the production dashboard', async () => {
+    const router = renderRoute('/')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
+    expect(screen.getByRole('heading', { name: 'Dasbor' })).toBeVisible()
+    expect(screen.queryByText('Nusantara Tech Gala 2026')).not.toBeInTheDocument()
   })
 
-  it('renders Dashboard inside the Operator shell', () => {
+  it.each(['/dashboard', '/participants', '/draw/setup', '/history', '/display'])('renders production route %s without prototype chrome', async (path) => {
+    renderRoute(path)
+    await waitFor(() => expect(screen.getByRole('main')).toBeInTheDocument())
+    expect(screen.queryByText('PROTO')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Nusantara Tech Gala 2026/i)).not.toBeInTheDocument()
+  })
+
+  it.each(['/events', '/dashboard', '/prize-categories', '/participants', '/settings', '/draw/setup', '/draw/live', '/draw/pending', '/history'])('does not render publisher diagnostics on production route %s', async (path) => {
+    renderRoute(path)
+    await waitFor(() => expect(screen.getByRole('main')).toBeInTheDocument())
+    expect(screen.queryByText('Audience publisher diagnostics')).not.toBeInTheDocument()
+  })
+
+  it('keeps publisher diagnostics available behind an explicit development debug flag', async () => {
+    renderRoute('/dashboard?debug=audience-transport')
+    expect(await screen.findByText('Audience publisher diagnostics')).toBeInTheDocument()
+  })
+
+  it('keeps Operator and Audience production shells separated', () => {
+    renderRoute('/dashboard')
+    expect(document.querySelector('[data-operator-shell]')).toHaveAttribute('data-interface', 'operator')
+    expect(screen.getByRole('navigation', { name: 'Navigasi Operator' })).toBeInTheDocument()
+
+    cleanup()
+    renderRoute('/display')
+    expect(document.querySelector('[data-audience-shell]')).toHaveAttribute('data-interface', 'audience')
+    expect(screen.queryByRole('navigation', { name: 'Navigasi Operator' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument()
+  })
+
+  it('provides a keyboard skip link to a focusable main landmark', async () => {
+    const user = userEvent.setup()
     renderRoute('/dashboard')
 
-    expect(
-      within(screen.getByRole('main')).getByRole('heading', {
-        level: 1,
-        name: 'Nusantara Tech Gala 2026',
-      }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('banner')).toBeInTheDocument()
-    expect(
-      screen.getByRole('navigation', { name: 'Operator navigation' }),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Raffle OS')).toBeInTheDocument()
-    expect(
-      screen.getAllByText('Nusantara Tech Gala 2026'),
-    ).toHaveLength(2)
-    expect(screen.getByText('Practice Mode')).toBeInTheDocument()
-    expect(
-      screen.getByRole('status', {
-        name: 'Audience Display: Connected',
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('combobox', { name: 'Prototype scenario' }),
-    ).toHaveValue('ready')
+    await user.tab()
+    const skipLink = screen.getByRole('link', { name: 'Lewati ke konten utama' })
+    expect(skipLink).toHaveFocus()
+    expect(skipLink).toHaveAttribute('href', '#operator-main')
+    expect(screen.getByRole('main')).toHaveAttribute('id', 'operator-main')
+    expect(screen.getByRole('main')).toHaveAttribute('tabindex', '-1')
   })
 
-  it('keeps prototype chrome off production Draw Setup while preserving it for explicit prototype routes', () => {
-    const production = renderRoute('/draw/setup')
-    expect(screen.queryByRole('combobox', { name: 'Prototype scenario' })).not.toBeInTheDocument()
-    expect(screen.queryByText('Prototype navigation')).not.toBeInTheDocument()
-    expect(screen.queryByText('Practice Mode')).not.toBeInTheDocument()
-    expect(screen.queryByRole('status', { name: /Audience Display:/i })).not.toBeInTheDocument()
-    production.unmount()
-
-    renderRoute('/draw/setup?scenario=ready')
-    expect(screen.getByRole('combobox', { name: 'Prototype scenario' })).toBeInTheDocument()
-    expect(screen.getByText('Prototype navigation')).toBeInTheDocument()
-    expect(screen.getByText('Practice Mode')).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: 'Audience Display: Connected' })).toBeInTheDocument()
+  it('exposes only production destinations in the production sidebar', () => {
+    renderRoute('/dashboard')
+    const navigation = screen.getByRole('navigation', { name: 'Navigasi Operator' })
+    expect(navigation).toHaveTextContent('Dasbor')
+    expect(navigation).toHaveTextContent('Peserta')
+    expect(navigation).toHaveTextContent('Settings Undian')
+    expect(navigation).toHaveTextContent('Undian')
+    expect(navigation).toHaveTextContent('Hasil Pending')
+    expect(navigation).toHaveTextContent('Riwayat')
+    expect(navigation).toHaveTextContent('Settings Tampilan')
+    expect(navigation.textContent).toBe('DashboardPrizeParticipantsSettings TampilanSettings UndianLive DrawHasil PendingHistory')
+    expect(navigation).not.toHaveTextContent('Events')
+    expect(navigation).not.toHaveTextContent('Kategori Hadiah')
+    expect(navigation).not.toHaveTextContent('Audience Display')
+    expect(navigation).not.toHaveTextContent('Live Draw Queue')
+    expect(Array.from(navigation.querySelectorAll('a')).map((link) => link.getAttribute('href'))).not.toContain('/dev/prototypes')
   })
 
-  it.each(operatorPageHeadings)(
-    'renders %s as the %s Operator page',
-    (path, title) => {
-    const { container } = renderRoute(path)
-
-    expect(
-      screen.getByRole('heading', { level: 1, name: title }),
-    ).toBeInTheDocument()
-    expect(container.querySelector('[data-operator-shell]')).toHaveAttribute(
-      'data-interface',
-      'operator',
-    )
-    expect(container.querySelector('.operator-header')).toBeInTheDocument()
-
-    const navigation = screen.getByRole('navigation', {
-      name: 'Operator navigation',
-    })
-    for (const navigationLabel of operatorNavigationLabels) {
-      expect(
-        within(navigation).getByRole('link', { name: navigationLabel }),
-      ).toBeInTheDocument()
-    }
-    },
-  )
-
-  it.each([
-    ['/dashboard', 'Dashboard'],
-    ['/draw/results', 'Pending Results'],
-    ['/settings', 'Settings'],
-  ])('marks the navigation link for %s as active', (path, label) => {
+  it.each(['/draw/live', '/draw/pending', '/settings'])('keeps production route %s honest', async (path) => {
     renderRoute(path)
-
-    const activeLink = screen.getByRole('link', { name: label })
-    expect(activeLink).toHaveAttribute('aria-current', 'page')
-    expect(activeLink).toHaveClass('operator-nav__link--active')
+    await waitFor(() => expect(screen.getByRole('main')).toBeInTheDocument())
+    if (path === '/settings') {
+      expect(screen.getByRole('heading', { name: 'Event required' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Open Event Management' })).toHaveAttribute('href', '/events')
+    }
+    else expect(screen.getByRole('heading', { name: path === '/draw/pending' ? 'Hasil Pending' : 'Undian' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
   })
 
-  it('renders the standalone Audience Display shell at /display', () => {
-    const { container } = renderRoute('/display')
-
-    const audienceShell = container.querySelector('[data-audience-shell]')
-    expect(audienceShell).toHaveAttribute('data-interface', 'audience')
-    expect(container.querySelector('[data-operator-shell]')).toBeNull()
-    expect(
-      screen.getByRole('main', { name: 'Audience presentation' }),
-    ).toBeInTheDocument()
+  it('does not expose the prototype pending route as production navigation', () => {
+    renderRoute('/draw/results')
+    expect(screen.getByRole('heading', { name: 'Not Found' })).toBeInTheDocument()
   })
 
-  it('renders the standby Audience Display prototype at /display', () => {
-    renderRoute('/display')
-
-    expect(
-      screen.getByRole('heading', {
-        level: 1,
-        name: 'Draw will begin shortly',
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText('Nusantara Tech Gala 2026'),
-    ).toBeInTheDocument()
-    expect(screen.queryByText('000123')).not.toBeInTheDocument()
-  })
-
-  it('renders Not Found for an unknown route', () => {
-    const { container } = renderRoute('/unknown-route')
-
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'Not Found' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText('The requested page does not exist.'),
-    ).toBeInTheDocument()
-    expect(container.querySelector('[data-operator-shell]')).toBeNull()
-    expect(
-      screen.queryByRole('navigation', { name: 'Operator navigation' }),
-    ).not.toBeInTheDocument()
-  })
-
-  it('provides working navigation from Not Found to /dashboard', async () => {
+  it('keeps the current Event header control safe when no Event is active', async () => {
     const user = userEvent.setup()
-    const { router } = renderRoute('/unknown-route')
+    renderRoute('/dashboard')
+    await waitFor(() => expect(screen.getByRole('button', { name: /Current Event/i })).toBeInTheDocument())
+    const control = screen.getByRole('button', { name: /Current Event/i })
+    expect(control).toHaveAttribute('aria-expanded', 'false')
+    expect(control.querySelector('.operator-header__chevron')).toBeInTheDocument()
+    await user.click(control)
+    const menu = screen.getByRole('menu')
+    expect(menu).toBeInTheDocument()
+    await waitFor(() => expect(menu).toHaveFocus())
+    expect(control).toHaveAttribute('aria-expanded', 'true')
+    expect(control).toHaveAttribute('aria-controls', menu.id)
+    expect(screen.queryByRole('menuitem', { name: 'Switch / Manage Events' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Manage Prize Categories' })).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(control).toHaveFocus()
+  })
 
-    const recoveryLink = screen.getByRole('link', {
-      name: 'Return to Dashboard',
-    })
+  it('closes the Current Event menu on outside pointer interaction and reopens cleanly', async () => {
+    const user = userEvent.setup()
+    renderRoute('/dashboard')
+    const control = await screen.findByRole('button', { name: /Current Event/i })
+    await user.click(control)
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+    await user.click(screen.getByRole('main'))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    await user.click(control)
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('links missing production Audience configuration to Settings', async () => {
+    renderRoute('/dashboard')
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Audience: Setup required' })).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: 'Audience: Setup required' })).toHaveAttribute('href', '/settings')
+    expect(screen.queryByText(/Production display scope is ready/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps the deterministic prototype available only under its development namespace', () => {
+    renderRoute('/dev/prototypes/dashboard')
+    expect(screen.getByText('PROTO')).toBeVisible()
+    expect(screen.getAllByText('Nusantara Tech Gala 2026').length).toBeGreaterThan(0)
+  })
+
+  it('keeps the prototype Audience Display namespace available', () => {
+    renderRoute('/dev/prototypes/display')
+    expect(screen.getByText('Draw will begin shortly')).toBeVisible()
+  })
+
+  it('keeps unknown routes recoverable through the production dashboard', async () => {
+    const user = userEvent.setup()
+    const router = renderRoute('/unknown-route')
+    const recoveryLink = screen.getByRole('link', { name: 'Return to Dashboard' })
     expect(recoveryLink).toHaveAttribute('href', '/dashboard')
-
     await user.click(recoveryLink)
-
-    expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: 'Nusantara Tech Gala 2026',
-      }),
-    ).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/dashboard')
-  })
-
-  it('does not render the Operator shell or status on /display', () => {
-    renderRoute('/display')
-
-    expect(
-      screen.queryByRole('navigation', { name: 'Operator navigation' }),
-    ).not.toBeInTheDocument()
-    expect(screen.queryByRole('banner')).not.toBeInTheDocument()
-    expect(screen.queryByText('Practice Mode')).not.toBeInTheDocument()
-    expect(
-      screen.queryByText(
-        /^Audience Display: (Disconnected|Connecting|Connected)$/,
-      ),
-    ).not.toBeInTheDocument()
-  })
-
-  it('exposes prototype direct links only in Operator navigation', () => {
-    renderRoute('/draw/setup?scenario=ready')
-
-    const prototypeNavigation = screen.getByRole('navigation', {
-      name: 'Prototype navigation scenarios',
-    })
-    const expectedLinks = [
-      ['Draw Setup — Practice Ready', '/draw/setup?mode=practice&scenario=ready'],
-      ['Draw Setup — Live Ready', '/draw/setup?mode=live&scenario=ready'],
-      [
-        'Draw Setup — Insufficient Pool',
-        '/draw/setup?mode=practice&scenario=insufficient',
-      ],
-      [
-        'Live Draw — Practice Ready',
-        '/draw/live?state=ready&mode=practice',
-      ],
-      ['Live Draw — Live Ready', '/draw/live?state=ready&mode=live'],
-      [
-        'Live Draw — Countdown',
-        '/draw/live?state=running&mode=practice&stage=countdown',
-      ],
-      [
-        'Live Draw — Rolling',
-        '/draw/live?state=running&mode=practice&stage=rolling',
-      ],
-    ] as const
-
-    for (const [label, href] of expectedLinks) {
-      expect(
-        within(prototypeNavigation).getByRole('link', { name: label }),
-      ).toHaveAttribute('href', href)
-    }
-
-    const sliceFourLinks = [
-      ['Pending Results - Pending', '/draw/results?scenario=pending'],
-      [
-        'Pending Results - Partial confirmation',
-        '/draw/results?scenario=partial',
-      ],
-      ['Pending Results - Confirmed', '/draw/results?scenario=confirmed'],
-      [
-        'Redraw - Single winner',
-        '/draw/results?panel=redraw&selection=single',
-      ],
-      [
-        'Redraw - Multiple winners',
-        '/draw/results?panel=redraw&selection=multiple',
-      ],
-      [
-        'Redraw - Replacement preview',
-        '/draw/results?panel=replacement',
-      ],
-      ['History - Draw Sessions', '/history?view=sessions'],
-      ['History - All Winners', '/history?view=winners'],
-      ['History - Audit Log', '/history?view=audit'],
-      ['History - Session detail', '/history?view=session-detail'],
-      ['Settings - Branding', '/settings?section=branding'],
-      ['Settings - Presentation', '/settings?section=presentation'],
-      ['Settings - Audio', '/settings?section=audio'],
-      ['Settings - Display', '/settings?section=display'],
-    ] as const
-
-    for (const [label, href] of sliceFourLinks) {
-      expect(
-        within(prototypeNavigation).getByRole('link', { name: label }),
-      ).toHaveAttribute('href', href)
-    }
-
-    const audienceLinks = [
-      ['Audience Standby', '/display?state=standby'],
-      ['Audience Countdown', '/display?state=countdown'],
-      ['Audience Rolling', '/display?state=rolling'],
-      ['Reveal 1', '/display?state=reveal&count=1'],
-      ['Reveal 6', '/display?state=reveal&count=6'],
-      ['Reveal 10', '/display?state=reveal&count=10'],
-      ['Reveal 20', '/display?state=reveal&count=20'],
-      ['Confirmed 1', '/display?state=confirmed&count=1'],
-      ['Confirmed 6', '/display?state=confirmed&count=6'],
-      ['Confirmed 10', '/display?state=confirmed&count=10'],
-      ['Confirmed 20', '/display?state=confirmed&count=20'],
-      ['Blackout', '/display?state=blackout'],
-      ['Disconnected', '/display?state=disconnected'],
-    ] as const
-
-    for (const [label, href] of audienceLinks) {
-      expect(
-        within(prototypeNavigation).getByRole('link', { name: label }),
-      ).toHaveAttribute('href', href)
-    }
-    expect(screen.getByText('Static prototype')).toBeVisible()
-  })
-
-  it('does not expose links to Operator routes on /display', () => {
-    renderRoute('/display')
-
-    for (const navigationLabel of operatorNavigationLabels) {
-      expect(
-        screen.queryByRole('link', { name: navigationLabel }),
-      ).not.toBeInTheDocument()
-    }
+    await waitFor(() => expect(router.state.location.pathname).toBe('/dashboard'))
+    expect(screen.getByRole('heading', { name: 'Dasbor' })).toBeVisible()
   })
 })

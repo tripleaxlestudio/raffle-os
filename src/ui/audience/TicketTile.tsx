@@ -1,20 +1,28 @@
 interface TicketTileProps {
-  confirmed: boolean
-  ticketNumber: string
+  status: 'pending' | 'confirmed'
+  ticketNumber?: string
+  locked?: boolean
+  revealEntrance?: boolean
 }
 
 export function TicketTile({
-  confirmed,
+  status,
   ticketNumber,
+  locked = true,
+  revealEntrance = false,
 }: TicketTileProps) {
   return (
-    <li
+    <div
+      role="listitem"
       className="ticket-tile"
-      data-confirmed={confirmed ? 'true' : 'false'}
+      data-confirmed={status === 'confirmed' ? 'true' : 'false'}
+      data-verification-status={status}
       data-ticket-tile
+      data-visible="true"
+      data-locked={locked ? 'true' : 'false'}
+      data-reveal-entrance={revealEntrance ? 'true' : 'false'}
     >
-      <span className="ticket-tile__label">Ticket</span>
-      <strong className="ticket-tile__number">{ticketNumber}</strong>
-    </li>
+      <span className="ticket-tile__label">{locked ? status === 'confirmed' ? 'Dikonfirmasi' : 'Pemenang' : 'Berputar'}</span><strong className="ticket-tile__number">{ticketNumber}</strong>
+    </div>
   )
 }

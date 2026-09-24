@@ -108,7 +108,7 @@ export function resolvePrototypeImportStep(
 }
 
 export function getPrototypeImportStepPath(step: PrototypeImportStep) {
-  return `/participants?workflow=prototype&step=${step}`
+  return `/dev/prototypes/participants?step=${step}`
 }
 
 export interface PrototypeDrawSetupQuery {
@@ -155,7 +155,7 @@ export function getPrototypeDrawSetupPath({
   mode,
   scenario,
 }: PrototypeDrawSetupQuery) {
-  return `/draw/setup?mode=${mode}&scenario=${scenario}`
+  return `/dev/prototypes/draw/setup?mode=${mode}&scenario=${scenario}`
 }
 
 export function getPrototypeLiveDrawPath({
@@ -164,7 +164,7 @@ export function getPrototypeLiveDrawPath({
   state,
 }: PrototypeLiveDrawQuery) {
   const stageQuery = state === 'running' ? `&stage=${stage}` : ''
-  return `/draw/live?state=${state}&mode=${mode}${stageQuery}`
+  return `/dev/prototypes/draw/live?state=${state}&mode=${mode}${stageQuery}`
 }
 
 export interface PrototypePendingResultsQuery {
@@ -201,12 +201,12 @@ export function getPrototypePendingResultsPath({
   selection = 'single',
 }: Partial<PrototypePendingResultsQuery> = {}) {
   if (panel === 'summary') {
-    return `/draw/results?scenario=${scenario}`
+    return `/dev/prototypes/draw/results?scenario=${scenario}`
   }
 
   const selectionQuery =
     panel === 'redraw' ? `&selection=${selection}` : ''
-  return `/draw/results?scenario=${scenario}&panel=${panel}${selectionQuery}`
+  return `/dev/prototypes/draw/results?scenario=${scenario}&panel=${panel}${selectionQuery}`
 }
 
 export function resolvePrototypeHistoryView(

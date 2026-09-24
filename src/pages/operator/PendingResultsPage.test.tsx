@@ -8,21 +8,21 @@ import {
   redrawFixture,
 } from '../../prototype/data/index.ts'
 
-function renderResults(path = '/draw/results') {
+function renderResults(path = '/dev/prototypes/draw/results') {
   const router = createMemoryRouter(appRoutes, {
-    initialEntries: [path],
+    initialEntries: [path.startsWith('/dev/') ? path : `/dev/prototypes${path}`],
   })
   const view = render(<RouterProvider router={router} />)
 
   return { router, ...view }
 }
 
-describe('Pending Results static prototype', () => {
+describe('Hasil Pending static prototype', () => {
   it('renders the pending summary and exact leading-zero tickets', () => {
     renderResults()
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Pending Results' }),
+      screen.getByRole('heading', { level: 1, name: 'Hasil Pending' }),
     ).toBeInTheDocument()
     const table = screen.getByRole('table', {
       name: 'Prototype winner records for pending scenario',
@@ -51,7 +51,7 @@ describe('Pending Results static prototype', () => {
     const partialTable = screen.getByRole('table', {
       name: 'Prototype winner records for partial scenario',
     })
-    for (const status of ['Pending', 'Confirmed', 'Cancelled', 'Replaced']) {
+    for (const status of ['Tertunda', 'Dikonfirmasi', 'Dibatalkan', 'Replaced']) {
       expect(within(partialTable).getAllByText(status).length).toBeGreaterThan(0)
     }
     expect(screen.getByText(/Mixed statuses shown/i)).toBeVisible()
@@ -63,10 +63,10 @@ describe('Pending Results static prototype', () => {
         name: 'Prototype winner records for confirmed scenario',
       }),
     ).toBeInTheDocument()
-    expect(screen.getAllByText('Confirmed').length).toBeGreaterThanOrEqual(10)
+    expect(screen.getAllByText('Dikonfirmasi').length).toBeGreaterThanOrEqual(10)
     expect(
       screen.getByRole('link', { name: 'Review static history' }),
-    ).toHaveAttribute('href', '/history?view=session-detail')
+    ).toHaveAttribute('href', '/dev/prototypes/history?view=session-detail')
   })
 
   it('reconciles every partial row status with the exact summary counts', () => {
@@ -105,9 +105,9 @@ describe('Pending Results static prototype', () => {
       within(summary).getByText('Total result records').parentElement,
     ).toHaveTextContent('10')
     for (const [label, value] of [
-      ['Pending', '4'],
-      ['Confirmed', '4'],
-      ['Cancelled', '1'],
+      ['Tertunda', '4'],
+      ['Dikonfirmasi', '4'],
+      ['Dibatalkan', '1'],
       ['Replaced', '1'],
     ] as const) {
       expect(
@@ -168,13 +168,13 @@ describe('Pending Results static prototype', () => {
       screen.getByRole('link', { name: 'Open redraw' }),
     ).toHaveAttribute(
       'href',
-      '/draw/results?scenario=pending&panel=redraw&selection=multiple',
+      '/dev/prototypes/draw/results?scenario=pending&panel=redraw&selection=multiple',
     )
     expect(
       screen.getByRole('link', { name: 'Return to Live Draw' }),
     ).toHaveAttribute(
       'href',
-      '/draw/live?state=running&mode=live&stage=rolling',
+      '/dev/prototypes/draw/live?state=running&mode=live&stage=rolling',
     )
   })
 })
@@ -284,7 +284,7 @@ describe('Redraw presentation panel', () => {
     ).toBeVisible()
     expect(
       within(panel).getByRole('link', { name: 'Review in History' }),
-    ).toHaveAttribute('href', '/history?view=session-detail')
+    ).toHaveAttribute('href', '/dev/prototypes/history?view=session-detail')
   })
 
   it('does not mutate the redraw fixture during panel interactions', async () => {

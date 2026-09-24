@@ -51,6 +51,7 @@ import {
 } from '../errors/persistence-errors.ts'
 import { DexieDisplayConfigurationRepository } from './display-configuration.repository.ts'
 import { DexieDrawConfigurationRepository } from './draw-configuration.repository.ts'
+import { DEFAULT_DRAW_PRESENTATION_CONFIGURATION } from '../../../domain/draws/draw-presentation.types.ts'
 import { DexiePreferenceRepository } from './preference.repository.ts'
 import { DexiePrizeCategoryRepository } from './prize-category.repository.ts'
 
@@ -157,6 +158,7 @@ function makeConfiguration(
     eligibleGroupFilter: null,
     eventId: event.id,
     id: createDrawConfigurationId(),
+    presentation: DEFAULT_DRAW_PRESENTATION_CONFIGURATION,
     prizeCategoryId: category.id,
     requestedWinners: 1,
     requireCheckIn: false,
@@ -341,7 +343,7 @@ describe('DexiePrizeCategoryRepository reads and ordering', () => {
 })
 
 describe('DexiePrizeCategoryRepository lifecycle protection', () => {
-  it('creates a valid category only for an existing draft Event', async () => {
+  it('creates a valid category for any non-archived existing Event', async () => {
     const database = await createOpenDatabase()
     const repository = new DexiePrizeCategoryRepository(database)
     const draft = makeEvent()
@@ -352,9 +354,7 @@ describe('DexiePrizeCategoryRepository lifecycle protection', () => {
 
     await repository.create(category)
 
-    await expect(
-      repository.create(makeCategory(ready)),
-    ).rejects.toBeInstanceOf(ImmutableRecordError)
+    await repository.create(makeCategory(ready))
     await expect(
       repository.create(makeCategory(missing)),
     ).rejects.toBeInstanceOf(RelationshipMismatchError)
@@ -363,9 +363,7 @@ describe('DexiePrizeCategoryRepository lifecycle protection', () => {
         withRuntimeValue(makeCategory(draft), 'name', '   '),
       ),
     ).rejects.toBeInstanceOf(ValidationError)
-    expect(await database.prize_categories.toArray()).toEqual([
-      category,
-    ])
+    expect((await database.prize_categories.toArray()).map((item) => item.id)).toContain(category.id)
   })
 
   it('normalizes a duplicate ID, preserves the original, and retains the cause', async () => {
@@ -419,7 +417,7 @@ describe('DexiePrizeCategoryRepository lifecycle protection', () => {
     )
   })
 
-  it('rejects Event reassignment, creation-time replacement, and non-draft mutation', async () => {
+  it('rejects Event reassignment and creation-time replacement but permits active Event mutation', async () => {
     const database = await createOpenDatabase()
     const repository = new DexiePrizeCategoryRepository(database)
     const draft = makeEvent()
@@ -439,12 +437,8 @@ describe('DexiePrizeCategoryRepository lifecycle protection', () => {
     ).rejects.toBeInstanceOf(ImmutableRecordError)
 
     await database.events.update(draft.id, { status: 'ready' })
-    await expect(
-      repository.updateDraft({ ...category, name: 'Changed' }),
-    ).rejects.toBeInstanceOf(ImmutableRecordError)
-    expect(await database.prize_categories.get(category.id)).toEqual(
-      category,
-    )
+    await repository.updateDraft({ ...category, name: 'Changed' })
+    expect(await database.prize_categories.get(category.id)).toMatchObject({ name: 'Changed' })
   })
 
   it.each<DrawSessionStatus>([
@@ -452,7 +446,7 @@ describe('DexiePrizeCategoryRepository lifecycle protection', () => {
     'pending-confirmation',
     'completed',
     'cancelled',
-  ])('blocks updates after a referencing session reaches %s', async (status) => {
+  ])('permits updates after a referencing session reaches %s without changing the session', async (status) => {
     const database = await createOpenDatabase()
     const repository = new DexiePrizeCategoryRepository(database)
     const event = makeEvent()
@@ -461,19 +455,12 @@ describe('DexiePrizeCategoryRepository lifecycle protection', () => {
     await database.events.add(event)
     await database.prize_categories.add(category)
     await database.draw_configurations.add(configuration)
-    await database.draw_sessions.add(
-      makeSession(configuration, status),
-    )
+    const session = makeSession(configuration, status)
+    await database.draw_sessions.add(session)
 
-    await expect(
-      repository.updateDraft({
-        ...category,
-        name: 'Forbidden Change',
-      }),
-    ).rejects.toBeInstanceOf(ImmutableRecordError)
-    expect(await database.prize_categories.get(category.id)).toEqual(
-      category,
-    )
+    await repository.updateDraft({ ...category, name: 'Updated After Draw' })
+    expect(await database.prize_categories.get(category.id)).toMatchObject({ name: 'Updated After Draw' })
+    expect(await database.draw_sessions.get(session.id)).toMatchObject({ status })
   })
 
   it('rejects referenced deletion without cascading and deletes an unreferenced draft category', async () => {
@@ -1084,6 +1071,20 @@ describe('DexiePreferenceRepository typed behavior', () => {
       ).toMatchObject({ updatedAt: laterTimestamp })
     },
   )
+
+  it('persists Event-scoped setup journey reached steps for reload and Event switching', async () => {
+    const database = await createOpenDatabase()
+    const repository = new DexiePreferenceRepository(database)
+    const firstEvent = createEventId()
+    const secondEvent = createEventId()
+    const reached = { [firstEvent]: 3, [secondEvent]: 1 }
+
+    await repository.set('setupJourneyReachedStepByEvent', reached, laterTimestamp)
+
+    expect(await repository.get('setupJourneyReachedStepByEvent')).toEqual(reached)
+    expect((await repository.get('setupJourneyReachedStepByEvent'))?.[firstEvent]).toBe(3)
+    expect((await repository.get('setupJourneyReachedStepByEvent'))?.[secondEvent]).toBe(1)
+  })
 
   it('rejects runtime-invalid keys, values, and timestamps', async () => {
     const database = await createOpenDatabase()

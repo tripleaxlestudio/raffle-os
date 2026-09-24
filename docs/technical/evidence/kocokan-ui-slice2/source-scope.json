@@ -1,0 +1,33 @@
+{
+  "baseline": "b5c8775",
+  "purpose": "Compare JSX behavior attributes and unchanged frozen paths. Does not prove runtime correctness.",
+  "results": [
+    {
+      "path": "src/pages/operator/ProductionDashboardPage.tsx",
+      "comparedAttributes": 16,
+      "unchanged": true
+    },
+    {
+      "path": "src/pages/operator/EventsPage.tsx",
+      "comparedAttributes": 33,
+      "unchanged": true
+    },
+    {
+      "path": "src/pages/operator/PrizeCategoriesPage.tsx",
+      "comparedAttributes": 31,
+      "unchanged": true
+    },
+    {
+      "path": "src/ui/operator/participant-import/ProductionParticipantImportPreview.tsx",
+      "comparedAttributes": 53,
+      "unchanged": true
+    },
+    {
+      "path": "src/shared/components/ProductionSetupContinuation.tsx",
+      "comparedAttributes": 4,
+      "unchanged": true
+    }
+  ],
+  "frozenChanges": "",
+  "testChanges": ""
+}

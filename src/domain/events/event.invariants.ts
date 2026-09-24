@@ -12,11 +12,11 @@ import {
 const permittedTransitions: Readonly<
   Record<EventStatus, readonly EventStatus[]>
 > = {
-  archived: [],
+  archived: ['ready'],
   completed: ['archived'],
-  draft: ['ready'],
+  draft: ['ready', 'archived'],
   live: ['completed'],
-  ready: ['draft', 'live'],
+  ready: ['draft', 'live', 'archived'],
 }
 
 export function validateEvent(event: Event): Result<Event> {
@@ -80,4 +80,11 @@ export function canHardDeleteEvent(
   hasOfficialHistory: boolean,
 ): boolean {
   return event.status === 'draft' && !hasOfficialHistory
+}
+
+export function canPermanentlyDeleteEvent(
+  event: Event,
+  hasUnresolvedOperationalState: boolean,
+): boolean {
+  return event.status !== 'live' && !hasUnresolvedOperationalState
 }

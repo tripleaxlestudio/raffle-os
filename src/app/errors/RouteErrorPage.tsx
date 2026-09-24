@@ -8,21 +8,21 @@ interface RouteErrorContent {
 function getRouteErrorContent(error: unknown): RouteErrorContent {
   if (isRouteErrorResponse(error) && error.status === 404) {
     return {
-      heading: 'Page not found',
-      message: 'The requested page could not be found.',
+      heading: 'Halaman tidak ditemukan',
+      message: 'Halaman yang diminta tidak dapat ditemukan.',
     }
   }
 
   if (isRouteErrorResponse(error)) {
     return {
-      heading: 'Unable to load this page',
-      message: 'The requested page could not be opened.',
+      heading: 'Halaman tidak dapat dimuat',
+      message: 'Halaman yang diminta tidak dapat dibuka.',
     }
   }
 
   return {
-    heading: 'Something went wrong',
-    message: 'An unexpected error prevented this page from loading.',
+    heading: 'Terjadi kesalahan',
+    message: 'Kesalahan tak terduga menyebabkan halaman ini tidak dapat dimuat.',
   }
 }
 
@@ -37,7 +37,7 @@ export function RouteErrorPage() {
         <p>{content.message}</p>
         <div className="error-page__actions">
           <Link className="recovery-link" to="/dashboard">
-            Return to Dashboard
+            Kembali ke Dasbor
           </Link>
         </div>
       </div>

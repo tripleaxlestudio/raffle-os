@@ -1,0 +1,48 @@
+export type AudienceViewState =
+  | 'standby'
+  | 'countdown'
+  | 'rolling'
+  | 'reveal'
+  | 'pending-handoff'
+  | 'winner-reveal'
+  | 'confirmed'
+  | 'disconnected'
+  | 'blackout'
+  | 'connecting'
+  | 'disconnected-safe'
+
+export type PublicAudienceContext = Readonly<{
+  readonly eventName: string
+  readonly eventSubtitle: string
+  readonly logo?: Blob
+  readonly prizeCategory: string
+  readonly prizeLabel: string
+  readonly prizeImageAssetId?: string
+  readonly prototypeStatic?: boolean
+}>
+
+export type PublicAudienceScenario = PublicAudienceContext &
+  Readonly<{
+    readonly state: AudienceViewState
+    readonly message?: string
+    readonly nextDrawReady?: boolean
+    readonly winnerCount?: number
+    readonly countdownValue?: string
+    readonly ticketNumbers?: readonly string[]
+    readonly winnerStatuses?: readonly ('pending' | 'confirmed')[]
+    readonly statusMessage?: string
+    readonly instruction?: string
+    readonly layoutCount?: number
+    readonly displayTest?: boolean
+    readonly primaryColor?: string
+    readonly accentColor?: string
+    readonly rollingStartedAt?: string
+    readonly rollingSlotCount?: number
+    readonly rollSpeedPerSecond?: number
+    readonly rollStopMode?: 'timed' | 'manual'
+    readonly rollDurationSeconds?: number
+    readonly presentationSeed?: string
+    readonly presentationMode?: 'instant-reveal' | 'random-number-roll'
+    readonly revealMode?: 'all-together' | 'sequential'
+    readonly revealStartedAt?: string
+  }>

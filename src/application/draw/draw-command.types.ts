@@ -56,6 +56,14 @@ export interface DrawCommandDependencies {
   readonly selectWinners?: (input: WinnerSelectionInput) => WinnerSelectionResult
   readonly randomSource: RandomSource
   readonly persistence: DrawPersistenceUnitOfWork
+  /** Optional production preflight. Live must verify storage before selection when supplied. */
+  readonly checkStorageHealth?: () => Promise<{
+    readonly ok: true
+  } | {
+    readonly ok: false
+    readonly code: string
+    readonly reason: string
+  }>
   readonly now: () => IsoTimestamp
   readonly createWinnerRecordId: () => WinnerRecordId
   readonly createAuditRecordId: () => AuditRecordId

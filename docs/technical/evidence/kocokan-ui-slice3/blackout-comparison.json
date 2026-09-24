@@ -1,0 +1,36 @@
+{
+  "method": "Same fixture data, legacy versus Kocokan theme; actual blackout DOM, not empty preview selector",
+  "kocokan": [
+    {
+      "background": "rgba(0, 0, 0, 0)",
+      "class": "audience-display-page",
+      "color": "rgb(36, 33, 43)",
+      "height": "1080px",
+      "width": "1920px"
+    },
+    {
+      "background": "rgb(0, 0, 0)",
+      "class": "audience-blackout-stage",
+      "color": "rgb(36, 33, 43)",
+      "height": "1080px",
+      "width": "1920px"
+    }
+  ],
+  "legacy": [
+    {
+      "background": "rgba(0, 0, 0, 0)",
+      "class": "audience-display-page",
+      "color": "rgb(244, 246, 250)",
+      "height": "1080px",
+      "width": "1920px"
+    },
+    {
+      "background": "rgb(0, 0, 0)",
+      "class": "audience-blackout-stage",
+      "color": "rgb(244, 246, 250)",
+      "height": "1080px",
+      "width": "1920px"
+    }
+  ],
+  "equal": false
+}

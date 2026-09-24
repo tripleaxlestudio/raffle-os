@@ -2,6 +2,7 @@ import { validateDrawConfiguration } from '../../domain/draws/draw.invariants.ts
 import { validateEvent } from '../../domain/events/event.invariants.ts'
 import { validatePrizeCategory } from '../../domain/prizes/prize.types.ts'
 import { validateDrawSession } from '../../domain/draws/draw.invariants.ts'
+import { resolveDrawPresentationConfiguration } from '../../domain/draws/draw-presentation.types.ts'
 import { isIsoTimestamp } from '../../domain/shared/timestamps.ts'
 import { buildCandidatePool } from './candidate-pool-builder.ts'
 import { evaluateEligibility } from '../eligibility/eligibility-evaluator.ts'
@@ -52,6 +53,7 @@ function makeConfigurationSnapshot(
     winningRule: configuration.winningRule,
     requireCheckIn: configuration.requireCheckIn,
     eligibleGroupFilter: configuration.eligibleGroupFilter,
+    presentation: resolveDrawPresentationConfiguration(configuration.presentation),
     capturedAt,
   })
 }
@@ -165,6 +167,15 @@ export async function executeDraw(
     return failure('candidate-pool', 'candidate-pool-failed', 'Candidate-pool construction failed before selection.', cause)
   }
   if (!build.ok) return failure(build.error.kind === 'capacity' ? 'capacity' : build.error.kind === 'integrity' ? 'integrity' : build.error.kind === 'relationship' ? 'relationship' : 'eligibility', 'candidate-pool-failed', build.error.message, build.error)
+
+  if (input.mode === 'live' && dependencies.checkStorageHealth !== undefined) {
+    try {
+      const storage = await dependencies.checkStorageHealth()
+      if (!storage.ok) return failure('persistence', 'persistence-failed', `Live draw is blocked because local persistence is not safe: ${storage.reason}`, storage)
+    } catch (cause: unknown) {
+      return failure('persistence', 'persistence-failed', 'Live draw is blocked because local persistence could not be verified safely.', cause)
+    }
+  }
 
   const configurationSnapshot = makeConfigurationSnapshot(configuration, category, capturedAt)
   let selection: ReturnType<typeof selectWinners>

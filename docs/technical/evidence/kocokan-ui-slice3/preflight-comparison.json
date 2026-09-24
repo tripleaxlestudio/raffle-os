@@ -1,0 +1,584 @@
+{
+  "beforePath": "node_modules/.tmp/kocokan-slice3-before.json",
+  "afterPath": "node_modules/.tmp/kocokan-slice3-after.json",
+  "beforeSha256": "9e922d34867eaecdf4c7187af15cf6bcaa44eed0e0a6d40506e727107f128bd0",
+  "afterSha256": "e935542b4d2e2f25715c18d3ea640c881bf51bacb9ea45edce76db81cf6f495c",
+  "focused": {
+    "tests": 109,
+    "passed": 51,
+    "failed": 58,
+    "exactStatusAndSignatureChanges": [],
+    "rows": [
+      {
+        "id": "src/app/production-draw-run-route.test.tsx::production Draw Run route shell uses production chrome without prototype controls or status bars",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/app/production-draw-run-route.test.tsx::production Draw Run route shell keeps an unknown session safe and never starts the command",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Back to Draw Setup\""
+      },
+      {
+        "id": "src/app/production-draw-run-route.test.tsx::production Draw Run route shell renders the persisted start gate without invoking the command on route load",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Hold to start official Live draw\""
+      },
+      {
+        "id": "src/app/production-draw-run-route.test.tsx::production Draw Run route shell keeps the primary start action and persisted recap visible without the redundant checklist",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an element with the text: Event. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+      },
+      {
+        "id": "src/app/production-draw-run-route.test.tsx::production Draw Run route shell keeps all-ready stage focused on centered execution without a redundant checklist",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Hold to start official Live draw\""
+      },
+      {
+        "id": "src/app/production-draw-run-route.test.tsx::production Draw Run route shell places the Practice safety notice inside the Start Draw stage",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an element with the text: PRACTICE MODE. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+      },
+      {
+        "id": "src/app/production-draw-run-route.test.tsx::production Draw Run route shell surfaces a start failure instead of silently returning to Ready",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"button\" and name \"Hold to start official Live draw\""
+      },
+      {
+        "id": "src/app/production-draw-run-route.test.tsx::production Draw Run route shell hydrates a valid Practice projection on initial mount and does not show start controls",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"heading\" and name \"Result Locked\""
+      },
+      {
+        "id": "src/app/production-draw-run-route.test.tsx::production Draw Run route shell uses the same projection after remount without reselection",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"heading\" and name \"Result Locked\""
+      },
+      {
+        "id": "src/app/production-draw-run-route.test.tsx::production Draw Run route shell does not read Practice storage for a Live session",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/app/production-draw-run-route.test.tsx::production Draw Run route shell surfaces a corrupt Practice projection as a typed bootstrap error without invoking selection",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Presentation recovery\""
+      },
+      {
+        "id": "src/application/draw/draw-run-preflight.test.ts::Draw Run production preflight composes a complete ready checklist with Practice context and presentation summary",
+        "status": "failed",
+        "signature": "AssertionError: expected [ 'Event', 'Prize', …(4) ] to deeply equal [ 'Event', 'Prize', …(4) ]"
+      },
+      {
+        "id": "src/application/draw/draw-run-preflight.test.ts::Draw Run production preflight blocks winner capacity and represents Live context",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/draw/draw-run-preflight.test.ts::Draw Run production preflight makes missing DisplayConfiguration a setup-required hard blocker",
+        "status": "failed",
+        "signature": "AssertionError: expected { key: 'audience', …(5) } to match object { state: 'blocked', …(2) }"
+      },
+      {
+        "id": "src/application/draw/draw-run-preflight.test.ts::Draw Run production preflight distinguishes configured waiting, connected, and unavailable Audience states",
+        "status": "failed",
+        "signature": "AssertionError: expected { key: 'audience', …(5) } to match object { state: 'ready', value: 'Terhubung' }"
+      },
+      {
+        "id": "src/application/draw/draw-run-preflight.test.ts::Draw Run production preflight keeps stale or conflicting sessions blocked without selecting winners",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/draw/draw-session-queue.test.ts::DrawSession queue query scopes sessions to the selected Event and orders active, ready, then resolved",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/draw/draw-session-queue.test.ts::DrawSession queue query returns no queue for a missing Event and blocks missing relations",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/draw/live-start-gate-controller.test.ts::Live start hold controller completes only at 1500ms and ignores duplicate starts while pending",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/draw/live-start-gate-controller.test.ts::Live start hold controller cancels before completion and does not invoke the command",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/draw/live-start-gate-controller.test.ts::Live start hold controller does not invoke after disposal",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/workflow/phase10-recovery-acceptance.integration.test.tsx::Phase 10.7 integrated recovery acceptance scenarios A-I A: refresh with no unresolved draw returns normally without creating official records",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/workflow/phase10-recovery-acceptance.integration.test.tsx::Phase 10.7 integrated recovery acceptance scenarios A-I B: refresh after persisted Live selection restores exact identities, tickets, snapshots, and Pending state",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/workflow/phase10-recovery-acceptance.integration.test.tsx::Phase 10.7 integrated recovery acceptance scenarios A-I C: refresh after partial confirmation preserves the Confirmed/Pending split and receipt evidence",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/workflow/phase10-recovery-acceptance.integration.test.tsx::Phase 10.7 integrated recovery acceptance scenarios A-I D: interruption before selection requires acknowledgement and never fabricates a winner",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/workflow/phase10-recovery-acceptance.integration.test.tsx::Phase 10.7 integrated recovery acceptance scenarios A-I E: Audience reconnect restores only the authoritative persisted public result",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/workflow/phase10-recovery-acceptance.integration.test.tsx::Phase 10.7 integrated recovery acceptance scenarios A-I F: failed official persistence is rolled back and cannot report a recoverable result",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/workflow/phase10-recovery-acceptance.integration.test.tsx::Phase 10.7 integrated recovery acceptance scenarios A-I G: unsafe storage/schema readiness blocks startup before authoritative repositories are read",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/application/workflow/phase10-recovery-acceptance.integration.test.tsx::Phase 10.7 integrated recovery acceptance scenarios A-I H: unresolved official work redirects the Operator away from conflicting fresh setup",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an element with the text: The authoritative session was preserved. No new selection will be made during recovery.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+      },
+      {
+        "id": "src/application/workflow/phase10-recovery-acceptance.integration.test.tsx::Phase 10.7 integrated recovery acceptance scenarios A-I I: repeated recovery and duplicate command replay remain idempotent",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/DrawSessionQueuePage.test.tsx::Production Draw control deck renders ClipboardCheck for the pending-result action branch",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/DrawSessionQueuePage.test.tsx::Production Draw control deck uses one prominent mode switch with selected states and compact audience actions",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/DrawSessionQueuePage.test.tsx::Production DrawSessionQueuePage empty states renders the refined empty state card when no active draw exists but completed sessions exist",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/DrawSessionQueuePage.test.tsx::Production DrawSessionQueuePage empty states renders initial setup empty state when no draws have ever been created",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring keeps Event read-only and follows the selected persisted category prize",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find a label with the text of: Prize"
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring shows prize-first option identities and persisted draw status groups",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"option\" and name \"K-Ion Nano Premium 5 · Door Prize · COMPLETED\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring shows quick counts with pressed semantics and updates the same winner field",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find a label with the text of: Custom winner count"
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring saves requestedWinners through the existing authoring service",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Save changes\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring keeps Save changes disabled while pristine and re-enables it for each editable change",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"button\" and name \"Save changes\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring preserves the custom 1–100 input and validation errors",
+        "status": "failed",
+        "signature": "Error: Unable to find a label with the text of: Custom winner count"
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring shows authoritative capacity diagnostics and readiness",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"heading\" and name \"Eligible pool summary\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring defaults to Instant Reveal and keeps the pool and winner quantity workflow intact",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring selects Random Number Roll and maps duration, speed, and reveal presets",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring persists the shared presentation configuration in Practice and does not alter winner quantity",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring shows timed duration controls by default and preserves the duration across Manual Stop",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring saves and reloads Manual Stop with speed and reveal settings intact",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"radio\" and name `/Random Number Roll/`"
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring restores the selected presentation UI after Save changes and reload",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring hides roll controls when switching back to Instant Reveal while preserving their draft values",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring does not claim authoritative readiness while dirty and blocks handoff",
+        "status": "failed",
+        "signature": "Error: Unable to find a label with the text of: Custom winner count"
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring refreshes readiness after save and preserves Live conflict blocking",
+        "status": "failed",
+        "signature": "Error: Unable to find a label with the text of: Custom winner count"
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring keeps started sessions immutable and preserves Live distinction",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"heading\" and name \"This DrawSession is not editable\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring keeps all presentation controls aligned with the active-session lock",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"dialog\" and name \"Winner review pending\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupPage.test.tsx::Draw Setup persisted authoring allows a completed previous session to prepare the next presentation configuration",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"heading\" and name \"Reveal style\""
+      },
+      {
+        "id": "src/pages/operator/DrawSetupRoute.test.tsx::Draw Setup route isolation renders explicit static prototype scenarios without production command controls",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/pages/operator/DrawSetupRoute.test.tsx::Draw Setup route isolation uses the production composition when no prototype scenario is supplied",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an element with the text: /Loading persisted Event/i. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+      },
+      {
+        "id": "src/ui/operator/draw/draw-session-queue-view-model.test.ts::production DrawSession queue view model formats timestamps without exposing ISO values",
+        "status": "failed",
+        "signature": "AssertionError: expected '6 Agu 2026, 23.42' to match /^6 Aug 2026 · \\d{2}:42$/"
+      },
+      {
+        "id": "src/ui/operator/draw/draw-session-queue-view-model.test.ts::production DrawSession queue view model uses explicit mode and lifecycle labels",
+        "status": "failed",
+        "signature": "AssertionError: expected { modeLabel: 'Latihan', …(10) } to match object { modeLabel: 'Latihan', …(3) }"
+      },
+      {
+        "id": "src/ui/operator/draw/draw-session-queue-view-model.test.ts::production DrawSession queue view model formats drawing recovery without raw checkpoint values",
+        "status": "failed",
+        "signature": "AssertionError: expected { modeLabel: 'Live', …(10) } to match object { …(3) }"
+      },
+      {
+        "id": "src/ui/operator/draw/draw-session-queue-view-model.test.ts::production DrawSession queue view model classifies completed and cancelled sessions as historical",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/draw-session-queue-view-model.test.ts::production DrawSession queue view model keeps relationship failures visible and non-actionable",
+        "status": "failed",
+        "signature": "AssertionError: expected { modeLabel: 'Live', …(10) } to match object { …(2) }"
+      },
+      {
+        "id": "src/ui/operator/draw/draw-session-queue-view-model.test.ts::production DrawSession queue view model groups matching Practice and Live sessions into one draw deck",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/draw-session-queue-view-model.test.ts::production DrawSession queue view model selects one current operational draw and excludes completed previous draws",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/draw-session-queue-view-model.test.ts::production DrawSession queue view model keeps an active or pending Live draw ahead of newer ready sessions",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/draw-session-queue-view-model.test.ts::production DrawSession queue view model distinguishes Audience presence from acknowledged publication",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation uses 1 selected replacement slot(s) throughout redraw presentation",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation uses 3 selected replacement slot(s) throughout redraw presentation",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation uses 5 selected replacement slot(s) throughout redraw presentation",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation uses 6 selected replacement slot(s) throughout redraw presentation",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation keeps the Operator preview and /display on the same audience renderer and public projection",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation renders the exact authoritative rolling public projection for a 1-winner redraw",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation renders the exact authoritative rolling public projection for a 5-winner redraw",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation renders the exact authoritative rolling public projection for a 9-winner redraw",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation renders the exact authoritative rolling public projection for a 10-winner redraw",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation renders the exact authoritative reveal public projection for a 1-winner redraw",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation renders the exact authoritative reveal public projection for a 5-winner redraw",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation renders the exact authoritative reveal public projection for a 9-winner redraw",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation renders the exact authoritative reveal public projection for a 10-winner redraw",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation mounts the shared Audience canvas inside a visible preview viewport",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation keeps the preview canvas on one guarded positive scale value",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation renders the persistent public monitor for the Ready-to-Start state",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an element with the text: /Audience acknowledgement: Acknowledged/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation reveals 1 winners in sequence order without changing ticket strings",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"list\" and name \"1 Practice winners\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation reveals 20 winners in sequence order without changing ticket strings",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"list\" and name \"20 Practice winners\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation reveals 50 winners in sequence order without changing ticket strings",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"list\" and name \"50 Practice winners\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation reveals 100 winners in sequence order without changing ticket strings",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"list\" and name \"100 Practice winners\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation bootstraps a Live result without a checkpoint by writing countdown first",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation shows the blocking recovery dialog when the Live countdown checkpoint write fails",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Presentation recovery\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation routes review to the exact locked DrawSession when pending results are persisted",
+        "status": "failed",
+        "signature": "AssertionError: expected [ Array(2) ] to deeply equal [ 'Back to Settings Undian', …(1) ]"
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation exposes rehearsal reset only for completed Practice presentation",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"heading\" and name \"Practice presentation complete\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation does not expose rehearsal reset for Live presentation",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an element with the text: The selected winners are ready for review.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation opens quick redraw confirmation without mutating until confirmed",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"dialog\" and name \"Redraw winner\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation keeps redraw available for two winners and requires explicit winner selection",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"dialog\" and name \"Select winners to redraw\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation keeps redraw available for a 3-winner draw",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation keeps redraw available for a 5-winner draw",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation restores a compact chained redraw lineage with only the current winner actionable",
+        "status": "failed",
+        "signature": "Error: Unable to find an element with the text: Redraw history · 3 replaced winners. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation renders the production control deck and structured Audience status during countdown",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation renders exact winner values in the authoritative preview during reveal",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"list\" and name \"1 Practice winners\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation centers 3-winner result and preview groups without changing ticket strings",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"list\" and name \"3 Practice winners\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation uses a compact three-column winner grid for six winners with contiguous indexes",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"list\" and name \"6 Practice winners\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation keeps only replacement winners in Operator reveal and preview after a partial redraw",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"list\" and name \"3 official winners\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation keeps 1 replacement slot(s) in the Operator Audience Preview while rolling",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation keeps 3 replacement slot(s) in the Operator Audience Preview while rolling",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation keeps 5 replacement slot(s) in the Operator Audience Preview while rolling",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation keeps 6 replacement slot(s) in the Operator Audience Preview while rolling",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation keeps the active multi-winner grid when redraw lineage includes replaced winners",
+        "status": "failed",
+        "signature": "Error: Unable to find role=\"list\" and name \"6 official winners\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation restores Reset rehearsal for completed Practice reveal only",
+        "status": "passed",
+        "signature": null
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation completes a Practice timed roll without Skip animation",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Rolling\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation shows STOP & REVEAL only for Manual rolling",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"STOP & REVEAL\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawPresentation survives Strict Mode recovery hydration and continues from the persisted stage",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an accessible element with the role \"heading\" and name \"Rolling\""
+      },
+      {
+        "id": "src/ui/operator/draw/ProductionDrawPresentation.test.tsx::ProductionDrawRunHeader keeps critical metrics and production actions explicit",
+        "status": "failed",
+        "signature": "TestingLibraryElementError: Unable to find an element with the text: Winner. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible."
+      }
+    ]
+  },
+  "fullVersusSlice2": {
+    "previousTotals": {
+      "files": 145,
+      "passedFiles": 114,
+      "failedFiles": 31,
+      "tests": 1207,
+      "passed": 1067,
+      "failed": 140,
+      "skipped": 0
+    },
+    "currentTotals": {
+      "files": 146,
+      "passedFiles": 115,
+      "failedFiles": 31,
+      "tests": 1214,
+      "passed": 1074,
+      "failed": 140,
+      "skipped": 0
+    },
+    "newOrChangedFailures": [],
+    "recoveredBaselineStillPassing": [
+      "KB-043",
+      "KB-044"
+    ]
+  }
+}

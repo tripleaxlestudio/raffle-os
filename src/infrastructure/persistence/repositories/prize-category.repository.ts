@@ -1,12 +1,9 @@
 import type { PrizeCategoryRepository } from '../../../application/persistence/repositories/prize-category-repository.interface.ts'
-import type { DrawSessionStatus } from '../../../domain/draws/draw-session.types.ts'
+import type { DrawSession } from '../../../domain/draws/draw-session.types.ts'
 import type { PrizeCategory } from '../../../domain/prizes/prize.types.ts'
 import { validatePrizeCategory } from '../../../domain/prizes/prize.types.ts'
-import type {
-  DrawConfigurationId,
-  EventId,
-  PrizeCategoryId,
-} from '../../../domain/shared/identifiers.ts'
+import type { EventId, PrizeCategoryId } from '../../../domain/shared/identifiers.ts'
+import type { DrawConfigurationId } from '../../../domain/shared/identifiers.ts'
 import type { RaffleOSDatabase } from '../db.ts'
 import {
   ImmutableRecordError,
@@ -18,29 +15,12 @@ import {
   requireValid,
 } from './repository-helpers.ts'
 
-const STARTED_SESSION_STATUSES: ReadonlySet<DrawSessionStatus> =
-  new Set([
-    'drawing',
-    'pending-confirmation',
-    'completed',
-    'cancelled',
-  ])
-
-async function findStartedSessionForConfigurations(
+async function findReadySessionForConfigurations(
   database: RaffleOSDatabase,
   configurationIds: readonly DrawConfigurationId[],
-) {
-  if (configurationIds.length === 0) {
-    return undefined
-  }
-
-  return database.draw_sessions
-    .where('configurationId')
-    .anyOf([...configurationIds])
-    .filter((session) =>
-      STARTED_SESSION_STATUSES.has(session.status),
-    )
-    .first()
+): Promise<DrawSession | undefined> {
+  if (configurationIds.length === 0) return undefined
+  return database.draw_sessions.where('configurationId').anyOf([...configurationIds]).filter((session) => session.status === 'ready').first()
 }
 
 export class DexiePrizeCategoryRepository
@@ -103,9 +83,9 @@ export class DexiePrizeCategoryRepository
             )
           }
 
-          if (parentEvent.status !== 'draft') {
+          if (parentEvent.status === 'archived') {
             throw new ImmutableRecordError(
-              'PrizeCategories can be created only for a draft Event.',
+              'PrizeCategories cannot be created for an archived Event.',
             )
           }
 
@@ -163,26 +143,16 @@ export class DexiePrizeCategoryRepository
             )
           }
 
-          if (parentEvent.status !== 'draft') {
+          if (parentEvent.status === 'archived') {
             throw new ImmutableRecordError(
-              'Only a PrizeCategory in a draft Event can be updated.',
+              'PrizeCategories cannot be updated for an archived Event.',
             )
           }
 
-          const configurationIds =
-            await this.database.draw_configurations
-              .where('prizeCategoryId')
-              .equals(current.id)
-              .primaryKeys()
-          const startedSession =
-            await findStartedSessionForConfigurations(
-              this.database,
-              configurationIds,
-            )
-          if (startedSession !== undefined) {
-            throw new ImmutableRecordError(
-              'A PrizeCategory used by a started DrawSession is immutable.',
-            )
+          const configurationIds = await this.database.draw_configurations.where('prizeCategoryId').equals(current.id).primaryKeys()
+          const readySession = await findReadySessionForConfigurations(this.database, configurationIds)
+          if (readySession !== undefined) {
+            throw new ImmutableRecordError('A PrizeCategory used by a ready DrawSession must be updated through Draw Setup first.')
           }
 
           await this.database.prize_categories.put(category)
@@ -223,9 +193,9 @@ export class DexiePrizeCategoryRepository
             )
           }
 
-          if (parentEvent.status !== 'draft') {
+          if (parentEvent.status === 'archived') {
             throw new ImmutableRecordError(
-              'Only a PrizeCategory in a draft Event can be deleted.',
+              'Only a PrizeCategory in a non-archived Event can be deleted.',
             )
           }
 

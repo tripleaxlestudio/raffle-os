@@ -26,6 +26,17 @@ describe('Storage Capability Diagnostic', () => {
     expect(databases.length).toBe(0)
   })
 
+  it('does not require Web Crypto to create an isolated diagnostic database name', async () => {
+    const originalCrypto = globalThis.crypto
+    Object.defineProperty(globalThis, 'crypto', { configurable: true, value: undefined })
+    try {
+      const result = await runStorageCapabilityDiagnostic({ indexedDBFactory: fakeIndexedDb })
+      expect(result.success).toBe(true)
+    } finally {
+      Object.defineProperty(globalThis, 'crypto', { configurable: true, value: originalCrypto })
+    }
+  })
+
   it('handles open stage failure gracefully and attempts cleanup', async () => {
     const failingFactory = new IDBFactory()
     failingFactory.open = () => {

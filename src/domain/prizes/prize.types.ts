@@ -20,7 +20,29 @@ export interface PrizeCategory {
   readonly displayOrder: number
   readonly description?: string
   readonly sponsorName?: string
+  readonly prizeImageAssetId?: string
   readonly createdAt: IsoTimestamp
+}
+
+export const ALLOWED_PRIZE_IMAGE_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+] as const
+
+export const MAX_PRIZE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB
+
+export function validatePrizeImageFile(
+  file: { readonly type: string; readonly size: number },
+): string | null {
+  const isAllowed = (ALLOWED_PRIZE_IMAGE_TYPES as readonly string[]).includes(file.type)
+  if (!isAllowed) {
+    return 'Format file tidak didukung. Gunakan PNG, JPG, atau WebP.'
+  }
+  if (file.size > MAX_PRIZE_IMAGE_SIZE_BYTES) {
+    return 'Ukuran file melebihi batas maksimal 5 MB.'
+  }
+  return null
 }
 
 export function validatePrizeCategory(

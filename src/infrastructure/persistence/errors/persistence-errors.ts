@@ -7,8 +7,16 @@ export const PERSISTENCE_ERROR_CODES = {
   schemaMigration: 'schema-migration-failed',
   storageQuota: 'storage-quota-exceeded',
   transaction: 'transaction-failed',
+  checkpointNotFound: 'checkpoint-not-found',
+  invalidCheckpoint: 'invalid-checkpoint',
+  unsupportedCheckpointVersion: 'unsupported-checkpoint-version',
+  staleCheckpoint: 'stale-checkpoint',
+  checkpointReadFailure: 'checkpoint-read-failed',
+  checkpointWriteFailure: 'checkpoint-write-failed',
+  checkpointDeleteFailure: 'checkpoint-delete-failed',
   unsupportedSchemaVersion: 'unsupported-schema-version',
   validation: 'validation-failed',
+  participantMutationLocked: 'participant-mutation-locked',
 } as const
 
 export type PersistenceErrorCode =
@@ -26,6 +34,9 @@ export class PersistenceError extends Error {
     this.code = code
     this.name = 'PersistenceError'
   }
+}
+export class ParticipantMutationLockedError extends PersistenceError {
+  constructor(message = 'Participant mutations are blocked while an active Live draw presentation is in progress.') { super(PERSISTENCE_ERROR_CODES.participantMutationLocked, message); this.name = 'ParticipantMutationLockedError' }
 }
 
 export class DatabaseUnavailableError extends PersistenceError {
@@ -154,6 +165,28 @@ export class TransactionError extends PersistenceError {
     super(PERSISTENCE_ERROR_CODES.transaction, message, options)
     this.name = 'TransactionError'
   }
+}
+
+export class CheckpointNotFoundError extends PersistenceError {
+  constructor(message = 'The presentation checkpoint was not found.', options?: ErrorOptions) { super(PERSISTENCE_ERROR_CODES.checkpointNotFound, message, options); this.name = 'CheckpointNotFoundError' }
+}
+export class InvalidCheckpointError extends PersistenceError {
+  constructor(message = 'The presentation checkpoint is invalid or corrupt.', options?: ErrorOptions) { super(PERSISTENCE_ERROR_CODES.invalidCheckpoint, message, options); this.name = 'InvalidCheckpointError' }
+}
+export class UnsupportedCheckpointVersionError extends PersistenceError {
+  constructor(message = 'The presentation checkpoint format is unsupported.', options?: ErrorOptions) { super(PERSISTENCE_ERROR_CODES.unsupportedCheckpointVersion, message, options); this.name = 'UnsupportedCheckpointVersionError' }
+}
+export class StaleCheckpointError extends PersistenceError {
+  constructor(message = 'The presentation checkpoint does not match its DrawSession.', options?: ErrorOptions) { super(PERSISTENCE_ERROR_CODES.staleCheckpoint, message, options); this.name = 'StaleCheckpointError' }
+}
+export class CheckpointReadError extends PersistenceError {
+  constructor(message = 'The presentation checkpoint could not be read.', options?: ErrorOptions) { super(PERSISTENCE_ERROR_CODES.checkpointReadFailure, message, options); this.name = 'CheckpointReadError' }
+}
+export class CheckpointWriteError extends PersistenceError {
+  constructor(message = 'The presentation checkpoint could not be written.', options?: ErrorOptions) { super(PERSISTENCE_ERROR_CODES.checkpointWriteFailure, message, options); this.name = 'CheckpointWriteError' }
+}
+export class CheckpointDeleteError extends PersistenceError {
+  constructor(message = 'The presentation checkpoint could not be deleted.', options?: ErrorOptions) { super(PERSISTENCE_ERROR_CODES.checkpointDeleteFailure, message, options); this.name = 'CheckpointDeleteError' }
 }
 
 function errorName(value: unknown): string | null {

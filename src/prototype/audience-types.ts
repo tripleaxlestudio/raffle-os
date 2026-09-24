@@ -12,6 +12,7 @@ export type AudienceQueryState =
 export interface PublicAudienceBranding {
   readonly eventName: string
   readonly eventSubtitle: string
+  readonly prototypeStatic?: boolean
 }
 
 export interface PublicAudiencePrizeContext
@@ -61,7 +62,7 @@ export interface PublicAudienceBlackoutScenario {
 }
 
 export interface PublicAudienceDisconnectedScenario
-  extends PublicAudienceBranding {
+  extends PublicAudiencePrizeContext {
   readonly instruction: string
   readonly message: string
   readonly state: 'disconnected'

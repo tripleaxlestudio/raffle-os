@@ -31,5 +31,34 @@ export const SCHEMA_V1_STORE_NAMES = [
   'preferences',
 ] as const
 
+export const SCHEMA_VERSION_2 = 2 as const
+export const SCHEMA_V2 = {
+  presentation_checkpoints: 'drawSessionId, stage, persistedAt',
+} as const
+
+export const SCHEMA_VERSION_3 = 3 as const
+export const SCHEMA_V3 = {
+  command_receipts:
+    '&commandId, drawSessionId, operation, [drawSessionId+operation], status, createdAt, committedAt',
+} as const
+
+export const SCHEMA_VERSION_4 = 4 as const
+export const SCHEMA_V4 = { event_settings: '&eventId, updatedAt' } as const
+
+export const SCHEMA_VERSION_5 = 5 as const
+export const SCHEMA_V5 = {
+  draw_configurations: SCHEMA_V1.draw_configurations,
+  draw_sessions: SCHEMA_V1.draw_sessions,
+} as const
+
+export const SCHEMA_VERSION_6 = 6 as const
+export const SCHEMA_V6 = SCHEMA_V5
+
+export const SCHEMA_VERSION_7 = 7 as const
+export const SCHEMA_V7 = {
+  redraw_requests:
+    '&id, eventId, drawSessionId, status, [drawSessionId+status], createdAt, updatedAt',
+} as const
+
 export type SchemaV1StoreName =
   (typeof SCHEMA_V1_STORE_NAMES)[number]

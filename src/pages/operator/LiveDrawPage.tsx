@@ -307,7 +307,7 @@ function RollingState({ mode }: { mode: PrototypeDrawMode }) {
           >
             Return to countdown
           </ButtonLink>
-          <ButtonLink size="lg" to="/draw/results">
+          <ButtonLink size="lg" to="/dev/prototypes/draw/results">
             Review Pending Results
           </ButtonLink>
           <p>No winner has been selected or declared.</p>

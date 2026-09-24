@@ -1,9 +1,9 @@
-import type { PublicAudienceDisconnectedScenario } from '../../prototype/audience-types.ts'
+import type { PublicAudienceScenario } from './audience-view.types.ts'
 import { AudienceStage } from './AudienceStage.tsx'
 import { EventBrand } from './EventBrand.tsx'
 
 interface DisconnectedStageProps {
-  scenario: PublicAudienceDisconnectedScenario
+  scenario: PublicAudienceScenario
 }
 
 export function DisconnectedStage({
@@ -24,9 +24,9 @@ export function DisconnectedStage({
           aria-hidden="true"
           className="disconnected-stage__marker"
         />
-        <p className="audience-eyebrow">Display status</p>
-        <h1>{scenario.message}</h1>
-        <p>{scenario.instruction}</p>
+        <p className="audience-eyebrow">Status tampilan</p>
+        <h1>{scenario.message ?? 'Koneksi tampilan terputus'}</h1>
+        <p>{scenario.instruction ?? 'Silakan tunggu Operator.'}</p>
       </div>
     </AudienceStage>
   )

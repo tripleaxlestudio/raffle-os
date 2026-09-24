@@ -3,9 +3,9 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { appRoutes } from '../../app/router.tsx'
 
-function renderSettings(path = '/settings') {
+function renderSettings(path = '/dev/prototypes/settings') {
   const router = createMemoryRouter(appRoutes, {
-    initialEntries: [path],
+    initialEntries: [path.startsWith('/dev/') ? path : `/dev/prototypes${path}`],
   })
   const view = render(<RouterProvider router={router} />)
 
@@ -31,10 +31,10 @@ describe('Settings static prototype', () => {
   })
 
   it.each([
-    ['/settings?section=branding', 'Branding'],
-    ['/settings?section=presentation', 'Presentation'],
-    ['/settings?section=audio', 'Audio'],
-    ['/settings?section=display', 'Display'],
+    ['/dev/prototypes/settings?section=branding', 'Branding'],
+    ['/dev/prototypes/settings?section=presentation', 'Presentasi'],
+    ['/dev/prototypes/settings?section=audio', 'Audio'],
+    ['/dev/prototypes/settings?section=display', 'Display'],
   ])('renders %s directly as the %s section', (path, heading) => {
     renderSettings(path)
 
@@ -48,7 +48,7 @@ describe('Settings static prototype', () => {
   })
 
   it('shows presentation controls without runtime motion', () => {
-    renderSettings('/settings?section=presentation')
+    renderSettings('/dev/prototypes/settings?section=presentation')
 
     expect(
       screen.getByRole('combobox', { name: 'Countdown duration' }),
@@ -62,7 +62,7 @@ describe('Settings static prototype', () => {
   })
 
   it('shows inert audio controls without an audio element', () => {
-    const { container } = renderSettings('/settings?section=audio')
+    const { container } = renderSettings('/dev/prototypes/settings?section=audio')
 
     expect(
       screen.getByRole('combobox', { name: 'Countdown cue' }),
@@ -74,7 +74,7 @@ describe('Settings static prototype', () => {
   })
 
   it('shows display controls and links to the static standby URL', () => {
-    renderSettings('/settings?section=display')
+    renderSettings('/dev/prototypes/settings?section=display')
 
     expect(
       screen.getByRole('combobox', { name: 'Target resolution' }),
@@ -84,11 +84,11 @@ describe('Settings static prototype', () => {
     ).toBeChecked()
     expect(
       screen.getByRole('link', { name: 'Preview display' }),
-    ).toHaveAttribute('href', '/display?state=standby')
+    ).toHaveAttribute('href', '/dev/prototypes/display?state=standby')
   })
 
   it('falls invalid sections back to Branding', () => {
-    const { container } = renderSettings('/settings?section=storage')
+    const { container } = renderSettings('/dev/prototypes/settings?section=storage')
 
     expect(container.querySelector('.settings-page')).toHaveAttribute(
       'data-settings-section',

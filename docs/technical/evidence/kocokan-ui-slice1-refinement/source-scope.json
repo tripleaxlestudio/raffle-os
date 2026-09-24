@@ -1,0 +1,8 @@
+{
+  "base": "6dce8f2",
+  "file": "src/styles/operator.css",
+  "frozenPreviewRules": 12,
+  "frozenPreviewRulesUnchanged": true,
+  "existingLayoutDeclarationValuesUnchanged": true,
+  "note": "Compares preview rules verbatim apart from line endings, and ordered existing layout declarations. Visual colors, borders, radii and theme class aliases are intentional changes. Browser isolation is recorded separately."
+}

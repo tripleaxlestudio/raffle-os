@@ -4,11 +4,11 @@ export function NotFoundPage() {
   return (
     <main className="error-page" data-interface="operator">
       <div className="error-page__content">
-        <h1>Not Found</h1>
-        <p>The requested page does not exist.</p>
+        <h1>Halaman tidak ditemukan</h1>
+        <p>Halaman yang diminta tidak tersedia.</p>
         <div className="error-page__actions">
           <Link className="not-found__link" to="/dashboard">
-            Return to Dashboard
+            Kembali ke Dasbor
           </Link>
         </div>
       </div>

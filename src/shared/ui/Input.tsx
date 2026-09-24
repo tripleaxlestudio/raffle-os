@@ -1,3 +1,4 @@
+import { useUiClass } from './ui-theme.ts'
 import { useId, type InputHTMLAttributes } from 'react'
 import { FieldMessage } from './FieldMessage.tsx'
 import { joinClassNames } from './class-names.ts'
@@ -21,6 +22,7 @@ export function Input({
   label,
   ...props
 }: InputProps) {
+  const ui = useUiClass()
   const generatedId = useId()
   const fieldId = id ?? generatedId
   const labelId = `${fieldId}-label`
@@ -29,10 +31,10 @@ export function Input({
 
   return (
     <label
-      className={joinClassNames('ui-field', containerClassName)}
+      className={joinClassNames(ui('ui-field'), containerClassName)}
       htmlFor={fieldId}
     >
-      <span className="ui-field__label" id={labelId}>
+      <span className={ui("ui-field__label")} id={labelId}>
         {label}
       </span>
       <input
@@ -44,7 +46,7 @@ export function Input({
         })}
         aria-invalid={error === undefined ? undefined : true}
         aria-labelledby={labelId}
-        className={joinClassNames('ui-input', className)}
+        className={joinClassNames(ui('ui-input'), className)}
         id={fieldId}
         {...props}
       />

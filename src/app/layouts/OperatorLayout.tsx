@@ -16,6 +16,7 @@ import { OperatorSidebar } from '../shell/OperatorSidebar.tsx'
 import { createParticipantImportProductionServices } from '../../application/participant-import/participant-import-production-services.ts'
 import { resolveParticipantWorkflow } from '../../pages/operator/participant-workflow.ts'
 import type { Event } from '../../domain/events/event.types.ts'
+import { BackToTopButton } from '../../shared/components/BackToTopButton.tsx'
 
 export function OperatorLayout() {
   const location = useLocation()
@@ -24,19 +25,19 @@ export function OperatorLayout() {
   const [productionEvent, setProductionEvent] = useState<Event | null>(null)
   const [productionEventLoading, setProductionEventLoading] = useState(false)
   const scenario =
-    location.pathname === '/dashboard'
+    location.pathname === '/dev/prototypes/dashboard'
       ? resolveDashboardPrototypeScenario(searchParams)
       : 'ready'
   const prototype = getDashboardPrototype(scenario)
   const isProductionParticipantRoute =
-    location.pathname === '/participants' &&
+    location.pathname === '/dev/prototypes/participants' &&
     resolveParticipantWorkflow(searchParams) === 'production'
   const isProductionDrawSetupRoute =
-    location.pathname === '/draw/setup' && !searchParams.has('scenario')
+    location.pathname === '/dev/prototypes/draw/setup' && !searchParams.has('scenario')
   const isProductionEventRoute = isProductionParticipantRoute || isProductionDrawSetupRoute
   const mode =
-    location.pathname === '/draw/setup' ||
-    location.pathname === '/draw/live'
+    location.pathname === '/dev/prototypes/draw/setup' ||
+    location.pathname === '/dev/prototypes/draw/live'
       ? resolvePrototypeDrawMode(searchParams.get('mode'))
       : prototype.mode
 
@@ -66,7 +67,7 @@ export function OperatorLayout() {
   function handleScenarioChange(
     nextScenario: DashboardPrototypeScenario,
   ) {
-    void navigate(`/dashboard?scenario=${nextScenario}`)
+    void navigate(`/dev/prototypes/dashboard?scenario=${nextScenario}`)
   }
 
   return (
@@ -75,7 +76,7 @@ export function OperatorLayout() {
       data-interface="operator"
       data-operator-shell
     >
-      <OperatorSidebar production={isProductionEventRoute} />
+      <OperatorSidebar eventScopedNavigationDisabled={isProductionEventRoute && !productionEventLoading && productionEvent === null} production={isProductionEventRoute} />
       <div className="operator-workspace">
         <OperatorHeader
           connectionStatus={prototype.connectionStatus}
@@ -92,9 +93,10 @@ export function OperatorLayout() {
           scenario={scenario}
           showPrototypeControls={!isProductionEventRoute}
         />
-        <main className="operator-main">
+        <main className="operator-main" id="operator-main">
           <Outlet />
         </main>
+        <BackToTopButton />
       </div>
     </div>
   )

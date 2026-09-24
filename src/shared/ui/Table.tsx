@@ -1,3 +1,4 @@
+import { useUiClass } from './ui-theme.ts'
 import type {
   ThHTMLAttributes,
   ReactNode,
@@ -22,18 +23,19 @@ export function TableHeader({
   sortable = false,
   ...props
 }: TableHeaderProps) {
+  const ui = useUiClass()
   return (
     <th
       aria-sort={sortable ? 'none' : undefined}
       className={joinClassNames(
-        sortable && 'ui-table__header--sortable',
+        sortable && ui('ui-table__header--sortable'),
         className,
       )}
       {...props}
     >
       <span>{children}</span>
       {sortable ? (
-        <span aria-hidden="true" className="ui-table__sort-marker">
+        <span aria-hidden="true" className={ui("ui-table__sort-marker")}>
           {'\u2195'}
         </span>
       ) : null}
@@ -49,11 +51,12 @@ export function Table({
   isEmpty = false,
   ...props
 }: TableProps) {
+  const ui = useUiClass()
   return (
-    <div className="ui-table-frame">
-      <div className="ui-table-scroll">
+    <div className={ui("ui-table-frame")}>
+      <div className={ui("ui-table-scroll")}>
         <table
-          className={joinClassNames('ui-table', className)}
+          className={joinClassNames(ui('ui-table'), className)}
           {...props}
         >
           <caption>{caption}</caption>
@@ -61,7 +64,7 @@ export function Table({
         </table>
       </div>
       {isEmpty ? (
-        <div className="ui-table-empty">
+        <div className={ui("ui-table-empty")}>
           {emptyState ?? 'No rows are available.'}
         </div>
       ) : null}

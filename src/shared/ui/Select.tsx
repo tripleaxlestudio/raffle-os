@@ -1,3 +1,4 @@
+import { useUiClass } from './ui-theme.ts'
 import { useId, type SelectHTMLAttributes } from 'react'
 import { FieldMessage } from './FieldMessage.tsx'
 import { joinClassNames } from './class-names.ts'
@@ -22,6 +23,7 @@ export function Select({
   label,
   ...props
 }: SelectProps) {
+  const ui = useUiClass()
   const generatedId = useId()
   const fieldId = id ?? generatedId
   const labelId = `${fieldId}-label`
@@ -30,13 +32,13 @@ export function Select({
 
   return (
     <label
-      className={joinClassNames('ui-field', containerClassName)}
+      className={joinClassNames(ui('ui-field'), containerClassName)}
       htmlFor={fieldId}
     >
-      <span className="ui-field__label" id={labelId}>
+      <span className={ui("ui-field__label")} id={labelId}>
         {label}
       </span>
-      <span className="ui-select-wrap">
+      <span className={ui("ui-select-wrap")}>
         <select
           aria-describedby={getFieldDescriptionIds({
             description,
@@ -46,12 +48,13 @@ export function Select({
           })}
           aria-invalid={error === undefined ? undefined : true}
           aria-labelledby={labelId}
-          className={joinClassNames('ui-select', className)}
+          className={joinClassNames(ui('ui-select'), className)}
           id={fieldId}
           {...props}
         >
           {children}
         </select>
+        <span aria-hidden="true" className={ui("ui-select__chevron")} />
       </span>
       <FieldMessage
         description={description}

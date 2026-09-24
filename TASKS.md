@@ -570,7 +570,7 @@ Recovery and operational-safety work is part of MVP hardening. Backup and restor
 
 - [ ] Add autosave-status feedback.
 - [ ] Restore an interrupted Pending session without reselection.
-- [ ] Restore the last safe Audience Display state.
+- [x] Restore the last safe Audience Display state.
 - [ ] Add protection against accidental event reset.
 - [ ] Add explicit confirmation to every destructive action.
 - [ ] Add storage-capacity warnings.
@@ -578,7 +578,7 @@ Recovery and operational-safety work is part of MVP hardening. Backup and restor
 - [ ] Add a Web Crypto API readiness diagnostic.
 - [ ] Add a BroadcastChannel readiness diagnostic.
 - [ ] Add a storage-availability diagnostic.
-- [ ] Add recovery tests for refresh and interrupted sessions.
+- [x] Add recovery tests for refresh and interrupted sessions.
 
 ### Conditional P2 backup and restore
 
@@ -600,16 +600,118 @@ Recovery and operational-safety work is part of MVP hardening. Backup and restor
 
 ## Phase 11 — Accessibility, Performance, and Release Hardening
 
+### Slice 11.0 — baseline and acceptance control
+
+- [x] Fix stable filenames for Phase 11 evidence and release records.
+- [x] Inventory Phase 3, 4, 6, 7, and 10 acceptance debt without rewriting
+  historical evidence.
+- [x] Create the PRD acceptance evidence index and browser/viewport matrix.
+- [x] Record approved localization and Windows Host product direction.
+- [x] Create the initial release-blocker and known-limitation register.
+- [ ] Approve or defer the high-readability and large-number Audience options.
+- [ ] Approve the benchmark device and final-selection timing protocol.
+- [ ] Name the Beta/RC/Release acceptance authority and approve the pilot policy.
+- [x] Record fresh Slice 11.0 verification results.
+
 ### Accessibility and presentation
 
 - [ ] Review keyboard navigation across all operator workflows.
-- [ ] Verify visible focus states.
-- [ ] Complete a color-contrast review.
-- [ ] Add reduced-motion support.
+- [x] Verify visible focus states in source, focused regressions, and sampled
+  browser surfaces; full Chrome/Edge journey sign-off remains B11-019.
+- [x] Complete the default-token color-contrast review; target-display branding
+  combinations remain part of B11-016/B11-020.
+- [x] Add reduced-motion support.
 - [ ] Add a high-readability Audience Display option if approved.
 - [ ] Add a large-number display option if approved.
-- [ ] Remove unnecessary animation.
-- [ ] Verify important states are not communicated through color alone.
+- [x] Remove unnecessary animation.
+- [x] Verify important states are not communicated through color alone.
+
+### Bahasa Indonesia localization
+
+Checkpoint 2026-08-31: the glossary, typed locale boundary, production copy
+migration, and Undian/Hasil/empty-state UI refinements are saved with Slice 11.1.
+Slice 11.2 remains in progress: full-suite failures, final copy review, and
+Chrome/Edge B11-021 acceptance are still outstanding. See
+`docs/technical/PHASE-11-ACCEPTANCE.md` for checkpoint evidence.
+
+- [ ] Define and approve the Indonesian terminology glossary.
+- [ ] Inventory all user-facing production Operator and Audience copy.
+- [ ] Make Bahasa Indonesia the default language for production navigation,
+  actions, statuses, validation, confirmations, errors, recovery guidance, and
+  accessibility labels.
+- [ ] Use `id-ID` presentation formats without translating stored timestamps,
+  ticket strings, IDs, domain enums, audit semantics, routes, protocol fields,
+  or storage keys.
+- [ ] Preserve versioned CSV/XLSX contracts or explicitly version any approved
+  localized export-header change.
+- [ ] Verify Indonesian copy fits every required Operator viewport and Audience
+  layout without hiding critical actions.
+
+### Slice 11.2A — UI improvements and bounded feature additions
+
+Owner update 2026-08-31: this slice is approved as a planning slot after 11.2,
+before performance and packaging work. Individual approvals are recorded below;
+this does not authorize unspecified features.
+
+- [x] Designate Slice 11.2A for UI improvements and bounded feature additions.
+- [ ] Collect proposed items and record purpose, affected screens, scope and
+  exclusions, domain/persistence impact, and acceptance checks for each.
+- [ ] Obtain owner approval for each item and synchronize affected requirements,
+  plans, and acceptance records before implementation.
+- [ ] Implement approved items in focused groups, verify, and commit each group.
+- [ ] Reconcile the recorded 11.2 full-suite failures before closing the next
+  development slice; keep required automated gates passing.
+- [ ] Complete affected manual UI/browser acceptance in the final session.
+
+Conditional Audience readability options remain in 11.1A. Changes affecting
+draw rules, eligibility, official History/audit, recovery, persistence, or
+dependencies require explicit impact review and approval, not an assumption
+that a small UI means a small feature.
+
+#### 11.2A-01 — Distinct Audience connection indicators
+
+Owner request 2026-08-31: make Waiting and Connected clearly distinguishable.
+Scope: shared visual treatment for the production header and Dashboard Operations
+card, with distinct static icons, semantic tinted badges, Indonesian labels,
+and locale-independent CSS state selectors. Both indicators use the existing
+presence status store; a stale snapshot acknowledgement must not leave the
+Dashboard connected after the Audience closes. Preserve existing open-display and
+Settings actions. No transport, heartbeat, draw, persistence, or audit changes.
+Acceptance: focused regressions for all indicator states and state changes;
+browser checks for Waiting/Connected, keyboard focus, and target Operator widths.
+Comprehensive Chrome/Edge release sign-off remains deferred.
+
+- [x] Approve the bounded UI fix described above.
+- [x] Implement the indicator fix and pass focused automated/browser checks;
+  evidence is recorded in Phase 11 acceptance. Full-suite/owner gates stay open.
+
+Execution order: **11.2A -> 11.4 profiling/hardening -> 11.5A-D packaging ->
+final acceptance (11.3 + 11.5E + final 11.4 benchmark) -> 11.6 RC closeout**.
+Only comprehensive manual acceptance is postponed. Focused tests and required
+automated gates continue per slice; pending acceptance remains pending and all
+release gates are unchanged.
+
+#### 11.2A-02 — Clean Audience standby and browser fullscreen
+
+Owner request 2026-08-31: widen the cramped standby waiting heading and remove
+the bottom fullscreen button/status so the Audience output stays clean.
+Use browser fullscreen (F11 on the supported Windows setup); do not add an
+in-page replacement control or intercept the browser shortcut. Preserve the
+waiting copy, branding, public state, safe areas, and winner selection/data.
+Scope: Audience standby layout and removal of the fullscreen overlay in all
+production Audience states. The existing protocol and standalone fullscreen
+utility remain unchanged. No new dependency or persisted setting.
+Acceptance: standby fits within the safe area at 1920 x 1080 and smaller
+desktop viewports; no fullscreen controls or status overlay in standby, draw,
+blackout, connecting, or disconnected states. Keep assistive state announcements.
+Real Chrome/Edge F11 entry/exit remains a final manual acceptance check.
+
+- [x] Approve the bounded Audience presentation fix described above.
+- [x] Implement and verify; record focused tests and browser observations in `PHASE-11-ACCEPTANCE.md` (full browser acceptance remains pending).
+
+Owner copy follow-up 2026-08-31 for 11.2A-02: replace the idle heading with
+"Menunggu undian berikutnya". Copy only; no layout or state changes. Custom
+messages/menu are deferred for a separate discussion, not approved for implementation.
 
 ### Browser, viewport, and scale verification
 
@@ -629,6 +731,19 @@ Recovery and operational-safety work is part of MVP hardening. Backup and restor
 - [ ] Run all tests if a test script exists at that time.
 - [ ] Run `npm run build`.
 - [ ] Review the production bundle for unexpected assets or dependencies.
+- [ ] Approve the Windows local Host technology through an ADR and focused
+  spike. The product direction is an installed/portable `Raffle OS Host.exe`
+  that serves the production web build and opens normal Chrome/Edge.
+- [ ] Produce a reproducible local/offline release package with a version/build
+  manifest, checksums, third-party notices, and launch/update/rollback guidance.
+- [ ] Verify a clean Windows event laptop requires no Laragon, XAMPP, Node.js,
+  npm, Vite, PHP, external web server, or internet connection.
+- [ ] Verify the packaged artifact preserves same-origin Operator/Audience
+  behavior, SPA route fallback, offline launch, and IndexedDB data across the
+  approved update path.
+- [ ] Record Host security, signing, runtime, browser selection, canonical
+  origin, data-location, install/update/uninstall, license, and dependency
+  decisions before implementation.
 - [ ] Remove development-only seed data from production paths.
 - [ ] Remove debug output.
 - [ ] Complete the operator rehearsal checklist.
@@ -641,7 +756,62 @@ Recovery and operational-safety work is part of MVP hardening. Backup and restor
 - [ ] Core workflows pass manual acceptance testing.
 - [ ] No critical accessibility issue remains.
 - [ ] No critical data-integrity issue remains.
+- [ ] Production UI and operational guidance are complete in approved Bahasa
+  Indonesia without changing stored domain identities.
+- [ ] The approved release package is reproducible, identified by version and
+  checksum, and passes offline launch and update-persistence smoke tests.
 - [ ] Release limitations are documented.
+
+## Separate Workstream — Kocokan Operator UI Redesign
+
+Owner approval 2026-08-31: adopt the controlled visual modernization plan in
+[`docs/technical/KOCOKAN-UI-REDESIGN-PLAN.md`](docs/technical/KOCOKAN-UI-REDESIGN-PLAN.md).
+This is separate from Phase 11 functional requirements and its 11.2A items.
+Do not renumber phases, broaden domain behavior, or change release gates.
+
+- [x] Slice 0 — Baseline & Scope: preserve existing Phase 11 work at `523da46`,
+  branch `redesign/kocokan-ui`, record verification/failure register, visual
+  inventory, theme/CSS proposal, tokens and browser/manual checklist.
+  Full-suite baseline is FAIL (142 tests); this preparation checkbox does not
+  imply application acceptance. See the dedicated baseline record.
+- [ ] Slice 1 — Visual System & App Shell: implementation and verification
+  recorded in [Slice 1 report](docs/technical/KOCOKAN-UI-SLICE-1.md); owner
+  visual acceptance remains pending. Requested light-surface corrections are
+  recorded in the [refinement report](docs/technical/KOCOKAN-UI-SLICE-1-REFINEMENT.md).
+  Separate execution approval received
+  after Slice 0 acceptance. Full-suite baseline debt is not waived.
+- [x] Slice 2 — Dashboard & Event Preparation: owner accepted final checkpoint
+  `c6e598a` on `redesign/kocokan-ui`, including compact-upload and chevron
+  refinements (2026-08-31). Historical execution authorized on
+  2026-08-31; owner accepted the 18 unchanged preflight failures as pre-existing
+  debt under the revised regression gate. Implementation and verification
+  complete and accepted; no new/changed failures, no Phase 11 reconciliation.
+  Focused: 45 pass / 18 unchanged fail. Full: 1,067 pass / 140 unchanged fail.
+  See [Slice 2 report](docs/technical/KOCOKAN-UI-SLICE-2.md).
+- [x] Slice 3 — Draw Console: [approved plan](docs/technical/KOCOKAN-UI-SLICE-3-PLAN.md).
+  Owner authorized preflight, implementation, verification and one focused
+  commit after accepting Slice 2 at `c6e598a`. Light-first Operator surfaces,
+  frozen Audience, unchanged baseline failure policy; no Slice 4 or Phase 11 reconciliation.
+  Implementation and verification complete for owner review (2026-09-01);
+  [Slice 3 report](docs/technical/KOCOKAN-UI-SLICE-3.md). Focused 51 pass /
+  58 identical baseline fail; 7 added tests pass. Full 1,074 pass / 140 identical
+  baseline fail, zero new/changed failures. Owner accepted Slice 3 and authorized
+  Slice 4 on 2026-09-01; focused commit `93f3785` is the Slice 4 base.
+- [ ] Slice 4 — Pending Results: [approved plan](docs/technical/KOCOKAN-UI-SLICE-4-PLAN.md).
+  Implementation and verification complete for owner review (2026-09-01);
+  [Slice 4 report](docs/technical/KOCOKAN-UI-SLICE-4.md). Focused 77 pass /
+  22 identical baseline fail, including 10 added passing tests. Full 1,084 pass /
+  140 identical baseline fail; zero new/changed failures or regressions. Slice 5
+  remains unauthorized until owner acceptance.
+- [ ] Slice 5 — History.
+- [ ] Slice 6 — Settings & Cross-App States.
+- [ ] Slice 7 — Integrated Visual Acceptance.
+
+Plan approval is not authorization to execute every slice automatically.
+Implement, verify and commit each approved slice separately; stop for approval
+before the next. Phase 11 defect/localization reconciliation is separately
+owned and must not be mixed into redesign commits. Audience presentation and
+prototype styling remain explicit exclusions.
 
 ## Deferred P2 Backlog
 

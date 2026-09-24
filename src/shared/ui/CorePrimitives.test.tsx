@@ -105,6 +105,13 @@ describe('core UI primitives', () => {
 
     expect(select).toHaveValue('attention')
     expect(select).toHaveAttribute('name', 'scenario')
+    expect(select).toHaveClass('ui-select')
+    expect(select.parentElement).toContainElement(
+      select.parentElement?.querySelector('.ui-select__chevron') ?? null,
+    )
+    expect(
+      select.parentElement?.querySelector('.ui-select__chevron'),
+    ).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('supports native checkbox keyboard interaction', async () => {
@@ -159,7 +166,7 @@ describe('core UI primitives', () => {
     expect(screen.getByLabelText('Readiness')).toHaveClass(
       'ui-card--raised',
     )
-    expect(screen.getByText('Confirmed')).toHaveClass(
+    expect(screen.getByText('Dikonfirmasi')).toHaveClass(
       'ui-badge--confirmed',
     )
   })

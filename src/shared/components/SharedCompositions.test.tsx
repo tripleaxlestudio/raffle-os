@@ -61,17 +61,25 @@ describe('shared compositions', () => {
     expect(banner).toHaveTextContent('Frozen values are ready for review.')
   })
 
+  it('keeps StatusBanner label relationships unique when tones repeat', () => {
+    render(<><StatusBanner badge="Blocked" title="First warning" tone="warning">First recovery action.</StatusBanner><StatusBanner badge="Review" title="Second warning" tone="warning">Second recovery action.</StatusBanner></>)
+
+    const first = screen.getByRole('region', { name: 'First warning' })
+    const second = screen.getByRole('region', { name: 'Second warning' })
+    expect(first.getAttribute('aria-labelledby')).not.toBe(second.getAttribute('aria-labelledby'))
+  })
+
   it('renders MetricCard label, value, detail, and tone', () => {
     render(
       <MetricCard
         detail="Deterministic records"
-        label="Participants"
+        label="Peserta"
         tone="info"
         value="1,250"
       />,
     )
 
-    const card = screen.getByText('Participants').closest('.metric-card')
+    const card = screen.getByText('Peserta').closest('.metric-card')
     expect(card).toHaveAttribute('data-tone', 'info')
     expect(card).toHaveTextContent('1,250')
     expect(card).toHaveTextContent('Deterministic records')
@@ -81,14 +89,14 @@ describe('shared compositions', () => {
     const { container } = render(
       <SummaryList
         items={[
-          { label: 'Pending', value: '4' },
-          { label: 'Confirmed', value: '4' },
+          { label: 'Tertunda', value: '4' },
+          { label: 'Dikonfirmasi', value: '4' },
         ]}
       />,
     )
 
     expect(container.querySelector('dl')).toBeInTheDocument()
-    expect(screen.getByText('Pending').tagName).toBe('DT')
+    expect(screen.getByText('Tertunda').tagName).toBe('DT')
     expect(screen.getAllByText('4', { selector: 'dd' })).toHaveLength(2)
   })
 })

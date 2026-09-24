@@ -4,6 +4,7 @@ import Dexie, {
 } from 'dexie'
 import type { AuditRecord } from '../../domain/audit/audit.types.ts'
 import type { DisplayConfiguration } from '../../domain/display/display-configuration.types.ts'
+import type { EventSettings } from '../../domain/settings/event-settings.types.ts'
 import type { DrawConfiguration } from '../../domain/draws/draw-configuration.types.ts'
 import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
 import type { Event } from '../../domain/events/event.types.ts'
@@ -15,6 +16,7 @@ import type {
 import type { PrizeCategory } from '../../domain/prizes/prize.types.ts'
 import type {
   AuditRecordId,
+  CommandId,
   DisplayConfigurationId,
   DrawConfigurationId,
   DrawSessionId,
@@ -25,7 +27,10 @@ import type {
   WinnerRecordId,
 } from '../../domain/shared/identifiers.ts'
 import type { RedrawRecord } from '../../domain/winners/redraw.types.ts'
+import type { RedrawRequest } from '../../domain/winners/redraw-request.types.ts'
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
+import type { PresentationCheckpointRecord } from '../../domain/workflow/presentation-checkpoint.types.ts'
+import type { CommandReceiptRecord } from '../../application/persistence/command-receipt-repository.interface.ts'
 import { normalizeDatabaseOpenError } from './errors/persistence-errors.ts'
 import {
   CURRENT_SUPPORTED_SCHEMA_VERSION,
@@ -83,6 +88,7 @@ export class RaffleOSDatabase extends Dexie {
     DisplayConfiguration,
     DisplayConfigurationId
   >
+  declare readonly event_settings: Table<EventSettings, EventId>
   declare readonly draw_sessions: Table<DrawSession, DrawSessionId>
   declare readonly winner_records: Table<
     WinnerRecord,
@@ -92,11 +98,17 @@ export class RaffleOSDatabase extends Dexie {
     RedrawRecord,
     RedrawRecordId
   >
+  declare readonly redraw_requests: Table<RedrawRequest, CommandId>
   declare readonly audit_records: Table<AuditRecord, AuditRecordId>
   declare readonly preferences: Table<
     ApplicationPreference,
     ApplicationPreferenceKey
   >
+  declare readonly presentation_checkpoints: Table<
+    PresentationCheckpointRecord,
+    DrawSessionId
+  >
+  declare readonly command_receipts: Table<CommandReceiptRecord, CommandId>
 
   readonly #indexedDbFactory: IDBFactory | undefined
 
@@ -146,6 +158,21 @@ export class RaffleOSDatabase extends Dexie {
     } catch (error: unknown) {
       this.close({ disableAutoOpen: true })
       throw normalizeDatabaseOpenError(error)
+    }
+  }
+
+  async checkReadiness(): Promise<{ readonly ok: true } | { readonly ok: false; readonly code: string; readonly reason: string }> {
+    try {
+      await this.openSupported()
+      const required = ['events', 'participants', 'prize_categories', 'draw_configurations', 'display_configurations', 'draw_sessions', 'winner_records', 'redraw_records', 'redraw_requests', 'audit_records', 'preferences', 'presentation_checkpoints', 'command_receipts'] as const
+      for (const name of [...required, 'event_settings'] as const) {
+        if (!this.tables.some((table) => table.name === name)) return { ok: false, code: 'unsupported-schema', reason: 'The local database schema is missing a required store.' }
+        await this.table(name).count()
+      }
+      return { ok: true }
+    } catch (error: unknown) {
+      const normalized = normalizeDatabaseOpenError(error)
+      return { ok: false, code: normalized.code, reason: 'Local storage could not be opened or read safely.' }
     }
   }
 }

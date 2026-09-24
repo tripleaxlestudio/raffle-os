@@ -36,10 +36,10 @@ export class AppErrorBoundary extends Component<
       return (
         <main className="error-page" data-interface="operator">
           <div className="error-page__content">
-            <h1>Something went wrong</h1>
+            <h1>Terjadi kesalahan</h1>
             <p>
-              Raffle OS could not display this page. Reload the application to
-              try again.
+              Raffle OS tidak dapat menampilkan halaman ini. Muat ulang aplikasi
+              untuk mencoba lagi.
             </p>
             <div className="error-page__actions">
               <button
@@ -47,7 +47,7 @@ export class AppErrorBoundary extends Component<
                 onClick={this.handleReload}
                 type="button"
               >
-                Reload application
+                Muat ulang aplikasi
               </button>
             </div>
           </div>

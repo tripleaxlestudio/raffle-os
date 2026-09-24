@@ -1,3 +1,4 @@
+import { useUiClass } from './ui-theme.ts'
 import { useId, type InputHTMLAttributes, type ReactNode } from 'react'
 import { joinClassNames } from './class-names.ts'
 
@@ -15,28 +16,29 @@ export function Checkbox({
   label,
   ...props
 }: CheckboxProps) {
+  const ui = useUiClass()
   const generatedId = useId()
   const fieldId = id ?? generatedId
   const labelId = `${fieldId}-label`
   const descriptionId = `${fieldId}-description`
 
   return (
-    <label className={joinClassNames('ui-check', className)} htmlFor={fieldId}>
+    <label className={joinClassNames(ui('ui-check'), className)} htmlFor={fieldId}>
       <input
         aria-describedby={description === undefined ? undefined : descriptionId}
         aria-labelledby={labelId}
-        className="ui-check__input"
+        className={ui("ui-check__input")}
         id={fieldId}
         type="checkbox"
         {...props}
       />
-      <span aria-hidden="true" className="ui-check__control" />
-      <span className="ui-check__copy">
-        <span className="ui-check__label" id={labelId}>
+      <span aria-hidden="true" className={ui("ui-check__control")} />
+      <span className={ui("ui-check__copy")}>
+        <span className={ui("ui-check__label")} id={labelId}>
           {label}
         </span>
         {description === undefined ? null : (
-          <span className="ui-check__description" id={descriptionId}>
+          <span className={ui("ui-check__description")} id={descriptionId}>
             {description}
           </span>
         )}

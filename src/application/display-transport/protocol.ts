@@ -1,0 +1,349 @@
+import { validateDisplayAppearance, type DisplayAppearanceConfiguration } from '../../domain/display/display-configuration.types.ts';
+
+export const PROTOCOL_VERSION = 1 as const;
+
+export type ProtocolScope = {
+  readonly eventId: string;
+  readonly displayId: string;
+};
+
+export type ProtocolSender = {
+  readonly kind: 'operator' | 'display';
+  readonly id: string;
+};
+
+export type DisplayCapability = {
+  readonly broadcastChannel: 'available' | 'unavailable';
+  readonly fullscreen: 'available' | 'unavailable';
+};
+export type PublicAsset = { readonly type: string; readonly blob: Blob };
+
+export type PublicDisplayStage =
+  | 'standby'
+  | 'countdown'
+  | 'rolling'
+  | 'reveal'
+  | 'pending-handoff'
+  | 'confirmed';
+
+export type PublicWinnerStatus = 'pending' | 'confirmed';
+export type PublicVerificationState = 'pending' | 'in-progress' | 'verified';
+
+export type PublicMessage =
+  | {
+      readonly type: 'display-ready';
+      readonly capability: DisplayCapability;
+    }
+  | {
+      readonly type: 'display-state';
+      readonly stage: PublicDisplayStage;
+      readonly drawSessionId?: string;
+      readonly stageStartedAt?: string;
+      readonly revealStartedAt?: string;
+      readonly countdownValue?: 3 | 2 | 1;
+      readonly blackoutRequested?: boolean;
+      readonly displayTest?: boolean;
+      readonly eventName?: string;
+      readonly eventSubtitle?: string;
+      readonly prizeCategory?: string;
+      readonly prizeImageAssetId?: string;
+  readonly prizeName?: string;
+      readonly winnerCount?: number;
+      readonly primaryColor?: string;
+      readonly accentColor?: string;
+      readonly appearance?: DisplayAppearanceConfiguration;
+      readonly logo?: PublicAsset;
+      readonly background?: PublicAsset;
+      readonly blackoutAppearance?: 'pure-black' | 'event-surface';
+      readonly safeAreaMargin?: number;
+      readonly mode?: 'practice' | 'live';
+      readonly rollingSlotCount?: number;
+      readonly rollSpeedPerSecond?: number;
+      readonly rollStopMode?: 'timed' | 'manual';
+      readonly rollDurationSeconds?: number;
+      readonly presentationSeed?: string;
+      readonly presentationMode?: 'instant-reveal' | 'random-number-roll';
+      readonly revealMode?: 'all-together' | 'sequential';
+      readonly ticketNumbers?: readonly string[];
+      readonly winnerStatuses?: readonly PublicWinnerStatus[];
+      readonly verificationState?: PublicVerificationState;
+      readonly restore?: boolean;
+    }
+  | {
+      readonly type: 'display-restore-request';
+      readonly requestedEpoch?: number;
+      readonly requestedSequence?: number;
+    }
+  | {
+      readonly type: 'display-snapshot-applied';
+      readonly appliedEpoch: number;
+      readonly appliedSequence: number;
+      readonly publicState: 'display-test' | 'standby' | 'draw';
+    }
+  | {
+      readonly type: 'display-heartbeat';
+    }
+  | {
+      readonly type: 'display-close';
+    };
+
+export type ProtocolEnvelope = {
+  readonly protocolVersion: typeof PROTOCOL_VERSION;
+  readonly messageId: string;
+  readonly sender: ProtocolSender;
+  readonly scope: ProtocolScope;
+  readonly drawSessionId?: string;
+  readonly epoch: number;
+  readonly sequence: number;
+  readonly emittedAt: string;
+  readonly message: PublicMessage;
+};
+
+export type ProtocolEnvelopeFactory = (input: {
+  readonly messageId?: string;
+  readonly sender: ProtocolSender;
+  readonly scope: ProtocolScope;
+  readonly drawSessionId?: string;
+  readonly epoch: number;
+  readonly sequence: number;
+  readonly emittedAt: string;
+  readonly message: PublicMessage;
+}) => ProtocolEnvelope;
+
+export const createProtocolEnvelope: ProtocolEnvelopeFactory = (input) => ({
+  protocolVersion: PROTOCOL_VERSION,
+  messageId: input.messageId ?? `${input.sender.kind}:${input.sender.id}:${input.epoch}:${input.sequence}`,
+  sender: { ...input.sender },
+  scope: { ...input.scope },
+  ...(input.drawSessionId === undefined ? {} : { drawSessionId: input.drawSessionId }),
+  epoch: input.epoch,
+  sequence: input.sequence,
+  emittedAt: input.emittedAt,
+  message: input.message,
+});
+
+export type ParseEnvelopeResult =
+  | { readonly ok: true; readonly envelope: ProtocolEnvelope }
+  | { readonly ok: false; readonly error: ProtocolError };
+
+export type ProtocolError =
+  | { readonly kind: 'invalid-envelope'; readonly path: string; readonly message: string }
+  | { readonly kind: 'unsupported-version'; readonly received: unknown }
+  | { readonly kind: 'scope-mismatch'; readonly expected: ProtocolScope; readonly received: ProtocolScope }
+  | { readonly kind: 'session-mismatch'; readonly expected: string; readonly received?: string }
+  | { readonly kind: 'sequence-duplicate'; readonly epoch: number; readonly sequence: number }
+  | { readonly kind: 'sequence-stale'; readonly epoch: number; readonly sequence: number }
+  | { readonly kind: 'sequence-out-of-order'; readonly expected: number; readonly received: number }
+  | { readonly kind: 'sequence-gap'; readonly expected: number; readonly received: number }
+  | { readonly kind: 'duplicate-message'; readonly messageId: string }
+  | { readonly kind: 'restore-rejected'; readonly reason: 'session-mismatch' | 'scope-mismatch' | 'invalid-request' }
+  | { readonly kind: 'transport-unavailable'; readonly reason: string }
+  | { readonly kind: 'transport-closed' };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.length > 0;
+
+const isCapability = (value: unknown): value is DisplayCapability =>
+  isRecord(value) &&
+  (value.broadcastChannel === 'available' || value.broadcastChannel === 'unavailable') &&
+  (value.fullscreen === 'available' || value.fullscreen === 'unavailable');
+const isPublicAsset = (value: unknown): value is PublicAsset => isRecord(value) && typeof value.type === 'string' && value.blob instanceof Blob;
+
+const isStage = (value: unknown): value is PublicDisplayStage =>
+  value === 'standby' ||
+  value === 'countdown' ||
+  value === 'rolling' ||
+  value === 'reveal' ||
+  value === 'pending-handoff' ||
+  value === 'confirmed';
+
+const invalid = (path: string, message: string): ParseEnvelopeResult => ({
+  ok: false,
+  error: { kind: 'invalid-envelope', path, message },
+});
+
+const hasOnlyKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean =>
+  Object.keys(value).every((key) => keys.includes(key));
+
+export const parseEnvelope = (value: unknown): ParseEnvelopeResult => {
+  if (!isRecord(value)) return invalid('$', 'Envelope must be an object.');
+  if (!hasOnlyKeys(value, ['protocolVersion', 'messageId', 'sender', 'scope', 'drawSessionId', 'epoch', 'sequence', 'emittedAt', 'message'])) return invalid('$', 'Envelope contains unsupported fields.');
+  if (value.protocolVersion === undefined) return invalid('protocolVersion', 'Protocol version is required.');
+  if (value.protocolVersion !== PROTOCOL_VERSION) {
+    return { ok: false, error: { kind: 'unsupported-version', received: value.protocolVersion } };
+  }
+  if (!isNonEmptyString(value.messageId)) return invalid('messageId', 'Message ID is required.');
+  if (!isRecord(value.sender) || !isNonEmptyString(value.sender.id) || (value.sender.kind !== 'operator' && value.sender.kind !== 'display')) {
+    return invalid('sender', 'Sender must have a valid kind and ID.');
+  }
+  if (!isRecord(value.scope) || !isNonEmptyString(value.scope.eventId) || !isNonEmptyString(value.scope.displayId)) {
+    return invalid('scope', 'Scope must have eventId and displayId.');
+  }
+  if (value.drawSessionId !== undefined && !isNonEmptyString(value.drawSessionId)) return invalid('drawSessionId', 'Session ID must be a non-empty string.');
+  const epoch = value.epoch;
+  const sequence = value.sequence;
+  if (typeof epoch !== 'number' || !Number.isSafeInteger(epoch) || epoch < 0) return invalid('epoch', 'Epoch must be a non-negative safe integer.');
+  if (typeof sequence !== 'number' || !Number.isSafeInteger(sequence) || sequence < 0) return invalid('sequence', 'Sequence must be a non-negative safe integer.');
+  if (!isNonEmptyString(value.emittedAt) || Number.isNaN(Date.parse(value.emittedAt))) return invalid('emittedAt', 'Timestamp must be a valid string.');
+  if (!isRecord(value.message) || !isNonEmptyString(value.message.type)) return invalid('message', 'Message type is required.');
+
+  const message = value.message;
+  const messageType = message.type;
+  const capability = message.capability;
+  const stage = message.stage;
+  const validCapability = isCapability(capability) ? capability : undefined;
+  const validStage = isStage(stage) ? stage : undefined;
+  if (messageType === 'display-ready' && (!hasOnlyKeys(message, ['type', 'capability']) || validCapability === undefined)) return invalid('message', 'Display-ready message contains unsupported or invalid fields.');
+  if (messageType === 'display-state' && validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
+  if (messageType === 'display-state' && !hasOnlyKeys(message, ['type', 'stage', 'drawSessionId', 'stageStartedAt', 'revealStartedAt', 'countdownValue', 'blackoutRequested', 'displayTest', 'eventName', 'eventSubtitle', 'prizeCategory', 'prizeName', 'prizeImageAssetId', 'winnerCount', 'primaryColor', 'accentColor', 'appearance', 'logo', 'background', 'blackoutAppearance', 'safeAreaMargin', 'mode', 'rollingSlotCount', 'rollSpeedPerSecond', 'rollStopMode', 'rollDurationSeconds', 'presentationSeed', 'presentationMode', 'revealMode', 'ticketNumbers', 'winnerStatuses', 'verificationState', 'restore'])) return invalid('message', 'Display-state message contains unsupported fields.');
+  if (messageType === 'display-restore-request' && !hasOnlyKeys(message, ['type', 'requestedEpoch', 'requestedSequence'])) return invalid('message', 'Restore request contains unsupported fields.');
+  if (messageType === 'display-snapshot-applied' && !hasOnlyKeys(message, ['type', 'appliedEpoch', 'appliedSequence', 'publicState'])) return invalid('message', 'Snapshot acknowledgement contains unsupported fields.');
+  if (messageType === 'display-heartbeat' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Heartbeat contains unsupported fields.');
+  if (messageType === 'display-close' && !hasOnlyKeys(message, ['type'])) return invalid('message', 'Close message contains unsupported fields.');
+  if (messageType !== 'display-ready' && messageType !== 'display-state' && messageType !== 'display-restore-request' && messageType !== 'display-snapshot-applied' && messageType !== 'display-heartbeat' && messageType !== 'display-close') {
+    return invalid('message.type', 'Message type is unsupported.');
+  }
+
+  let parsedMessage: PublicMessage;
+  if (messageType === 'display-ready') {
+    if (validCapability === undefined) return invalid('message.capability', 'Capability is invalid.');
+    parsedMessage = { type: messageType, capability: { ...validCapability } };
+  } else if (messageType === 'display-state') {
+    if (validStage === undefined) return invalid('message.stage', 'Display stage is invalid.');
+    const ticketNumbers = message.ticketNumbers;
+    const winnerStatuses = message.winnerStatuses;
+    const verificationState = message.verificationState;
+    if (message.drawSessionId !== undefined && !isNonEmptyString(message.drawSessionId)) return invalid('message.drawSessionId', 'Projection session ID must be a non-empty string.');
+    if (message.stageStartedAt !== undefined && (!isNonEmptyString(message.stageStartedAt) || Number.isNaN(Date.parse(message.stageStartedAt)))) return invalid('message.stageStartedAt', 'Stage timestamp must be valid.');
+    if (message.revealStartedAt !== undefined && (!isNonEmptyString(message.revealStartedAt) || Number.isNaN(Date.parse(message.revealStartedAt)))) return invalid('message.revealStartedAt', 'Reveal timestamp must be valid.');
+    if (message.countdownValue !== undefined && message.countdownValue !== 1 && message.countdownValue !== 2 && message.countdownValue !== 3) return invalid('message.countdownValue', 'Countdown value is invalid.');
+    if (message.blackoutRequested !== undefined && typeof message.blackoutRequested !== 'boolean') return invalid('message.blackoutRequested', 'Blackout state must be boolean.');
+    if (message.displayTest !== undefined && typeof message.displayTest !== 'boolean') return invalid('message.displayTest', 'Display-test marker must be boolean.');
+    if (message.eventName !== undefined && !isNonEmptyString(message.eventName)) return invalid('message.eventName', 'Public Event name must be a non-empty string.');
+    if (message.eventSubtitle !== undefined && typeof message.eventSubtitle !== 'string') return invalid('message.eventSubtitle', 'Public subtitle is invalid.');
+    if (message.prizeCategory !== undefined && !isNonEmptyString(message.prizeCategory)) return invalid('message.prizeCategory', 'Prize category is invalid.');
+    if (message.prizeImageAssetId !== undefined && !isNonEmptyString(message.prizeImageAssetId)) return invalid('message.prizeImageAssetId', 'Prize image reference is invalid.');
+    if (message.prizeName !== undefined && !isNonEmptyString(message.prizeName)) return invalid('message.prizeName', 'Prize name is invalid.');
+    if (message.winnerCount !== undefined && (typeof message.winnerCount !== 'number' || !Number.isInteger(message.winnerCount) || message.winnerCount < 1 || message.winnerCount > 100)) return invalid('message.winnerCount', 'Winner count is invalid.');
+    if (message.primaryColor !== undefined && !isNonEmptyString(message.primaryColor)) return invalid('message.primaryColor', 'Primary color is invalid.');
+    if (message.accentColor !== undefined && !isNonEmptyString(message.accentColor)) return invalid('message.accentColor', 'Accent color is invalid.');
+    if (message.appearance !== undefined && !validateDisplayAppearance(message.appearance).ok) return invalid('message.appearance', 'Display appearance is invalid.');
+    if (message.blackoutAppearance !== undefined && message.blackoutAppearance !== 'pure-black' && message.blackoutAppearance !== 'event-surface') return invalid('message.blackoutAppearance', 'Blackout appearance is invalid.');
+    if (message.safeAreaMargin !== undefined && (typeof message.safeAreaMargin !== 'number' || !Number.isFinite(message.safeAreaMargin) || message.safeAreaMargin < 0)) return invalid('message.safeAreaMargin', 'Safe-area margin is invalid.');
+    if (message.logo !== undefined && !isPublicAsset(message.logo)) return invalid('message.logo', 'Public logo is invalid.');
+    if (message.background !== undefined && !isPublicAsset(message.background)) return invalid('message.background', 'Public background is invalid.');
+    if (message.mode !== undefined && message.mode !== 'practice' && message.mode !== 'live') return invalid('message.mode', 'Display mode is invalid.');
+    if (message.rollingSlotCount !== undefined && (typeof message.rollingSlotCount !== 'number' || !Number.isInteger(message.rollingSlotCount) || message.rollingSlotCount < 1 || message.rollingSlotCount > 100)) return invalid('message.rollingSlotCount', 'Rolling slot count is invalid.');
+    if (message.rollSpeedPerSecond !== undefined && (typeof message.rollSpeedPerSecond !== 'number' || !Number.isFinite(message.rollSpeedPerSecond) || message.rollSpeedPerSecond < 1)) return invalid('message.rollSpeedPerSecond', 'Rolling speed is invalid.');
+    if (message.rollStopMode !== undefined && message.rollStopMode !== 'timed' && message.rollStopMode !== 'manual') return invalid('message.rollStopMode', 'Rolling stop mode is invalid.');
+    if (message.rollDurationSeconds !== undefined && (typeof message.rollDurationSeconds !== 'number' || !Number.isFinite(message.rollDurationSeconds) || message.rollDurationSeconds < 0)) return invalid('message.rollDurationSeconds', 'Rolling duration is invalid.');
+    if (message.presentationSeed !== undefined && !isNonEmptyString(message.presentationSeed)) return invalid('message.presentationSeed', 'Presentation seed is invalid.');
+    if (message.revealMode !== undefined && message.revealMode !== 'all-together' && message.revealMode !== 'sequential') return invalid('message.revealMode', 'Reveal mode is invalid.');
+    if (message.presentationMode !== undefined && message.presentationMode !== 'instant-reveal' && message.presentationMode !== 'random-number-roll') return invalid('message.presentationMode', 'Presentation mode is invalid.');
+    if (message.restore !== undefined && typeof message.restore !== 'boolean') return invalid('message.restore', 'Restore marker must be boolean.');
+    if (ticketNumbers !== undefined && (!Array.isArray(ticketNumbers) || ticketNumbers.some((ticket) => !isNonEmptyString(ticket)))) return invalid('message.ticketNumbers', 'Ticket numbers must be non-empty strings.');
+    if (winnerStatuses !== undefined && (!Array.isArray(winnerStatuses) || winnerStatuses.some((status) => status !== 'pending' && status !== 'confirmed'))) return invalid('message.winnerStatuses', 'Winner statuses are invalid.');
+    if (verificationState !== undefined && verificationState !== 'pending' && verificationState !== 'in-progress' && verificationState !== 'verified') return invalid('message.verificationState', 'Verification state is invalid.');
+    parsedMessage = {
+      type: messageType,
+      stage: validStage,
+      ...(message.drawSessionId === undefined ? {} : { drawSessionId: message.drawSessionId }),
+      ...(message.stageStartedAt === undefined ? {} : { stageStartedAt: message.stageStartedAt }),
+      ...(message.revealStartedAt === undefined ? {} : { revealStartedAt: message.revealStartedAt }),
+      ...(message.countdownValue === undefined ? {} : { countdownValue: message.countdownValue }),
+      ...(message.blackoutRequested === undefined ? {} : { blackoutRequested: message.blackoutRequested }),
+      ...(message.displayTest === undefined ? {} : { displayTest: message.displayTest }),
+      ...(message.eventName === undefined ? {} : { eventName: message.eventName }),
+      ...(message.eventSubtitle === undefined ? {} : { eventSubtitle: message.eventSubtitle }),
+      ...(message.prizeCategory === undefined ? {} : { prizeCategory: message.prizeCategory }),
+      ...(message.prizeName === undefined ? {} : { prizeName: message.prizeName }),
+    ...(message.prizeImageAssetId === undefined ? {} : { prizeImageAssetId: message.prizeImageAssetId }),
+      ...(message.winnerCount === undefined ? {} : { winnerCount: message.winnerCount }),
+      ...(message.primaryColor === undefined ? {} : { primaryColor: message.primaryColor }),
+      ...(message.accentColor === undefined ? {} : { accentColor: message.accentColor }),
+      ...(message.appearance === undefined ? {} : { appearance: message.appearance as DisplayAppearanceConfiguration }),
+      ...(message.logo === undefined ? {} : { logo: message.logo as PublicAsset }),
+      ...(message.background === undefined ? {} : { background: message.background as PublicAsset }),
+      ...(message.blackoutAppearance === undefined ? {} : { blackoutAppearance: message.blackoutAppearance }),
+      ...(message.safeAreaMargin === undefined ? {} : { safeAreaMargin: message.safeAreaMargin }),
+      ...(message.mode === undefined ? {} : { mode: message.mode }),
+      ...(typeof message.rollingSlotCount !== 'number' ? {} : { rollingSlotCount: message.rollingSlotCount }),
+      ...(message.rollSpeedPerSecond === undefined ? {} : { rollSpeedPerSecond: message.rollSpeedPerSecond }),
+      ...(message.rollStopMode === undefined ? {} : { rollStopMode: message.rollStopMode }),
+      ...(message.rollDurationSeconds === undefined ? {} : { rollDurationSeconds: message.rollDurationSeconds }),
+      ...(message.presentationSeed === undefined ? {} : { presentationSeed: message.presentationSeed }),
+      ...(message.revealMode === undefined ? {} : { revealMode: message.revealMode }),
+      ...(message.presentationMode === undefined ? {} : { presentationMode: message.presentationMode }),
+      ...(ticketNumbers === undefined ? {} : { ticketNumbers: [...ticketNumbers] }),
+      ...(winnerStatuses === undefined ? {} : { winnerStatuses: [...winnerStatuses] }),
+      ...(verificationState === undefined ? {} : { verificationState }),
+      ...(message.restore === undefined ? {} : { restore: message.restore }),
+    };
+  } else if (messageType === 'display-restore-request') {
+    if (message.requestedEpoch !== undefined && (typeof message.requestedEpoch !== 'number' || !Number.isSafeInteger(message.requestedEpoch) || message.requestedEpoch < 0)) return invalid('message.requestedEpoch', 'Requested epoch is invalid.');
+    if (message.requestedSequence !== undefined && (typeof message.requestedSequence !== 'number' || !Number.isSafeInteger(message.requestedSequence) || message.requestedSequence < 0)) return invalid('message.requestedSequence', 'Requested sequence is invalid.');
+    parsedMessage = {
+      type: messageType,
+      ...(typeof message.requestedEpoch !== 'number' ? {} : { requestedEpoch: message.requestedEpoch }),
+      ...(typeof message.requestedSequence !== 'number' ? {} : { requestedSequence: message.requestedSequence }),
+    };
+  } else if (messageType === 'display-snapshot-applied') {
+    const appliedEpoch = message.appliedEpoch;
+    const appliedSequence = message.appliedSequence;
+    if (typeof appliedEpoch !== 'number' || !Number.isSafeInteger(appliedEpoch) || appliedEpoch < 0 || typeof appliedSequence !== 'number' || !Number.isSafeInteger(appliedSequence) || appliedSequence < 0) return invalid('message', 'Snapshot acknowledgement ordering is invalid.');
+    if (message.publicState !== 'display-test' && message.publicState !== 'standby' && message.publicState !== 'draw') return invalid('message.publicState', 'Snapshot acknowledgement state is invalid.');
+    parsedMessage = { type: messageType, appliedEpoch, appliedSequence, publicState: message.publicState };
+  } else {
+    parsedMessage = { type: messageType };
+  }
+
+  const envelope: ProtocolEnvelope = {
+    protocolVersion: PROTOCOL_VERSION,
+    messageId: value.messageId,
+    sender: { kind: value.sender.kind, id: value.sender.id },
+    scope: { eventId: value.scope.eventId, displayId: value.scope.displayId },
+    ...(value.drawSessionId === undefined ? {} : { drawSessionId: value.drawSessionId }),
+    epoch,
+    sequence,
+    emittedAt: value.emittedAt,
+    message: parsedMessage,
+  };
+  return { ok: true, envelope };
+};
+
+export const createScopeMismatchError = (expected: ProtocolScope, received: ProtocolScope): ProtocolError => ({
+  kind: 'scope-mismatch', expected, received,
+});
+
+export const validateEnvelopeContext = (
+  envelope: ProtocolEnvelope,
+  expectedScope: ProtocolScope,
+  expectedSession?: string,
+): ProtocolError | undefined => {
+  if (envelope.scope.eventId !== expectedScope.eventId || envelope.scope.displayId !== expectedScope.displayId) {
+    return createScopeMismatchError(expectedScope, envelope.scope);
+  }
+  if (expectedSession !== undefined && envelope.drawSessionId !== expectedSession) {
+    return { kind: 'session-mismatch', expected: expectedSession, received: envelope.drawSessionId };
+  }
+  return undefined;
+};
+
+export type SequenceTracker = { readonly epoch: number; readonly sequence: number };
+
+export const acceptSequence = (previous: SequenceTracker | undefined, incoming: SequenceTracker): ProtocolError | undefined => {
+  if (previous === undefined) return undefined;
+  if (incoming.epoch < previous.epoch || (incoming.epoch === previous.epoch && incoming.sequence < previous.sequence)) {
+    return { kind: 'sequence-stale', epoch: incoming.epoch, sequence: incoming.sequence };
+  }
+  if (incoming.epoch === previous.epoch && incoming.sequence === previous.sequence) {
+    return { kind: 'sequence-duplicate', epoch: incoming.epoch, sequence: incoming.sequence };
+  }
+  if (incoming.epoch === previous.epoch && incoming.sequence > previous.sequence + 1) {
+    return { kind: 'sequence-out-of-order', expected: previous.sequence + 1, received: incoming.sequence };
+  }
+  return undefined;
+};

@@ -1,3 +1,4 @@
+import { useUiClass } from './ui-theme.ts'
 import { Button } from './Button.tsx'
 import { joinClassNames } from './class-names.ts'
 
@@ -20,14 +21,15 @@ export function Toast({
   urgent = false,
   variant = 'neutral',
 }: ToastProps) {
+  const ui = useUiClass()
   return (
     <section
       aria-label={title}
-      className={joinClassNames('ui-toast', `ui-toast--${variant}`)}
+      className={joinClassNames(ui('ui-toast'), ui(`ui-toast--${variant}`))}
       role={urgent ? 'alert' : 'status'}
     >
-      <span aria-hidden="true" className="ui-toast__marker" />
-      <div className="ui-toast__copy">
+      <span aria-hidden="true" className={ui("ui-toast__marker")} />
+      <div className={ui("ui-toast__copy")}>
         <strong>{title}</strong>
         {description === undefined ? null : <p>{description}</p>}
       </div>

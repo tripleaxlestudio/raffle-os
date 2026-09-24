@@ -1,0 +1,89 @@
+[
+  {
+    "main": 1680,
+    "overflow": false,
+    "surface": "setup",
+    "viewport": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "controls": [
+      {
+        "height": 44,
+        "top": 880.1875
+      },
+      {
+        "height": 44,
+        "top": 880.1875
+      },
+      {
+        "height": 44,
+        "top": 880.1875
+      },
+      {
+        "height": 44,
+        "top": 880.1875
+      },
+      {
+        "height": 44,
+        "top": 880.1875
+      },
+      {
+        "height": 44,
+        "top": 880.1875
+      },
+      {
+        "height": 44,
+        "top": 880.1875
+      }
+    ],
+    "overflow": false,
+    "surface": "setup",
+    "viewport": [
+      1366,
+      768
+    ]
+  },
+  {
+    "overflow": false,
+    "surface": "queue",
+    "viewport": [
+      1366,
+      768
+    ]
+  },
+  {
+    "overflow": false,
+    "surface": "queue",
+    "viewport": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "overflow": false,
+    "surface": "run",
+    "viewport": [
+      1920,
+      1080
+    ]
+  },
+  {
+    "overflow": false,
+    "surface": "run",
+    "viewport": [
+      1366,
+      768
+    ]
+  },
+  {
+    "overflow": false,
+    "surface": "queue",
+    "viewport": [
+      1440,
+      900
+    ]
+  }
+]

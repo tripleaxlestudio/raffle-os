@@ -5,6 +5,7 @@ import { useProductionWorkspace } from '../workspace/ProductionWorkspaceContext.
 import { PRODUCTION_SETUP_JOURNEY } from '../../shared/components/production-setup-journey.ts'
 import { Icon, type IconName } from '../../shared/ui/index.ts'
 import { productionSetupStageIndexForRoute, type ProductionSetupReadiness } from '../workspace/production-setup-readiness.ts'
+import { ReportIssueModal } from '../../pages/operator/ReportIssueModal.tsx'
 
 const prototypeNavigationItems = [
   { label: 'Dashboard', marker: 'DB', to: '/dashboard' },
@@ -69,6 +70,7 @@ function OperatorSidebarContent({
   readonly reachedStep?: number
 }) {
   const [supportExpanded, setSupportExpanded] = useState(false)
+  const [reportIssueOpen, setReportIssueOpen] = useState(false)
   const shellClass = (name: string) => themeClass(production ? 'kocokan' : 'legacy', name)
   return (
     <aside className={shellClass("operator-sidebar")} aria-label="Bilah samping Operator">
@@ -123,7 +125,12 @@ function OperatorSidebarContent({
             </button>
             {supportExpanded ? <ul className={shellClass("operator-sidebar__submenu")} id="operator-sidebar-support-menu">
               {productionSupportItems.map((label) => <li key={label}>
-                <button className={shellClass("operator-sidebar__submenu-button")} title={`${label} belum tersedia`} type="button">{label}</button>
+                <button
+                  className={shellClass("operator-sidebar__submenu-button")}
+                  onClick={label === 'Laporkan Masalah' ? () => setReportIssueOpen(true) : undefined}
+                  title={label === 'Laporkan Masalah' ? undefined : `${label} belum tersedia`}
+                  type="button"
+                >{label}</button>
               </li>)}
             </ul> : null}
           </li>
@@ -135,6 +142,7 @@ function OperatorSidebarContent({
         </span>
         <span>{production ? 'Versi pengembangan' : 'Phase 2 Prototype'}</span>
       </div>
+      {production ? <ReportIssueModal onClose={() => setReportIssueOpen(false)} open={reportIssueOpen} /> : null}
     </aside>
   )
 }

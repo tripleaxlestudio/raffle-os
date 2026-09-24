@@ -12,6 +12,7 @@
 @import "./kocokan/pending.css";
 @import "./kocokan/log.css";
 @import "./kocokan/settings.css";
+@import "./kocokan/feedback.css";
 @import "./kocokan/display-designer.css";
 
 @layer base {

@@ -75,7 +75,17 @@ describe('production sidebar Event gating', () => {
     await user.click(support)
 
     expect(support).toHaveAttribute('aria-expanded', 'true')
-    for (const label of ['Laporkan Masalah', 'Dokumentasi', 'Tentang Kocokan']) {
+    const workspaceBeforeReport = { ...workspace }
+    const reportIssue = within(utilities).getByRole('button', { name: 'Laporkan Masalah' })
+    expect(reportIssue).not.toHaveAttribute('title')
+    await user.click(reportIssue)
+    expect(screen.getByRole('dialog', { name: 'Laporkan Masalah' })).toBeInTheDocument()
+    expect(screen.getByTestId('location')).toHaveTextContent('/dashboard')
+    expect(workspace).toEqual(workspaceBeforeReport)
+    await user.click(screen.getByRole('button', { name: 'Batal' }))
+    expect(screen.queryByRole('dialog', { name: 'Laporkan Masalah' })).not.toBeInTheDocument()
+
+    for (const label of ['Dokumentasi', 'Tentang Kocokan']) {
       const submenuItem = within(utilities).getByRole('button', { name: label })
       expect(submenuItem).toHaveAttribute('title', `${label} belum tersedia`)
       await user.click(submenuItem)

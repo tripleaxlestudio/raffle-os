@@ -1,0 +1,117 @@
+.kc-modal:has(.kc-report-issue__form),
+.kc-modal:has(.kc-report-issue__review) {
+  display: flex;
+  width: min(calc(100% - 32px), 760px);
+  max-height: min(90vh, 820px);
+  flex-direction: column;
+}
+
+.kc-modal:has(.kc-report-issue__form) .kc-modal__body,
+.kc-modal:has(.kc-report-issue__review) .kc-modal__body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.kc-report-issue__form,
+.kc-report-issue__review {
+  display: grid;
+  gap: 18px;
+}
+
+.kc-report-issue__selectors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.kc-report-issue__textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.kc-report-issue__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid currentColor;
+  border-radius: var(--kc-radius-control);
+  background: var(--kc-danger-surface);
+  color: var(--kc-danger);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.kc-report-issue__notice--info {
+  background: var(--kc-info-surface);
+  color: var(--kc-info);
+}
+
+.kc-report-issue__notice .ui-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.kc-report-issue__review-title {
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  border: 1px solid var(--kc-divider);
+  border-radius: var(--kc-radius-control);
+  background: var(--kc-surface-muted);
+}
+
+.kc-report-issue__review-title span,
+.kc-report-issue__review-label {
+  color: var(--kc-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.kc-report-issue__review-title strong {
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+
+.kc-report-issue__review-label {
+  display: block;
+  margin-bottom: 7px;
+}
+
+.kc-report-issue__review pre {
+  max-height: 360px;
+  overflow: auto;
+  margin: 0;
+  padding: 14px;
+  border: 2px solid var(--kc-outline);
+  border-radius: var(--kc-radius-control);
+  background: var(--kc-surface);
+  color: var(--kc-text);
+  font: 500 13px/1.55 var(--kc-font-mono);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.kc-report-issue__privacy-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: var(--kc-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.kc-report-issue__privacy-note .ui-icon {
+  flex: 0 0 auto;
+  color: var(--kc-info);
+}
+
+@media (max-width: 42rem) {
+  .kc-report-issue__selectors {
+    grid-template-columns: 1fr;
+  }
+}

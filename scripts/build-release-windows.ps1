@@ -52,14 +52,26 @@ Build commit: $($manifest.buildCommit)
 Source dirty: $($manifest.sourceDirty)
 Compiler: Inno Setup $compilerVersion
 Origin: http://127.0.0.1:47882
+Release role: v0.1.1 is the bootstrap updater release.
+Users on v0.1.0 must install v0.1.1 manually once.
+Future stable updates can use the installed app's user-confirmed update flow.
+This release does not claim a v0.1.0 -> v0.1.1 one-click update.
 Install: Program Files\Kocokan (Windows x64; administrator required).
 Start Menu: Kocokan. Desktop shortcut: optional.
 Close Kocokan using Quit before update/uninstall; setup never force-closes it.
 Browser profile, IndexedDB, localStorage, events and history remain untouched.
 No Node/npm/Bun/Vite/Laragon/.NET installation required on the destination.
 $signed
+Update features: stable GitHub release checker; installed-mode detection;
+user-confirmed one-click update infrastructure; secure installer download and
+SHA256 verification; authoritative update safety gate; Audience-connected
+blocking; graceful updater handoff; and relaunch/result recovery.
+Feedback: privacy-safe Google Forms reporting opens a reviewable form; nothing
+is submitted until the user submits it in Google Forms.
 Branding: official .ico pending; existing placeholder retained.
-Scope: installer/release only. No auto-updater, LAN mode or cloud service.
+Scope: bootstrap updater release. No silent/background update, LAN mode or
+cloud service. The real installed v0.1.1 -> v0.1.2 flow remains a later owner
+acceptance gate.
 All portable file hashes: portable/checksums.json. Licenses: notices/.
 Old release artifacts are retained. Repeated builds use a timestamped folder.
 Reproducible procedure; timestamps and unsigned installer bytes may differ.

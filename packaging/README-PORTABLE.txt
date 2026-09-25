@@ -13,6 +13,7 @@ folder does not export or transfer browser data. Use a consistent browser/profil
 Closing the browser does not stop the server. The draw controller remains in
 the browser; the launcher does not run draws in the background.
 
-Unsigned pilot. No updater, LAN mode or cloud service included.
+Unsigned build. Installed mode includes the user-confirmed one-click updater;
+portable mode cannot prepare or install updates. No LAN mode or cloud service.
 The separate Setup installer wraps this same portable application.
 Third-party licenses: notices/ and runtime license files at this folder root.

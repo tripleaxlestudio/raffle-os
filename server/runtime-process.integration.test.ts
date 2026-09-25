@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { fork, type ChildProcess } from 'node:child_process'
 import { once } from 'node:events'
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -15,9 +15,13 @@ import { UPDATE_CAPABILITY_ENVIRONMENT_VARIABLE, UPDATE_TOKEN_ENVIRONMENT_VARIAB
 let fixture: string
 let bundle: string
 let webRoot: string
+let packageVersion: string
 const children = new Set<ChildProcess>()
 
 beforeAll(async () => {
+  const packageMetadata: unknown = JSON.parse(await readFile(resolve('package.json'), 'utf8'))
+  if (typeof packageMetadata !== 'object' || packageMetadata === null || !('version' in packageMetadata) || typeof packageMetadata.version !== 'string') throw new Error('Missing package version.')
+  packageVersion = packageMetadata.version
   fixture = await mkdtemp(join(tmpdir(), 'kocokan-bundle-test-'))
   webRoot = join(fixture, 'web')
   await mkdir(webRoot)
@@ -89,7 +93,7 @@ describe('built production runtime process', () => {
     })
     await installed.ready
     const capabilities = await (await fetch(`${PILOT_ORIGIN}/api/update/capabilities`)).json()
-    expect(capabilities).toEqual({ environment: 'installed', currentVersion: '0.1.0', prepareSupported: true, installSupported: false })
+    expect(capabilities).toEqual({ environment: 'installed', currentVersion: packageVersion, prepareSupported: true, installSupported: false })
     expect(JSON.stringify(capabilities)).not.toContain(mutationToken)
     const bootstrap = await fetch(`${PILOT_ORIGIN}/api/update/bootstrap`, { method: 'POST', headers: { Origin: PILOT_ORIGIN } })
     expect(bootstrap.headers.get('cache-control')).toBe('no-store')

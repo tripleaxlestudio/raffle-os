@@ -20,6 +20,7 @@ export type PendingDecisionErrorCode =
   | 'unsupported-mode'
   | 'invalid-command-id'
   | 'storage-failure'
+  | 'update-in-progress'
   | 'unknown-outcome'
 
 export type PendingDecisionErrorKind = 'not-found' | 'validation' | 'conflict' | 'capacity' | 'transition' | 'storage' | 'unknown'

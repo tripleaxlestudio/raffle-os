@@ -7,8 +7,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../launcher/RuntimeController.cs" Link="RuntimeController.cs" />
-    <Compile Include="../launcher/ChildJob.cs" Link="ChildJob.cs" />
     <Compile Include="../launcher/InstalledModeDetector.cs" Link="InstalledModeDetector.cs" />
     <Compile Include="../launcher/UpdateRuntimeBootstrap.cs" Link="UpdateRuntimeBootstrap.cs" />
     <Compile Include="../launcher/UpdateInstallHandoff.cs" Link="UpdateInstallHandoff.cs" />

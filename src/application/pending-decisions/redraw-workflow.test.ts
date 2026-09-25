@@ -6,8 +6,9 @@ import { projectLiveDrawRun } from '../workflow/presentation-projection.ts'
 import { DexieCommandReceiptRepository } from '../../infrastructure/persistence/repositories/command-receipt.repository.ts'
 import { DexieDrawPersistenceUnitOfWork } from '../../infrastructure/persistence/transactions/dexie-draw-persistence-unit-of-work.ts'
 import { cleanupTestDatabases, makeDrawHistoryFixture, makeWinner, openTestDatabase, seedStartedFixture } from '../../infrastructure/persistence/test/draw-history-test-helpers.ts'
+import { productionUpdateLock, UpdateOperationLockedError } from '../update/update-lock.ts'
 
-afterEach(cleanupTestDatabases)
+afterEach(async () => { productionUpdateLock.release(); await cleanupTestDatabases() })
 
 function pendingCommand(sessionId: RedrawPendingWinnersCommand['drawSessionId'], winnerIds: readonly string[], commandId: string, note = 'operator supplied note'): RedrawPendingWinnersCommand {
   return {
@@ -58,6 +59,13 @@ async function setupSixPendingWinners() {
 }
 
 describe('request → present → complete redraw workflow', () => {
+  it('blocks redraw request and redraw start through the shared update lock', async () => {
+    const { fixture, original, service } = await setup()
+    await productionUpdateLock.acquire(async () => true)
+
+    await expect(service.redraw(pendingCommand(fixture.session.id, [original.id], 'redraw-update-locked'))).resolves.toMatchObject({ status: 'invalid', error: { code: 'update-in-progress' } })
+    await expect(service.start('redraw-update-locked' as CommandId)).rejects.toBeInstanceOf(UpdateOperationLockedError)
+  })
   it.each([1, 3, 5, 6])('requests and completes exactly %i replacement winner(s)', async (selectedCount) => {
     const { database, fixture, originals, service } = await setupSixPendingWinners()
     const result = await service.redraw(pendingCommand(fixture.session.id, originals.slice(0, selectedCount).map((winner) => winner.id), `redraw-six-${selectedCount}`))

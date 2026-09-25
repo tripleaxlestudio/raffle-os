@@ -6,6 +6,7 @@ import type { PendingDecisionOutcome, RedrawConfirmedWinnersCommand, RedrawPendi
 import { PersistenceError } from '../../infrastructure/persistence/errors/persistence-errors.ts'
 import type { CommandId } from '../../domain/shared/identifiers.ts'
 import type { RedrawRequest } from '../../domain/winners/redraw-request.types.ts'
+import { productionUpdateLock } from '../update/update-lock.ts'
 
 export type RedrawApplicationResult =
   | { readonly status: 'committed' | 'idempotent-replay'; readonly outcome: PendingDecisionOutcome }
@@ -50,6 +51,7 @@ export class RedrawService {
   }
 
   async redraw(command: RedrawPendingWinnersCommand | RedrawConfirmedWinnersCommand): Promise<RedrawApplicationResult> {
+    if (productionUpdateLock.isActive()) return error('invalid', 'update-in-progress', 'Aplikasi sedang menyiapkan pembaruan. Undi Ulang baru tidak dapat dimulai.')
     const validation = validateLiveMutationCommand(command)
     if (!validation.ok) return { status: 'invalid', error: validation.error }
     const payload = canonicalizeDecisionPayload(command)
@@ -93,6 +95,7 @@ export class RedrawService {
   }
 
   async start(requestId: CommandId): Promise<RedrawRequest> {
+    productionUpdateLock.assertDrawOperationAllowed()
     if (this.persistence.startRedraw === undefined) throw new Error('The redraw start persistence boundary is unavailable.')
     return this.persistence.startRedraw({ requestId })
   }

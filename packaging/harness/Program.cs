@@ -88,6 +88,66 @@ try
         await impostor.StartAsync();
         Check(impostor.State == RuntimeState.Error, "HTTP 200 ready=true with wrong identity/version rejected");
     }
+
+    var updateLocal = Path.Combine(faultRoot, "local");
+    var updateVersion = "0.1.2";
+    var versionDirectory = Path.Combine(updateLocal, "Kocokan", "updates", updateVersion);
+    Directory.CreateDirectory(versionDirectory);
+    await File.WriteAllTextAsync(Path.Combine(faultRoot, "Kocokan.Updater.exe"), "fixture");
+    await File.WriteAllTextAsync(Path.Combine(versionDirectory, $"Kocokan-Setup-{updateVersion}.exe"), "fixture");
+    var installLine = JsonSerializer.Serialize(new { type = "update-install", version = updateVersion });
+    string UpdateScript(string marker, bool ignoreFirstShutdown) =>
+        "const fs=require('fs'),http=require('http');const first=!fs.existsSync(" + JsonSerializer.Serialize(marker) + ");if(first)fs.writeFileSync(" + JsonSerializer.Serialize(marker) + ",'1');" +
+        "http.createServer((q,r)=>{r.setHeader('Content-Type','application/json');r.end(JSON.stringify({application:'kocokan',version:" + JsonSerializer.Serialize(version) + ",ready:true,status:'running'}))}).listen(47882,'127.0.0.1',()=>{console.log(" + JsonSerializer.Serialize(readyLine) + ");if(first)setTimeout(()=>console.log(" + JsonSerializer.Serialize(installLine) + "),500)});" +
+        "process.stdin.resume();process.stdin.on('data',()=>{if(!first||!" + (ignoreFirstShutdown ? "true" : "false") + ")process.exit(0)});";
+    Func<UpdateRuntimeBootstrap> installedBootstrap = () => new(UpdateRuntimeCapability.Installed, new string('A', 43));
+
+    var successMarker = Path.Combine(faultRoot, "success.marker");
+    var successScript = UpdateScript(successMarker, false).Replace("if(first)setTimeout(()=>console.log(" + JsonSerializer.Serialize(installLine) + "),500)", "if(first)setTimeout(()=>{console.log(" + JsonSerializer.Serialize(installLine) + ");console.log(" + JsonSerializer.Serialize(installLine) + ")},500)");
+    await File.WriteAllTextAsync(Path.Combine(faultRoot, "server", "kocokan-server.cjs"), successScript);
+    var successSpawner = new TrackingUpdaterSpawner();
+    var installExitReady = false;
+    using (var successfulHandoff = new RuntimeController(faultRoot, stopTimeout: TimeSpan.FromMilliseconds(500), updateBootstrapFactory: installedBootstrap, updaterSpawner: successSpawner, localAppData: updateLocal))
+    {
+        successfulHandoff.InstallExitReady += () => installExitReady = true;
+        await successfulHandoff.StartAsync();
+        await Wait(() => installExitReady);
+        Check(successSpawner.StartCount == 1, "valid installed duplicate handoff spawns updater exactly once");
+        Check(!successfulHandoff.ForcedLastStop && successfulHandoff.ChildId == null, "valid handoff stops runtime gracefully before launcher exit");
+    }
+
+    var portableMarker = Path.Combine(faultRoot, "portable.marker");
+    await File.WriteAllTextAsync(Path.Combine(faultRoot, "server", "kocokan-server.cjs"), UpdateScript(portableMarker, false));
+    var portableSpawner = new TrackingUpdaterSpawner();
+    using (var portableHandoff = new RuntimeController(faultRoot, updateBootstrapFactory: () => new(UpdateRuntimeCapability.Portable, new string('B', 43)), updaterSpawner: portableSpawner, localAppData: updateLocal))
+    {
+        await portableHandoff.StartAsync();
+        await Task.Delay(800);
+        Check(portableSpawner.StartCount == 0 && portableHandoff.State == RuntimeState.Running, "portable launcher rejects install handoff");
+        await portableHandoff.StopAsync();
+    }
+
+    var spawnMarker = Path.Combine(faultRoot, "spawn.marker");
+    await File.WriteAllTextAsync(Path.Combine(faultRoot, "server", "kocokan-server.cjs"), UpdateScript(spawnMarker, false));
+    using (var spawnFailure = new RuntimeController(faultRoot, stopTimeout: TimeSpan.FromMilliseconds(300), updateBootstrapFactory: installedBootstrap, updaterSpawner: new ThrowingUpdaterSpawner(), localAppData: updateLocal))
+    {
+        await spawnFailure.StartAsync();
+        await Wait(() => spawnFailure.State == RuntimeState.Running && spawnFailure.Message.Contains("dipulihkan"));
+        Check(spawnFailure.ChildId != null, "updater spawn failure restores launcher runtime usability");
+        await spawnFailure.StopAsync();
+    }
+
+    var forcedMarker = Path.Combine(faultRoot, "forced.marker");
+    await File.WriteAllTextAsync(Path.Combine(faultRoot, "server", "kocokan-server.cjs"), UpdateScript(forcedMarker, true));
+    var trackingSpawner = new TrackingUpdaterSpawner();
+    using (var forcedUpdate = new RuntimeController(faultRoot, stopTimeout: TimeSpan.FromMilliseconds(250), updateBootstrapFactory: installedBootstrap, updaterSpawner: trackingSpawner, localAppData: updateLocal))
+    {
+        await forcedUpdate.StartAsync();
+        await Wait(() => trackingSpawner.Process.Killed && forcedUpdate.State == RuntimeState.Running && forcedUpdate.Message.Contains("dipulihkan"));
+        Check(trackingSpawner.Process.Killed, "forced runtime shutdown aborts updater before installation");
+        Check(forcedUpdate.ChildId != null, "forced update abort restores launcher runtime usability");
+        await forcedUpdate.StopAsync();
+    }
 }
 finally { Directory.Delete(faultRoot, true); }
 
@@ -114,3 +174,23 @@ using (var launcher = Process.Start(new ProcessStartInfo(Path.Combine(package, "
 await Wait(RuntimeController.PortAvailable);
 Check(RuntimeController.PortAvailable(), "abnormal launcher death leaves no listener via Job Object/EOF");
 Console.WriteLine(JsonSerializer.Serialize(new { passed = passed.Count, tests = passed }));
+
+file sealed class ThrowingUpdaterSpawner : IUpdaterSpawner
+{
+    public IUpdaterProcess Start(string executable, int launcherPid, string version, string installRoot) => throw new InvalidOperationException("injected spawn failure");
+}
+
+file sealed class TrackingUpdaterSpawner : IUpdaterSpawner
+{
+    public TrackingUpdaterProcess Process { get; } = new();
+    public int StartCount { get; private set; }
+    public IUpdaterProcess Start(string executable, int launcherPid, string version, string installRoot) { StartCount++; return Process; }
+}
+
+file sealed class TrackingUpdaterProcess : IUpdaterProcess
+{
+    public bool Killed { get; private set; }
+    public bool HasExited => Killed;
+    public void Kill() => Killed = true;
+    public void Dispose() { }
+}

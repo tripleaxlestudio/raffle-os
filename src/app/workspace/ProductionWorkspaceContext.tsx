@@ -17,6 +17,7 @@ import { evaluateStartupRecovery, type StartupRecoveryResult } from '../../appli
 import { projectAudienceRecoverySource } from '../../application/display-transport/audience-recovery.ts'
 import type { DrawReadinessResult } from '../../application/draw/draw-readiness.types.ts'
 import type { RedrawRequest } from '../../domain/winners/redraw-request.types.ts'
+import { evaluateUpdateSafety, registerUpdateSafetyAuthority } from '../../application/update/update-safety.ts'
 
 export interface IntentionalRedrawHandoff {
   readonly drawSessionId: RedrawRequest['drawSessionId']
@@ -194,6 +195,56 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
     })()
     return () => { active = false }
   }, [services])
+
+  const readUpdateSafety = useCallback(async () => {
+    const storage = services.checkStorage === undefined ? null : await services.checkStorage()
+    if (storage !== null && !storage.ok) return evaluateUpdateSafety({ workspaceReadable: false, liveSessionStatuses: [], recovery: 'unresolved', receiptAmbiguous: true, activeRedrawRecovery: true, presentationStages: [], audience: 'ambiguous' })
+    if (services.checkStorage === undefined) await services.open()
+    const activeEventId = await services.preferences.get('activeEventId')
+    if (activeEventId === null) return evaluateUpdateSafety({ workspaceReadable: true, liveSessionStatuses: [], recovery: 'normal', receiptAmbiguous: false, activeRedrawRecovery: false, presentationStages: [], audience: 'disconnected' })
+    const event = await services.events.findById(activeEventId)
+    if (event === null) return evaluateUpdateSafety({ workspaceReadable: false, liveSessionStatuses: [], recovery: 'unresolved', receiptAmbiguous: true, activeRedrawRecovery: true, presentationStages: [], audience: 'ambiguous' })
+    const [sessions, winners, displayConfiguration] = await Promise.all([
+      services.sessions.findByEventId(event.id),
+      services.winners.findByEventId(event.id),
+      services.displayConfigurations?.findByEventId(event.id) ?? Promise.resolve(null),
+    ])
+    const liveSessions = sessions.filter((session) => session.mode === 'live')
+    const records = await Promise.all(liveSessions.map(async (session) => {
+      const [redraws, receipts, checkpoint, activeRedrawRequest] = await Promise.all([
+        services.redraws?.findByDrawSessionId(session.id) ?? Promise.resolve([]),
+        services.pendingDecisions?.receipts.findBySession(session.id) ?? Promise.resolve([]),
+        services.presentationCheckpoints?.findByDrawSessionId(session.id) ?? Promise.resolve(null),
+        services.redrawRequests?.findActiveByDrawSessionId(session.id) ?? Promise.resolve(null),
+      ])
+      return { session, redraws, receipts, checkpoint, activeRedrawRequest }
+    }))
+    const recovery = evaluateStartupRecovery({
+      activeEvent: event,
+      sessions,
+      winners,
+      redraws: records.flatMap((record) => record.redraws),
+      receipts: records.flatMap((record) => record.receipts),
+      redrawRequests: records.flatMap((record) => record.activeRedrawRequest === null ? [] : [record.activeRedrawRequest]),
+      checkpoint: records.find((record) => record.checkpoint !== null)?.checkpoint ?? null,
+    })
+    const audience = displayConfiguration === null
+      ? 'disconnected' as const
+      : publisherRef.current === null || publisherScopeRef.current !== `${event.id}:${displayConfiguration.id}`
+        ? 'ambiguous' as const
+        : publisherRef.current.getDiagnostics().activeAudienceSubscriberCount > 0 ? 'connected' as const : 'disconnected' as const
+    return evaluateUpdateSafety({
+      workspaceReadable: true,
+      liveSessionStatuses: liveSessions.map((session) => session.status),
+      recovery: recovery.kind === 'conflicting-sessions' ? 'conflicting-sessions' : recovery.kind === 'recover-session' ? 'unresolved' : 'normal',
+      receiptAmbiguous: records.some((record) => record.receipts.some((receipt) => receipt.status === 'started' || receipt.status === 'unknown')),
+      activeRedrawRecovery: records.some((record) => record.activeRedrawRequest !== null),
+      presentationStages: records.flatMap((record) => record.checkpoint === null ? [] : [record.checkpoint.stage]),
+      audience,
+    })
+  }, [services])
+
+  useEffect(() => registerUpdateSafetyAuthority(readUpdateSafety), [readUpdateSafety])
 
   useEffect(() => {
     void refresh()

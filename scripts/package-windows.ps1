@@ -28,6 +28,8 @@ if (Test-Path -LiteralPath $output) { throw "Refusing to overwrite existing arti
 New-Item -ItemType Directory -Path $output | Out-Null
 & dotnet publish packaging/launcher/Kocokan.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false "-p:Version=$productVersion" "-p:FileVersion=$productVersion.0" "-p:AssemblyVersion=$productVersion.0" -o $output
 if ($LASTEXITCODE -ne 0) { throw 'Launcher publish failed.' }
+& dotnet publish packaging/updater/Kocokan.Updater.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true "-p:Version=$productVersion" "-p:FileVersion=$productVersion.0" "-p:AssemblyVersion=$productVersion.0" -o $output
+if ($LASTEXITCODE -ne 0) { throw 'Updater publish failed.' }
 foreach ($directory in @('runtime', 'server', 'web', 'notices')) { New-Item -ItemType Directory -Path (Join-Path $output $directory) | Out-Null }
 Copy-Item -LiteralPath (Join-Path $cache "node-v$nodeVersion-win-x64\node.exe") -Destination (Join-Path $output 'runtime\node.exe')
 Copy-Item -LiteralPath 'dist-runtime\kocokan-server.cjs' -Destination (Join-Path $output 'server')

@@ -30,6 +30,7 @@ export type DrawCommandFailureCode =
   | 'eligibility-failed'
   | 'candidate-pool-failed'
   | 'selection-failed'
+  | 'update-in-progress'
   | 'persistence-failed'
 
 export interface DrawCommandFailure {

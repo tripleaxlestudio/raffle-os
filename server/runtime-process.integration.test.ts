@@ -10,6 +10,7 @@ import { WebSocket } from 'ws'
 import { createProtocolEnvelope } from '../src/application/display-transport/protocol.ts'
 import { encodeDisplayWireEnvelope } from '../src/application/display-transport/wire-codec.ts'
 import { PILOT_ORIGIN } from './local-server.ts'
+import { UPDATE_CAPABILITY_ENVIRONMENT_VARIABLE, UPDATE_TOKEN_ENVIRONMENT_VARIABLE } from './update/runtime-capability.ts'
 
 let fixture: string
 let bundle: string
@@ -25,11 +26,15 @@ beforeAll(async () => {
   bundle = join(fixture, 'runtime/kocokan-server.cjs')
 }, 20_000)
 
-function launch(args: string[] = ['--web-root', webRoot]): { child: ChildProcess; ready: Promise<void>; exited: Promise<number | null>; stderr: () => string } {
+function launch(args: string[] = ['--web-root', webRoot], updateEnvironment: Record<string, string> = {}): { child: ChildProcess; ready: Promise<void>; exited: Promise<number | null>; stderr: () => string } {
   // Run the emitted bundle outside the repo, without node_modules or Vite at
   // runtime. process.execPath is the development machine's Node, not yet a
   // distributed Windows binary.
-  const child = fork(bundle, args, { cwd: fixture, execArgv: [], stdio: [args.includes('--launcher-stdio') ? 'pipe' : 'ignore', 'pipe', 'pipe', 'ipc'] })
+  const environment = { ...process.env }
+  delete environment[UPDATE_CAPABILITY_ENVIRONMENT_VARIABLE]
+  delete environment[UPDATE_TOKEN_ENVIRONMENT_VARIABLE]
+  Object.assign(environment, updateEnvironment)
+  const child = fork(bundle, args, { cwd: fixture, env: environment, execArgv: [], stdio: [args.includes('--launcher-stdio') ? 'pipe' : 'ignore', 'pipe', 'pipe', 'ipc'] })
   children.add(child)
   let errorOutput = ''
   child.stderr?.on('data', (chunk: Buffer) => { errorOutput += chunk.toString() })
@@ -63,6 +68,46 @@ afterAll(async () => {
 })
 
 describe('built production runtime process', () => {
+  it('fails closed without valid launcher metadata and activates installed bootstrap only with valid private metadata', async () => {
+    const portable = launch()
+    await portable.ready
+    expect(await (await fetch(`${PILOT_ORIGIN}/api/update/capabilities`)).json()).toMatchObject({ environment: 'portable', prepareSupported: false, installSupported: false })
+    portable.child.send({ type: 'shutdown' })
+    expect(await portable.exited).toBe(0)
+
+    const invalid = launch(undefined, { [UPDATE_CAPABILITY_ENVIRONMENT_VARIABLE]: 'installed', [UPDATE_TOKEN_ENVIRONMENT_VARIABLE]: 'invalid' })
+    await invalid.ready
+    expect(await (await fetch(`${PILOT_ORIGIN}/api/update/capabilities`)).json()).toMatchObject({ environment: 'portable', prepareSupported: false })
+    invalid.child.send({ type: 'shutdown' })
+    expect(await invalid.exited).toBe(0)
+
+    const mutationToken = 'b'.repeat(43)
+    const installed = launch(undefined, {
+      [UPDATE_CAPABILITY_ENVIRONMENT_VARIABLE]: 'installed',
+      [UPDATE_TOKEN_ENVIRONMENT_VARIABLE]: mutationToken,
+      LOCALAPPDATA: fixture,
+    })
+    await installed.ready
+    const capabilities = await (await fetch(`${PILOT_ORIGIN}/api/update/capabilities`)).json()
+    expect(capabilities).toEqual({ environment: 'installed', currentVersion: '0.1.0', prepareSupported: true, installSupported: false })
+    expect(JSON.stringify(capabilities)).not.toContain(mutationToken)
+    const bootstrap = await fetch(`${PILOT_ORIGIN}/api/update/bootstrap`, { method: 'POST', headers: { Origin: PILOT_ORIGIN } })
+    expect(bootstrap.headers.get('cache-control')).toBe('no-store')
+    expect(await bootstrap.json()).toEqual({ mutationToken })
+    installed.child.send({ type: 'shutdown' })
+    expect(await installed.exited).toBe(0)
+
+    const installedLauncher = launch(['--web-root', webRoot, '--launcher-stdio'], {
+      [UPDATE_CAPABILITY_ENVIRONMENT_VARIABLE]: 'installed',
+      [UPDATE_TOKEN_ENVIRONMENT_VARIABLE]: mutationToken,
+      LOCALAPPDATA: fixture,
+    })
+    await installedLauncher.ready
+    expect(await (await fetch(`${PILOT_ORIGIN}/api/update/capabilities`)).json()).toMatchObject({ environment: 'installed', prepareSupported: true, installSupported: true })
+    installedLauncher.child.stdin?.end('shutdown\n')
+    expect(await installedLauncher.exited).toBe(0)
+  }, 15_000)
+
   it('shuts down through the launcher stdin pipe and on parent pipe EOF', async () => {
     for (const command of ['shutdown\n', '']) {
       const runtime = launch(['--web-root', webRoot, '--launcher-stdio'])

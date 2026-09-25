@@ -2,6 +2,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import type { Socket } from 'node:net'
 import { attachDisplayRealtimeHub } from './display-realtime-hub.ts'
 import { loadProductionAssets, type ProductionAsset } from './production-assets.ts'
+import { createUpdateApi, type UpdateApiOptions, type UpdateCapability, type UpdatePreparationServices } from './update/update-api.ts'
+import type { UpdateInstallResult } from './update/update-result.ts'
 
 export const PILOT_HOST = '127.0.0.1'
 export const PILOT_PORT = 47882
@@ -20,6 +22,13 @@ type LocalServerOptions = Readonly<{
   // host/port override and never searches for an available port.
   testPort?: number
   shutdownTimeoutMs?: number
+  update?: Readonly<{
+    capability?: UpdateCapability
+    mutationToken?: string
+    services?: UpdatePreparationServices
+    requestInstall?: (version: string) => void
+    lastInstallResult?: UpdateInstallResult
+  }>
 }>
 
 function end(response: ServerResponse, status: number, message: string): void {
@@ -55,6 +64,16 @@ export async function startLocalServer(options: LocalServerOptions): Promise<Loc
   let closing: Promise<void> | undefined
   const sockets = new Set<Socket>()
   const timeout = options.shutdownTimeoutMs ?? 1500
+  const updateOptions: UpdateApiOptions = {
+    currentVersion: options.version,
+    capability: options.update?.capability ?? 'portable',
+    canonicalOrigin: () => `http://${authority}`,
+    ...(options.update?.mutationToken === undefined ? {} : { mutationToken: options.update.mutationToken }),
+    ...(options.update?.services === undefined ? {} : { services: options.update.services }),
+    ...(options.update?.requestInstall === undefined ? {} : { requestInstall: options.update.requestInstall }),
+    ...(options.update?.lastInstallResult === undefined ? {} : { lastInstallResult: options.update.lastInstallResult }),
+  }
+  const updateApi = createUpdateApi(updateOptions)
   const server = createServer((request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff')
     response.setHeader('Referrer-Policy', 'no-referrer')
@@ -65,6 +84,7 @@ export async function startLocalServer(options: LocalServerOptions): Promise<Loc
     const path = requestPath(request)
     if (path === undefined) { end(response, 400, 'Invalid request path.'); return }
     hub.middleware(request, response, () => {
+      if (updateApi.isPath(path)) { void updateApi.handle(request, response, path); return }
       if (request.method !== 'GET' && request.method !== 'HEAD') { response.setHeader('Allow', 'GET, HEAD'); end(response, 405, 'Method not allowed.'); return }
       if (path === '/health') {
         response.setHeader('Content-Type', 'application/json; charset=utf-8')
@@ -73,7 +93,7 @@ export async function startLocalServer(options: LocalServerOptions): Promise<Loc
       }
       const asset = assets.get(path)
       if (asset !== undefined) { sendAsset(request, response, asset); return }
-      const reserved = /^\/(?:assets|display-assets|ws|health)(?:\/|$)/.test(path)
+      const reserved = /^\/(?:api|assets|display-assets|ws|health)(?:\/|$)/.test(path)
       const acceptsHtml = /(?:text\/html|\*\/\*)/.test(request.headers.accept ?? '*/*')
       if (!reserved && !path.includes('.') && acceptsHtml) { sendAsset(request, response, index); return }
       end(response, 404, 'Not found.')

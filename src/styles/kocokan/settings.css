@@ -197,6 +197,24 @@
   max-width: 580px;
 }
 
+.kc-settings-update-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--kc-text);
+  font-weight: 650;
+}
+
+.kc-settings-update-status progress {
+  width: min(360px, 100%);
+  accent-color: var(--kc-primary);
+}
+
+.kc-settings-update-error {
+  color: var(--kc-danger);
+  font-weight: 650;
+}
+
 .kc-settings-row__action {
   display: flex;
   align-items: center;

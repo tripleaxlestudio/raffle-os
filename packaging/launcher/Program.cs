@@ -30,6 +30,11 @@ internal sealed partial class LauncherForm : Form
         InitializeLayout();
         runtime.Changed += () => DiagnosticLog.Write("runtime-state=" + runtime.State);
         runtime.Changed += RefreshState;
+        runtime.InstallExitReady += () =>
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            BeginInvoke(() => { canClose = true; Close(); });
+        };
         Shown += async (_, _) => await runtime.StartAsync();
         retry.Click += async (_, _) => await runtime.StartAsync();
         hide.Click += (_, _) => WindowState = FormWindowState.Minimized;

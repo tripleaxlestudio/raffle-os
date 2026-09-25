@@ -14,24 +14,32 @@ internal sealed class RuntimeController : IDisposable
     private readonly string root;
     private readonly TimeSpan startupTimeout;
     private readonly TimeSpan stopTimeout;
+    private readonly Func<UpdateRuntimeBootstrap> updateBootstrapFactory;
+    private readonly IUpdaterSpawner updaterSpawner;
+    private readonly string localAppData;
     private readonly HttpClient http = new(new HttpClientHandler { UseProxy = false }) { Timeout = TimeSpan.FromMilliseconds(700) };
     private Process? child;
     private ChildJob? job;
     private CancellationTokenSource? starting;
     private Task? startTask;
     private bool stopping;
+    private int installAccepted;
     private string errorOutput = "";
     public RuntimeState State { get; private set; } = RuntimeState.Starting;
     public string Message { get; private set; } = "";
     public int? ChildId => child is { HasExited: false } ? child.Id : null;
     public bool ForcedLastStop { get; private set; }
     public event Action? Changed;
+    public event Action? InstallExitReady;
 
-    public RuntimeController(string root, TimeSpan? startupTimeout = null, TimeSpan? stopTimeout = null)
+    public RuntimeController(string root, TimeSpan? startupTimeout = null, TimeSpan? stopTimeout = null, Func<UpdateRuntimeBootstrap>? updateBootstrapFactory = null, IUpdaterSpawner? updaterSpawner = null, string? localAppData = null)
     {
         this.root = root;
         this.startupTimeout = startupTimeout ?? TimeSpan.FromSeconds(20);
         this.stopTimeout = stopTimeout ?? TimeSpan.FromSeconds(5);
+        this.updateBootstrapFactory = updateBootstrapFactory ?? (() => UpdateRuntimeBootstrap.Create(InstalledModeDetector.CreateForCurrentProcess(root)));
+        this.updaterSpawner = updaterSpawner ?? new UpdaterSpawner();
+        this.localAppData = localAppData ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
     }
     private void Set(RuntimeState state, string message)
     { State = state; Message = message; Changed?.Invoke(); }
@@ -70,6 +78,8 @@ internal sealed class RuntimeController : IDisposable
             // A packaged runtime must not inherit developer injection/module paths.
             info.Environment.Remove("NODE_OPTIONS");
             info.Environment.Remove("NODE_PATH");
+            var updateBootstrap = updateBootstrapFactory();
+            updateBootstrap.ApplyTo(info);
             info.ArgumentList.Add(Path.Combine(root, "server", "kocokan-server.cjs"));
             info.ArgumentList.Add("--web-root");
             info.ArgumentList.Add(Path.Combine(root, "web"));
@@ -87,6 +97,8 @@ internal sealed class RuntimeController : IDisposable
                     var value = data.RootElement;
                     if (value.GetProperty("type").GetString() == "ready" && value.GetProperty("version").GetString() == expected && value.GetProperty("origin").GetString() == Origin)
                         ready.TrySetResult();
+                    else if (UpdateInstallProtocol.TryParse(args.Data, out var installRequest) && installRequest != null)
+                        _ = HandleInstallRequestAsync(installRequest, updateBootstrap.Capability);
                 }
                 catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException) { }
             };
@@ -127,6 +139,47 @@ internal sealed class RuntimeController : IDisposable
             await CleanupAsync();
             if (!stopping) Set(RuntimeState.Error, ex is OperationCanceledException ? "Startup timeout. Server belum siap; periksa paket lalu Retry." : ex.Message);
         }
+    }
+    private async Task HandleInstallRequestAsync(UpdateInstallRequest request, UpdateRuntimeCapability capability)
+    {
+        if (capability != UpdateRuntimeCapability.Installed || State != RuntimeState.Running || Interlocked.CompareExchange(ref installAccepted, 1, 0) != 0) return;
+        IUpdaterProcess? updater = null;
+        try
+        {
+            var paths = PreparedUpdatePathResolver.Resolve(localAppData, request.Version);
+            var updaterSource = Path.Combine(root, "Kocokan.Updater.exe");
+            if (!File.Exists(paths.Installer) || !File.Exists(updaterSource)) throw new FileNotFoundException("Paket pembaruan belum siap.");
+            Directory.CreateDirectory(paths.Directory);
+            File.Copy(updaterSource, paths.StagedUpdater, overwrite: true);
+            updater = updaterSpawner.Start(paths.StagedUpdater, Environment.ProcessId, request.Version, root);
+            stopping = true;
+            Set(RuntimeState.Stopping, "Menutup server sebelum memasang pembaruan…");
+            await CleanupAsync();
+            if (ForcedLastStop || !PortAvailable())
+            {
+                updater.Kill();
+                updater.Dispose();
+                updater = null;
+                await RestartAfterAbortedInstallAsync("Pembaruan dibatalkan karena server tidak berhenti secara normal.");
+                return;
+            }
+            InstallExitReady?.Invoke();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            updater?.Kill();
+            await RestartAfterAbortedInstallAsync("Pembaruan tidak dapat dimulai. " + ex.Message);
+        }
+        finally { updater?.Dispose(); }
+    }
+    private async Task RestartAfterAbortedInstallAsync(string message)
+    {
+        stopping = true;
+        await CleanupAsync();
+        stopping = false;
+        Volatile.Write(ref installAccepted, 0);
+        await StartAsync();
+        if (State == RuntimeState.Running) Set(RuntimeState.Running, message + " Server lokal dipulihkan.");
     }
     private async Task WatchExitAsync(Process process)
     {

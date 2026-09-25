@@ -9,6 +9,7 @@ import { evaluateEligibility } from '../eligibility/eligibility-evaluator.ts'
 import { selectWinners } from './winner-selection.ts'
 import { drawCommandFailure, type DrawCommandFailure } from './draw-command-errors.ts'
 import type { DrawCommandDependencies, DrawCommandExecution, DrawCommandInput, DrawCommandResult } from './draw-command.types.ts'
+import { productionUpdateLock } from '../update/update-lock.ts'
 
 const PARTICIPANT_PAGE_SIZE = 1000
 
@@ -90,6 +91,11 @@ export async function executeDraw(
   input: DrawCommandInput,
   dependencies: DrawCommandDependencies,
 ): Promise<DrawCommandExecution> {
+  try {
+    productionUpdateLock.assertDrawOperationAllowed()
+  } catch (cause: unknown) {
+    return failure('validation', 'update-in-progress', 'Aplikasi sedang menyiapkan pembaruan. Undian baru tidak dapat dimulai.', cause)
+  }
   let now: import('../../domain/shared/timestamps.ts').IsoTimestamp
   try {
     now = dependencies.now()

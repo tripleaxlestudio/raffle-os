@@ -20,8 +20,9 @@ import { executeDraw } from './draw-command.ts'
 import type { DrawCommandDependencies } from './draw-command.types.ts'
 import { RaffleOSDatabase } from '../../infrastructure/persistence/db.ts'
 import { DexieDrawAuthoringUnitOfWork } from '../../infrastructure/persistence/transactions/dexie-draw-authoring-unit-of-work.ts'
+import { productionUpdateLock } from '../update/update-lock.ts'
 
-afterEach(cleanupTestDatabases)
+afterEach(async () => { productionUpdateLock.release(); await cleanupTestDatabases() })
 
 function source(): RandomSource {
   return { nextUint32: () => 0 }
@@ -54,6 +55,17 @@ function input(fixture: ReturnType<typeof makeDrawHistoryFixture>, mode: 'live' 
 }
 
 describe('executeDraw', () => {
+  it('blocks a new draw through the shared application guard while update preparation is active', async () => {
+    const database = await openTestDatabase('command-update-lock')
+    const fixture = makeDrawHistoryFixture(['00001', '00002'])
+    await seedReadyFixture(database, fixture)
+    await productionUpdateLock.acquire(async () => true)
+
+    const result = await executeDraw(input(fixture), dependencies(database))
+
+    expect(result).toMatchObject({ ok: false, error: { code: 'update-in-progress' } })
+    expect((await database.draw_sessions.get(fixture.session.id))?.status).toBe('ready')
+  })
   it('does not select winners when the Live storage preflight is unsafe', async () => {
     const database = await openTestDatabase('command-storage-preflight-failure')
     const fixture = makeDrawHistoryFixture(['00001', '00002'])

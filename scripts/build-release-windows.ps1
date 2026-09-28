@@ -45,6 +45,7 @@ if ($Zip) {
     Compress-Archive -LiteralPath $portable -DestinationPath $zipPath
     $checksumFiles += $zipPath
 }
+$releaseFlowArrow = [char]0x2192
 @"
 Kocokan v$version
 
@@ -52,7 +53,7 @@ Changes:
 
 - Sidebar footer now displays the current Kocokan version dynamically.
 
-This release is also used to validate the v0.1.1 → v0.1.2 auto-update flow.
+This release is also used to validate the v0.1.1 $releaseFlowArrow v0.1.2 auto-update flow.
 "@ | Set-Content -LiteralPath (Join-Path $release 'RELEASE-NOTES.txt') -Encoding utf8
 $checksumFiles | ForEach-Object {
     (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + $_.Substring($release.Length + 1).Replace('\', '/')

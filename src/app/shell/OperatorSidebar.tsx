@@ -6,6 +6,7 @@ import { PRODUCTION_SETUP_JOURNEY } from '../../shared/components/production-set
 import { Icon, type IconName } from '../../shared/ui/index.ts'
 import { productionSetupStageIndexForRoute, type ProductionSetupReadiness } from '../workspace/production-setup-readiness.ts'
 import { ReportIssueModal } from '../../pages/operator/ReportIssueModal.tsx'
+import { KOCOKAN_APP_VERSION } from '../../config/app-version.ts'
 
 const prototypeNavigationItems = [
   { label: 'Dashboard', marker: 'DB', to: '/dashboard' },
@@ -140,7 +141,7 @@ function OperatorSidebarContent({
         <span className={shellClass("operator-sidebar__footer-label")}>
           {production ? 'KOCOKAN' : 'Static prototype'}
         </span>
-        <span>{production ? 'Versi pengembangan' : 'Phase 2 Prototype'}</span>
+        <span>{production ? `Versi ${KOCOKAN_APP_VERSION}` : 'Phase 2 Prototype'}</span>
       </div>
       {production ? <ReportIssueModal onClose={() => setReportIssueOpen(false)} open={reportIssueOpen} /> : null}
     </aside>

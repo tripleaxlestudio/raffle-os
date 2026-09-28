@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { KOCOKAN_APP_VERSION } from '../../config/app-version.ts'
 import { OperatorSidebar } from './OperatorSidebar.tsx'
 
 const workspace = vi.hoisted(() => ({ status: 'empty' as 'empty' | 'invalid-reference' | 'loading' | 'ready' }))
@@ -96,7 +97,8 @@ describe('production sidebar Event gating', () => {
     expect(support).toHaveAttribute('aria-expanded', 'false')
     expect(within(utilities).queryByRole('button', { name: 'Laporkan Masalah' })).not.toBeInTheDocument()
     expect(screen.getByText('KOCOKAN', { selector: '.kc-operator-sidebar__footer-label' })).toBeInTheDocument()
-    expect(screen.getByText('Versi pengembangan')).toBeInTheDocument()
+    expect(screen.getByText(`Versi ${KOCOKAN_APP_VERSION}`)).toBeInTheDocument()
+    expect(screen.queryByText('Versi pengembangan')).not.toBeInTheDocument()
   })
 
   it('treats a stale Event reference as unavailable', () => {

@@ -198,12 +198,12 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
 
   const readUpdateSafety = useCallback(async () => {
     const storage = services.checkStorage === undefined ? null : await services.checkStorage()
-    if (storage !== null && !storage.ok) return evaluateUpdateSafety({ workspaceReadable: false, liveSessionStatuses: [], recovery: 'unresolved', receiptAmbiguous: true, activeRedrawRecovery: true, presentationStages: [], audience: 'ambiguous' })
+    if (storage !== null && !storage.ok) return evaluateUpdateSafety({ workspaceReadable: false, liveSessionStatuses: [], recovery: 'unresolved', receiptAmbiguous: true, activeRedrawRecovery: true, presentationCheckpoints: [], audience: 'ambiguous' })
     if (services.checkStorage === undefined) await services.open()
     const activeEventId = await services.preferences.get('activeEventId')
-    if (activeEventId === null) return evaluateUpdateSafety({ workspaceReadable: true, liveSessionStatuses: [], recovery: 'normal', receiptAmbiguous: false, activeRedrawRecovery: false, presentationStages: [], audience: 'disconnected' })
+    if (activeEventId === null) return evaluateUpdateSafety({ workspaceReadable: true, liveSessionStatuses: [], recovery: 'normal', receiptAmbiguous: false, activeRedrawRecovery: false, presentationCheckpoints: [], audience: 'disconnected' })
     const event = await services.events.findById(activeEventId)
-    if (event === null) return evaluateUpdateSafety({ workspaceReadable: false, liveSessionStatuses: [], recovery: 'unresolved', receiptAmbiguous: true, activeRedrawRecovery: true, presentationStages: [], audience: 'ambiguous' })
+    if (event === null) return evaluateUpdateSafety({ workspaceReadable: false, liveSessionStatuses: [], recovery: 'unresolved', receiptAmbiguous: true, activeRedrawRecovery: true, presentationCheckpoints: [], audience: 'ambiguous' })
     const [sessions, winners, displayConfiguration] = await Promise.all([
       services.sessions.findByEventId(event.id),
       services.winners.findByEventId(event.id),
@@ -239,7 +239,7 @@ export function ProductionWorkspaceProvider({ children }: { readonly children: R
       recovery: recovery.kind === 'conflicting-sessions' ? 'conflicting-sessions' : recovery.kind === 'recover-session' ? 'unresolved' : 'normal',
       receiptAmbiguous: records.some((record) => record.receipts.some((receipt) => receipt.status === 'started' || receipt.status === 'unknown')),
       activeRedrawRecovery: records.some((record) => record.activeRedrawRequest !== null),
-      presentationStages: records.flatMap((record) => record.checkpoint === null ? [] : [record.checkpoint.stage]),
+      presentationCheckpoints: records.flatMap((record) => record.checkpoint === null ? [] : [{ sessionStatus: record.session.status, stage: record.checkpoint.stage }]),
       audience,
     })
   }, [services])

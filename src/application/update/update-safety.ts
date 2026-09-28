@@ -22,7 +22,10 @@ export interface UpdateSafetySnapshot {
   readonly recovery: 'normal' | 'unresolved' | 'conflicting-sessions'
   readonly receiptAmbiguous: boolean
   readonly activeRedrawRecovery: boolean
-  readonly presentationStages: readonly PresentationStage[]
+  readonly presentationCheckpoints: readonly {
+    readonly sessionStatus: DrawSession['status']
+    readonly stage: PresentationStage
+  }[]
   readonly audience: 'connected' | 'disconnected' | 'ambiguous'
 }
 
@@ -39,7 +42,8 @@ export function evaluateUpdateSafety(snapshot: UpdateSafetySnapshot): UpdateSafe
   if (snapshot.liveSessionStatuses.some((status) => status === 'drawing' || status === 'pending-confirmation')) {
     return { safe: false, reason: 'draw-active' }
   }
-  if (snapshot.presentationStages.some((stage) => ACTIVE_PRESENTATION.has(stage))) {
+  if (snapshot.presentationCheckpoints.some(({ sessionStatus, stage }) =>
+    (sessionStatus === 'drawing' || sessionStatus === 'pending-confirmation') && ACTIVE_PRESENTATION.has(stage))) {
     return { safe: false, reason: 'presentation-active' }
   }
   if (snapshot.audience === 'ambiguous') return { safe: false, reason: 'audience-ambiguous' }

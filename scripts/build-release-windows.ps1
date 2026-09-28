@@ -51,9 +51,10 @@ Kocokan v$version
 
 Changes:
 
-- Sidebar footer now displays the current Kocokan version dynamically.
+- Fixed auto-update safety detection for completed and cancelled draw sessions with stale presentation checkpoints.
+- Completed/cancelled sessions no longer incorrectly block application updates.
 
-This release is also used to validate the v0.1.1 $releaseFlowArrow v0.1.2 auto-update flow.
+This release is used to validate the v0.1.2 $releaseFlowArrow v0.1.3 auto-update flow.
 "@ | Set-Content -LiteralPath (Join-Path $release 'RELEASE-NOTES.txt') -Encoding utf8
 $checksumFiles | ForEach-Object {
     (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + $_.Substring($release.Length + 1).Replace('\', '/')

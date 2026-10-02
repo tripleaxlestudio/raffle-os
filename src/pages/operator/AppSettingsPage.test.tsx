@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { RaffleOSDatabase } from '../../infrastructure/persistence/db.ts'
 import { AppSettingsPage } from './AppSettingsPage.tsx'
+import { KOCOKAN_APP_VERSION } from '../../config/app-version.ts'
 
 let testDb: RaffleOSDatabase
 
@@ -200,10 +201,10 @@ describe('AppSettingsPage prototype & production storage', () => {
     await user.click(screen.getByRole('tab', { name: /Tentang/i }))
 
     expect(screen.getByRole('heading', { name: 'KOCOKAN' })).toBeInTheDocument()
-    expect(screen.getByText('Kontrol Undian untuk Event')).toBeInTheDocument()
-    expect(screen.getByText('by Tripleaxle')).toBeInTheDocument()
+    expect(screen.getByText('Sistem undian lokal untuk kebutuhan acara')).toBeInTheDocument()
+    expect(screen.getByText('Dikembangkan oleh Tripleaxle')).toBeInTheDocument()
 
-    expect(screen.getByText('0.1.0')).toBeInTheDocument()
+    expect(screen.getByText(KOCOKAN_APP_VERSION)).toBeInTheDocument()
     expect(screen.getAllByText('Development')).toHaveLength(2)
 
     expect(screen.getByText('Yang Baru')).toBeInTheDocument()

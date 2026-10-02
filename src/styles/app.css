@@ -13,6 +13,7 @@
 @import "./kocokan/log.css";
 @import "./kocokan/settings.css";
 @import "./kocokan/feedback.css";
+@import "./kocokan/help.css";
 @import "./kocokan/display-designer.css";
 
 @layer base {

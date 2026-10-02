@@ -56,51 +56,35 @@ describe('production sidebar Event gating', () => {
     expect(labels.slice(-3)).toEqual(['Riwayat', 'Log', 'Settings'])
   })
 
-  it('shows secondary placeholder utilities without creating navigation', async () => {
+  it('navigates help without an event and preserves support disclosure and reporting', async () => {
     const user = userEvent.setup()
-    workspace.status = 'ready'
-    renderSidebar('/dashboard')
-
+    renderSidebar()
     const utilities = screen.getByRole('navigation', { name: 'Bantuan dan informasi' })
-    for (const label of ['Yang Baru', 'Panduan Pengguna']) {
-      const utility = within(utilities).getByRole('button', { name: label })
-      expect(utility).toHaveAttribute('title', `${label} belum tersedia`)
-      await user.click(utility)
-      expect(screen.getByTestId('location')).toHaveTextContent('/dashboard')
+    for (const [label, target] of [['Yang Baru', '/help/whats-new'], ['Panduan Pengguna', '/help/guide']]) {
+      const link = within(utilities).getByRole('link', { name: label })
+      expect(link).toHaveAttribute('href', target)
+      await user.click(link)
+      expect(screen.getByTestId('location')).toHaveTextContent(target)
     }
-
     const support = within(utilities).getByRole('button', { name: 'Dukungan' })
     expect(support).toHaveAttribute('aria-expanded', 'false')
-    expect(within(utilities).queryByRole('button', { name: 'Laporkan Masalah' })).not.toBeInTheDocument()
-
-    await user.click(support)
-
+    support.focus()
+    await user.keyboard('{Enter}')
     expect(support).toHaveAttribute('aria-expanded', 'true')
-    const workspaceBeforeReport = { ...workspace }
-    const reportIssue = within(utilities).getByRole('button', { name: 'Laporkan Masalah' })
-    expect(reportIssue).not.toHaveAttribute('title')
-    await user.click(reportIssue)
-    expect(screen.getByRole('dialog', { name: 'Laporkan Masalah' })).toBeInTheDocument()
-    expect(screen.getByTestId('location')).toHaveTextContent('/dashboard')
-    expect(workspace).toEqual(workspaceBeforeReport)
+    const submenu = document.getElementById('operator-sidebar-support-menu')!
+    expect(within(submenu).getByRole('link', { name: 'Panduan Pengguna' })).toHaveAttribute('href', '/help/guide')
+    expect(within(submenu).getByRole('link', { name: 'Tentang Kocokan' })).toHaveAttribute('href', '/settings/app?tab=about')
+    expect(screen.queryByText('Dokumentasi')).not.toBeInTheDocument()
+    await user.click(within(submenu).getByRole('button', { name: 'Laporkan Masalah' }))
+    expect(screen.getByRole('dialog', { name: 'Laporkan Masalah' })).toBeVisible()
+    expect(workspace.status).toBe('empty')
     await user.click(screen.getByRole('button', { name: 'Batal' }))
-    expect(screen.queryByRole('dialog', { name: 'Laporkan Masalah' })).not.toBeInTheDocument()
-
-    for (const label of ['Dokumentasi', 'Tentang Kocokan']) {
-      const submenuItem = within(utilities).getByRole('button', { name: label })
-      expect(submenuItem).toHaveAttribute('title', `${label} belum tersedia`)
-      await user.click(submenuItem)
-      expect(screen.getByTestId('location')).toHaveTextContent('/dashboard')
-    }
-
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     await user.click(support)
     expect(support).toHaveAttribute('aria-expanded', 'false')
-    expect(within(utilities).queryByRole('button', { name: 'Laporkan Masalah' })).not.toBeInTheDocument()
-    expect(screen.getByText('KOCOKAN', { selector: '.kc-operator-sidebar__footer-label' })).toBeInTheDocument()
+    expect(within(submenu).queryByRole('link')).not.toBeInTheDocument()
     expect(screen.getByText(`Versi ${KOCOKAN_APP_VERSION}`)).toBeInTheDocument()
-    expect(screen.queryByText('Versi pengembangan')).not.toBeInTheDocument()
   })
-
   it('treats a stale Event reference as unavailable', () => {
     workspace.status = 'invalid-reference'
     renderSidebar()
@@ -123,7 +107,7 @@ describe('production sidebar Event gating', () => {
     workspace.status = 'loading'
     renderSidebar()
 
-    expect(screen.getAllByRole('link')).toHaveLength(10)
+    expect(within(screen.getByRole('navigation', { name: 'Navigasi Operator' })).getAllByRole('link')).toHaveLength(10)
     expect(screen.queryAllByText('Select an Event first')).toHaveLength(0)
   })
 

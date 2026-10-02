@@ -26,6 +26,7 @@ import { LogPage } from '../pages/operator/LogPage.tsx'
 import { AppSettingsPage } from '../pages/operator/AppSettingsPage.tsx'
 import { SettingsPage as PrototypeSettingsPage } from '../pages/operator/SettingsPage.tsx'
 import { NotFoundPage } from '../pages/system/NotFoundPage.tsx'
+import { HelpGuidePage, HelpLicensesPage, HelpSupportPage, HelpWhatsNewPage } from '../pages/operator/help/HelpPages.tsx'
 
 const operatorRoutes = {
   id: 'operator',
@@ -47,6 +48,10 @@ const operatorRoutes = {
     { path: 'settings', element: <ProductionDisplayDesignerPage /> },
     { path: 'log', element: <LogPage /> },
     { path: 'settings/app', element: <AppSettingsPage /> },
+    { path: 'help/whats-new', element: <HelpWhatsNewPage /> },
+    { path: 'help/guide', element: <HelpGuidePage /> },
+    { path: 'help/support', element: <HelpSupportPage /> },
+    { path: 'help/licenses', element: <HelpLicensesPage /> },
   ],
 } satisfies RouteObject
 

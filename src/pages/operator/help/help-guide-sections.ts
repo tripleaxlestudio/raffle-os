@@ -1,0 +1,15 @@
+export const GUIDE_SECTIONS = [
+  { id: 'alur-cepat-kocokan', title: 'Alur Cepat Kocokan' },
+  { id: 'checklist-sebelum-acara', title: 'Checklist Sebelum Acara' },
+  { id: 'mengenal-kocokan', title: 'Mengenal Kocokan' },
+  { id: 'persiapan-acara', title: 'Persiapan Acara dan Hadiah' },
+  { id: 'peserta-dan-impor-data', title: 'Peserta dan Impor Data' },
+  { id: 'pengaturan-undian', title: 'Pengaturan Undian' },
+  { id: 'tampilan-audiens-dan-persiapan-av', title: 'Tampilan Audiens dan Persiapan AV' },
+  { id: 'latihan-dan-live', title: 'Latihan dan Live' },
+  { id: 'menjalankan-undian', title: 'Menjalankan Undian' },
+  { id: 'hasil-konfirmasi-dan-undi-ulang', title: 'Hasil, Konfirmasi, dan Undi Ulang' },
+  { id: 'riwayat-dan-ekspor', title: 'Riwayat dan Ekspor' },
+  { id: 'penyimpanan-dan-pemulihan', title: 'Penyimpanan dan Pemulihan' },
+  { id: 'kendala-umum', title: 'Kendala Umum' },
+] as const

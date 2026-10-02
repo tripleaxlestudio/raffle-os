@@ -8,6 +8,7 @@ import { githubReleaseClient } from '../../../infrastructure/update/github-relea
 import { LocalUpdateClientError, localUpdateClient, type LocalUpdateClient, type NativeUpdateCapabilities, type NativeUpdateErrorCode, type NativeUpdateInstallResult, type NativeUpdateStatus } from '../../../infrastructure/update/local-update-client.ts'
 import {
   Button,
+  ButtonLink,
   Icon,
 } from '../../../shared/ui/index.ts'
 
@@ -190,8 +191,8 @@ export function AboutTab({
         </div>
         <div className="kc-settings-about-copy">
           <h2 className="kc-settings-about-title">KOCOKAN</h2>
-          <p className="kc-settings-about-subtitle">Kontrol Undian untuk Event</p>
-          <p className="kc-settings-about-author">by Tripleaxle</p>
+          <p className="kc-settings-about-subtitle">Sistem undian lokal untuk kebutuhan acara</p>
+          <p className="kc-settings-about-author">Dikembangkan oleh Tripleaxle</p>
         </div>
       </div>
 
@@ -232,14 +233,9 @@ export function AboutTab({
               </span>
             </div>
             <div className="kc-settings-row__action">
-              <Button
-                icon={<Icon name="Sparkles" size={16} />}
-                onClick={() => showTemporaryNotice('Simulasi membuka catatan rilis fitur.')}
-                type="button"
-                variant="secondary"
-              >
+              <ButtonLink icon={<Icon name="Sparkles" size={16} />} to="/help/whats-new" variant="secondary">
                 Buka
-              </Button>
+              </ButtonLink>
             </div>
           </div>
 
@@ -251,14 +247,9 @@ export function AboutTab({
               </span>
             </div>
             <div className="kc-settings-row__action">
-              <Button
-                icon={<Icon name="BookOpen" size={16} />}
-                onClick={() => showTemporaryNotice('Simulasi membuka manual panduan pengguna.')}
-                type="button"
-                variant="secondary"
-              >
+              <ButtonLink icon={<Icon name="BookOpen" size={16} />} to="/help/guide" variant="secondary">
                 Buka
-              </Button>
+              </ButtonLink>
             </div>
           </div>
 
@@ -270,14 +261,9 @@ export function AboutTab({
               </span>
             </div>
             <div className="kc-settings-row__action">
-              <Button
-                icon={<Icon name="LifeBuoy" size={16} />}
-                onClick={() => showTemporaryNotice('Simulasi membuka kanal dukungan teknis.')}
-                type="button"
-                variant="secondary"
-              >
+              <ButtonLink icon={<Icon name="LifeBuoy" size={16} />} to="/help/support" variant="secondary">
                 Buka
-              </Button>
+              </ButtonLink>
             </div>
           </div>
 
@@ -289,14 +275,9 @@ export function AboutTab({
               </span>
             </div>
             <div className="kc-settings-row__action">
-              <Button
-                icon={<Icon name="FileText" size={16} />}
-                onClick={() => showTemporaryNotice('Simulasi membuka rincian lisensi software.')}
-                type="button"
-                variant="secondary"
-              >
+              <ButtonLink icon={<Icon name="FileText" size={16} />} to="/help/licenses" variant="secondary">
                 Lihat
-              </Button>
+              </ButtonLink>
             </div>
           </div>
         </div>

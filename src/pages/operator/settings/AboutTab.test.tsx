@@ -8,6 +8,7 @@ import type { ExternalLinkOpenResult } from '../../../infrastructure/browser/ext
 import { LocalUpdateClient } from '../../../infrastructure/update/local-update-client.ts'
 import { UiThemeContext } from '../../../shared/ui/ui-theme.ts'
 import { AboutTab } from './AboutTab.tsx'
+import { MemoryRouter } from 'react-router'
 
 function stableRelease(version = '0.1.0'): StableRelease {
   return {
@@ -34,9 +35,9 @@ function renderAbout({
   readonly safetyAuthority?: UpdateSafetyAuthority
 } = {}) {
   return render(
-    <UiThemeContext.Provider value="kocokan">
+    <MemoryRouter><UiThemeContext.Provider value="kocokan">
       <AboutTab currentVersion="0.1.0" nativeClient={nativeUpdateClient} openLink={openLink} safetyAuthority={safetyAuthority} updateClient={updateClient} />
-    </UiThemeContext.Provider>,
+    </UiThemeContext.Provider></MemoryRouter>,
   )
 }
 

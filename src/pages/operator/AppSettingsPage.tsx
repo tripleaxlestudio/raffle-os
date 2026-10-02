@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { Icon } from '../../shared/ui/index.ts'
 import type { RaffleOSDatabase } from '../../infrastructure/persistence/db.ts'
 import { SETTINGS_TABS, type SettingsTabId } from './settings/settings-types.ts'
@@ -14,7 +14,15 @@ interface AppSettingsPageProps {
 }
 
 export function AppSettingsPage({ database }: AppSettingsPageProps = {}) {
-  const [activeTab, setActiveTab] = useState<SettingsTabId>('general')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab: SettingsTabId = SETTINGS_TABS.find((tab) => tab.id === searchParams.get('tab'))?.id ?? 'general'
+  function setActiveTab(tab: SettingsTabId) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      next.set('tab', tab)
+      return next
+    })
+  }
 
   return (
     <section aria-labelledby="app-settings-title" className="kc-settings-page">

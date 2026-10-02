@@ -32,11 +32,14 @@ const productionNavigationItems = [
 ] as const
 
 const productionUtilityItems = [
-  { label: 'Yang Baru', icon: 'Sparkles' },
-  { label: 'Panduan Pengguna', icon: 'BookOpen' },
-] as const satisfies readonly { readonly label: string; readonly icon: IconName }[]
+  { label: 'Yang Baru', icon: 'Sparkles', to: '/help/whats-new' },
+  { label: 'Panduan Pengguna', icon: 'BookOpen', to: '/help/guide' },
+] as const satisfies readonly { readonly label: string; readonly icon: IconName; readonly to: string }[]
 
-const productionSupportItems = ['Laporkan Masalah', 'Dokumentasi', 'Tentang Kocokan'] as const
+const productionSupportLinks = [
+  { label: 'Panduan Pengguna', to: '/help/guide' },
+  { label: 'Tentang Kocokan', to: '/settings/app?tab=about' },
+] as const
 
 type NavigationItem = {
   readonly label: string
@@ -107,10 +110,10 @@ function OperatorSidebarContent({
       {production ? <nav aria-label="Bantuan dan informasi" className={shellClass("operator-sidebar__utility")}>
         <ul className={shellClass("operator-sidebar__utility-list")}>
           {productionUtilityItems.map((item) => <li key={item.label}>
-            <button className={shellClass("operator-sidebar__utility-button")} title={`${item.label} belum tersedia`} type="button">
+            <NavLink className={shellClass("operator-sidebar__utility-button")} to={item.to}>
               <span className={shellClass("operator-sidebar__utility-icon")}><Icon name={item.icon} size={17} /></span>
               <span>{item.label}</span>
-            </button>
+            </NavLink>
           </li>)}
           <li>
             <button
@@ -124,16 +127,12 @@ function OperatorSidebarContent({
               <span>Dukungan</span>
               <span aria-hidden="true" className={shellClass("operator-sidebar__utility-chevron")}><Icon name="ChevronDown" size={15} /></span>
             </button>
-            {supportExpanded ? <ul className={shellClass("operator-sidebar__submenu")} id="operator-sidebar-support-menu">
-              {productionSupportItems.map((label) => <li key={label}>
-                <button
-                  className={shellClass("operator-sidebar__submenu-button")}
-                  onClick={label === 'Laporkan Masalah' ? () => setReportIssueOpen(true) : undefined}
-                  title={label === 'Laporkan Masalah' ? undefined : `${label} belum tersedia`}
-                  type="button"
-                >{label}</button>
+            <ul hidden={!supportExpanded} className={shellClass("operator-sidebar__submenu")} id="operator-sidebar-support-menu">
+              <li><button className={shellClass("operator-sidebar__submenu-button")} onClick={() => setReportIssueOpen(true)} type="button">Laporkan Masalah</button></li>
+              {productionSupportLinks.map((item) => <li key={item.to}>
+                <NavLink className={shellClass("operator-sidebar__submenu-button")} to={item.to}>{item.label}</NavLink>
               </li>)}
-            </ul> : null}
+            </ul>
           </li>
         </ul>
       </nav> : null}

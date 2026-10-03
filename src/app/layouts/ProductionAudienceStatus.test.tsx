@@ -177,6 +177,20 @@ describe('production header and dashboard Audience indicators', () => {
     expect(operations.getByText('Menunggu')).toBeVisible()
   })
 
+  it('opens the scoped Audience display from both dashboard buttons without a popup callback', async () => {
+    const user = userEvent.setup()
+    renderDashboard()
+    const operations = within(screen.getByRole('region', { name: 'Operasi Dasbor' }))
+    const buttons = operations.getAllByRole('button', { name: 'Buka Tampilan Audiens' })
+    expect(buttons).toHaveLength(2)
+
+    for (const [index, button] of buttons.entries()) {
+      await user.click(button)
+      expect(mocks.openAudience).toHaveBeenCalledTimes(index + 1)
+      expect(mocks.openAudience).toHaveBeenLastCalledWith('/display?eventId=ui-event&displayConfigurationId=ui-display')
+    }
+  })
+
   it('shows a setup state instead of fabricating an Audience preview when display configuration is missing', () => {
     mocks.workspace.displayConfiguration = null
     mocks.workspace.setupReadiness = { ...mocks.workspace.setupReadiness, displaySettings: false }

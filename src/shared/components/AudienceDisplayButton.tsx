@@ -18,7 +18,8 @@ export function AudienceDisplayButton({
       icon={<Icon name="ExternalLink" />}
       iconAfter
       onClick={() => {
-        onPopupBlocked?.(openManagedAudienceDisplay(displayUrl) === 'blocked')
+        const result = openManagedAudienceDisplay(displayUrl)
+        onPopupBlocked?.(result === 'blocked')
       }}
       {...buttonProps}
     >

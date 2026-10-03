@@ -1,0 +1,699 @@
+{
+  "applicationVersion": "0.1.3",
+  "maps": [
+    {
+      "file": "dist/assets/index-DLehYBJk.js.map",
+      "sha256": "ffd49e2fbdce96fce9abec1861e8bedf53c739111cb49dfaea00d575eb65e997"
+    },
+    {
+      "file": "dist/assets/xlsx-Cl_0CZaL.js.map",
+      "sha256": "4fbc9c594124ebfbc241ab206d063454982aae7a762a0f39f866080544df365c"
+    },
+    {
+      "file": "dist-runtime/kocokan-server.cjs.map",
+      "sha256": "3a68148aeac3d47157a568cf6a548fd31e51f074d3355ca209d32ed5a22ea681"
+    }
+  ],
+  "windowsSnapshot": {
+    "version": "0.1.3",
+    "buildCommit": "d5c4577360e676d5966cc25295b964ec6eb327ad",
+    "nodeVersion": "22.23.2",
+    "launcherRuntime": [
+      {
+        "name": "Microsoft.NETCore.App",
+        "version": "8.0.31"
+      },
+      {
+        "name": "Microsoft.WindowsDesktop.App",
+        "version": "8.0.31"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "@babel/runtime",
+      "version": "7.29.7",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/@babel/runtime",
+      "notices": [
+        {
+          "filename": "node_modules_@babel_runtime-LICENSE.txt",
+          "sha256": "117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76"
+        }
+      ]
+    },
+    {
+      "name": "@emotion/cache",
+      "version": "11.14.0",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/@emotion/cache",
+      "notices": [
+        {
+          "filename": "node_modules_@emotion_cache-LICENSE.txt",
+          "sha256": "6e8d23763cf7cb707ad8f6677aa502ebeca1dda447e6d6e57f6549c1625b9c4a"
+        }
+      ]
+    },
+    {
+      "name": "@emotion/hash",
+      "version": "0.9.2",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/@emotion/hash",
+      "notices": [
+        {
+          "filename": "node_modules_@emotion_hash-LICENSE.txt",
+          "sha256": "6e8d23763cf7cb707ad8f6677aa502ebeca1dda447e6d6e57f6549c1625b9c4a"
+        }
+      ]
+    },
+    {
+      "name": "@emotion/memoize",
+      "version": "0.9.0",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/@emotion/memoize",
+      "notices": [
+        {
+          "filename": "node_modules_@emotion_memoize-LICENSE.txt",
+          "sha256": "6e8d23763cf7cb707ad8f6677aa502ebeca1dda447e6d6e57f6549c1625b9c4a"
+        }
+      ]
+    },
+    {
+      "name": "@emotion/react",
+      "version": "11.14.0",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/@emotion/react",
+      "notices": [
+        {
+          "filename": "node_modules_@emotion_react-LICENSE.txt",
+          "sha256": "6e8d23763cf7cb707ad8f6677aa502ebeca1dda447e6d6e57f6549c1625b9c4a"
+        }
+      ]
+    },
+    {
+      "name": "@emotion/serialize",
+      "version": "1.3.3",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/@emotion/serialize",
+      "notices": [
+        {
+          "filename": "node_modules_@emotion_serialize-LICENSE.txt",
+          "sha256": "6e8d23763cf7cb707ad8f6677aa502ebeca1dda447e6d6e57f6549c1625b9c4a"
+        }
+      ]
+    },
+    {
+      "name": "@emotion/sheet",
+      "version": "1.4.0",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/@emotion/sheet",
+      "notices": [
+        {
+          "filename": "node_modules_@emotion_sheet-LICENSE.txt",
+          "sha256": "6e8d23763cf7cb707ad8f6677aa502ebeca1dda447e6d6e57f6549c1625b9c4a"
+        }
+      ]
+    },
+    {
+      "name": "@emotion/unitless",
+      "version": "0.10.0",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/@emotion/unitless",
+      "notices": [
+        {
+          "filename": "node_modules_@emotion_unitless-LICENSE.txt",
+          "sha256": "6e8d23763cf7cb707ad8f6677aa502ebeca1dda447e6d6e57f6549c1625b9c4a"
+        }
+      ]
+    },
+    {
+      "name": "@emotion/use-insertion-effect-with-fallbacks",
+      "version": "1.2.0",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/@emotion/use-insertion-effect-with-fallbacks",
+      "notices": [
+        {
+          "filename": "node_modules_@emotion_use-insertion-effect-with-fallbacks-LICENSE.txt",
+          "sha256": "6e8d23763cf7cb707ad8f6677aa502ebeca1dda447e6d6e57f6549c1625b9c4a"
+        }
+      ]
+    },
+    {
+      "name": "@emotion/utils",
+      "version": "1.4.2",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/@emotion/utils",
+      "notices": [
+        {
+          "filename": "node_modules_@emotion_utils-LICENSE.txt",
+          "sha256": "6e8d23763cf7cb707ad8f6677aa502ebeca1dda447e6d6e57f6549c1625b9c4a"
+        }
+      ]
+    },
+    {
+      "name": "@floating-ui/dom",
+      "version": "1.8.0",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/@floating-ui/dom",
+      "notices": [
+        {
+          "filename": "node_modules_@floating-ui_dom-LICENSE.txt",
+          "sha256": "0e4c9a9b6c71019cbbea3bdc20b01223110a9035700f9c960c8fcbf78c2325ce"
+        }
+      ]
+    },
+    {
+      "name": "@floating-ui/utils",
+      "version": "0.2.12",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/@floating-ui/utils",
+      "notices": [
+        {
+          "filename": "node_modules_@floating-ui_utils-LICENSE.txt",
+          "sha256": "0e4c9a9b6c71019cbbea3bdc20b01223110a9035700f9c960c8fcbf78c2325ce"
+        }
+      ]
+    },
+    {
+      "name": "dexie",
+      "version": "4.4.4",
+      "license": "Apache-2.0",
+      "scope": "web",
+      "source": "node_modules/dexie",
+      "notices": [
+        {
+          "filename": "node_modules_dexie-LICENSE.txt",
+          "sha256": "cb5e8e7e5f4a3988e1063c142c60dc2df75605f4c46515e776e3aca6df976e14"
+        },
+        {
+          "filename": "node_modules_dexie-NOTICE.txt",
+          "sha256": "6176d2e8a3fd8a881828a1a27bbcc5a9e03a75f437ce3c4ddbedd94fdac475c1"
+        }
+      ]
+    },
+    {
+      "name": "hoist-non-react-statics",
+      "version": "3.3.2",
+      "license": "BSD-3-Clause",
+      "scope": "web",
+      "source": "node_modules/hoist-non-react-statics",
+      "notices": [
+        {
+          "filename": "node_modules_hoist-non-react-statics-LICENSE.md.txt",
+          "sha256": "eb32ff0ec52b6ea86e3d3e06c6ad1b68ee03798b6729af13919f6d5c14b368f3"
+        }
+      ]
+    },
+    {
+      "name": "react-is",
+      "version": "16.13.1",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/hoist-non-react-statics/node_modules/react-is",
+      "notices": [
+        {
+          "filename": "node_modules_hoist-non-react-statics_node_modules_react-is-LICENSE.txt",
+          "sha256": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85"
+        }
+      ]
+    },
+    {
+      "name": "memoize-one",
+      "version": "6.0.0",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/memoize-one",
+      "notices": [
+        {
+          "filename": "node_modules_memoize-one-LICENSE.txt",
+          "sha256": "b1c501095de70182748cb8e8d97ac5577701a4ef3b755ba30d59fd87b24bdb0f"
+        }
+      ]
+    },
+    {
+      "name": "react",
+      "version": "19.2.8",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/react",
+      "notices": [
+        {
+          "filename": "node_modules_react-LICENSE.txt",
+          "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+        }
+      ]
+    },
+    {
+      "name": "react-dom",
+      "version": "19.2.8",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/react-dom",
+      "notices": [
+        {
+          "filename": "node_modules_react-dom-LICENSE.txt",
+          "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+        }
+      ]
+    },
+    {
+      "name": "react-router",
+      "version": "7.18.2",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/react-router",
+      "notices": [
+        {
+          "filename": "node_modules_react-router-LICENSE.md.txt",
+          "sha256": "77c9ee6a9c5d5782fb0c50b50d101189116314c14f7df0a1b0d385fc96a7ba49"
+        }
+      ]
+    },
+    {
+      "name": "react-select",
+      "version": "5.10.2",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/react-select",
+      "notices": [
+        {
+          "filename": "node_modules_react-select-LICENSE.txt",
+          "sha256": "d736dd18c7e53f88217fa2106c748f1a1687bb91d69a1f673fa685269402d784"
+        }
+      ]
+    },
+    {
+      "name": "scheduler",
+      "version": "0.27.0",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/scheduler",
+      "notices": [
+        {
+          "filename": "node_modules_scheduler-LICENSE.txt",
+          "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93"
+        }
+      ]
+    },
+    {
+      "name": "stylis",
+      "version": "4.2.0",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/stylis",
+      "notices": [
+        {
+          "filename": "node_modules_stylis-LICENSE.txt",
+          "sha256": "88c579c6ee44b41137a21321190d177982e5b17d4fa1b83a4a2e3ea325a8fc9a"
+        }
+      ]
+    },
+    {
+      "name": "use-isomorphic-layout-effect",
+      "version": "1.2.1",
+      "license": "MIT",
+      "scope": "web",
+      "source": "node_modules/use-isomorphic-layout-effect",
+      "notices": [
+        {
+          "filename": "node_modules_use-isomorphic-layout-effect-LICENSE.txt",
+          "sha256": "82fb62378a03a80df2a21d491d70cc8928912e35a8e8378fb0fcbe6e5493aec5"
+        }
+      ]
+    },
+    {
+      "name": "ws",
+      "version": "8.21.3",
+      "license": "MIT",
+      "scope": "runtime",
+      "source": "node_modules/ws",
+      "notices": [
+        {
+          "filename": "node_modules_ws-LICENSE.txt",
+          "sha256": "2b29dcfe0d6471f7e8c92c5fb38c9f93edee10330937055440192f1832b1ecef"
+        }
+      ]
+    },
+    {
+      "name": "xlsx",
+      "version": "0.20.3",
+      "license": "Apache-2.0",
+      "scope": "web",
+      "source": "node_modules/xlsx",
+      "notices": [
+        {
+          "filename": "node_modules_xlsx-LICENSE.txt",
+          "sha256": "4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64"
+        }
+      ]
+    },
+    {
+      "name": "Node.js",
+      "version": "22.23.2",
+      "license": "See Node.js license and included third-party notices",
+      "scope": "Windows distribution v0.1.3 snapshot",
+      "source": "artifacts/release/Kocokan-0.1.3/notices",
+      "notices": [
+        {
+          "filename": "NODE-LICENSE.txt",
+          "sha256": "8cc9bb466b19fc7e7cc99d03e9df1132021fda8b01eea2624c58bb372dbef576"
+        }
+      ]
+    },
+    {
+      "name": "Microsoft.NETCore.App",
+      "version": "8.0.31",
+      "license": "See runtime license and included notices",
+      "scope": "Windows distribution v0.1.3 snapshot",
+      "source": "artifacts/release/Kocokan-0.1.3/notices",
+      "notices": [
+        {
+          "filename": "microsoft.netcore.app.runtime.win-x64-LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
+        },
+        {
+          "filename": "microsoft.netcore.app.runtime.win-x64-THIRD-PARTY-NOTICES.TXT",
+          "sha256": "b60b2912da28eaa6518593c9e2efb5334ee062d3c42e80d8fdfa806b3dc52977"
+        }
+      ]
+    },
+    {
+      "name": "Microsoft.WindowsDesktop.App",
+      "version": "8.0.31",
+      "license": "See runtime license and included notices",
+      "scope": "Windows distribution v0.1.3 snapshot",
+      "source": "artifacts/release/Kocokan-0.1.3/notices",
+      "notices": [
+        {
+          "filename": "microsoft.windowsdesktop.app.runtime.win-x64-LICENSE",
+          "sha256": "a89886665765362eb77e0f8e26602c924520041d1711b2eedc136434fe4d01ab"
+        }
+      ]
+    }
+  ],
+  "productionNotObserved": [
+    {
+      "path": "node_modules/@babel/code-frame",
+      "version": "7.29.7",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@babel/generator",
+      "version": "7.29.7",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@babel/helper-globals",
+      "version": "7.29.7",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@babel/helper-module-imports",
+      "version": "7.29.7",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@babel/helper-string-parser",
+      "version": "7.29.7",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@babel/helper-validator-identifier",
+      "version": "7.29.7",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@babel/parser",
+      "version": "7.29.7",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@babel/template",
+      "version": "7.29.7",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@babel/traverse",
+      "version": "7.29.7",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@babel/types",
+      "version": "7.29.7",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@emotion/babel-plugin",
+      "version": "11.13.5",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@emotion/babel-plugin/node_modules/convert-source-map",
+      "version": "1.9.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@emotion/weak-memoize",
+      "version": "0.4.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@floating-ui/core",
+      "version": "1.8.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@jridgewell/gen-mapping",
+      "version": "0.3.13",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@jridgewell/resolve-uri",
+      "version": "3.1.2",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@jridgewell/sourcemap-codec",
+      "version": "1.5.5",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@jridgewell/trace-mapping",
+      "version": "0.3.31",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@types/parse-json",
+      "version": "4.0.2",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@types/react",
+      "version": "19.2.17",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/@types/react-transition-group",
+      "version": "4.4.12",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/babel-plugin-macros",
+      "version": "3.1.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/callsites",
+      "version": "3.1.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/cookie",
+      "version": "1.1.1",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/cosmiconfig",
+      "version": "7.1.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/cosmiconfig/node_modules/yaml",
+      "version": "1.10.3",
+      "license": "ISC"
+    },
+    {
+      "path": "node_modules/csstype",
+      "version": "3.2.3",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/debug",
+      "version": "4.4.3",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/dom-helpers",
+      "version": "5.2.1",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/error-ex",
+      "version": "1.3.4",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/es-errors",
+      "version": "1.3.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/escape-string-regexp",
+      "version": "4.0.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/find-root",
+      "version": "1.1.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/function-bind",
+      "version": "1.1.2",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/hasown",
+      "version": "2.0.4",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/import-fresh",
+      "version": "3.3.1",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/is-arrayish",
+      "version": "0.2.1",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/is-core-module",
+      "version": "2.16.2",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/js-tokens",
+      "version": "4.0.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/jsesc",
+      "version": "3.1.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/json-parse-even-better-errors",
+      "version": "2.3.1",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/lines-and-columns",
+      "version": "1.2.4",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/loose-envify",
+      "version": "1.4.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/ms",
+      "version": "2.1.3",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/object-assign",
+      "version": "4.1.1",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/parent-module",
+      "version": "1.0.1",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/parse-json",
+      "version": "5.2.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/path-parse",
+      "version": "1.0.7",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/path-type",
+      "version": "4.0.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/picocolors",
+      "version": "1.1.1",
+      "license": "ISC"
+    },
+    {
+      "path": "node_modules/prop-types",
+      "version": "15.8.1",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/prop-types/node_modules/react-is",
+      "version": "16.13.1",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/react-transition-group",
+      "version": "4.4.5",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "path": "node_modules/resolve",
+      "version": "1.22.12",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/resolve-from",
+      "version": "4.0.0",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/set-cookie-parser",
+      "version": "2.7.2",
+      "license": "MIT"
+    },
+    {
+      "path": "node_modules/source-map",
+      "version": "0.5.7",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "path": "node_modules/supports-preserve-symlinks-flag",
+      "version": "1.0.0",
+      "license": "MIT"
+    }
+  ],
+  "developmentPackageCount": 279
+}

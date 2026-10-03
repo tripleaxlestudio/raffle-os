@@ -1,5 +1,5 @@
 import { GUIDE_SECTIONS } from './help-guide-sections.ts'
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
@@ -7,6 +7,7 @@ import { appRoutes } from '../../../app/router.tsx'
 import { KOCOKAN_APP_VERSION } from '../../../config/app-version.ts'
 import { AppSettingsPage } from '../AppSettingsPage.tsx'
 import { HelpGuidePage, HelpSupportPage } from './HelpPages.tsx'
+import { HELP_RELEASE_NOTES } from './help-release-notes.ts'
 
 function settingsRouter(path: string) {
   const router = createMemoryRouter([{ path: '/settings/app', element: <AppSettingsPage /> }], { initialEntries: [path] })
@@ -29,7 +30,7 @@ describe('Help infrastructure and navigation', () => {
     expect(screen.getByRole('link', { name: 'Kembali ke Settings → Tentang' })).toHaveAttribute('href', '/settings/app?tab=about')
     if (path === '/help/whats-new') {
       expect(screen.getByRole('heading', { name: `Versi ${KOCOKAN_APP_VERSION}` })).toBeVisible()
-      expect(screen.getByText('Catatan perubahan untuk versi ini belum tersedia.')).toBeVisible()
+      if (!HELP_RELEASE_NOTES.some((note) => note.version === KOCOKAN_APP_VERSION)) expect(screen.getByText('Catatan perubahan untuk versi ini belum tersedia.')).toBeVisible()
     }
     if (path === '/help/licenses') expect(screen.getByText('Ketentuan penggunaan Kocokan belum dipublikasikan pada build ini.')).toBeVisible()
   })
@@ -96,7 +97,7 @@ describe('Help infrastructure and navigation', () => {
     const user = userEvent.setup()
     const router = createMemoryRouter([{ path: '/help/support', element: <HelpSupportPage /> }], { initialEntries: ['/help/support'] })
     render(<RouterProvider router={router} />)
-    const report = screen.getByRole('button', { name: 'Laporkan Masalah' })
+    const report = within(screen.getByRole('heading', { name: 'Laporkan Masalah' }).parentElement!).getByRole('button', { name: 'Laporkan Masalah' })
     await user.click(report)
     expect(screen.getByRole('dialog', { name: 'Laporkan Masalah' })).toBeVisible()
     await user.keyboard('{Escape}')

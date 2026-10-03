@@ -1,0 +1,57 @@
+ docs/legal/THIRD-PARTY-NOTICES.md                  |  43 +-
+ docs/legal/licenses/help/.gitattributes            |   3 +
+ docs/legal/licenses/help/NODE-LICENSE.txt          | Bin 0 -> 148217 bytes
+ ...crosoft.netcore.app.runtime.win-x64-LICENSE.TXT | Bin 0 -> 1139 bytes
+ ...ore.app.runtime.win-x64-THIRD-PARTY-NOTICES.TXT | Bin 0 -> 68910 bytes
+ ...soft.windowsdesktop.app.runtime.win-x64-LICENSE | Bin 0 -> 1137 bytes
+ .../help/node_modules_@babel_runtime-LICENSE.txt   | Bin 0 -> 1106 bytes
+ .../help/node_modules_@emotion_cache-LICENSE.txt   | Bin 0 -> 1087 bytes
+ .../help/node_modules_@emotion_hash-LICENSE.txt    | Bin 0 -> 1087 bytes
+ .../help/node_modules_@emotion_memoize-LICENSE.txt | Bin 0 -> 1087 bytes
+ .../help/node_modules_@emotion_react-LICENSE.txt   | Bin 0 -> 1087 bytes
+ .../node_modules_@emotion_serialize-LICENSE.txt    | Bin 0 -> 1087 bytes
+ .../help/node_modules_@emotion_sheet-LICENSE.txt   | Bin 0 -> 1087 bytes
+ .../node_modules_@emotion_unitless-LICENSE.txt     | Bin 0 -> 1087 bytes
+ ...use-insertion-effect-with-fallbacks-LICENSE.txt | Bin 0 -> 1087 bytes
+ .../help/node_modules_@emotion_utils-LICENSE.txt   | Bin 0 -> 1087 bytes
+ .../help/node_modules_@floating-ui_dom-LICENSE.txt | Bin 0 -> 1089 bytes
+ .../node_modules_@floating-ui_utils-LICENSE.txt    | Bin 0 -> 1089 bytes
+ .../licenses/help/node_modules_dexie-LICENSE.txt   | Bin 0 -> 11325 bytes
+ .../licenses/help/node_modules_dexie-NOTICE.txt    | Bin 0 -> 575 bytes
+ ..._modules_hoist-non-react-statics-LICENSE.md.txt | Bin 0 -> 1662 bytes
+ ...react-statics_node_modules_react-is-LICENSE.txt | Bin 0 -> 1086 bytes
+ .../help/node_modules_memoize-one-LICENSE.txt      | Bin 0 -> 1073 bytes
+ .../licenses/help/node_modules_react-LICENSE.txt   | Bin 0 -> 1088 bytes
+ .../help/node_modules_react-dom-LICENSE.txt        | Bin 0 -> 1088 bytes
+ .../help/node_modules_react-router-LICENSE.md.txt  | Bin 0 -> 1161 bytes
+ .../help/node_modules_react-select-LICENSE.txt     | Bin 0 -> 1077 bytes
+ .../help/node_modules_scheduler-LICENSE.txt        | Bin 0 -> 1088 bytes
+ .../licenses/help/node_modules_stylis-LICENSE.txt  | Bin 0 -> 1078 bytes
+ ...odules_use-isomorphic-layout-effect-LICENSE.txt | Bin 0 -> 1070 bytes
+ .../licenses/help/node_modules_ws-LICENSE.txt      | Bin 0 -> 1183 bytes
+ .../licenses/help/node_modules_xlsx-LICENSE.txt    | Bin 0 -> 11355 bytes
+ docs/releases/KOCOKAN-v0.1.3.md                    |  10 +
+ docs/technical/KOCOKAN-HELP-SLICE-2.md             |  82 +++
+ .../evidence/help-slice2/browser-verification.json | 108 ++++
+ .../help-slice2/full-suite-comparison.json         | 124 ++++
+ .../evidence/help-slice2/guide-checklist-1366.png  | Bin 0 -> 91481 bytes
+ .../evidence/help-slice2/guide-checklist-1440.png  | Bin 0 -> 101145 bytes
+ .../evidence/help-slice2/guide-journey-1366.png    | Bin 0 -> 62378 bytes
+ .../evidence/help-slice2/guide-journey-1440.png    | Bin 0 -> 70485 bytes
+ .../evidence/help-slice2/licenses-1366.png         | Bin 0 -> 89008 bytes
+ .../evidence/help-slice2/licenses-1440.png         | Bin 0 -> 92474 bytes
+ .../evidence/help-slice2/notices-audit.json        | 699 +++++++++++++++++++++
+ .../technical/evidence/help-slice2/staged-stat.txt |  56 ++
+ .../evidence/help-slice2/support-1366.png          | Bin 0 -> 72642 bytes
+ .../evidence/help-slice2/support-1440.png          | Bin 0 -> 78005 bytes
+ scripts/audit-help-notices.mjs                     |  79 +++
+ scripts/verify-help-browser.mjs                    | 108 ++++
+ src/pages/operator/help/HelpContent.test.tsx       |  65 ++
+ src/pages/operator/help/HelpGuideContent.tsx       |  99 +++
+ src/pages/operator/help/HelpNavigation.test.tsx    |   7 +-
+ src/pages/operator/help/HelpPages.tsx              |  45 +-
+ src/pages/operator/help/help-release-notes.ts      |  22 +
+ src/pages/operator/help/help-support-content.ts    |  44 ++
+ src/pages/operator/help/third-party-notices.json   | 406 ++++++++++++
+ src/styles/kocokan/help.css                        |   7 +
+ 56 files changed, 1991 insertions(+), 16 deletions(-)

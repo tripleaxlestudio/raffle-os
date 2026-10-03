@@ -1,0 +1,108 @@
+{
+  "browser": "154.0.4258.37",
+  "isolation": "Internet blocked by refused proxy and request abort; local HTTP runtime retained. No service worker/server-stop offline claim.",
+  "results": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": "whats-new",
+      "directAndRefresh": "passed",
+      "keyboardAndLayout": "passed",
+      "returnToAbout": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": "guide",
+      "directAndRefresh": "passed",
+      "keyboardAndLayout": "passed",
+      "returnToAbout": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": "support",
+      "directAndRefresh": "passed",
+      "keyboardAndLayout": "passed",
+      "returnToAbout": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": "licenses",
+      "directAndRefresh": "passed",
+      "keyboardAndLayout": "passed",
+      "returnToAbout": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "route": "whats-new",
+      "directAndRefresh": "passed",
+      "keyboardAndLayout": "passed",
+      "returnToAbout": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "route": "guide",
+      "directAndRefresh": "passed",
+      "keyboardAndLayout": "passed",
+      "returnToAbout": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "route": "support",
+      "directAndRefresh": "passed",
+      "keyboardAndLayout": "passed",
+      "returnToAbout": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "route": "licenses",
+      "directAndRefresh": "passed",
+      "keyboardAndLayout": "passed",
+      "returnToAbout": "passed"
+    }
+  ],
+  "externalRequests": [
+    {
+      "host": "example.com",
+      "pathname": "/"
+    },
+    {
+      "host": "docs.google.com",
+      "pathname": "/forms/d/e/1FAIpQLSckueKJdrR111voEETSbQoE9zKRnAvLdtM6gUMXlE1845mYFg/viewform"
+    }
+  ],
+  "failures": [
+    {
+      "host": "example.com",
+      "error": "net::ERR_INTERNET_DISCONNECTED"
+    },
+    {
+      "host": "docs.google.com",
+      "error": "net::ERR_INTERNET_DISCONNECTED"
+    }
+  ],
+  "pageErrors": [],
+  "googleFormsFailureAppSurvives": true
+}

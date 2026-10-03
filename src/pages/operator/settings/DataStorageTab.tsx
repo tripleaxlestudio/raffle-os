@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Icon } from '../../../shared/ui/index.ts'
 import { RaffleOSDatabase } from '../../../infrastructure/persistence/db.ts'
+import { DexiePrizeImageAssetRepository } from '../../../infrastructure/persistence/repositories/prize-image-asset.repository.ts'
+import { KOCOKAN_APP_VERSION } from '../../../config/app-version.ts'
 import {
   createBackup,
   downloadBackupFile,
@@ -10,6 +12,7 @@ import {
   previewBackup,
   readStorageStatistics,
   validateBackupEnvelope,
+  validateBackupPrizeImages,
 } from '../../../application/storage/storage-service.ts'
 import type {
   BackupPreviewSummary,
@@ -25,6 +28,8 @@ interface DataStorageTabProps {
 
 export function DataStorageTab({ database: injectedDatabase }: DataStorageTabProps) {
   const database = useMemo(() => injectedDatabase ?? new RaffleOSDatabase(), [injectedDatabase])
+  const prizeAssets = useMemo(() => new DexiePrizeImageAssetRepository(), [])
+  useEffect(() => () => prizeAssets.close(), [prizeAssets])
 
   const [stats, setStats] = useState<StorageStatistics | null>(null)
   const [statsLoading, setStatsLoading] = useState<boolean>(true)
@@ -107,7 +112,7 @@ export function DataStorageTab({ database: injectedDatabase }: DataStorageTabPro
     setIsBackingUp(true)
     setFeedback(null)
     try {
-      const envelope = await createBackup(database)
+      const envelope = await createBackup(database, KOCOKAN_APP_VERSION, prizeAssets)
       const filename = generateBackupFilename(new Date(envelope.createdAt))
       downloadBackupFile(envelope, filename)
       showFeedback('success', `Backup berhasil dibuat dan diunduh: ${filename}`)
@@ -143,6 +148,7 @@ export function DataStorageTab({ database: injectedDatabase }: DataStorageTabPro
       }
 
       const envelope = validationResult.value
+      await validateBackupPrizeImages(envelope)
       const preview = previewBackup(envelope)
       setPendingRestoreEnvelope(envelope)
       setRestorePreview(preview)
@@ -160,12 +166,12 @@ export function DataStorageTab({ database: injectedDatabase }: DataStorageTabPro
     setIsRestoring(true)
     setFeedback(null)
     try {
-      await executeRestore(database, pendingRestoreEnvelope)
+      await executeRestore(database, pendingRestoreEnvelope, prizeAssets)
       setRestoreModalOpen(false)
       setPendingRestoreEnvelope(null)
       setRestorePreview(null)
       await refreshStats()
-      showFeedback('success', 'Data aplikasi berhasil dipulihkan secara penuh dari file backup.')
+      showFeedback('success', 'Data pada file backup berhasil dipulihkan. Periksa kembali data dan aset pada aplikasi.')
     } catch (error: unknown) {
       showFeedback(
         'error',

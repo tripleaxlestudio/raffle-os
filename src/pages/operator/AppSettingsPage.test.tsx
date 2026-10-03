@@ -2,7 +2,8 @@ import { IDBKeyRange, indexedDB } from 'fake-indexeddb'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import * as storageService from '../../application/storage/storage-service.ts'
 import { RaffleOSDatabase } from '../../infrastructure/persistence/db.ts'
 import { AppSettingsPage } from './AppSettingsPage.tsx'
 import { KOCOKAN_APP_VERSION } from '../../config/app-version.ts'
@@ -25,6 +26,15 @@ function renderAppSettings(database = testDb) {
 }
 
 describe('AppSettingsPage prototype & production storage', () => {
+  it('passes the centralized application version when creating a backup', async () => {
+    const spy = vi.spyOn(storageService, 'createBackup').mockRejectedValue(new Error('Isolated version test'))
+    try {
+      renderAppSettings()
+      await userEvent.click(screen.getByRole('tab', { name: 'Data & Penyimpanan' }))
+      await userEvent.click(screen.getByRole('button', { name: /Buat Backup/i }))
+      expect(spy).toHaveBeenCalledWith(testDb, KOCOKAN_APP_VERSION, expect.anything())
+    } finally { spy.mockRestore() }
+  })
   beforeEach(() => {
     testDb = createTestDb()
   })

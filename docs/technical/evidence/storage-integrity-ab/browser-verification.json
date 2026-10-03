@@ -1,0 +1,23 @@
+{
+  "origin": "http://127.0.0.1:5181",
+  "profileIsolation": "Two fresh contexts; clean target main/assets databases; no real user data",
+  "browser": "154.0.4258.37",
+  "backupAppVersion": "0.1.3",
+  "formatVersion": 1,
+  "imageCount": 2,
+  "prizeCount": 4,
+  "sourceHashes": [
+    "e9cc41e9c67e93de34218a14c07aea4ed7a5c214fe00022c3dfa514496173ba7",
+    "67db79204bec4e3f71c59593fb909b0d6d45e42135e17b0d0a4bf4d841c06881"
+  ],
+  "restoredHashes": [
+    "e9cc41e9c67e93de34218a14c07aea4ed7a5c214fe00022c3dfa514496173ba7",
+    "67db79204bec4e3f71c59593fb909b0d6d45e42135e17b0d0a4bf4d841c06881"
+  ],
+  "sharedReferencePreserved": true,
+  "operatorAfterReload": true,
+  "audienceStandbyAfterReload": true,
+  "noBrokenObjectUrls": true,
+  "pageErrors": [],
+  "renderBoundary": "Production Operator category renderer; actual AudiencePresentation mounted with restored standby fixture. No official draw or transport changes."
+}

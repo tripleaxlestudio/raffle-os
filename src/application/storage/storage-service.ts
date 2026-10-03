@@ -1,6 +1,9 @@
 import type { EventSettings, LocalAsset } from '../../domain/settings/event-settings.types.ts'
 import type { RaffleOSDatabase } from '../../infrastructure/persistence/db.ts'
 import { signalProductionWorkspaceChanged } from '../../app/workspace/ProductionWorkspaceContext.tsx'
+import { prizeImageHash, validatePrizeImageBackup, MAX_BACKUP_PRIZE_IMAGE_BYTES, type PrizeImageBackupStore, type SerializedPrizeImage } from './prize-image-backup.ts'
+import type { PrizeImageAsset } from '../../domain/prizes/prize-asset.types.ts'
+import { MAX_PRIZE_IMAGE_SIZE_BYTES } from '../../domain/prizes/prize.types.ts'
 import type {
   BackupPreviewSummary,
   KocokanBackupData,
@@ -28,8 +31,8 @@ export async function blobToBase64(blob: Blob): Promise<string> {
   const buffer = await blob.arrayBuffer()
   const bytes = new Uint8Array(buffer)
   let binary = ''
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i])
+  for (let i = 0; i < bytes.byteLength; i += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 8192))
   }
   return btoa(binary)
 }
@@ -182,7 +185,8 @@ function deserializeEventSettings(serialized: SerializedEventSettings): EventSet
 
 export async function createBackup(
   database: RaffleOSDatabase,
-  appVersion = '0.1.0',
+  appVersion: string,
+  prizeAssets?: PrizeImageBackupStore,
 ): Promise<KocokanBackupEnvelope> {
   await database.openSupported()
 
@@ -222,7 +226,20 @@ export async function createBackup(
     rawEventSettings.map((s) => serializeEventSettings(s)),
   )
 
+  const imageIds = [...new Set(prizeCategories.flatMap((category) => category.prizeImageAssetId === undefined ? [] : [category.prizeImageAssetId]))]
+  if (imageIds.length > 0 && prizeAssets === undefined) throw new Error('Penyimpanan gambar hadiah diperlukan untuk membuat backup.')
+  const images = imageIds.length === 0 ? [] : await prizeAssets!.readForBackup(imageIds)
+  if (images.some((image) => image.blob.size <= 0 || image.blob.size > MAX_PRIZE_IMAGE_SIZE_BYTES || image.size !== image.blob.size || image.type !== image.blob.type)) throw new Error('Isi atau metadata gambar hadiah tidak valid (maksimal 5 MB per gambar).')
+  if (images.reduce((sum, image) => sum + image.blob.size, 0) > MAX_BACKUP_PRIZE_IMAGE_BYTES) throw new Error('Total gambar hadiah backup melebihi batas 64 MB.')
+  const prizeImageAssets: SerializedPrizeImage[] = []
+  for (const { blob, ...metadata } of images) {
+    prizeImageAssets.push({ ...metadata, base64: await blobToBase64(blob), sha256: await prizeImageHash(blob) })
+  }
+  const imageError = validatePrizeImageBackup(prizeImageAssets, imageIds)
+  if (imageError !== null) throw new Error(imageError)
+
   const backupData: KocokanBackupData = {
+    prizeImageAssets,
     events,
     participants,
     prizeCategories,
@@ -269,6 +286,11 @@ export function validateBackupEnvelope(rawText: string): Result<KocokanBackupEnv
   } catch {
     return { ok: false, error: 'File bukan format JSON yang valid.' }
   }
+
+  return validateParsedBackup(parsed)
+}
+
+function validateParsedBackup(parsed: unknown): Result<KocokanBackupEnvelope, string> {
 
   if (typeof parsed !== 'object' || parsed === null) {
     return { ok: false, error: 'Data backup tidak valid (harus berupa objek JSON).' }
@@ -418,7 +440,22 @@ export function validateBackupEnvelope(rawText: string): Result<KocokanBackupEnv
     }
   }
 
+  if (data.prizeImageAssets !== undefined) {
+    const references = (data.prizeCategories as Record<string, unknown>[]).flatMap((category) => category.prizeImageAssetId === undefined ? [] : [category.prizeImageAssetId])
+    const imageError = validatePrizeImageBackup(data.prizeImageAssets, references)
+    if (imageError !== null) return { ok: false, error: imageError }
+  }
   return { ok: true, value: parsed as KocokanBackupEnvelope }
+}
+
+export async function validateBackupPrizeImages(envelope: KocokanBackupEnvelope): Promise<readonly PrizeImageAsset[]> {
+  const images: PrizeImageAsset[] = []
+  for (const { base64, sha256, ...metadata } of envelope.data.prizeImageAssets ?? []) {
+    const blob = base64ToBlob(base64, metadata.type)
+    if (await prizeImageHash(blob) !== sha256) throw new Error('Checksum gambar hadiah tidak sesuai; data saat ini tidak diubah.')
+    images.push({ ...metadata, blob })
+  }
+  return images
 }
 
 export function previewBackup(envelope: KocokanBackupEnvelope): BackupPreviewSummary {
@@ -432,21 +469,31 @@ export function previewBackup(envelope: KocokanBackupEnvelope): BackupPreviewSum
     participantCount: data.participants.length,
     officialHistoryCount: liveSessions.length,
     totalSessionsCount: data.drawSessions.length,
+    prizeImageCount: data.prizeImageAssets?.length ?? 0,
+    missingPrizeImageCount: data.prizeImageAssets === undefined ? data.prizeCategories.filter((category) => category.prizeImageAssetId !== undefined).length : 0,
   }
 }
 
 export async function executeRestore(
   database: RaffleOSDatabase,
   envelope: KocokanBackupEnvelope,
+  prizeAssets?: PrizeImageBackupStore,
 ): Promise<void> {
+  const validation = validateParsedBackup(envelope)
+  if (!validation.ok) throw new Error(validation.error)
+  const images = await validateBackupPrizeImages(envelope)
+  if (images.length > 0 && prizeAssets === undefined) throw new Error('Penyimpanan gambar hadiah diperlukan untuk restore.')
   await database.openSupported()
 
   const { data } = envelope
   const reconstructedEventSettings: EventSettings[] = (data.eventSettings ?? []).map((s) =>
     deserializeEventSettings(s),
   )
+  const mapping = images.length === 0 ? new Map<string, string>() : await prizeAssets!.stageForRestore(images)
+  const categories = data.prizeCategories.map(({ prizeImageAssetId, ...category }) => prizeImageAssetId !== undefined && mapping.has(prizeImageAssetId) ? { ...category, prizeImageAssetId: mapping.get(prizeImageAssetId)! } : category)
 
   // Atomic replace-all within a single readwrite transaction across all tables
+  try {
   await database.transaction('rw', database.tables, async () => {
     // 1. Clear all existing records from all stores
     for (const table of database.tables) {
@@ -461,7 +508,7 @@ export async function executeRestore(
       await database.participants.bulkAdd([...data.participants])
     }
     if (data.prizeCategories.length > 0) {
-      await database.prize_categories.bulkAdd([...data.prizeCategories])
+      await database.prize_categories.bulkAdd(categories)
     }
     if (data.drawConfigurations.length > 0) {
       await database.draw_configurations.bulkAdd([...data.drawConfigurations])
@@ -497,6 +544,10 @@ export async function executeRestore(
       await database.command_receipts.bulkAdd([...data.commandReceipts])
     }
   })
+  } catch (error: unknown) {
+    try { await prizeAssets?.discardStaged([...mapping.values()]) } catch { throw new Error('Restore data gagal; data utama tetap dipertahankan, tetapi pembersihan aset sementara gagal.') }
+    throw error
+  }
 
   // Invalidate and refresh application workspace
   signalProductionWorkspaceChanged()

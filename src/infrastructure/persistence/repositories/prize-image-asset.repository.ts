@@ -1,6 +1,7 @@
 import Dexie, { type Table, type DexieOptions } from 'dexie'
 import type { PrizeImageAsset } from '../../../domain/prizes/prize-asset.types.ts'
 import type { PrizeImageAssetRepository } from '../../../application/persistence/repositories/prize-image-asset-repository.interface.ts'
+import type { PrizeImageBackupStore } from '../../../application/storage/prize-image-backup.ts'
 
 export const DEFAULT_PRIZE_ASSET_DATABASE_NAME = 'RaffleOS_PrizeAssets'
 
@@ -34,7 +35,7 @@ class PrizeAssetDatabase extends Dexie {
   }
 }
 
-export class DexiePrizeImageAssetRepository implements PrizeImageAssetRepository {
+export class DexiePrizeImageAssetRepository implements PrizeImageAssetRepository, PrizeImageBackupStore {
   private readonly db: PrizeAssetDatabase
 
   constructor(
@@ -84,5 +85,29 @@ export class DexiePrizeImageAssetRepository implements PrizeImageAssetRepository
 
   close(): void {
     this.db.close()
+  }
+
+  async readForBackup(ids: readonly string[]): Promise<readonly PrizeImageAsset[]> {
+    await this.db.open()
+    const records = await this.db.prize_images.bulkGet([...ids])
+    return records.map((record, index) => {
+      if (record === undefined) throw new Error(`Gambar hadiah ${ids[index]} tidak tersedia; backup tidak dibuat.`)
+      return record
+    })
+  }
+
+  async stageForRestore(assets: readonly PrizeImageAsset[]): Promise<ReadonlyMap<string, string>> {
+    await this.db.open()
+    // Fresh IDs never overwrite assets used by the current main database.
+    const mapping = new Map(assets.map((asset) => [asset.id, crypto.randomUUID()]))
+    await this.db.transaction('rw', this.db.prize_images, async () => {
+      await this.db.prize_images.bulkAdd(assets.map((asset) => ({ ...asset, id: mapping.get(asset.id)! })))
+    })
+    return mapping
+  }
+
+  async discardStaged(ids: readonly string[]): Promise<void> {
+    await this.db.open()
+    await this.db.prize_images.bulkDelete([...ids])
   }
 }

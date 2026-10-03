@@ -72,6 +72,7 @@ export function RestoreConfirmationModal({
                 <th scope="row">Jumlah Peserta</th>
                 <td><strong>{preview.participantCount.toLocaleString('id-ID')}</strong> peserta</td>
               </tr>
+              <tr><th scope="row">Gambar Hadiah</th><td>{preview.prizeImageCount ?? 0} gambar pada backup</td></tr>
               <tr>
                 <th scope="row">Riwayat Undian Resmi</th>
                 <td><strong>{preview.officialHistoryCount.toLocaleString('id-ID')}</strong> sesi resmi ({preview.totalSessionsCount} total)</td>
@@ -79,6 +80,8 @@ export function RestoreConfirmationModal({
             </tbody>
           </table>
         </div>
+
+        {(preview.missingPrizeImageCount ?? 0) > 0 ? <p role="alert">Backup lama tidak membawa data gambar untuk {preview.missingPrizeImageCount} hadiah. Referensi gambar tersebut akan dilepas; hadiah tetap dipulihkan tanpa gambar.</p> : null}
 
         <div className="kc-confirmation" data-tone="warning">
           <span className="kc-confirmation__marker" aria-hidden="true">

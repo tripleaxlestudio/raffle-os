@@ -13,6 +13,7 @@ import type { RedrawRequest } from '../../domain/winners/redraw-request.types.ts
 import type { WinnerRecord } from '../../domain/winners/winner.types.ts'
 import type { PresentationCheckpointRecord } from '../../domain/workflow/presentation-checkpoint.types.ts'
 import type { CommandReceiptRecord } from '../persistence/command-receipt-repository.interface.ts'
+import type { SerializedPrizeImage } from './prize-image-backup.ts'
 
 export interface SerializedLocalAsset {
   readonly name: string
@@ -37,6 +38,8 @@ export interface SerializedEventSettings {
 }
 
 export interface KocokanBackupData {
+  /** Optional v1 extension. Legacy files did not carry portable prize images. */
+  readonly prizeImageAssets?: readonly SerializedPrizeImage[]
   readonly events: readonly Event[]
   readonly participants: readonly Participant[]
   readonly prizeCategories: readonly PrizeCategory[]
@@ -80,6 +83,8 @@ export interface BackupPreviewSummary {
   readonly participantCount: number
   readonly officialHistoryCount: number
   readonly totalSessionsCount: number
+  readonly prizeImageCount?: number
+  readonly missingPrizeImageCount?: number
 }
 
 export type StorageOperationStatus = 'idle' | 'working' | 'success' | 'error'

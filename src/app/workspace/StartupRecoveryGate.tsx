@@ -5,6 +5,7 @@ import { ButtonLink, Card, Icon } from '../../shared/ui/index.ts'
 import { StatusBanner } from '../../shared/components/StatusBanner.tsx'
 import { OperatorPersistenceStatus } from '../../shared/components/OperatorPersistenceStatus.tsx'
 import { useIntentionalRedrawTransition } from './ProductionWorkspaceContext.tsx'
+import { isReadOnlyHelpPath, recoveryNavigationTarget } from './recovery-help-navigation.ts'
 
 function isRecoveryTarget(pathname: string, targetPath: string): boolean {
   return pathname === targetPath
@@ -14,16 +15,15 @@ export function StartupRecoveryGate({ recovery }: { readonly recovery?: StartupR
   const location = useLocation()
   const navigate = useNavigate()
   const redrawTransition = useIntentionalRedrawTransition()
-  const targetPath = recovery?.kind === 'recover-session' || recovery?.kind === 'conflicting-sessions'
-    ? recovery.recommendedRoute
-    : null
+  const targetPath = recoveryNavigationTarget(recovery)
+  const onHelpRoute = isReadOnlyHelpPath(location.pathname)
   useEffect(() => {
     const handoff = redrawTransition.handoff
     if (handoff !== null && location.pathname !== `/draw/run/${handoff.drawSessionId}`) redrawTransition.clear()
   }, [location.pathname, redrawTransition])
   useEffect(() => {
-    if (targetPath !== null && !isRecoveryTarget(location.pathname, targetPath)) void navigate(targetPath, { replace: true })
-  }, [location.pathname, navigate, targetPath])
+    if (targetPath !== null && !onHelpRoute && !isRecoveryTarget(location.pathname, targetPath)) void navigate(targetPath, { replace: true })
+  }, [location.pathname, navigate, onHelpRoute, targetPath])
 
   if (recovery === undefined || recovery.kind === 'normal' || recovery.kind === 'no-active-event') return null
   if (recovery.kind === 'storage-failure') return <OperatorPersistenceStatus kind="blocked" detail={`${recovery.error} Tidak ada data resmi yang diubah. Coba lagi dari ruang kerja terkait setelah penyimpanan lokal tersedia.`} />
@@ -43,6 +43,10 @@ export function StartupRecoveryGate({ recovery }: { readonly recovery?: StartupR
         ? 'Presentasi terhenti sebelum pemilihan resmi. Pengaturan Undian aman untuk dilanjutkan.'
         : 'Sesi resmi tetap dipertahankan. Tidak ada pemilihan baru selama pemulihan.'
   const actionLabel = isConflict || acknowledgement ? 'Tinjau hasil tersimpan' : decision?.kind === 'resume-setup' ? 'Kembali ke Pengaturan Undian' : 'Lanjutkan verifikasi'
+  if (onHelpRoute && targetPath !== null) return <StatusBanner badge="Pemulihan belum selesai" className="kc-help-recovery-status" title={title} tone="warning">
+    <span>{detail} Anda dapat membaca bantuan; selesaikan pemulihan sebelum melanjutkan pekerjaan lain.</span>
+    <ButtonLink to={targetPath} variant="secondary">Kembali ke Pemulihan</ButtonLink>
+  </StatusBanner>
   if (isIntentionalRedrawRoute) return null
   if (onRecoveredRedrawRoute) return <StatusBanner badge="Dipulihkan" className="kc-draw-recovery-notice" icon={<Icon name="CircleCheck" size={20} />} title="Sesi undi ulang berhasil dipulihkan" tone="success">Semua hasil dan keputusan sebelumnya tetap tersimpan.</StatusBanner>
   if (onRecoveryRoute) return <StatusBanner badge="Pemulihan" title={title} tone="warning">{detail}</StatusBanner>

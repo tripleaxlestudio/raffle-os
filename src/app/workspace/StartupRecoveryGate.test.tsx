@@ -55,7 +55,27 @@ function recoveredRedraw(): StartupRecoveryResult {
 }
 
 describe('StartupRecoveryGate recovery notice', () => {
-  beforeEach(() => navigate.mockReset())
+  beforeEach(() => {
+    navigate.mockReset()
+    redrawTransition.clear.mockClear()
+    redrawTransition.handoff = null
+  })
+
+  it('drops only the transient redraw handoff when opening Help and retains the authoritative request', () => {
+    const recovery = recoveredRedraw()
+    if (recovery.kind !== 'recover-session' || recovery.redrawRequest === undefined) throw new Error('Expected redraw fixture.')
+    const request = structuredClone(recovery.redrawRequest)
+    redrawTransition.handoff = {
+      drawSessionId: recovery.session.id,
+      request: recovery.redrawRequest,
+      readiness: { state: 'session-not-ready', retryable: false },
+    }
+    render(<MemoryRouter initialEntries={['/help/guide']}><StartupRecoveryGate recovery={recovery} /></MemoryRouter>)
+    expect(redrawTransition.clear).toHaveBeenCalledOnce()
+    expect(navigate).not.toHaveBeenCalled()
+    expect(recovery.redrawRequest).toEqual(request)
+    expect(screen.getByRole('link', { name: 'Kembali ke Pemulihan' })).toHaveAttribute('href', `/draw/run/${recovery.session.id}`)
+  })
 
   it('shows a compact non-actionable notice on the active recovered redraw route', () => {
     const recovery = recoveredRedraw()

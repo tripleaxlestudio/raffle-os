@@ -2,7 +2,7 @@
 
 ## 1. Scope
 
-Tanggal: 3 Oktober 2026. Status: **audit selesai; keputusan produk belum dipilih; tidak ada perubahan behavior produksi**.
+Tanggal audit: 3 Oktober 2026. Pada penutupan audit tidak ada perubahan behavior produksi. **Pemilik kemudian memilih opsi B** melalui pesan “aku plih opsi B”. Implementasi dan verifikasi lanjutan dicatat di [Help Recovery Option B](KOCOKAN-RECOVERY-HELP-OPTION-B.md); fakta source dan bukti audit di bawah tetap merupakan snapshot baseline sebelum implementasi.
 
 Follow-up D dari [Help Acceptance](KOCOKAN-HELP-ACCEPTANCE.md), setelah [Storage Integrity A+B](KOCOKAN-STORAGE-INTEGRITY-A-B.md). Baseline branch `main`, HEAD `7cbd2124de2108fc1e08fdf9b7447da16787e0da`. History memuat Slice 1 `bc5bc77`, Slice 2 `578b4fc`, Help Acceptance `26faf82`, dan Storage A+B `7cbd212`. Dua untracked awal dipertahankan: `docs/copy/` dan `docs/product/KOCOKAN-HELP-MENUS-DRAFT.md`. Tidak ada push, perubahan versi, installer, data pengguna, atau keputusan produk baru.
 
@@ -236,7 +236,7 @@ Hasil: **6 files / 53 tests PASS**, exit 0. Tes existing tidak diedit dan tidak 
 
 ## 12. Open Product Decision
 
-Keputusan diperlukan sebelum perubahan behavior. About saat ini tidak memenuhi definisi read-only penuh; jika memilih C, scope tambahan pembatasan updater/tab harus ditetapkan. Pilihan tidak boleh diartikan mengubah integritas hasil, state machine recovery atau melonggarkan tindakan resmi.
+Keputusan pemilik setelah audit: **B — Help exception**. About tetap diblokir selama unresolved recovery. Pilihan tidak mengubah integritas hasil, state machine recovery atau melonggarkan tindakan resmi. Kotak berikut mencatat keputusan lanjutan, bukan pilihan otomatis oleh audit.
 
 ```text
 PRODUCT DECISION REQUIRED
@@ -244,7 +244,7 @@ PRODUCT DECISION REQUIRED
 Saat unresolved Live recovery aktif:
 
 [ ] A — Blokir seluruh route non-recovery termasuk Help.
-[ ] B — Izinkan empat route /help/* terdaftar sebagai read-only exception,
+[x] B — Izinkan empat route /help/* terdaftar sebagai read-only exception,
         dengan status persisten dan CTA Kembali ke Pemulihan.
 [ ] C — Izinkan Help + utility read-only lain yang telah diaudit,
         dengan pembatasan render/tab/action sebelum About dapat diizinkan.
@@ -254,5 +254,5 @@ Reason: Help lokal tidak menjalankan mutasi domain dan menyediakan petunjuk
 yang dibutuhkan saat recovery, sementara Settings/About memiliki tindakan
 di luar membaca informasi. Recovery tetap prioritas dan workflow lain terkunci.
 
-Owner decision: BELUM DIPILIH.
+Owner decision: B, disetujui melalui pesan pengguna pada 3 Oktober 2026.
 ```

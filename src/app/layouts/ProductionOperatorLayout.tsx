@@ -14,6 +14,7 @@ import { StartupRecoveryGate } from '../workspace/StartupRecoveryGate.tsx'
 import { openManagedAudienceDisplay } from '../../infrastructure/browser/managed-audience-display.ts'
 import { AudienceConnectionStatus } from '../../shared/components/AudienceConnectionStatus.tsx'
 import { BackToTopButton } from '../../shared/components/BackToTopButton.tsx'
+import { RecoveryHelpContext, recoveryNavigationTarget } from '../workspace/recovery-help-navigation.ts'
 
 type OperatorEventStatus = {
   readonly key: 'ready' | 'live' | 'pending' | 'completed' | 'interrupted' | 'draft' | 'archived' | 'loading' | 'setup-required' | 'unavailable'
@@ -172,7 +173,14 @@ function ProductionOperatorContent() {
     <OperatorSidebar production />
     <div className="operator-workspace kc-operator-workspace">
       <ProductionOperatorHeader />
-      <main className="operator-main operator-main--production kc-operator-main" data-production-content-scroll="true" id="operator-main" tabIndex={-1}><StartupRecoveryGate recovery={workspace.status === 'ready' ? workspace.startupRecovery : undefined} /><Outlet /><ProductionAudienceDiagnostics />{productionSetupStageIndexForRoute(location.pathname) !== undefined ? <ProductionSetupContinuation /> : null}</main>
+      <main className="operator-main operator-main--production kc-operator-main" data-production-content-scroll="true" id="operator-main" tabIndex={-1}>
+        <RecoveryHelpContext value={workspace.status === 'ready' && recoveryNavigationTarget(workspace.startupRecovery) !== null}>
+          <StartupRecoveryGate recovery={workspace.status === 'ready' ? workspace.startupRecovery : undefined} />
+          <Outlet />
+          <ProductionAudienceDiagnostics />
+          {productionSetupStageIndexForRoute(location.pathname) !== undefined ? <ProductionSetupContinuation /> : null}
+        </RecoveryHelpContext>
+      </main>
       <BackToTopButton />
     </div>
   </div>

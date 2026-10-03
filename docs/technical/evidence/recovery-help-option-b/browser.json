@@ -1,0 +1,283 @@
+{
+  "date": "2026-10-03",
+  "origin": "http://127.0.0.1:5182",
+  "isolation": "fresh nonpersistent Edge context; synthetic data; no installed origin",
+  "fixture": {
+    "eventId": "f0f14da2-96be-4b4d-aa3e-3e8fa82eb401",
+    "sessionId": "979fb130-5ab2-45d5-b5ec-1d05f0eb1fc1"
+  },
+  "observations": [
+    {
+      "name": "normal /help/whats-new",
+      "url": "http://127.0.0.1:5182/help/whats-new",
+      "historyLength": 2,
+      "headings": [
+        "Yang Baru di Kocokan"
+      ]
+    },
+    {
+      "name": "normal /help/guide",
+      "url": "http://127.0.0.1:5182/help/guide",
+      "historyLength": 3,
+      "headings": [
+        "Panduan Pengguna"
+      ]
+    },
+    {
+      "name": "normal /help/support",
+      "url": "http://127.0.0.1:5182/help/support",
+      "historyLength": 4,
+      "headings": [
+        "Dukungan Kocokan"
+      ]
+    },
+    {
+      "name": "normal /help/licenses",
+      "url": "http://127.0.0.1:5182/help/licenses",
+      "historyLength": 5,
+      "headings": [
+        "Lisensi & Open Source"
+      ]
+    },
+    {
+      "name": "normal /settings/app?tab=about",
+      "url": "http://127.0.0.1:5182/settings/app?tab=about",
+      "historyLength": 6,
+      "headings": [
+        "Settings"
+      ]
+    },
+    {
+      "name": "recovery allowed /help/whats-new",
+      "url": "http://127.0.0.1:5182/help/whats-new",
+      "historyLength": 7,
+      "headings": [
+        "Yang Baru di Kocokan"
+      ]
+    },
+    {
+      "name": "recovery allowed /help/guide",
+      "url": "http://127.0.0.1:5182/help/guide",
+      "historyLength": 8,
+      "headings": [
+        "Panduan Pengguna"
+      ]
+    },
+    {
+      "name": "recovery allowed /help/support",
+      "url": "http://127.0.0.1:5182/help/support",
+      "historyLength": 9,
+      "headings": [
+        "Dukungan Kocokan"
+      ]
+    },
+    {
+      "name": "recovery allowed /help/licenses",
+      "url": "http://127.0.0.1:5182/help/licenses",
+      "historyLength": 10,
+      "headings": [
+        "Lisensi & Open Source"
+      ]
+    },
+    {
+      "name": "recovery guide before anchor navigation",
+      "url": "http://127.0.0.1:5182/help/guide",
+      "historyLength": 11,
+      "headings": [
+        "Panduan Pengguna"
+      ]
+    },
+    {
+      "name": "persistent status after scroll",
+      "url": "http://127.0.0.1:5182/help/guide#penyimpanan-dan-pemulihan",
+      "historyLength": 12,
+      "headings": [
+        "Panduan Pengguna"
+      ]
+    },
+    {
+      "name": "CTA return",
+      "url": "http://127.0.0.1:5182/draw/pending/979fb130-5ab2-45d5-b5ec-1d05f0eb1fc1",
+      "historyLength": 13,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "Back returns to allowed Help",
+      "url": "http://127.0.0.1:5182/help/guide#penyimpanan-dan-pemulihan",
+      "historyLength": 13,
+      "headings": [
+        "Panduan Pengguna"
+      ]
+    },
+    {
+      "name": "Forward returns to recovery",
+      "url": "http://127.0.0.1:5182/draw/pending/979fb130-5ab2-45d5-b5ec-1d05f0eb1fc1",
+      "historyLength": 13,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "sidebar whats-new",
+      "url": "http://127.0.0.1:5182/help/whats-new",
+      "historyLength": 14,
+      "headings": [
+        "Yang Baru di Kocokan"
+      ]
+    },
+    {
+      "name": "sidebar guide",
+      "url": "http://127.0.0.1:5182/help/guide",
+      "historyLength": 15,
+      "headings": [
+        "Panduan Pengguna"
+      ]
+    },
+    {
+      "name": "refresh Help",
+      "url": "http://127.0.0.1:5182/help/guide",
+      "historyLength": 15,
+      "headings": [
+        "Panduan Pengguna"
+      ]
+    },
+    {
+      "name": "new tab Help",
+      "url": "http://127.0.0.1:5182/help/support"
+    },
+    {
+      "name": "still blocked /settings/app?tab=about",
+      "url": "http://127.0.0.1:5182/draw/pending/979fb130-5ab2-45d5-b5ec-1d05f0eb1fc1",
+      "historyLength": 16,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "still blocked /settings/app?tab=storage",
+      "url": "http://127.0.0.1:5182/draw/pending/979fb130-5ab2-45d5-b5ec-1d05f0eb1fc1",
+      "historyLength": 17,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "still blocked /events",
+      "url": "http://127.0.0.1:5182/draw/pending/979fb130-5ab2-45d5-b5ec-1d05f0eb1fc1",
+      "historyLength": 18,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "still blocked /dashboard",
+      "url": "http://127.0.0.1:5182/draw/pending/979fb130-5ab2-45d5-b5ec-1d05f0eb1fc1",
+      "historyLength": 19,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "still blocked /settings",
+      "url": "http://127.0.0.1:5182/draw/pending/979fb130-5ab2-45d5-b5ec-1d05f0eb1fc1",
+      "historyLength": 20,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "report modal during recovery",
+      "url": "http://127.0.0.1:5182/help/support",
+      "historyLength": 21,
+      "headings": [
+        "Dukungan Kocokan"
+      ]
+    },
+    {
+      "name": "offline local licenses",
+      "url": "http://127.0.0.1:5182/help/licenses",
+      "historyLength": 22,
+      "headings": [
+        "Lisensi & Open Source"
+      ]
+    },
+    {
+      "name": "resolved Help stays and backlink restored",
+      "url": "http://127.0.0.1:5182/help/licenses",
+      "historyLength": 22,
+      "headings": [
+        "Lisensi & Open Source"
+      ]
+    },
+    {
+      "name": "conflict Help and landing CTA",
+      "url": "http://127.0.0.1:5182/help/support",
+      "historyLength": 23,
+      "headings": [
+        "Dukungan Kocokan"
+      ]
+    },
+    {
+      "name": "unknown selection Help",
+      "url": "http://127.0.0.1:5182/help/guide",
+      "historyLength": 24,
+      "headings": [
+        "Panduan Pengguna"
+      ]
+    },
+    {
+      "name": "pending redraw run before Help",
+      "url": "http://127.0.0.1:5182/draw/run/979fb130-5ab2-45d5-b5ec-1d05f0eb1fc1",
+      "historyLength": 25,
+      "headings": [
+        "Undi Ulang siap dijalankan",
+        "Fixture only"
+      ]
+    },
+    {
+      "name": "pending redraw Help return without selection",
+      "url": "http://127.0.0.1:5182/draw/run/979fb130-5ab2-45d5-b5ec-1d05f0eb1fc1",
+      "historyLength": 27,
+      "headings": [
+        "Undi Ulang siap dijalankan",
+        "Fixture only"
+      ]
+    },
+    {
+      "name": "running redraw rolling Help refresh return retains selection and checkpoint",
+      "url": "http://127.0.0.1:5182/draw/run/979fb130-5ab2-45d5-b5ec-1d05f0eb1fc1",
+      "historyLength": 29,
+      "headings": [
+        "Undi Ulang",
+        "Undi Ulang · Mengacak 1 pengganti",
+        "Fixture only"
+      ]
+    }
+  ],
+  "domainSnapshotUnchangedDuringPendingHelpNavigation": true,
+  "anchor": {
+    "banner": {
+      "top": 96.796875,
+      "bottom": 218.796875
+    },
+    "heading": {
+      "top": 287.796875,
+      "bottom": 314.796875
+    },
+    "focused": "penyimpanan-dan-pemulihan"
+  },
+  "sticky": {
+    "x": 320,
+    "y": 96.796875,
+    "width": 1040,
+    "height": 122
+  },
+  "redrawHelpRoundTripsUnchanged": [
+    "pending",
+    "running rolling"
+  ],
+  "errors": [],
+  "resolutionLimit": "test-fixture completion plus workspace signal"
+}

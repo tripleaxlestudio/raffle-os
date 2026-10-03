@@ -1,5 +1,9 @@
 @layer components {
   .kc-help-page { display: grid; gap: 20px; width: 100%; max-width: 1040px; margin-inline: auto; min-width: 0; color: var(--kc-text); overflow-wrap: anywhere; }
+  .kc-help-recovery-status { position: sticky; top: 0; z-index: 2; width: 100%; max-width: 1040px; margin: 0 auto 20px; background: var(--kc-surface); }
+  .kc-help-recovery-status p { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .kc-help-recovery-status p > span { flex: 1 1 360px; }
+  .kc-operator-main:has(.kc-help-recovery-status) .kc-help-page h2 { scroll-margin-top: 220px; }
   .kc-help-page h1 { margin: 0 0 8px; font-size: 28px; font-weight: 800; }
   .kc-help-page h2 { margin: 0 0 12px; font-size: 18px; font-weight: 750; scroll-margin-top: 24px; }
   .kc-help-page h3 { margin: 16px 0 8px; font-size: 15px; font-weight: 750; }

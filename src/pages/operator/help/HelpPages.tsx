@@ -1,5 +1,5 @@
 import { GUIDE_SECTIONS } from './help-guide-sections.ts'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useContext, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
 import { KOCOKAN_APP_VERSION } from '../../../config/app-version.ts'
 import { Button, ButtonLink, Card } from '../../../shared/ui/index.ts'
@@ -8,11 +8,13 @@ import { HelpGuideContent } from './HelpGuideContent.tsx'
 import { SUPPORT_ARTICLES } from './help-support-content.ts'
 import { HELP_RELEASE_NOTES } from './help-release-notes.ts'
 import thirdPartyNotices from './third-party-notices.json'
+import { RecoveryHelpContext } from '../../../app/workspace/recovery-help-navigation.ts'
 
 function HelpShell({ title, intro, children }: { readonly title: string; readonly intro: string; readonly children: ReactNode }) {
+  const recoveryActive = useContext(RecoveryHelpContext)
   return <section className="kc-help-page" aria-labelledby="help-title">
     <header><h1 id="help-title">{title}</h1><p>{intro}</p></header>
-    <nav aria-label="Navigasi bantuan"><ButtonLink to="/settings/app?tab=about" variant="secondary">Kembali ke Settings → Tentang</ButtonLink></nav>
+    {recoveryActive ? null : <nav aria-label="Navigasi bantuan"><ButtonLink to="/settings/app?tab=about" variant="secondary">Kembali ke Settings → Tentang</ButtonLink></nav>}
     {children}
   </section>
 }

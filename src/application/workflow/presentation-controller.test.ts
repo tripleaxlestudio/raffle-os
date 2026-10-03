@@ -13,6 +13,37 @@ function configuration(overrides: Partial<DrawPresentationConfiguration> = {}): 
 describe('PresentationController', () => {
   beforeEach(() => vi.useFakeTimers())
 
+  it.each(['countdown', 'rolling', 'reveal', 'pending-handoff'] as const)('keeps the official result and stops stage progression when leaving %s to read Help', async (stage) => {
+    const persistStage = vi.fn(async () => undefined)
+    const controller = new PresentationController({ result, mode: 'live', presentationConfiguration: configuration(), clock: makeClock(), persistStage, onState: () => undefined })
+    await controller.resume(stage, now)
+    controller.dispose()
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(persistStage).not.toHaveBeenCalled()
+    expect(controller.result).toBe(result)
+    const returned = new PresentationController({ result, mode: 'live', presentationConfiguration: configuration(), clock: makeClock(), persistStage, onState: () => undefined })
+    await returned.resume(stage, now)
+    expect(returned.result).toBe(result)
+    expect(returned.getState().stage).toBe(stage)
+    returned.dispose()
+  })
+
+  it('does not publish or schedule progression after a pending checkpoint write settles following unmount', async () => {
+    let finishWrite: () => void = () => undefined
+    const write = new Promise<void>((resolve) => { finishWrite = resolve })
+    const onState = vi.fn()
+    const persistStage = vi.fn(() => write)
+    const controller = new PresentationController({ result, mode: 'live', clock: makeClock(), persistStage, onState })
+    const start = controller.start()
+    controller.dispose()
+    finishWrite()
+    await start
+    await vi.advanceTimersByTimeAsync(30000)
+    expect(onState).not.toHaveBeenCalled()
+    expect(persistStage).toHaveBeenCalledTimes(1)
+    expect(controller.result).toBe(result)
+  })
+
   it('persists countdown, rolls, and reveals with one immutable result', async () => {
     const persisted: string[] = []
     const states: string[] = []

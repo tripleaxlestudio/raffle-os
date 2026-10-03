@@ -34,3 +34,7 @@ Installed manifest yang dibaca pada `C:\Program Files\Kocokan\manifest.json` mas
 Rilis 0.1.4 dimaksudkan sebagai target uji pemilik dari 0.1.3. Real installed upgrade, UAC, relaunch, dan kesinambungan data setelah update belum diuji pada closeout packaging; tidak diklaim PASS dan tidak ada waiver baru. Jalankan Kocokan installed 0.1.3, pastikan tidak ada sesi aktif/pending dan tutup Audience, lalu Settings → Tentang → Periksa Pembaruan → Update Sekarang → Pasang Pembaruan. Setelah relaunch, verifikasi versi 0.1.4 dan data acara/peserta/hadiah/riwayat tetap tersedia.
 
 Tag harus menunjuk build commit `e9fcd7f`, dan empat asset harus diunggah lengkap sebelum draft dijadikan latest stable. Hasil verifikasi publication/anonymous download dicatat setelah proses selesai.
+
+## Publication status
+
+Annotated tag `v0.1.4` telah dibuat terhadap build commit `e9fcd7f61c61299aedf34d2f3d6b29ef652870f1` dan di-push bersama `main`. Upload empat asset melalui `gh release create --draft --verify-tag` **ditolak automatic approval review sebelum command berjalan**: permintaan installer/autoupdate testing belum dianggap izin eksplisit untuk publikasi payload ke GitHub. Tidak ada workaround atau upload lain dilakukan. Rilis stabil tetap 0.1.3; installer lokal siap, tetapi autoupdate belum dapat menemukan 0.1.4. Publikasi asset dan verifikasi download menunggu persetujuan eksplisit pemilik.

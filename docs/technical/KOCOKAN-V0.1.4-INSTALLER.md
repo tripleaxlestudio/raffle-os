@@ -38,3 +38,13 @@ Tag harus menunjuk build commit `e9fcd7f`, dan empat asset harus diunggah lengka
 ## Publication status
 
 Annotated tag `v0.1.4` telah dibuat terhadap build commit `e9fcd7f61c61299aedf34d2f3d6b29ef652870f1` dan di-push bersama `main`. Upload empat asset melalui `gh release create --draft --verify-tag` **ditolak automatic approval review sebelum command berjalan**: permintaan installer/autoupdate testing belum dianggap izin eksplisit untuk publikasi payload ke GitHub. Tidak ada workaround atau upload lain dilakukan. Rilis stabil tetap 0.1.3; installer lokal siap, tetapi autoupdate belum dapat menemukan 0.1.4. Publikasi asset dan verifikasi download menunggu persetujuan eksplisit pemilik.
+
+### Publication completed after owner approval
+
+Pemilik kemudian memberi izin eksplisit melalui pesan **“boleh silahkan”** untuk upload keempat artefak dan publikasi rilis stabil. Status menunggu izin di atas adalah catatan historis.
+
+- [GitHub Release v0.1.4](https://github.com/tripleaxlestudio/raffle-os/releases/tag/v0.1.4) dipublikasikan setelah draft memiliki keempat asset lengkap; `isDraft: false`, `isPrerelease: false`, latest stable 0.1.4.
+- Metadata SHA256 GitHub dan ukuran keempat asset sesuai tabel lokal sebelum publication.
+- Anonymous GET ke `https://api.github.com/repos/tripleaxlestudio/raffle-os/releases/latest` memastikan `tag_name: v0.1.4`, non-draft/non-prerelease, serta URL/nama asset yang dibutuhkan updater.
+- Keempat asset diunduh ulang dengan `curl.exe` tanpa autentikasi, dan SHA256 semuanya identik dengan file lokal. Bukti unduhan disimpan lokal pada `artifacts/release/Kocokan-0.1.4/public-verification/` (ignored).
+- Real installed upgrade tetap menunggu uji pemilik. Publikasi, validasi metadata, dan checksum tidak mengubah status tersebut menjadi PASS.

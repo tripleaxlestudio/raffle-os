@@ -1094,6 +1094,7 @@
 }
 
 .kc-display-designer__dummy-upload {
+  position: relative;
   display: grid;
   place-items: center;
   gap: 5px;
@@ -1121,9 +1122,11 @@
 
 .kc-display-designer__dummy-upload input {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   opacity: 0;
+  cursor: pointer;
 }
 
 /* Action Footer Card */

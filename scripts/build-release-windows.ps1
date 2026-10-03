@@ -45,16 +45,19 @@ if ($Zip) {
     Compress-Archive -LiteralPath $portable -DestinationPath $zipPath
     $checksumFiles += $zipPath
 }
-$releaseFlowArrow = [char]0x2192
 @"
 Kocokan v$version
 
 Changes:
 
-- Fixed auto-update safety detection for completed and cancelled draw sessions with stale presentation checkpoints.
-- Completed/cancelled sessions no longer incorrectly block application updates.
+- Added local help, user guide, support, and open-source notices.
+- Allowed read-only help access while an unresolved session is being recovered.
+- Backups now preserve the application version and include prize images.
+- Fixed opening the Audience Display and image selection in the display designer.
+- Standby now uses the latest saved display appearance; confirmed tickets remain clearly highlighted.
 
-This release is used to validate the v0.1.2 $releaseFlowArrow v0.1.3 auto-update flow.
+Prepared for testing the installed v0.1.3 to v$version auto-update flow.
+The real installed upgrade is awaiting user testing. The full application suite still has 108 unchanged baseline failures.
 "@ | Set-Content -LiteralPath (Join-Path $release 'RELEASE-NOTES.txt') -Encoding utf8
 $checksumFiles | ForEach-Object {
     (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + $_.Substring($release.Length + 1).Replace('\', '/')

@@ -1,0 +1,115 @@
+{
+  "testedHead": "578b4fcb8e5a31760e46089d0d350470d902ec81",
+  "browser": "154.0.4258.37",
+  "origin": "http://127.0.0.1:5179",
+  "internet": "All non-loopback page requests blocked; Slice 2 full offline evidence retained.",
+  "results": [
+    {
+      "path": "/help/whats-new",
+      "direct": true,
+      "refresh": true,
+      "noActiveEvent": true,
+      "operatorLayout": true,
+      "backForward": true,
+      "aboutKeyboardAction": true
+    },
+    {
+      "path": "/help/guide",
+      "direct": true,
+      "refresh": true,
+      "noActiveEvent": true,
+      "operatorLayout": true,
+      "backForward": true,
+      "aboutKeyboardAction": true
+    },
+    {
+      "path": "/help/support",
+      "direct": true,
+      "refresh": true,
+      "noActiveEvent": true,
+      "operatorLayout": true,
+      "backForward": true,
+      "aboutKeyboardAction": true
+    },
+    {
+      "path": "/help/licenses",
+      "direct": true,
+      "refresh": true,
+      "noActiveEvent": true,
+      "operatorLayout": true,
+      "backForward": true,
+      "aboutKeyboardAction": true
+    }
+  ],
+  "sidebar": "Targets, keyboard disclosure, report modal and focus restoration passed; no Dokumentasi.",
+  "aboutDeepLinkRefresh": true,
+  "anchors": [
+    {
+      "id": "alur-cepat-kocokan",
+      "focused": true,
+      "y": 91.796875
+    },
+    {
+      "id": "checklist-sebelum-acara",
+      "focused": true,
+      "y": 91.796875
+    },
+    {
+      "id": "mengenal-kocokan",
+      "focused": true,
+      "y": 91.796875
+    },
+    {
+      "id": "persiapan-acara",
+      "focused": true,
+      "y": 91.796875
+    },
+    {
+      "id": "peserta-dan-impor-data",
+      "focused": true,
+      "y": 91.796875
+    },
+    {
+      "id": "pengaturan-undian",
+      "focused": true,
+      "y": 91.796875
+    },
+    {
+      "id": "tampilan-audiens-dan-persiapan-av",
+      "focused": true,
+      "y": 91.796875
+    },
+    {
+      "id": "latihan-dan-live",
+      "focused": true,
+      "y": 91.796875
+    },
+    {
+      "id": "menjalankan-undian",
+      "focused": true,
+      "y": 91.796875
+    },
+    {
+      "id": "hasil-konfirmasi-dan-undi-ulang",
+      "focused": true,
+      "y": 91.796875
+    },
+    {
+      "id": "riwayat-dan-ekspor",
+      "focused": true,
+      "y": 91.796875
+    },
+    {
+      "id": "penyimpanan-dan-pemulihan",
+      "focused": true,
+      "y": 91.796875
+    },
+    {
+      "id": "kendala-umum",
+      "focused": true,
+      "y": 706.796875
+    }
+  ],
+  "externalRequests": [],
+  "pageErrors": []
+}

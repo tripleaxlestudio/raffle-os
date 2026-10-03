@@ -9,6 +9,7 @@ import { appendRuntimeTrace } from '../../application/display-transport/runtime-
 import { productionSetupStageIndexForRoute } from '../workspace/production-setup-readiness.ts'
 import { ProductionSetupContinuation } from '../../shared/components/ProductionSetupContinuation.tsx'
 import { parseDrawSessionId } from '../../domain/shared/identifiers.ts'
+import { resolveDisplayAppearance } from '../../domain/display/display-configuration.types.ts'
 import { Icon } from '../../shared/ui/index.ts'
 import { StartupRecoveryGate } from '../workspace/StartupRecoveryGate.tsx'
 import { openManagedAudienceDisplay } from '../../infrastructure/browser/managed-audience-display.ts'
@@ -88,6 +89,7 @@ function ProductionOperatorHeader() {
       background: settings.background === undefined ? undefined : { type: settings.background.type, blob: settings.background.blob },
       blackoutAppearance: workspace.displayConfiguration.blackoutAppearance,
       safeAreaMargin: workspace.displayConfiguration.safeAreaMargin,
+      appearance: resolveDisplayAppearance(workspace.displayConfiguration, settings),
     })
   }
   const openAudience = () => {

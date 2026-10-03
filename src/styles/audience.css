@@ -1062,6 +1062,15 @@ html[data-audience-transparent="true"] :is(.audience-display-page, .audience-sta
   .audience-display-page[data-draw-box-preset="outline"] .ticket-tile { background: transparent; }
   .audience-display-page[data-draw-box-preset="brutal"] :is(.rolling-ticket, .ticket-tile) { transform: translate(-0.2rem, -0.2rem); }
   .audience-display-page[data-draw-box-preset="clean"] :is(.rolling-ticket, .ticket-tile) { border-color: color-mix(in srgb, var(--display-text) 18%, transparent); background: color-mix(in srgb, var(--display-text) 8%, transparent); }
+  .audience-display-page .ticket-tile[data-verification-status="confirmed"] {
+    --draw-box-fill: #064e3b;
+    --draw-box-border: #34d399;
+    --draw-box-text: #ffffff;
+    --draw-label-fill: #047857;
+    --draw-label-text: #ffffff;
+    background: var(--draw-box-fill);
+    border-color: var(--draw-box-border);
+  }
   .audience-display-page[data-display-text-style="outline"] :is(.ticket-tile__number, .rolling-ticket span) { color: transparent; -webkit-text-stroke: 0.035em var(--draw-box-text); paint-order: stroke fill; }
   .audience-display-page[data-display-text-style="outline"] :is(.audience-draw-header__prize, .standby-stage__message h1) { color: transparent; -webkit-text-stroke: 0.035em var(--display-text); paint-order: stroke fill; }
   .audience-display-page[data-display-text-style="shadow"] :is(.ticket-tile__number, .rolling-ticket span, .audience-draw-header__prize, .standby-stage__message h1) { text-shadow: 0.08em 0.08em 0 color-mix(in srgb, var(--display-primary) 70%, #000000); }

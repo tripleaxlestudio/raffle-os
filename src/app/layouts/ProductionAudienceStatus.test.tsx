@@ -12,6 +12,8 @@ import type { DrawSession } from '../../domain/draws/draw-session.types.ts'
 import type { StartupRecoveryResult } from '../../application/workflow/startup-recovery-arbiter.ts'
 import type { AuditRecord } from '../../domain/audit/audit.types.ts'
 import type { DrawSessionQueueItem } from '../../application/draw/draw-session-queue.ts'
+import { DEFAULT_DISPLAY_APPEARANCE, resolveDisplayAppearance, type DisplayAppearanceConfiguration } from '../../domain/display/display-configuration.types.ts'
+import { projectPublicDisplaySnapshot, type PresentationProjectionSource } from '../../application/display-transport/public-projection.ts'
 
 const mocks = vi.hoisted(() => {
   const listeners = new Set<(status: PublisherStatus) => void>()
@@ -29,7 +31,8 @@ const mocks = vi.hoisted(() => {
   }
   const workspace = {
     status: 'ready', event: { id: 'ui-event', name: 'UI test', status: 'ready' as EventStatus },
-    displayConfiguration: { id: 'ui-display' } as { id: string } | null, currentMode: null as 'live' | 'practice' | null,
+    displayConfiguration: { id: 'ui-display' } as { id: string; appearance?: DisplayAppearanceConfiguration } | null, currentMode: null as 'live' | 'practice' | null,
+    eventSettings: { displayName: 'UI test', subtitle: '', primaryColor: '#7567FF', accentColor: '#F2A93B', background: { type: 'image/png', blob: new Blob(['old background'], { type: 'image/png' }) } },
     unresolvedSession: null as DrawSession | null, startupRecovery: { kind: 'normal', targetPath: '/dashboard' } as StartupRecoveryResult, participantCount: 0, checkedInParticipantCount: 0,
     prizeCategoryCount: 6, liveSessionCount: 0,
     sessionCounts: { draft: 0, ready: 0, drawing: 0, 'pending-confirmation': 0, completed: 0, cancelled: 0 },
@@ -73,7 +76,9 @@ describe('production header and dashboard Audience indicators', () => {
     mocks.state.snapshot = { drawSessionId: 'ui-event', stage: 'standby', blackoutRequested: false, displayTest: false, eventName: 'UI test' }
     mocks.audience.status = { kind: 'waiting-for-display' }
     mocks.openAudience.mockClear()
+    mocks.audience.publish.mockClear()
     mocks.workspace.currentMode = null
+    mocks.workspace.event.id = 'ui-event'
     mocks.workspace.event.name = 'UI test'
     mocks.workspace.event.status = 'ready'
     mocks.workspace.unresolvedSession = null
@@ -189,6 +194,49 @@ describe('production header and dashboard Audience indicators', () => {
       expect(mocks.openAudience).toHaveBeenCalledTimes(index + 1)
       expect(mocks.openAudience).toHaveBeenLastCalledWith('/display?eventId=ui-event&displayConfigurationId=ui-display')
     }
+  })
+
+  it('sends the latest display appearance on Siaga so Audience and dashboard resolve the same background', async () => {
+    const user = userEvent.setup()
+    mocks.workspace.event.id = 'bceb07b0-8582-42fc-b295-89f0f34bd05d'
+    const view = renderDashboard()
+    const background = { type: 'image/png', blob: new Blob(['new background'], { type: 'image/png' }) }
+    mocks.workspace.displayConfiguration = {
+      id: 'ui-display',
+      appearance: { ...DEFAULT_DISPLAY_APPEARANCE, background: { type: 'image', fit: 'contain', imageAsset: background }, logo: { ...DEFAULT_DISPLAY_APPEARANCE.logo, position: 'top-right', size: 96 } },
+    }
+    view.rerender(<MemoryRouter initialEntries={['/dashboard']}><Routes><Route element={<ProductionOperatorLayout />}><Route path="/dashboard" element={<ProductionDashboardPage />} /></Route></Routes></MemoryRouter>)
+    await user.click(screen.getByRole('button', { name: 'Kembalikan Tampilan Audiens ke Siaga' }))
+
+    const source: PresentationProjectionSource = mocks.audience.publish.mock.calls[0][0]
+    const snapshot = projectPublicDisplaySnapshot(source)
+    const legacy = { ...snapshot, primaryColor: snapshot.primaryColor ?? '#7567FF', accentColor: snapshot.accentColor ?? '#F2A93B' }
+    const audienceAppearance = resolveDisplayAppearance({ appearance: snapshot.appearance }, legacy)
+    const previewAppearance = resolveDisplayAppearance(mocks.workspace.displayConfiguration, legacy)
+    expect(audienceAppearance).toEqual(previewAppearance)
+    expect(audienceAppearance.background.imageAsset?.blob).toBe(background.blob)
+    expect(audienceAppearance.background.imageAsset?.blob).not.toBe(mocks.workspace.eventSettings.background.blob)
+    expect(audienceAppearance.logo).toMatchObject({ position: 'top-right', size: 96 })
+    expect(snapshot).toMatchObject({ stage: 'standby', blackoutRequested: false, displayTest: false })
+    expect(snapshot.ticketNumbers).toBeUndefined()
+  })
+
+  it('keeps legacy event branding when display appearance has not been saved', async () => {
+    const user = userEvent.setup()
+    mocks.workspace.event.id = 'bceb07b0-8582-42fc-b295-89f0f34bd05d'
+    renderDashboard()
+    await user.click(screen.getByRole('button', { name: 'Kembalikan Tampilan Audiens ke Siaga' }))
+    const source: PresentationProjectionSource = mocks.audience.publish.mock.calls[0][0]
+    expect(source.appearance?.background.imageAsset?.blob).toBe(mocks.workspace.eventSettings.background.blob)
+  })
+
+  it.each(['drawing', 'pending-confirmation'] as const)('blocks Siaga while a session is %s', async (status) => {
+    mocks.workspace.unresolvedSession = queueItem(status).session
+    renderDashboard()
+    const button = screen.getByRole('button', { name: 'Kembalikan Tampilan Audiens ke Siaga' })
+    expect(button).toBeDisabled()
+    await userEvent.setup().click(button)
+    expect(mocks.audience.publish).not.toHaveBeenCalled()
   })
 
   it('shows a setup state instead of fabricating an Audience preview when display configuration is missing', () => {

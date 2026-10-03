@@ -1,0 +1,221 @@
+{
+  "date": "2026-10-03",
+  "baseline": "7cbd2124de2108fc1e08fdf9b7447da16787e0da",
+  "origin": "http://127.0.0.1:5182",
+  "isolation": "fresh nonpersistent Edge context; synthetic IndexedDB fixture; installed origin untouched",
+  "fixture": {
+    "eventId": "ef29e0b6-d26b-4033-9bab-5f2dc8e58dc8",
+    "sessionId": "16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9"
+  },
+  "target": "/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+  "observations": [
+    {
+      "name": "normal /help/whats-new",
+      "url": "http://127.0.0.1:5182/help/whats-new",
+      "historyLength": 2,
+      "headings": [
+        "Yang Baru di Kocokan"
+      ]
+    },
+    {
+      "name": "normal /help/guide",
+      "url": "http://127.0.0.1:5182/help/guide",
+      "historyLength": 3,
+      "headings": [
+        "Panduan Pengguna"
+      ]
+    },
+    {
+      "name": "normal /help/support",
+      "url": "http://127.0.0.1:5182/help/support",
+      "historyLength": 4,
+      "headings": [
+        "Dukungan Kocokan"
+      ]
+    },
+    {
+      "name": "normal /help/licenses",
+      "url": "http://127.0.0.1:5182/help/licenses",
+      "historyLength": 5,
+      "headings": [
+        "Lisensi & Open Source"
+      ]
+    },
+    {
+      "name": "normal /settings/app?tab=about",
+      "url": "http://127.0.0.1:5182/settings/app?tab=about",
+      "historyLength": 6,
+      "headings": [
+        "Settings"
+      ]
+    },
+    {
+      "name": "recovery direct /help/whats-new",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 7,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "recovery direct /help/guide",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 8,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "recovery direct /help/support",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 9,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "recovery direct /help/licenses",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 10,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "recovery direct /settings/app?tab=about",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 11,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "recovery sidebar whats-new",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 12,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "recovery sidebar guide",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 13,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "recovery sidebar about",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 14,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "sidebar report modal available",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 14,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "browser Back",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 15,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "browser Forward",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 15,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "refresh recommended route",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 15,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "new tab Help",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9"
+    },
+    {
+      "name": "fixture resolved no intended-route replay",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 15,
+      "headings": [
+        "Tinjau Pemenang"
+      ]
+    },
+    {
+      "name": "resolved /help/guide",
+      "url": "http://127.0.0.1:5182/help/guide",
+      "historyLength": 16,
+      "headings": [
+        "Panduan Pengguna"
+      ]
+    },
+    {
+      "name": "resolved /help/support",
+      "url": "http://127.0.0.1:5182/help/support",
+      "historyLength": 17,
+      "headings": [
+        "Dukungan Kocokan"
+      ]
+    },
+    {
+      "name": "resolved /settings/app?tab=about",
+      "url": "http://127.0.0.1:5182/settings/app?tab=about",
+      "historyLength": 18,
+      "headings": [
+        "Settings"
+      ]
+    },
+    {
+      "name": "resolved /dashboard",
+      "url": "http://127.0.0.1:5182/dashboard",
+      "historyLength": 19,
+      "headings": [
+        "Isolated recovery audit",
+        "Menunggu undian berikutnya"
+      ]
+    },
+    {
+      "name": "resolved Back over previously replaced entry",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 19,
+      "headings": [
+        "Hasil Akhir"
+      ]
+    },
+    {
+      "name": "conflicting sessions direct Help",
+      "url": "http://127.0.0.1:5182/draw/pending",
+      "historyLength": 10,
+      "headings": [
+        "Hasil"
+      ]
+    },
+    {
+      "name": "unknown selection direct Help",
+      "url": "http://127.0.0.1:5182/draw/pending/16ff0599-6e69-4a7f-a3b1-7a244dfe5ca9",
+      "historyLength": 11,
+      "headings": [
+        "Status hasil tidak didukung"
+      ]
+    }
+  ],
+  "domainSnapshotUnchangedDuringRecoveryNavigation": true,
+  "errors": [],
+  "resolutionLimit": "Resolved by fixture update plus workspace event, not official confirmation acceptance"
+}
